@@ -43,6 +43,9 @@ export function register({ readSource, assert, loadModule, test }) {
       "/src/features/ai/components/elements/agent-resource-badges.tsx"
     )
     const aiPageSource = await readSource("/src/features/ai/pages/ai.tsx")
+    const workspaceSource = await readSource(
+      "/src/features/ai/components/agent-chat-workspace.tsx"
+    )
 
     assert.match(badgeSource, /sidePane\.openSidePane\(sidePaneTarget\.id\)/)
     assert.match(
@@ -60,7 +63,7 @@ export function register({ readSource, assert, loadModule, test }) {
     )
     assert.match(badgeSource, /to: "\/p\/\$pageId"/)
     assert.match(badgeSource, /to: "\/d\/\$databaseId"/)
-    assert.match(aiPageSource, /<PageSidePaneLayout/)
+    assert.match(workspaceSource, /<PageSidePaneLayout/)
     assert.match(aiPageSource, /<PageEditorPane/)
     assert.match(aiPageSource, /<DatabaseMainPane/)
   })

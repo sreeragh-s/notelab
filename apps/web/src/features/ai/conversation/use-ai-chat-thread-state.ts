@@ -8,6 +8,7 @@ import { isHostedDemoRuntime } from "@/features/demo";
 type StoredAiChatThreadState = {
   activeThreadId: string | null;
   bootstrapped: boolean;
+  draftAgentProfileId: string | null;
 };
 
 type AiChatThreadStore = {
@@ -20,6 +21,7 @@ type AiChatThreadStore = {
 const emptyThreadState: StoredAiChatThreadState = {
   activeThreadId: null,
   bootstrapped: false,
+  draftAgentProfileId: null,
 };
 
 const useAiChatThreadStore = create<AiChatThreadStore>()(() => ({
@@ -51,6 +53,7 @@ function updateStoredThreadState(
 function initializeActiveThreadId(
   workspaceId: string,
   threadId: string | null,
+  draftAgentProfileId: string | null,
 ) {
   useAiChatThreadStore.setState((state) => {
     if (state.threadStateByWorkspaceId[workspaceId]) {
@@ -60,7 +63,11 @@ function initializeActiveThreadId(
     return {
       threadStateByWorkspaceId: {
         ...state.threadStateByWorkspaceId,
-        [workspaceId]: { activeThreadId: threadId, bootstrapped: false },
+        [workspaceId]: {
+          activeThreadId: threadId,
+          bootstrapped: false,
+          draftAgentProfileId,
+        },
       },
     };
   });
@@ -75,6 +82,17 @@ function setStoredActiveThreadId(
       ? current
       : { ...current, activeThreadId: threadId },
   );
+}
+
+function setStoredDraftAgentProfileId(
+  workspaceId: string,
+  agentProfileId: string | null,
+) {
+  updateStoredThreadState(workspaceId, (current) => ({
+    ...current,
+    activeThreadId: null,
+    draftAgentProfileId: agentProfileId,
+  }));
 }
 
 function markBootstrapped(workspaceId: string) {
@@ -105,7 +123,15 @@ function getCurrentUrlThreadId() {
   );
 }
 
-function replaceAiThreadSearchParam(threadId: string | null) {
+function getCurrentUrlAgentId() {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get("agent")?.trim() || null;
+}
+
+function replaceAiThreadSearchParam(
+  threadId: string | null,
+  draftAgentProfileId?: string | null,
+) {
   if (typeof window === "undefined" || window.location.pathname !== "/ai") {
     return;
   }
@@ -114,8 +140,11 @@ function replaceAiThreadSearchParam(threadId: string | null) {
 
   if (threadId) {
     url.searchParams.set("thread", threadId);
+    url.searchParams.delete("agent");
   } else {
     url.searchParams.delete("thread");
+    if (draftAgentProfileId) url.searchParams.set("agent", draftAgentProfileId);
+    else url.searchParams.delete("agent");
   }
 
   window.history.replaceState(
@@ -139,6 +168,7 @@ export function useAiChatThreadState(options?: { enabled?: boolean }) {
   );
 
   const activeThreadId = threadState?.activeThreadId ?? null;
+  const draftAgentProfileId = threadState?.draftAgentProfileId ?? null;
   const hasInitializedActiveThread = Boolean(threadState);
   const hasBootstrappedActiveThread = Boolean(threadState?.bootstrapped);
 
@@ -151,10 +181,19 @@ export function useAiChatThreadState(options?: { enabled?: boolean }) {
       setStoredActiveThreadId(workspaceId, threadId);
 
       if (pathname === "/ai") {
-        replaceAiThreadSearchParam(threadId);
+        replaceAiThreadSearchParam(threadId, draftAgentProfileId);
       }
     },
-    [workspaceId, pathname],
+    [workspaceId, pathname, draftAgentProfileId],
+  );
+
+  const setDraftAgentProfileId = useCallback(
+    (agentProfileId: string | null) => {
+      if (!workspaceId) return;
+      setStoredDraftAgentProfileId(workspaceId, agentProfileId);
+      if (pathname === "/ai") replaceAiThreadSearchParam(null, agentProfileId);
+    },
+    [pathname, workspaceId],
   );
 
   useEffect(() => {
@@ -165,7 +204,11 @@ export function useAiChatThreadState(options?: { enabled?: boolean }) {
     const initialThreadId =
       pathname === "/ai" ? getCurrentUrlThreadId() : null;
 
-    initializeActiveThreadId(workspaceId, initialThreadId);
+    initializeActiveThreadId(
+      workspaceId,
+      initialThreadId,
+      pathname === "/ai" && !initialThreadId ? getCurrentUrlAgentId() : null,
+    );
   }, [enabled, hasInitializedActiveThread, workspaceId, pathname]);
 
   useEffect(() => {
@@ -194,20 +237,23 @@ export function useAiChatThreadState(options?: { enabled?: boolean }) {
       : null;
     setStoredActiveThreadId(workspaceId, fallbackThreadId);
     markBootstrapped(workspaceId);
-    replaceAiThreadSearchParam(fallbackThreadId);
+    replaceAiThreadSearchParam(fallbackThreadId, draftAgentProfileId);
   }, [
     activeThreadId,
+    draftAgentProfileId,
     enabled,
     hasBootstrappedActiveThread,
     hasInitializedActiveThread,
     workspaceId,
     setActiveThreadId,
+    setDraftAgentProfileId,
     threadsQuery.data?.threads,
     threadsQuery.isLoading,
   ]);
 
   return {
     activeThreadId,
+    draftAgentProfileId,
     isBootstrapping:
       enabled &&
       (!workspaceId ||
@@ -215,6 +261,7 @@ export function useAiChatThreadState(options?: { enabled?: boolean }) {
         !hasBootstrappedActiveThread ||
         threadsQuery.isLoading),
     setActiveThreadId,
+    setDraftAgentProfileId,
     threadsQuery,
   };
 }

@@ -39,18 +39,11 @@ import {
   type AiChatFeedback,
   type AiChatThreadMessagesResponse,
   type PageEditSnapshotPart,
-  useAiAgentProfiles,
   useCreateAiChatThread,
   useSubmitAiChatFeedback,
   useWorkspaceAiModels,
 } from "@zilobase/features/ai-chat";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/ui/select";
+import { Button } from "@/shared/ui/button";
 import { useAgentConversation } from "@zilobase/ai-conversation-adapter";
 import {
   useAiDevMessageTrace,
@@ -95,7 +88,11 @@ import {
 
 type ChatbotProps = {
   databaseId?: string | null;
+  draftAgentDescription?: string | null;
+  draftAgentName?: string | null;
+  draftAgentProfileId?: string | null;
   isSidebar?: boolean;
+  onDraftDirtyChange?: (dirty: boolean) => void;
   onThreadCreated?: (threadId: string) => void;
   threadId: string | null;
   pageId?: string | null;
@@ -150,8 +147,8 @@ const Chatbot = (props: ChatbotProps) => {
     return (
       <ChatbotConversationController
         {...props}
-        initialAgentProfileId={null}
-        initialAgentProfileName={null}
+        initialAgentProfileId={props.draftAgentProfileId ?? null}
+        initialAgentProfileName={props.draftAgentName ?? null}
         initialMessages={emptyAgentChatMessages}
         initialFeedback={[]}
         key={initialMessagesKey}
@@ -185,9 +182,11 @@ const Chatbot = (props: ChatbotProps) => {
 
 const ChatbotConversationController = ({
   databaseId = null,
+  draftAgentDescription = null,
   initialFeedback,
   initialMessages,
   isSidebar = false,
+  onDraftDirtyChange,
   onThreadCreated,
   threadId,
   pageId = null,
@@ -203,9 +202,6 @@ const ChatbotConversationController = ({
   const previousMessageCountRef = useRef(0);
   const threadCreationPromiseRef = useRef<Promise<string> | null>(null);
   const [model, setModel] = useState<string>("auto");
-  const [selectedAgentProfileId, setSelectedAgentProfileId] = useState(
-    initialAgentProfileId ?? "personal",
-  );
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
   const [text, setText] = useState<string>("");
   const [textCursor, setTextCursor] = useState(0);
@@ -296,10 +292,6 @@ const ChatbotConversationController = ({
     primarySource: effectivePrimarySource,
   });
   const aiModelsQuery = useWorkspaceAiModels();
-  const agentProfilesQuery = useAiAgentProfiles();
-  const availableAgentProfiles = agentProfilesQuery.data?.filter(
-    (agent) => agent.status === "active",
-  ) ?? [];
   const models = useMemo(() => {
     const queryModels = aiModelsQuery.data?.models ?? [];
 
@@ -964,10 +956,7 @@ const ChatbotConversationController = ({
 
         threadCreationPromiseRef.current = createThread
           .mutateAsync({
-            agentProfileId:
-              selectedAgentProfileId === "personal"
-                ? null
-                : selectedAgentProfileId,
+            agentProfileId: initialAgentProfileId,
           })
           .then((response) => response.thread.id);
 
@@ -1076,7 +1065,7 @@ const ChatbotConversationController = ({
       sendMessage,
       threadId,
       workspaceId,
-      selectedAgentProfileId,
+      initialAgentProfileId,
     ],
   );
 
@@ -1255,6 +1244,10 @@ const ChatbotConversationController = ({
 
   const hasMessages = visibleMessages.length > 0;
   useEffect(() => {
+    if (threadId) return;
+    onDraftDirtyChange?.(Boolean(text.trim() || attachments.length));
+  }, [attachments.length, onDraftDirtyChange, text, threadId]);
+  useEffect(() => {
     const previousMessageCount = previousMessageCountRef.current;
     previousMessageCountRef.current = visibleMessages.length;
 
@@ -1285,33 +1278,34 @@ const ChatbotConversationController = ({
       }
       ref={rootRef}
     >
-      {availableAgentProfiles.length > 0 && (
-        <div className="mx-auto mb-2 flex w-full max-w-3xl items-center justify-end gap-2 px-3 text-xs text-content-secondary">
-          <span>Agent</span>
-          {threadId ? (
-            <span className="rounded-md border px-2 py-1 font-medium text-content-primary">
-              {initialAgentProfileName ?? availableAgentProfiles.find(
-                (agent) => agent.id === initialAgentProfileId,
-              )?.name ?? "Personal Ask AI"}
-            </span>
-          ) : (
-            <Select
-              onValueChange={setSelectedAgentProfileId}
-              value={selectedAgentProfileId}
-            >
-              <SelectTrigger className="h-8 w-48" aria-label="Ask AI agent">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="personal">Personal Ask AI</SelectItem>
-                {availableAgentProfiles.map((agent) => (
-                  <SelectItem key={agent.id} value={agent.id}>
-                    {agent.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+      {!hasMessages && (
+        <div className="mx-auto mb-6 grid w-full max-w-3xl justify-items-center gap-3 px-4 text-center">
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-surface-secondary text-lg font-semibold">
+            {(initialAgentProfileName ?? "AI").slice(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight">
+              {getGreeting(session?.user?.name)}
+            </h1>
+            <p className="mt-1 text-sm text-content-secondary">
+              {draftAgentDescription?.trim() || (initialAgentProfileName
+                ? `Chat privately with ${initialAgentProfileName}.`
+                : "Search, create, and work across your Zilobase workspace.")}
+            </p>
+          </div>
+          <div className="flex max-w-2xl flex-wrap justify-center gap-2">
+            {starterPrompts(Boolean(initialAgentProfileId)).map((prompt) => (
+              <Button
+                key={prompt}
+                onClick={() => setText(prompt)}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {prompt}
+              </Button>
+            ))}
+          </div>
         </div>
       )}
       <ChatbotMessages
@@ -1338,7 +1332,6 @@ const ChatbotConversationController = ({
         onDiscardPageEdit={handleDiscardPageEdit}
         onRetryIncompleteDatabase={handleRetryIncompleteDatabase}
         onSubmitFeedback={handleSubmitFeedback}
-        onSuggestion={setText}
         onTogglePageEditChanges={handleTogglePageEditChanges}
         onUndoPageEdit={handleUndoPageEdit}
         snapshotByToolCallId={snapshotByToolCallId}
@@ -1391,3 +1384,16 @@ const ChatbotConversationController = ({
 };
 
 export default Chatbot;
+
+function getGreeting(name?: string | null) {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const firstName = name?.trim().split(/\s+/)[0];
+  return firstName ? `${greeting}, ${firstName}` : greeting;
+}
+
+function starterPrompts(agentSelected: boolean) {
+  return agentSelected
+    ? ["What can you help me with?", "Review my priorities", "Draft the next steps"]
+    : ["Summarize my workspace", "Find relevant information", "Create a project plan"];
+}

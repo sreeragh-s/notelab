@@ -12,6 +12,7 @@ import {
   type AiAgentProfileDetail,
   type McpApprovedServer,
   type McpConnectionSummary,
+  type McpConnectionScopeRef,
   type McpToolPolicy,
   type McpWorkspacePolicy,
   useApprovedMcpServers,
@@ -23,6 +24,7 @@ import {
   useMcpCatalog,
   useMcpConnectionMutation,
   useMcpConnections,
+  mcpScopeApiPath,
   useMcpPolicyMutation,
   useMcpWorkspacePolicy,
   useReplaceAiAgentProfileAccess,
@@ -43,6 +45,7 @@ import {
 } from "@/shared/ui/select"
 import { Switch } from "@/shared/ui/switch"
 import { Textarea } from "@/shared/ui/textarea"
+import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/app-tabs"
 
 type AgentTab = "instructions" | "tools" | "share" | "activity"
 
@@ -139,9 +142,11 @@ export function CustomAgentsSection() {
   )
 }
 
-function AgentEditor({ agentId }: { agentId: string | null }) {
+export function AgentEditor({ agentId, initialTab }: { agentId: string | null; initialTab?: string | null }) {
   const detailQuery = useAiAgentProfile(agentId)
-  const [tab, setTab] = React.useState<AgentTab>("instructions")
+  const [tab, setTab] = React.useState<AgentTab>(() => normalizeAgentTab(initialTab))
+
+  React.useEffect(() => setTab(normalizeAgentTab(initialTab)), [initialTab])
 
   if (!agentId || detailQuery.isLoading) {
     return <p className="text-sm text-content-secondary">Loading agent...</p>
@@ -160,25 +165,35 @@ function AgentEditor({ agentId }: { agentId: string | null }) {
   ]
 
   return (
-    <div className="min-w-0 rounded-lg border p-4">
-      <div className="mb-4 flex flex-wrap gap-1 border-b pb-2">
+    <Tabs
+      className="min-w-0 gap-4 rounded-lg border p-4"
+      onValueChange={(value) => setTab(value as AgentTab)}
+      value={tab}
+    >
+      <TabsList className="w-full justify-start overflow-x-auto rounded-none border-b p-0 pb-2">
         {tabs.map((item) => (
-          <Button
+          <TabsTrigger
+            className="grow-0"
             key={item.id}
-            onClick={() => setTab(item.id)}
-            size="sm"
-            type="button"
-            variant={tab === item.id ? "secondary" : "ghost"}
+            value={item.id}
           >
             {item.label}
-          </Button>
+          </TabsTrigger>
         ))}
+      </TabsList>
+      <div>
+        {tab === "instructions" && <AgentInstructions agent={detailQuery.data} />}
+        {tab === "tools" && (
+          <McpConnectionsPanel
+            canEdit={detailQuery.data.role === "owner" || detailQuery.data.role === "editor"}
+            delegated
+            scope={{ type: "agent", agentProfileId: detailQuery.data.id }}
+          />
+        )}
+        {tab === "share" && <AgentShare agent={detailQuery.data} />}
+        {tab === "activity" && <AgentActivity agent={detailQuery.data} />}
       </div>
-      {tab === "instructions" && <AgentInstructions agent={detailQuery.data} />}
-      {tab === "tools" && <AgentConnections agent={detailQuery.data} />}
-      {tab === "share" && <AgentShare agent={detailQuery.data} />}
-      {tab === "activity" && <AgentActivity agent={detailQuery.data} />}
-    </div>
+    </Tabs>
   )
 }
 
@@ -231,16 +246,34 @@ function AgentInstructions({ agent }: { agent: AiAgentProfileDetail }) {
   )
 }
 
-function AgentConnections({ agent }: { agent: AiAgentProfileDetail }) {
+export function PersonalMcpConnections() {
+  return (
+    <McpConnectionsPanel
+      canEdit
+      delegated={false}
+      scope={{ type: "personal" }}
+    />
+  )
+}
+
+function McpConnectionsPanel({
+  canEdit,
+  delegated,
+  scope,
+}: {
+  canEdit: boolean
+  delegated: boolean
+  scope: McpConnectionScopeRef
+}) {
   const catalogQuery = useMcpCatalog()
   const approvedServersQuery = useApprovedMcpServers()
-  const connectionsQuery = useMcpConnections(agent.id)
+  const connectionsQuery = useMcpConnections(scope)
   const { data: session } = useSession()
   const [customHeaders, setCustomHeaders] = React.useState([
     { name: "Authorization", value: "" },
   ])
   const [tokenProvider, setTokenProvider] = React.useState("catalog:github")
-  const canEdit = agent.role === "owner" || agent.role === "editor"
+  const basePath = mcpScopeApiPath(scope)
   const createConnection = useMcpConnectionMutation<
     {
       approvedServerId?: string
@@ -248,21 +281,21 @@ function AgentConnections({ agent }: { agent: AiAgentProfileDetail }) {
       catalogId?: string
     },
     { connection: McpConnectionSummary }
-  >(agent.id, () => `/api/ai/agents/${agent.id}/connections`, "POST")
+  >(scope, () => `${basePath}/connections`, "POST")
   const startOauth = useMcpConnectionMutation<
     { connectionId: string },
     { authorizationUrl: string }
   >(
-    agent.id,
-    (input) => `/api/ai/agents/${agent.id}/connections/${input.connectionId}/oauth/start`,
+    scope,
+    (input) => `${basePath}/connections/${input.connectionId}/oauth/start`,
     "POST",
   )
   const submitHeaders = useMcpConnectionMutation<
     { connectionId: string; headers: Array<{ name: string; value: string }> },
     { connection: McpConnectionSummary }
   >(
-    agent.id,
-    (input) => `/api/ai/agents/${agent.id}/connections/${input.connectionId}/headers`,
+    scope,
+    (input) => `${basePath}/connections/${input.connectionId}/headers`,
     "PUT",
   )
 
@@ -298,9 +331,9 @@ function AgentConnections({ agent }: { agent: AiAgentProfileDetail }) {
   return (
     <div className="grid gap-5">
       <div className="rounded-md border border-feedback-warning bg-feedback-warning-subtle p-3 text-sm text-feedback-warning-text">
-        Everyone with agent-use access invokes the external permissions of the
-        member who authenticates this connection. Zilobase access checks still
-        apply to native pages and databases.
+        {delegated
+          ? "Everyone with agent-use access invokes the external permissions of the member who authenticates this connection. Zilobase access checks still apply to native pages and databases."
+          : "These connections are private to your account in this workspace. Custom agents cannot use them."}
       </div>
 
       {canEdit && (
@@ -405,10 +438,11 @@ function AgentConnections({ agent }: { agent: AiAgentProfileDetail }) {
         <h4 className="text-sm font-medium">Connected servers</h4>
         {connectionsQuery.data?.length ? connectionsQuery.data.map((connection) => (
           <ConnectionCard
-            agent={agent}
+            canDisconnect={canEdit}
             connection={connection}
             currentUserId={session?.user?.id ?? null}
             key={connection.id}
+            scope={scope}
           />
         )) : <p className="text-sm text-content-secondary">No connections yet.</p>}
       </div>
@@ -417,31 +451,34 @@ function AgentConnections({ agent }: { agent: AiAgentProfileDetail }) {
 }
 
 function ConnectionCard({
-  agent,
+  canDisconnect,
   connection,
   currentUserId,
+  scope,
 }: {
-  agent: AiAgentProfileDetail
+  canDisconnect: boolean
   connection: McpConnectionSummary
   currentUserId: string | null
+  scope: McpConnectionScopeRef
 }) {
   const isAuthenticator = currentUserId === connection.authenticatedByUserId
+  const basePath = mcpScopeApiPath(scope)
   const updateTools = useMcpConnectionMutation<
     { connectionId: string; policies: McpToolPolicyInput[] },
     { connection: McpConnectionSummary }
-  >(agent.id, (input) => `/api/ai/agents/${agent.id}/connections/${input.connectionId}/tools`, "PUT")
+  >(scope, (input) => `${basePath}/connections/${input.connectionId}/tools`, "PUT")
   const refresh = useMcpConnectionMutation<
     { connectionId: string },
     { connection: McpConnectionSummary; discoveredTools: number }
-  >(agent.id, (input) => `/api/ai/agents/${agent.id}/connections/${input.connectionId}/refresh`, "POST")
+  >(scope, (input) => `${basePath}/connections/${input.connectionId}/refresh`, "POST")
   const alwaysAllow = useMcpConnectionMutation<
     { connectionId: string; confirmed: boolean; enabled: boolean },
     { connection: McpConnectionSummary }
-  >(agent.id, (input) => `/api/ai/agents/${agent.id}/connections/${input.connectionId}/always-allow`, "PUT")
+  >(scope, (input) => `${basePath}/connections/${input.connectionId}/always-allow`, "PUT")
   const disconnect = useMcpConnectionMutation<
     { connectionId: string },
     { disconnected: boolean }
-  >(agent.id, (input) => `/api/ai/agents/${agent.id}/connections/${input.connectionId}`, "DELETE")
+  >(scope, (input) => `${basePath}/connections/${input.connectionId}`, "DELETE")
 
   const saveTool = async (tool: McpToolPolicy, changes: Partial<McpToolPolicy>) => {
     try {
@@ -477,7 +514,7 @@ function ConnectionCard({
               variant="ghost"
             ><RefreshCw className="size-4" /></Button>
           )}
-          {(agent.role === "owner" || agent.role === "editor") && (
+          {canDisconnect && (
             <Button
               aria-label="Disconnect server"
               onClick={() => {
@@ -669,14 +706,30 @@ function AgentShare({ agent }: { agent: AiAgentProfileDetail }) {
 }
 
 function AgentActivity({ agent }: { agent: AiAgentProfileDetail }) {
-  const activityQuery = useMcpActivity(agent.id, true)
+  const activityQuery = useMcpActivity({ type: "agent", agentProfileId: agent.id }, true)
+  return <McpActivityList activity={activityQuery.data} />
+}
+
+export function PersonalMcpActivity() {
+  const activityQuery = useMcpActivity({ type: "personal" }, true)
+  return <McpActivityList activity={activityQuery.data} privateActivity />
+}
+
+function McpActivityList({
+  activity,
+  privateActivity = false,
+}: {
+  activity: ReturnType<typeof useMcpActivity>["data"]
+  privateActivity?: boolean
+}) {
   return (
     <div className="grid gap-2">
       <p className="text-sm text-content-secondary">
-        Sanitized operational activity only. Prompts, arguments, credentials,
-        and returned external data are never shown here.
+        {privateActivity
+          ? "Private operational activity. Credentials, arguments, and returned data are never recorded here."
+          : "Sanitized operational activity only. Prompts, arguments, credentials, and returned external data are never shown here."}
       </p>
-      {activityQuery.data?.length ? activityQuery.data.map((entry) => (
+      {activity?.length ? activity.map((entry) => (
         <div className="flex flex-wrap items-center gap-2 border-b py-2 text-sm" key={entry.id}>
           <span className="font-medium">{entry.eventType.replaceAll("_", " ")}</span>
           {entry.providerLabel && <span>{entry.providerLabel}</span>}
@@ -688,7 +741,7 @@ function AgentActivity({ agent }: { agent: AiAgentProfileDetail }) {
   )
 }
 
-function WorkspaceMcpPolicyPanel() {
+export function WorkspaceMcpPolicyPanel() {
   const policyQuery = useMcpWorkspacePolicy()
   const [customServersEnabled, setCustomServersEnabled] = React.useState(false)
   const [externalWritesEnabled, setExternalWritesEnabled] = React.useState(false)
@@ -793,4 +846,10 @@ function showError(title: string, error: unknown) {
   toast.error(title, {
     description: error instanceof Error ? error.message : "Try again.",
   })
+}
+
+function normalizeAgentTab(value?: string | null): AgentTab {
+  if (value === "connectors" || value === "tools") return "tools"
+  if (value === "share" || value === "activity") return value
+  return "instructions"
 }

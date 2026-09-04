@@ -243,11 +243,9 @@ export function AiChatHistoryList({
                       <span className="min-w-0 flex-1 truncate">
                         {thread.title}
                       </span>
-                      {thread.agentProfile && (
-                        <span className="max-w-20 shrink-0 truncate rounded border px-1 text-[10px] opacity-70">
-                          {thread.agentProfile.name}
-                        </span>
-                      )}
+                      <span className="max-w-20 shrink-0 truncate rounded border px-1 text-[10px] opacity-70">
+                        {thread.agentProfile?.name ?? "Personal"}
+                      </span>
                       <span className="ml-auto shrink-0 text-[10px] opacity-60 transition-opacity group-focus-within/nav-row:opacity-0 group-hover/nav-row:opacity-0">
                         {formatRelativeTime(thread.lastActivityAt)}
                       </span>

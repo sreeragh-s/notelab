@@ -1,17 +1,11 @@
-import { lazy, Suspense } from "react";
-
 import { PageWorkspaceGate } from "@/features/workspaces";
-import { PageSidePaneLayout, usePageSidePane } from "@/features/pages/context/index";
-import { useAiChatThreadState } from "../conversation/use-ai-chat-thread-state";
+import { usePageSidePane } from "@/features/pages/context/index";
 import { useOpenEmbeddedPage } from "@/features/pages/hooks/index";
 import { DatabaseMainPane } from "@/features/databases/pages/index";
 import { PageEditorPane } from "@/features/pages/pages/index";
-
-const Chatbot = lazy(() => import("../components/elements/chatbot"));
+import { AgentChatWorkspace } from "../components/agent-chat-workspace";
 
 export default function AiPage() {
-  const { activeThreadId, isBootstrapping, setActiveThreadId } =
-    useAiChatThreadState();
   const {
     renderedSidePaneDatabaseId,
     renderedSidePanePageId,
@@ -28,39 +22,9 @@ export default function AiPage() {
     openPage(pageId, { databaseId: sidePaneDatabaseId });
   };
 
-  return (
-    <PageSidePaneLayout
-      main={
-        <div className="min-h-full">
-          <main className="box-border flex min-h-full px-4 py-4 md:py-6">
-            <section className="mx-auto min-h-full w-full max-w-6xl">
-              {isBootstrapping ? (
-                <div className="flex h-full items-center justify-center text-content-secondary text-sm">
-                  Loading chat...
-                </div>
-              ) : (
-                <Suspense
-                  fallback={
-                    <div className="flex h-full items-center justify-center text-content-secondary text-sm">
-                      Loading chat...
-                    </div>
-                  }
-                >
-                  <Chatbot
-                    key={activeThreadId ?? "new"}
-                    onThreadCreated={setActiveThreadId}
-                    threadId={activeThreadId}
-                  />
-                </Suspense>
-              )}
-            </section>
-          </main>
-        </div>
-      }
-      mainScrollClassName="overscroll-y-none"
-      sidePane={
-        sidePaneContentReady &&
-        (renderedSidePanePageId || renderedSidePaneDatabaseId) ? (
+  const externalSidePane =
+    sidePaneContentReady &&
+    (renderedSidePanePageId || renderedSidePaneDatabaseId) ? (
           renderedSidePaneDatabaseId ? (
             <DatabaseMainPane
               className="min-h-0 flex-1 overflow-y-auto"
@@ -81,12 +45,13 @@ export default function AiPage() {
               />
             </PageWorkspaceGate>
           ) : null
-        ) : null
-      }
-      sidePaneOpen={sidePaneAnimatedOpen}
-      sidePaneVisible={Boolean(
-        renderedSidePanePageId || renderedSidePaneDatabaseId,
-      )}
+        ) : null;
+
+  return (
+    <AgentChatWorkspace
+      externalSidePane={externalSidePane}
+      externalSidePaneOpen={sidePaneAnimatedOpen}
+      externalSidePaneVisible={Boolean(renderedSidePanePageId || renderedSidePaneDatabaseId)}
     />
   );
 }

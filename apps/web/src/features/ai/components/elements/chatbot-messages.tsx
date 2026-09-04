@@ -6,7 +6,6 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import {
   FileTextIcon,
-  InboxIcon,
   SparklesIcon,
   ThumbsDownIcon,
   ThumbsUpIcon,
@@ -619,53 +618,6 @@ const ChatMessage = ({
   );
 };
 
-const EmptyState = ({
-  isSidebar,
-  onSuggestion,
-}: {
-  isSidebar: boolean;
-  onSuggestion: (value: string) => void;
-}) => (
-  <div className="mx-auto flex max-w-3xl flex-col items-center justify-center gap-5 px-4 pb-6 text-center">
-    <div className="flex size-12 items-center justify-center rounded-md border bg-surface-canvas shadow-sm">
-      <InboxIcon className="size-6 text-content-secondary" />
-    </div>
-    <div className="space-y-2">
-      <h2 className="font-semibold text-xl">
-        {isSidebar ? "What should I do with this page?" : "What can I help you build?"}
-      </h2>
-      <p className="mx-auto max-w-xl text-content-secondary text-sm">
-        Describe the outcome in ordinary language. Ask AI will infer the setup,
-        use your workspace context, and complete the supported steps.
-      </p>
-    </div>
-    <div className="flex max-w-2xl flex-wrap justify-center gap-2">
-      {(isSidebar
-        ? [
-            "Summarize this page and list open questions",
-            "Turn this page into an action plan",
-            "Find related pages in this workspace",
-          ]
-        : [
-            "Find the latest decisions in this workspace",
-            "Create a 1:1 meeting notes database with useful properties and a This week view",
-            "Analyze an uploaded file and show the key trends",
-          ]
-      ).map((suggestion) => (
-        <Button
-          key={suggestion}
-          onClick={() => onSuggestion(suggestion)}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          {suggestion}
-        </Button>
-      ))}
-    </div>
-  </div>
-);
-
 type ChatbotMessagesProps = {
   applyingToolCallIds: readonly string[];
   debuggerContent?: ReactNode;
@@ -680,7 +632,6 @@ type ChatbotMessagesProps = {
   onDiscardPageEdit: (toolCallId: string) => void | Promise<void>;
   onRetryIncompleteDatabase: (prompt: string) => void | Promise<void>;
   onSubmitFeedback: (messageId: string, rating: -1 | 1, reason?: string) => void | Promise<void>;
-  onSuggestion: (value: string) => void;
   onTogglePageEditChanges: (toolCallId: string) => void;
   onUndoPageEdit: (toolCallId: string) => void | Promise<void>;
   snapshotByToolCallId: ReturnType<typeof buildPageEditSnapshotMap>;
@@ -705,7 +656,6 @@ export const ChatbotMessages = ({
   onDiscardPageEdit,
   onRetryIncompleteDatabase,
   onSubmitFeedback,
-  onSuggestion,
   onTogglePageEditChanges,
   onUndoPageEdit,
   snapshotByToolCallId,
@@ -723,9 +673,7 @@ export const ChatbotMessages = ({
         className={hasMessages || isSidebar ? "px-0 pb-10 md:px-4" : "px-0 pb-0 md:px-4"}
         scrollClassName={isSidebar ? undefined : "h-auto! overflow-visible! [scrollbar-gutter:auto]!"}
       >
-        {!hasMessages ? (
-          <EmptyState isSidebar={isSidebar} onSuggestion={onSuggestion} />
-        ) : (
+        {hasMessages ? (
           visibleMessages.map((message) => (
             <ChatMessage
               applyingToolCallIds={applyingToolCallIds}
@@ -749,7 +697,7 @@ export const ChatbotMessages = ({
               workspaceId={workspaceId}
             />
           ))
-        )}
+        ) : null}
         {debuggerContent}
         {shouldShowPendingAssistant(messages, status) ? (
           <PendingAssistantStatus status={status} />

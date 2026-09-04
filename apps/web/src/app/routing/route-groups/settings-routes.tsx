@@ -41,11 +41,6 @@ export const settingsRoutes = [
   }),
   createRoute({
     getParentRoute: () => appRoute,
-    path: "/settings/zilobase-ai",
-    component: lazyRouteComponent(() => import("@/features/settings/pages/zilobase-ai")),
-  }),
-  createRoute({
-    getParentRoute: () => appRoute,
     path: "/settings/team",
     validateSearch: validateTeamSettingsSearch,
     component: lazyRouteComponent(() => import("@/features/teamspaces/pages/team")),
