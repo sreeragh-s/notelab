@@ -23,6 +23,13 @@ gmail:
   pubsubSubscription: ""
   networkCIDR: 0.0.0.0/0
 
+mcp:
+  enabled: false
+  customServersEnabled: false
+  externalWritesEnabled: false
+  executionDisabled: false
+  clientMetadataUrl: ""
+
 image:
   repository: ghcr.io/zilobase/zilobase
   digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
@@ -44,6 +51,7 @@ secretKeys:
   smtpPassword: SMTP_PASSWORD
   gmailGoogleClientSecret: GMAIL_GOOGLE_CLIENT_SECRET
   gmailTokenEncryptionKey: GMAIL_TOKEN_ENCRYPTION_KEY
+  mcpCredentialEncryptionKeys: MCP_CREDENTIAL_ENCRYPTION_KEYS
 
 config:
   externalUrl: https://zilobase.example.invalid
