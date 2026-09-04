@@ -13,16 +13,17 @@ export function register({ readSource, assert, test }) {
     assert.match(buttonSource, /const buttonControlHeightClassName = "h-7"/);
     assert.match(
       buttonSource,
+      /const buttonControlTextClassName = "text-xs\/relaxed font-medium"/,
+    );
+    assert.match(
+      buttonSource,
       /default:\s*\n?\s*`\$\{buttonControlHeightClassName\} gap-1 px-2/,
     );
     assert.match(
       tabsSource,
-      /buttonControlHeightClassName,[\s\S]*?gap-2[\s\S]*?px-3[\s\S]*?text-sm[\s\S]*?\[&_svg:not\(\[class\*='size-'\]\)\]:size-4/,
+      /buttonControlHeightClassName,[\s\S]*?buttonControlTextClassName,[\s\S]*?gap-2[\s\S]*?px-3[\s\S]*?\[&_svg:not\(\[class\*='size-'\]\)\]:size-4/,
     );
-    assert.doesNotMatch(
-      tabsSource,
-      /h-7[\s\S]*?text-xs[\s\S]*?\[&_svg:not\(\[class\*='size-'\]\)\]:size-3\.5/,
-    );
+    assert.doesNotMatch(tabsSource, /text-sm font-medium/);
     assert.match(tabsSource, /data-active:bg-action-neutral-hover/);
     assert.match(tabsSource, /aria-\[current=page\]:bg-action-neutral-hover/);
     assert.match(tabsSource, /aria-\[current=page\]:active:bg-action-neutral-pressed/);
