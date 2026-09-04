@@ -5,6 +5,13 @@ import type * as React from "react"
 
 import { cn } from "@/shared/lib/utils"
 
+export function getAppTabTriggerClassName(className?: string) {
+  return cn(
+    "relative inline-flex h-8 shrink-0 grow cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md border border-transparent px-3 py-0.5 text-sm font-medium text-content-secondary outline-none transition-none hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:border-action-focus-ring focus-visible:ring-2 focus-visible:ring-action-focus-ring active:bg-action-neutral-pressed active:text-action-on-neutral data-active:bg-action-neutral-hover data-active:text-action-on-neutral data-active:hover:bg-action-neutral-pressed data-active:hover:text-action-on-neutral data-active:active:bg-action-neutral-pressed data-active:active:text-action-on-neutral data-disabled:pointer-events-none data-disabled:opacity-50 data-[orientation=vertical]:w-full data-[orientation=vertical]:justify-start dark:text-content-secondary dark:hover:text-content-primary dark:data-active:text-content-primary [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+    className,
+  )
+}
+
 export function Tabs({
   className,
   ...props
@@ -43,10 +50,11 @@ function TabsTab({
 }: TabsPrimitive.Tab.Props): React.ReactElement {
   return (
     <TabsPrimitive.Tab
-      className={cn(
-        "relative inline-flex h-8 shrink-0 grow cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md border border-transparent px-3 py-0.5 text-sm font-medium text-content-secondary outline-none transition-none hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:border-action-focus-ring focus-visible:ring-2 focus-visible:ring-action-focus-ring active:bg-action-neutral-pressed active:text-action-on-neutral data-active:bg-action-neutral-hover data-active:text-action-on-neutral data-active:hover:bg-action-neutral-pressed data-active:hover:text-action-on-neutral data-active:active:bg-action-neutral-pressed data-active:active:text-action-on-neutral data-disabled:pointer-events-none data-disabled:opacity-50 data-[orientation=vertical]:w-full data-[orientation=vertical]:justify-start dark:text-content-secondary dark:hover:text-content-primary dark:data-active:text-content-primary [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className,
-      )}
+      className={
+        typeof className === "function"
+          ? (state) => getAppTabTriggerClassName(className(state))
+          : getAppTabTriggerClassName(className)
+      }
       data-slot="tabs-tab"
       {...props}
     />

@@ -30,6 +30,7 @@ import {
   TooltipTrigger,
 } from "@/shared/ui/tooltip"
 import { cn } from "@/shared/lib/utils"
+import { getAppTabTriggerClassName } from "@/shared/ui/app-tabs"
 import { isFixedSidebarTabId, type SidebarTab } from "@zilobase/features/user-settings"
 
 export function SidebarLayoutTabs({
@@ -127,12 +128,12 @@ function SidebarLayoutTab({ active, activeTabSettings, editing, onSelectTab, tab
       animate="animate"
       aria-current={active ? "page" : undefined}
       aria-label={tab.name}
-      className={cn(
-        "relative inline-flex h-8 min-w-8 shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-transparent py-0.5 text-xs font-medium text-content-secondary outline-none transition-[color,background-color,box-shadow] hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:border-action-focus-ring focus-visible:ring-2 focus-visible:ring-action-focus-ring active:bg-action-neutral-pressed active:text-content-secondary",
-        active && "bg-action-neutral-hover text-action-on-neutral",
+      className={getAppTabTriggerClassName(cn(
+        "min-w-8 grow-0 px-2 text-xs transition-[color,background-color,box-shadow]",
+        active && "bg-action-neutral-hover text-action-on-neutral hover:bg-action-neutral-pressed dark:text-content-primary",
         canDrag && "cursor-grab touch-none active:cursor-grabbing",
         (sortable.isDragging || sortable.isOver) && "z-20 bg-action-neutral-hover",
-      )}
+      ))}
       custom={active}
       initial={false}
       onClick={() => onSelectTab(tab.id)}

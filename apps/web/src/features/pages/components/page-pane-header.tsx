@@ -381,6 +381,18 @@ function AppBreadcrumbs({ pathname }: { pathname: string }) {
     );
   }
 
+  if (pathname === "/ai") {
+    return (
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbPage className="line-clamp-1">Ask AI</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+    );
+  }
+
   if (pathname === "/recents") {
     const requestedView = location.search.view;
     const libraryView = libraryViewIds.includes(requestedView as LibraryView)
