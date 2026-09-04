@@ -27,7 +27,7 @@ export function register({ readSource, assert, test }) {
       ),
     )
 
-    assert.match(tabs, /rounded-lg p-1/)
+    assert.match(tabs, /rounded-lg p-0/)
     assert.match(tabs, /rounded-md[^"\n]*data-active:bg-action-neutral-hover/)
     assert.doesNotMatch(tabs, /TabsPrimitive\.Indicator/)
     for (const menu of [dropdown, contextMenu]) {

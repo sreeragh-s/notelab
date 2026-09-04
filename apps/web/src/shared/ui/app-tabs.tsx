@@ -35,7 +35,7 @@ export function TabsList({
   return (
     <TabsPrimitive.List
       className={cn(
-        "flex w-fit items-center justify-start gap-0.5 rounded-lg p-1 text-content-secondary data-[orientation=vertical]:flex-col",
+        "flex w-fit items-center justify-start gap-0.5 rounded-lg p-0 text-content-secondary data-[orientation=vertical]:flex-col",
         className,
       )}
       data-slot="tabs-list"
