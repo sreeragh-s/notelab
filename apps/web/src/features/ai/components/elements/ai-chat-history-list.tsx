@@ -203,7 +203,7 @@ export function AiChatHistoryList({
           <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-content-secondary" />
           <Input
             aria-label="Search chat history"
-            className="h-8 pl-8 text-xs"
+            className="pl-8 text-xs"
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search chats"
             type="search"

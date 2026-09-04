@@ -711,7 +711,7 @@ export function DatabaseViewToolbar() {
                           <TabsTrigger
                             aria-expanded={openViewMenuId === view.id}
                             aria-haspopup="menu"
-                            className="h-8 shrink-0 grow-0 gap-2 px-3"
+                            className="shrink-0 grow-0 gap-2 px-3"
                             onClick={handleViewClick}
                             onContextMenu={handleViewContextMenu}
                             onKeyDownCapture={handleViewKeyDownCapture}

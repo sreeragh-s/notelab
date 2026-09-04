@@ -508,7 +508,7 @@ export function MeetingView({
             <TabsList className="min-w-0 w-full justify-start overflow-x-auto">
               {tabs.map((tab) => (
                 <TabsTrigger
-                  className="h-8 shrink-0 grow-0 gap-2 px-3 capitalize"
+                  className="shrink-0 grow-0 gap-2 px-3 capitalize"
                   key={tab}
                   value={tab}
                 >

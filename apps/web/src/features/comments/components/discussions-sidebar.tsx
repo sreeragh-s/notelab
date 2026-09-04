@@ -133,7 +133,7 @@ export function DiscussionsSidebarPanel({
       >
         <TabsList className="w-full justify-start gap-1">
           <TabsTrigger
-            className="h-8 flex-none rounded-none px-1 text-xs font-medium"
+            className="flex-none rounded-none px-1 text-xs font-medium"
             value="open"
           >
             Open
@@ -142,7 +142,7 @@ export function DiscussionsSidebarPanel({
             </span>
           </TabsTrigger>
           <TabsTrigger
-            className="h-8 flex-none rounded-none px-1 text-xs font-medium"
+            className="flex-none rounded-none px-1 text-xs font-medium"
             value="resolved"
           >
             Resolved

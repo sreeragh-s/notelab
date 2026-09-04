@@ -54,7 +54,7 @@ export function PageLayoutTabs({
           <TabsList
             className="min-w-0 justify-start overflow-x-auto"
           >
-            <TabsTrigger className="h-8 shrink-0 grow-0 gap-2 px-3" value="content">
+            <TabsTrigger className="shrink-0 grow-0 gap-2 px-3" value="content">
               <FileText />
               <span>Content</span>
             </TabsTrigger>
@@ -74,7 +74,7 @@ export function PageLayoutTabs({
 
               return (
                 <TabsTrigger
-                  className="h-8 shrink-0 grow-0 gap-2 px-3"
+                  className="shrink-0 grow-0 gap-2 px-3"
                   key={tab.id}
                   value={tab.id}
                 >

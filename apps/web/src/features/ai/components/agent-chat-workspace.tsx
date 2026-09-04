@@ -299,7 +299,7 @@ function AgentRail({
 function AgentTab({ compact, label, value }: { compact: boolean; label: string; value: string }) {
   return (
     <TabsTrigger
-      className="h-8 shrink-0 grow-0 gap-2 px-3"
+      className="shrink-0 grow-0 gap-2 px-3"
       title={compact ? label : undefined}
       value={value}
     >

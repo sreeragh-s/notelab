@@ -130,7 +130,6 @@ function SidebarLayoutTab({ active, activeTabSettings, editing, onSelectTab, tab
       aria-label={tab.name}
       className={getAppTabTriggerClassName(cn(
         "min-w-8 grow-0 px-2 text-xs transition-[color,background-color,box-shadow]",
-        active && "bg-action-neutral-hover text-action-on-neutral hover:bg-action-neutral-pressed dark:text-content-primary",
         canDrag && "cursor-grab touch-none active:cursor-grabbing",
         (sortable.isDragging || sortable.isOver) && "z-20 bg-action-neutral-hover",
       ))}

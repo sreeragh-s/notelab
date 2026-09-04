@@ -32,7 +32,10 @@ export function register({ readSource, assert, test }) {
     )
     assert.match(sidebarSource, /gap-2 p-2/)
     assert.doesNotMatch(navPagesSource, /<span>More<\/span>/)
-    assert.match(sidebarPrimitiveSource, /flex h-8 w-full items-center/)
+    assert.match(
+      sidebarPrimitiveSource,
+      /buttonControlHeightClassName,[\s\S]*?peer\/menu-button group\/menu-button flex w-full items-center/,
+    )
     assert.match(sidebarPrimitiveSource, /text-sm font-medium text-content-secondary ring-action-focus-ring/)
     assert.doesNotMatch(navListSource, /data-\[active=false\]:opacity-80/)
     assert.match(navListSource, /flex min-w-0 flex-col gap-px/)

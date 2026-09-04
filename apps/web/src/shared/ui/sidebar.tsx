@@ -4,7 +4,7 @@ import { Slot } from "radix-ui"
 import { SidebarSimpleIcon } from "@/shared/components/icons"
 import { useIsMobile } from "@/shared/hooks/use-mobile"
 import { cn } from "@/shared/lib/utils"
-import { Button } from "@/shared/ui/button"
+import { Button, buttonControlHeightClassName } from "@/shared/ui/button"
 import {
   Sheet,
   SheetContent,
@@ -393,7 +393,8 @@ function SidebarMenuButton({
       data-sidebar="menu-button"
       data-active={isActive}
       className={cn(
-        "peer/menu-button group/menu-button flex h-8 w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm font-medium text-content-secondary ring-action-focus-ring outline-hidden transition-[background-color,color] group-has-data-[sidebar=menu-action]/menu-item:pr-8 hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:ring-2 active:bg-action-neutral-pressed active:text-action-on-neutral disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-action-neutral-hover data-open:hover:text-action-on-neutral data-active:bg-action-neutral-hover data-active:text-action-on-neutral data-active:hover:bg-action-neutral-pressed data-active:hover:text-action-on-neutral data-active:group-hover/nav-row:bg-action-neutral-pressed data-active:group-hover/nav-row:text-action-on-neutral data-active:active:bg-action-neutral-pressed data-active:active:text-action-on-neutral [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate",
+        buttonControlHeightClassName,
+        "peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm font-medium text-content-secondary ring-action-focus-ring outline-hidden transition-[background-color,color] group-has-data-[sidebar=menu-action]/menu-item:pr-8 hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:ring-2 active:bg-action-neutral-pressed active:text-action-on-neutral disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-action-neutral-hover data-open:hover:text-action-on-neutral data-active:bg-action-neutral-hover data-active:text-action-on-neutral data-active:hover:bg-action-neutral-pressed data-active:hover:text-action-on-neutral data-active:group-hover/nav-row:bg-action-neutral-pressed data-active:group-hover/nav-row:text-action-on-neutral data-active:active:bg-action-neutral-pressed data-active:active:text-action-on-neutral [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate",
         className,
       )}
       {...props}
