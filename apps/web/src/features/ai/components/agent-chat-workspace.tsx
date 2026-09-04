@@ -190,7 +190,7 @@ export function AgentChatWorkspace({
         {isSidebar && panel === "history" ? (
           <AiChatHistoryList
             activeThreadId={activeThreadId}
-            className="[&_[data-sidebar=menu-button]]:h-7 [&_[data-sidebar=menu-button]]:p-1.5 [&_[data-sidebar=menu]]:gap-px"
+            className="[&_[data-sidebar=menu]]:gap-px"
             onSelectThread={selectThread}
           />
         ) : isSidebar && panel === "settings" ? (
@@ -281,7 +281,7 @@ function AgentRail({
         <Button
           aria-label="Ask AI settings"
           onClick={onSettings}
-          size="icon-sm"
+          size="icon"
           type="button"
           variant="ghost"
         >
