@@ -315,11 +315,11 @@
   }
 
   .database-new-button {
-    @apply h-8 gap-1.5 px-2.5;
+    @apply h-7 gap-1 px-2;
   }
 
   .database-new-button svg {
-    @apply size-4;
+    @apply size-3.5;
   }
 
   .database-table-wrap,

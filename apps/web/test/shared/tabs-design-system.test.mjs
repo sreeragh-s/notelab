@@ -10,10 +10,10 @@ export function register({ readSource, assert, test }) {
       readSource("/src/features/databases/styles/database.css"),
     ]);
 
-    assert.match(buttonSource, /const buttonControlHeightClassName = "h-8"/);
+    assert.match(buttonSource, /const buttonControlHeightClassName = "h-7"/);
     assert.match(
       buttonSource,
-      /default:\s*\n?\s*`\$\{buttonControlHeightClassName\} gap-1\.5 px-2\.5/,
+      /default:\s*\n?\s*`\$\{buttonControlHeightClassName\} gap-1 px-2/,
     );
     assert.match(
       tabsSource,
@@ -27,10 +27,10 @@ export function register({ readSource, assert, test }) {
     assert.match(tabsSource, /aria-\[current=page\]:bg-action-neutral-hover/);
     assert.match(tabsSource, /aria-\[current=page\]:active:bg-action-neutral-pressed/);
     assert.match(tabsSource, /rounded-lg p-0/);
-    assert.match(buttonSource, /icon: "size-8/);
+    assert.match(buttonSource, /icon: "size-7/);
     assert.match(inputSource, /buttonControlHeightClassName,[\s\S]*?"w-full/);
     assert.match(sidebarSource, /buttonControlHeightClassName,[\s\S]*?peer\/menu-button/);
-    assert.match(databaseStyles, /\.database-new-button\s*\{\s*@apply h-8/);
+    assert.match(databaseStyles, /\.database-new-button\s*\{\s*@apply h-7/);
     assert.doesNotMatch(tabsSource, /TabsPrimitive\.Indicator|tab-indicator/);
   });
 }
