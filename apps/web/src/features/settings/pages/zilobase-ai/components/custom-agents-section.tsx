@@ -142,7 +142,15 @@ export function CustomAgentsSection() {
   )
 }
 
-export function AgentEditor({ agentId, initialTab }: { agentId: string | null; initialTab?: string | null }) {
+export function AgentEditor({
+  agentId,
+  initialTab,
+  plain = false,
+}: {
+  agentId: string | null
+  initialTab?: string | null
+  plain?: boolean
+}) {
   const detailQuery = useAiAgentProfile(agentId)
   const [tab, setTab] = React.useState<AgentTab>(() => normalizeAgentTab(initialTab))
 
@@ -166,12 +174,12 @@ export function AgentEditor({ agentId, initialTab }: { agentId: string | null; i
 
   return (
     <Tabs
-      className="min-w-0 gap-4 rounded-lg border p-4"
+      className={plain ? "min-w-0 gap-5" : "min-w-0 gap-4 rounded-lg border p-4"}
       onValueChange={(value) => setTab(value as AgentTab)}
       value={tab}
     >
-      <div className="overflow-x-auto border-b pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <TabsList className="rounded-none p-0">
+      <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <TabsList>
           {tabs.map((item) => (
             <TabsTrigger
               className="grow-0"

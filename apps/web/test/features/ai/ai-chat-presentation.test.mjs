@@ -62,6 +62,8 @@ export function register({ readSource, assert, test }) {
 
   test("Ask AI uses the database toolbar and standard side-pane controls", async () => {
     const workspaceSource = await readSource("/src/features/ai/components/agent-chat-workspace.tsx")
+    const settingsSource = await readSource("/src/features/ai/components/ai-settings-panel.tsx")
+    const agentSettingsSource = await readSource("/src/features/settings/pages/zilobase-ai/components/custom-agents-section.tsx")
     const headerSource = await readSource("/src/app/shell/content/app-header.tsx")
     const paneHeaderSource = await readSource("/src/features/pages/components/page-pane-header.tsx")
 
@@ -72,5 +74,9 @@ export function register({ readSource, assert, test }) {
     assert.match(headerSource, /<PageSidePaneCollapseButton[\s\S]*?label="Close AI settings"/)
     assert.match(paneHeaderSource, /export function PageSidePaneCollapseButton/)
     assert.match(paneHeaderSource, /<PageSidePaneCollapseButton onClick=\{onClose\} \/>/)
+    assert.doesNotMatch(settingsSource, /<header className="[^"]*border-b/)
+    assert.doesNotMatch(settingsSource, /overflow-x-auto border-b/)
+    assert.match(settingsSource, /<AgentEditor agentId=\{agentId\} initialTab=\{initialTab\} plain \/>/)
+    assert.doesNotMatch(agentSettingsSource, /overflow-x-auto border-b/)
   })
 }

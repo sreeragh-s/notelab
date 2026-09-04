@@ -66,8 +66,8 @@ export function AiSettingsPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-        <header className="flex min-h-12 items-start gap-3 border-b px-4 py-3">
-          <div className="min-w-0 flex-1">
+      <header className="flex min-h-12 items-start gap-3 px-5 pb-2 pt-4">
+        <div className="min-w-0 flex-1">
           <h2 className="font-heading text-sm font-medium text-content-primary">
             {creatingAgent ? "Create agent" : scope === "agent" ? "Agent settings" : "Personal Ask AI"}
           </h2>
@@ -76,22 +76,22 @@ export function AiSettingsPanel({
               ? "Configure this shared agent without exposing private conversations."
               : "Manage your private AI preferences and workspace-scoped connectors."}
           </p>
-          </div>
-          {showCloseButton ? (
-            <Button aria-label="Close AI settings" onClick={onClose} size="icon-sm" type="button" variant="ghost">
-              <XIcon className="size-4" />
-            </Button>
-          ) : null}
-        </header>
-        <div className="min-h-0 flex-1 overflow-y-auto p-5">
-          {creatingAgent ? (
-            <CreateAgentForm onCreated={onAgentCreated} />
-          ) : scope === "agent" ? (
-            <AgentEditor agentId={agentId} initialTab={initialTab} />
-          ) : (
-            <PersonalSettings tab={personalTab} onTabChange={setPersonalTab} />
-          )}
         </div>
+        {showCloseButton ? (
+          <Button aria-label="Close AI settings" onClick={onClose} size="icon-sm" type="button" variant="ghost">
+            <XIcon className="size-4" />
+          </Button>
+        ) : null}
+      </header>
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-3">
+        {creatingAgent ? (
+          <CreateAgentForm onCreated={onAgentCreated} />
+        ) : scope === "agent" ? (
+          <AgentEditor agentId={agentId} initialTab={initialTab} plain />
+        ) : (
+          <PersonalSettings tab={personalTab} onTabChange={setPersonalTab} />
+        )}
+      </div>
     </div>
   )
 }
@@ -113,8 +113,8 @@ function PersonalSettings({
   ]
   return (
     <Tabs className="gap-5" onValueChange={(value) => onTabChange(value as PersonalTab)} value={tab}>
-      <div className="overflow-x-auto border-b pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <TabsList aria-label="Personal Ask AI settings" className="rounded-none p-0">
+      <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <TabsList aria-label="Personal Ask AI settings">
           {tabs.map((item) => (
             <TabsTrigger
               className="grow-0"
