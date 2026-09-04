@@ -6,31 +6,41 @@ import {
   aiAgentPendingAction,
   aiAgentToolExecution,
   aiAgentTurn,
+  aiChatThread,
   aiMcpConnection,
   aiMcpToolSnapshot,
 } from "../../../infrastructure/database/schema";
 import type { RuntimeEnv } from "../../../shared/config/config";
 import { getMembership } from "../../access";
 import { hashAgentToolInput } from "../actions/agent-action-receipts";
-import { requireAgentProfileRole } from "../agents/agent-profile-service";
 import { decryptMcpSecret, encryptMcpSecret } from "./credential-crypto";
 import { isMcpExternalWritesEnabled } from "./config";
 import { discoverConnectionTools, executeMcpTool } from "./mcp-client";
 import { getWorkspaceMcpPolicy } from "./mcp-service";
+import {
+  getMcpCredentialScopeId,
+  getMcpScopeFromConnection,
+  isMcpScopeMatch,
+  requireMcpScopeAccess,
+  type McpScope,
+} from "./mcp-scope";
 
 const APPROVAL_TTL_MS = 15 * 60 * 1_000;
 
 export async function requestMcpActionApproval(input: {
-  agentProfileId: string;
   connection: typeof aiMcpConnection.$inferSelect;
   env: RuntimeEnv;
   snapshot: typeof aiMcpToolSnapshot.$inferSelect;
+  scope: McpScope;
   threadId: string;
   toolCallId: string;
   toolInput: unknown;
   userId: string;
   workspaceId: string;
 }): Promise<AgentToolResult> {
+  if (!isMcpScopeMatch(getMcpScopeFromConnection(input.connection), input.scope)) {
+    throw new Error("MCP approval connection does not match its chat context.");
+  }
   const id = crypto.randomUUID();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + APPROVAL_TTL_MS);
@@ -38,12 +48,12 @@ export async function requestMcpActionApproval(input: {
   const encrypted = await encryptMcpSecret(input.env, JSON.stringify(input.toolInput), {
     authenticatedByUserId: input.connection.authenticatedByUserId,
     connectionId: input.connection.id,
-    profileId: input.agentProfileId,
+    profileId: getMcpCredentialScopeId(input.connection),
     purpose: `approval:${id}`,
     workspaceId: input.workspaceId,
   });
   await db.insert(aiAgentPendingAction).values({
-    agentProfileId: input.agentProfileId,
+    agentProfileId: input.scope.type === "agent" ? input.scope.agentProfileId : null,
     connectionId: input.connection.id,
     createdAt: now,
     encryptedToolInput: `${encrypted.keyVersion}:${encrypted.ciphertext}`,
@@ -53,6 +63,8 @@ export async function requestMcpActionApproval(input: {
     externalToolName: input.snapshot.externalName,
     id,
     inputHash,
+    mcpScopeType: input.scope.type,
+    mcpScopeUserId: input.scope.type === "personal" ? input.scope.userId : null,
     status: "pending",
     threadId: input.threadId,
     toolCallId: input.toolCallId,
@@ -97,18 +109,36 @@ export async function executeApprovedMcpAction(input: {
 }) {
   const action = input.action;
   if (
-    !action.agentProfileId || !action.connectionId || !action.externalToolName ||
+    !action.mcpScopeType || !action.connectionId || !action.externalToolName ||
     !action.toolSchemaHash || !action.encryptedToolInput ||
     !action.encryptedToolInputIv || !action.encryptedToolInputAuthTag
   ) {
     throw new Error("MCP approval payload is incomplete.");
   }
-  await requireAgentProfileRole({
+  const scope: McpScope = action.mcpScopeType === "agent" && action.agentProfileId
+    ? { type: "agent", agentProfileId: action.agentProfileId }
+    : action.mcpScopeType === "personal" && action.mcpScopeUserId
+      ? { type: "personal", userId: action.mcpScopeUserId }
+      : (() => { throw new Error("MCP approval scope is invalid."); })();
+  await requireMcpScopeAccess({
     minimum: "user",
-    profileId: action.agentProfileId,
+    scope,
     userId: input.userId,
     workspaceId: input.workspaceId,
   });
+  const [thread] = await db.select({
+    agentProfileId: aiChatThread.agentProfileId,
+    userId: aiChatThread.userId,
+    workspaceId: aiChatThread.workspaceId,
+  }).from(aiChatThread).where(eq(aiChatThread.id, action.threadId)).limit(1);
+  if (
+    !thread || thread.workspaceId !== input.workspaceId || thread.userId !== input.userId ||
+    (scope.type === "agent"
+      ? thread.agentProfileId !== scope.agentProfileId
+      : thread.agentProfileId !== null)
+  ) {
+    throw new Error("MCP approval does not match its chat context.");
+  }
   await discoverConnectionTools({ connectionId: action.connectionId, env: input.env });
   const [context] = await db.select({
     connection: aiMcpConnection,
@@ -121,7 +151,10 @@ export async function executeApprovedMcpAction(input: {
     ),
   ).where(and(
     eq(aiMcpConnection.id, action.connectionId),
-    eq(aiMcpConnection.agentProfileId, action.agentProfileId),
+    eq(aiMcpConnection.scopeType, scope.type),
+    scope.type === "agent"
+      ? eq(aiMcpConnection.agentProfileId, scope.agentProfileId)
+      : eq(aiMcpConnection.scopeUserId, scope.userId),
     eq(aiMcpConnection.workspaceId, input.workspaceId),
   )).limit(1);
   if (
@@ -150,7 +183,7 @@ export async function executeApprovedMcpAction(input: {
   }, {
     authenticatedByUserId: context.connection.authenticatedByUserId,
     connectionId: context.connection.id,
-    profileId: action.agentProfileId,
+    profileId: getMcpCredentialScopeId(context.connection),
     purpose: `approval:${action.id}`,
     workspaceId: input.workspaceId,
   });
@@ -170,11 +203,11 @@ export async function executeApprovedMcpAction(input: {
     ))
     .limit(1);
   const result = await executeMcpTool({
-    agentProfileId: action.agentProfileId,
     connectionId: context.connection.id,
     env: input.env,
     externalName: context.snapshot.externalName,
     schemaHash: context.snapshot.schemaHash,
+    scope,
     threadId: action.threadId,
     toolInput,
     toolExecutionId: toolExecution?.id,
@@ -202,7 +235,7 @@ export async function executeApprovedMcpAction(input: {
 }
 
 export function isMcpPendingAction(action: typeof aiAgentPendingAction.$inferSelect) {
-  return Boolean(action.connectionId && action.externalToolName && action.agentProfileId);
+  return Boolean(action.connectionId && action.externalToolName && action.mcpScopeType);
 }
 
 export function dynamicMcpToolName(

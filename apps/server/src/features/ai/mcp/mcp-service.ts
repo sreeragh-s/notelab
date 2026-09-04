@@ -15,12 +15,20 @@ import {
   aiWorkspaceMcpPolicy,
 } from "../../../infrastructure/database/schema";
 import type { RuntimeEnv } from "../../../shared/config/config";
-import { requireAgentProfileRole } from "../agents/agent-profile-service";
+import { AgentProfileError } from "../agents/agent-profile-service";
 import { getMcpCatalogEntry } from "./catalog";
 import { MCP_LIMITS, isMcpCustomServersEnabled } from "./config";
 import { encryptMcpSecret } from "./credential-crypto";
 import { discoverConnectionTools } from "./mcp-client";
 import { McpEgressError, normalizeMcpEndpoint, validateMcpCustomHeaderName } from "./secure-egress";
+import {
+  getMcpCredentialScopeId,
+  getMcpScopeColumns,
+  getMcpScopeFromConnection,
+  getMcpScopeRef,
+  requireMcpScopeAccess,
+  type McpScope,
+} from "./mcp-scope";
 
 export class McpServiceError extends Error {
   constructor(
@@ -105,7 +113,7 @@ export async function removeApprovedMcpServer(input: {
 }
 
 export async function createMcpConnection(input: {
-  agentProfileId: string;
+  scope: McpScope;
   approvedServerId?: string;
   authMethod: "oauth" | "headers";
   catalogId?: string;
@@ -113,16 +121,16 @@ export async function createMcpConnection(input: {
   userId: string;
   workspaceId: string;
 }) {
-  await requireAgentProfileRole({
+  await requireMcpScopeAccess({
     minimum: "editor",
-    profileId: input.agentProfileId,
+    scope: input.scope,
     userId: input.userId,
     workspaceId: input.workspaceId,
   });
   const [connectionCount] = await db.select({ value: count() }).from(aiMcpConnection)
-    .where(eq(aiMcpConnection.agentProfileId, input.agentProfileId));
+    .where(scopeConnectionCondition(input.scope));
   if (Number(connectionCount?.value ?? 0) >= MCP_LIMITS.maxConnectionsPerAgent) {
-    throw new McpServiceError("mcp_connection_limit", "An agent can have at most 10 connections.", 409);
+    throw new McpServiceError("mcp_connection_limit", "This Ask AI context can have at most 10 connections.", 409);
   }
   const policy = await getWorkspaceMcpPolicy(input.workspaceId);
   let endpointUrl: string;
@@ -163,7 +171,7 @@ export async function createMcpConnection(input: {
   }
   const now = new Date();
   const [connection] = await db.insert(aiMcpConnection).values({
-    agentProfileId: input.agentProfileId,
+    ...getMcpScopeColumns(input.scope),
     approvedServerId,
     authenticatedByUserId: input.userId,
     authMethod: input.authMethod,
@@ -179,7 +187,7 @@ export async function createMcpConnection(input: {
   if (!connection) throw new McpServiceError("mcp_connection_create_failed", "Could not create connection.", 409);
   await recordMcpActivity({
     actorUserId: input.userId,
-    agentProfileId: input.agentProfileId,
+    scope: input.scope,
     connectionId: connection.id,
     eventType: "connection_created",
     outcome: "succeeded",
@@ -190,7 +198,7 @@ export async function createMcpConnection(input: {
 }
 
 export async function submitMcpHeaders(input: {
-  agentProfileId: string;
+  scope: McpScope;
   connectionId: string;
   env: RuntimeEnv;
   headers: Array<{ name: string; value: string }>;
@@ -217,7 +225,7 @@ export async function submitMcpHeaders(input: {
   const secret = await encryptMcpSecret(input.env, JSON.stringify({ kind: "headers", headers }), {
     authenticatedByUserId: input.userId,
     connectionId: connection.id,
-    profileId: connection.agentProfileId,
+    profileId: getMcpCredentialScopeId(connection),
     purpose: "connection_auth",
     workspaceId: connection.workspaceId,
   });
@@ -240,7 +248,7 @@ export async function submitMcpHeaders(input: {
   }
   await recordMcpActivity({
     actorUserId: input.userId,
-    agentProfileId: input.agentProfileId,
+    scope: input.scope,
     connectionId: connection.id,
     eventType: "connection_authenticated",
     metadata: { discoveredTools },
@@ -252,13 +260,16 @@ export async function submitMcpHeaders(input: {
 }
 
 export async function listMcpConnections(input: {
-  agentProfileId: string;
+  scope: McpScope;
   userId: string;
   workspaceId: string;
 }) {
-  await requireAgentProfileRole({ ...input, profileId: input.agentProfileId, minimum: "user" });
+  await requireMcpScopeAccess({ ...input, minimum: "user" });
   const connections = await db.select().from(aiMcpConnection)
-    .where(eq(aiMcpConnection.agentProfileId, input.agentProfileId))
+    .where(and(
+      eq(aiMcpConnection.workspaceId, input.workspaceId),
+      scopeConnectionCondition(input.scope),
+    ))
     .orderBy(aiMcpConnection.serverLabel);
   const membershipByAuthenticator = new Map<string, boolean>();
   for (const connection of connections) {
@@ -289,15 +300,15 @@ export async function listMcpConnections(input: {
 }
 
 export async function getMcpConnection(input: {
-  agentProfileId: string;
+  scope: McpScope;
   connectionId: string;
   userId: string;
   workspaceId: string;
 }) {
-  await requireAgentProfileRole({ ...input, profileId: input.agentProfileId, minimum: "user" });
+  await requireMcpScopeAccess({ ...input, minimum: "user" });
   const [connection] = await db.select().from(aiMcpConnection).where(and(
     eq(aiMcpConnection.id, input.connectionId),
-    eq(aiMcpConnection.agentProfileId, input.agentProfileId),
+    scopeConnectionCondition(input.scope),
     eq(aiMcpConnection.workspaceId, input.workspaceId),
   )).limit(1);
   if (!connection) throw new McpServiceError("mcp_connection_not_found", "Connection not found.", 404);
@@ -305,7 +316,7 @@ export async function getMcpConnection(input: {
 }
 
 export async function refreshMcpConnection(input: {
-  agentProfileId: string;
+  scope: McpScope;
   connectionId: string;
   env: RuntimeEnv;
   userId: string;
@@ -317,7 +328,7 @@ export async function refreshMcpConnection(input: {
 }
 
 export async function updateMcpToolPolicies(input: {
-  agentProfileId: string;
+  scope: McpScope;
   connectionId: string;
   policies: Array<{
     classification: "read" | "write" | "unknown";
@@ -341,12 +352,12 @@ export async function updateMcpToolPolicies(input: {
   const [currentlyEnabled] = await db.select({ value: count() }).from(aiMcpToolSnapshot)
     .innerJoin(aiMcpConnection, eq(aiMcpConnection.id, aiMcpToolSnapshot.connectionId))
     .where(and(
-      eq(aiMcpConnection.agentProfileId, input.agentProfileId),
+      scopeConnectionCondition(input.scope),
       eq(aiMcpToolSnapshot.enabled, true),
     ));
   const selectedCurrentlyEnabled = current.filter((tool) => tool.enabled).length;
   if (Number(currentlyEnabled?.value ?? 0) - selectedCurrentlyEnabled + enabling > MCP_LIMITS.maxEnabledToolsPerAgent) {
-    throw new McpServiceError("mcp_enabled_tool_limit", "An agent can enable at most 100 connector tools.", 409);
+    throw new McpServiceError("mcp_enabled_tool_limit", "This Ask AI context can enable at most 100 connector tools.", 409);
   }
   const now = new Date();
   await db.transaction(async (tx) => {
@@ -370,7 +381,7 @@ export async function updateMcpToolPolicies(input: {
 }
 
 export async function setMcpAlwaysAllow(input: {
-  agentProfileId: string;
+  scope: McpScope;
   confirmed: boolean;
   connectionId: string;
   enabled: boolean;
@@ -389,16 +400,16 @@ export async function setMcpAlwaysAllow(input: {
 }
 
 export async function disconnectMcpConnection(input: {
-  agentProfileId: string;
+  scope: McpScope;
   connectionId: string;
   env: RuntimeEnv;
   userId: string;
   workspaceId: string;
 }) {
-  await requireAgentProfileRole({ ...input, profileId: input.agentProfileId, minimum: "editor" });
+  await requireMcpScopeAccess({ ...input, minimum: "editor" });
   const [connection] = await db.select().from(aiMcpConnection).where(and(
     eq(aiMcpConnection.id, input.connectionId),
-    eq(aiMcpConnection.agentProfileId, input.agentProfileId),
+    scopeConnectionCondition(input.scope),
     eq(aiMcpConnection.workspaceId, input.workspaceId),
   )).limit(1);
   if (!connection) return false;
@@ -412,7 +423,7 @@ export async function disconnectMcpConnection(input: {
   }
   await recordMcpActivity({
     actorUserId: input.userId,
-    agentProfileId: input.agentProfileId,
+    scope: input.scope,
     connectionId: connection.id,
     eventType: "connection_disconnected",
     outcome: "succeeded",
@@ -424,13 +435,13 @@ export async function disconnectMcpConnection(input: {
 }
 
 export async function listMcpActivity(input: {
-  agentProfileId: string;
+  scope: McpScope;
   userId: string;
   workspaceId: string;
 }) {
-  await requireAgentProfileRole({ ...input, profileId: input.agentProfileId, minimum: "editor" });
+  await requireMcpScopeAccess({ ...input, minimum: input.scope.type === "agent" ? "editor" : "user" });
   const rows = await db.select().from(aiMcpActivity).where(and(
-    eq(aiMcpActivity.agentProfileId, input.agentProfileId),
+    scopeActivityCondition(input.scope),
     eq(aiMcpActivity.workspaceId, input.workspaceId),
   )).orderBy(desc(aiMcpActivity.createdAt)).limit(200);
   return rows.map((row): McpActivityEntry => ({
@@ -448,7 +459,7 @@ export async function listMcpActivity(input: {
 
 export async function recordMcpActivity(input: {
   actorUserId?: string | null;
-  agentProfileId: string;
+  scope: McpScope;
   connectionId?: string | null;
   eventType: string;
   metadata?: Record<string, string | number | boolean | null>;
@@ -459,7 +470,7 @@ export async function recordMcpActivity(input: {
 }) {
   await db.insert(aiMcpActivity).values({
     actorUserId: input.actorUserId ?? null,
-    agentProfileId: input.agentProfileId,
+    ...getMcpScopeColumns(input.scope),
     connectionId: input.connectionId ?? null,
     createdAt: new Date(),
     eventType: input.eventType.slice(0, 120),
@@ -473,15 +484,15 @@ export async function recordMcpActivity(input: {
 }
 
 async function requireOwnedConnection(input: {
-  agentProfileId: string;
+  scope: McpScope;
   connectionId: string;
   userId: string;
   workspaceId: string;
 }) {
-  await requireAgentProfileRole({ ...input, profileId: input.agentProfileId, minimum: "editor" });
+  await requireMcpScopeAccess({ ...input, minimum: "editor" });
   const [connection] = await db.select().from(aiMcpConnection).where(and(
     eq(aiMcpConnection.id, input.connectionId),
-    eq(aiMcpConnection.agentProfileId, input.agentProfileId),
+    scopeConnectionCondition(input.scope),
     eq(aiMcpConnection.workspaceId, input.workspaceId),
   )).limit(1);
   if (!connection) throw new McpServiceError("mcp_connection_not_found", "Connection not found.", 404);
@@ -512,8 +523,10 @@ async function listConnectionTools(connectionId: string): Promise<McpToolPolicy[
 }
 
 function serializeConnection(connection: typeof aiMcpConnection.$inferSelect): McpConnectionSummary {
+  const scope = getMcpScopeFromConnection(connection);
   return {
     agentProfileId: connection.agentProfileId,
+    scope: getMcpScopeRef(scope),
     alwaysAllowEnabled: connection.alwaysAllowEnabled,
     authenticatedByUserId: connection.authenticatedByUserId,
     authMethod: connection.authMethod as "oauth" | "headers",
@@ -525,6 +538,30 @@ function serializeConnection(connection: typeof aiMcpConnection.$inferSelect): M
     serverLabel: connection.serverLabel,
     state: connection.state as McpConnectionSummary["state"],
   };
+}
+
+function scopeConnectionCondition(scope: McpScope) {
+  return scope.type === "agent"
+    ? and(
+        eq(aiMcpConnection.scopeType, "agent"),
+        eq(aiMcpConnection.agentProfileId, scope.agentProfileId),
+      )
+    : and(
+        eq(aiMcpConnection.scopeType, "personal"),
+        eq(aiMcpConnection.scopeUserId, scope.userId),
+      );
+}
+
+function scopeActivityCondition(scope: McpScope) {
+  return scope.type === "agent"
+    ? and(
+        eq(aiMcpActivity.scopeType, "agent"),
+        eq(aiMcpActivity.agentProfileId, scope.agentProfileId),
+      )
+    : and(
+        eq(aiMcpActivity.scopeType, "personal"),
+        eq(aiMcpActivity.scopeUserId, scope.userId),
+      );
 }
 
 function sanitizeActivityMetadata(value: unknown): Record<string, string | number | boolean | null> {
@@ -539,6 +576,9 @@ function sanitizeActivityMetadata(value: unknown): Record<string, string | numbe
 
 export function toMcpServiceError(error: unknown) {
   if (error instanceof McpServiceError) return error;
+  if (error instanceof AgentProfileError) {
+    return new McpServiceError(error.code, error.message, error.status);
+  }
   if (error instanceof McpEgressError) {
     return new McpServiceError(error.code, error.message, 400);
   }

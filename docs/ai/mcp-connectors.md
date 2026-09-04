@@ -1,8 +1,9 @@
 # Custom Agents and MCP connectors
 
 Custom Agents are shareable Ask AI profiles with scoped instructions and remote
-Model Context Protocol (MCP) tools. The feature is disabled by default and does
-not change personal Ask AI, existing threads, native page permissions, or native
+Model Context Protocol (MCP) tools. Personal Ask AI can also own private MCP
+connections scoped to one member and workspace. The feature is disabled by
+default and does not change existing threads, native page permissions, or native
 database permissions.
 
 ## Product contract
@@ -14,8 +15,9 @@ database permissions.
 - Conversations and staged external data belong to the invoking user. Editors
   receive sanitized operational activity, never prompts, arguments, credentials,
   raw responses, or another member's conversation.
-- Each connection belongs to one agent and one server. The member who
-  authenticates it owns its credential. Agent users invoke that delegated
+- Each connection belongs either to Personal Ask AI for one workspace member or
+  to one custom agent. Personal connections are private and are never inherited
+  by custom agents. Agent users invoke the agent connection's delegated
   credential, which the setup and sharing UI discloses.
 - Only the authenticator can replace credentials or edit execution policies.
   Owners and editors can disable or disconnect a connection. Credential ownership
@@ -66,6 +68,11 @@ same-zone requests from bypassing the public front door.
 MCP annotations are hints only. Zilobase stores the effective `read`, `write`, or
 `unknown` classification, and an unknown tool or descriptor fails closed.
 
+The Ask AI workspace exposes Personal Ask AI and accessible custom agents in a
+context rail. New chats bind immutably to the selected context. History remains
+available from the header and connector/application catalogs appear only in the
+contextual Settings side panel.
+
 ## Configuration
 
 Generate a 32-byte key and configure a rotatable JSON keyring:
@@ -95,7 +102,7 @@ a write before it can run.
 
 ## Limits
 
-- 10 connections and 100 enabled tools per agent.
+- 10 connections and 100 enabled tools per personal or agent context.
 - 40 relevant connector tools exposed to the model per turn.
 - 8 connector calls inside the existing 15-step turn limit.
 - 30 second call timeout and 5 MiB raw response maximum.
@@ -105,7 +112,8 @@ a write before it can run.
 
 ## Operations and rollout
 
-Apply migration `0078_mcp_connectors.sql`, configure the encryption keyring, and
+Apply migrations `0078_mcp_connectors.sql` and
+`0079_scoped_mcp_connections.sql`, configure the encryption keyring, and
 keep execution disabled while testing local fixtures. Roll out catalog reads,
 one-time imports, approved custom servers, then automatic writes. Figma stays
 visible but unavailable until Zilobase is approved as a supported remote MCP

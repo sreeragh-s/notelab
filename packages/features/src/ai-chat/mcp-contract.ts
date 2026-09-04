@@ -8,6 +8,10 @@ export type McpConnectionState =
   | "reconnect_required"
   | "disabled"
 
+export type McpConnectionScopeRef =
+  | { type: "personal" }
+  | { type: "agent"; agentProfileId: string }
+
 export type AiAgentProfileSummary = {
   id: string
   name: string
@@ -69,7 +73,8 @@ export type McpToolPolicy = {
 
 export type McpConnectionSummary = {
   id: string
-  agentProfileId: string
+  scope: McpConnectionScopeRef
+  agentProfileId: string | null
   catalogId: string | null
   serverLabel: string
   endpointUrl: string

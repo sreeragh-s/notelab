@@ -31,7 +31,13 @@ import {
 } from "../tools/database/blueprint/schema";
 import { resolveDatabaseBlueprintViewConfig } from "../tools/database/blueprint/view-config";
 import { enqueueAiJob, PermanentAiJobError, type AiJobHandler } from "../jobs/ai-jobs";
-import { requireAgentProfileRole } from "../agents/agent-profile-service";
+import {
+  agentMcpScope,
+  getMcpScopeColumns,
+  personalMcpScope,
+  requireMcpScopeAccess,
+  type McpScope,
+} from "./mcp-scope";
 
 const supportedTypeSchema = z.enum(["text", "number", "checkbox", "url", "email", "phone", "date"]);
 export const mcpMaterializationInputSchema = z.object({
@@ -89,14 +95,16 @@ export function buildMcpMaterializationTools(context: {
   workspaceId: string;
   withDb<T>(fn: () => Promise<T>): Promise<T>;
 }): ToolSet {
-  if (!context.agentProfileId) return {};
+  const scope = context.agentProfileId
+    ? agentMcpScope(context.agentProfileId)
+    : personalMcpScope(context.userId);
   return {
     materializeConnectedDataAsDatabase: tool({
       description: "Queue one-time creation of a native Zilobase database from connector data returned in this private thread. Use only dataset IDs or tool execution IDs returned by connector tools. Do not pass raw rows. The user must have previewed the sample and asked to create the database.",
       inputSchema: mcpMaterializationInputSchema,
       execute: (input) => context.withDb(() => queueMcpMaterialization({
         ...context,
-        agentProfileId: context.agentProfileId!,
+        scope,
         spec: input,
       })),
     }),
@@ -104,16 +112,16 @@ export function buildMcpMaterializationTools(context: {
 }
 
 export async function queueMcpMaterialization(input: {
-  agentProfileId: string;
   env: RuntimeEnv;
+  scope: McpScope;
   spec: z.infer<typeof mcpMaterializationInputSchema>;
   threadId: string;
   userId: string;
   workspaceId: string;
 }): Promise<AgentToolResult> {
-  await requireAgentProfileRole({
+  await requireMcpScopeAccess({
     minimum: "user",
-    profileId: input.agentProfileId,
+    scope: input.scope,
     userId: input.userId,
     workspaceId: input.workspaceId,
   });
@@ -127,7 +135,10 @@ export async function queueMcpMaterialization(input: {
     eq(aiMcpDataset.workspaceId, input.workspaceId),
     eq(aiMcpDataset.userId, input.userId),
     eq(aiMcpDataset.threadId, input.threadId),
-    eq(aiMcpDataset.agentProfileId, input.agentProfileId),
+    eq(aiMcpDataset.scopeType, input.scope.type),
+    input.scope.type === "agent"
+      ? eq(aiMcpDataset.agentProfileId, input.scope.agentProfileId)
+      : eq(aiMcpDataset.scopeUserId, input.scope.userId),
     gt(aiMcpDataset.expiresAt, new Date()),
   ));
   const foundDatasetIds = new Set(datasets.map((dataset) => dataset.id));
@@ -227,7 +238,7 @@ export async function queueMcpMaterialization(input: {
   );
   await db.transaction(async (tx) => {
     await tx.insert(aiMcpMaterialization).values({
-      agentProfileId: input.agentProfileId,
+      ...getMcpScopeColumns(input.scope),
       completedRows: 0,
       createdAt: now,
       dataSourceId: target.dataSourceId,

@@ -554,6 +554,13 @@
       "when": 1788537600000,
       "tag": "0078_mcp_connectors",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1788541200000,
+      "tag": "0079_scoped_mcp_connections",
+      "breakpoints": true
     }
   ]
 }

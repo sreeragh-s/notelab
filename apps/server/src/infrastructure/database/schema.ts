@@ -2248,9 +2248,11 @@ export const aiMcpConnection = pgTable(
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => workspace.id, { onDelete: "cascade" }),
+    scopeType: text("scope_type").notNull().default("agent"),
     agentProfileId: text("agent_profile_id")
-      .notNull()
       .references(() => aiAgentProfile.id, { onDelete: "cascade" }),
+    scopeUserId: text("scope_user_id")
+      .references(() => user.id, { onDelete: "cascade" }),
     catalogId: text("catalog_id"),
     approvedServerId: text("approved_server_id").references(
       () => aiMcpApprovedServer.id,
@@ -2273,7 +2275,12 @@ export const aiMcpConnection = pgTable(
     uniqueIndex("ai_mcp_connection_profile_endpoint_unique").on(
       table.agentProfileId,
       table.endpointUrl,
-    ),
+    ).where(sql`${table.scopeType} = 'agent'`),
+    uniqueIndex("ai_mcp_connection_personal_endpoint_unique").on(
+      table.workspaceId,
+      table.scopeUserId,
+      table.endpointUrl,
+    ).where(sql`${table.scopeType} = 'personal'`),
     index("ai_mcp_connection_profile_state_idx").on(
       table.agentProfileId,
       table.state,
@@ -2285,6 +2292,10 @@ export const aiMcpConnection = pgTable(
     check(
       "ai_mcp_connection_state_check",
       sql`${table.state} in ('connecting', 'connected', 'degraded', 'reconnect_required', 'disabled')`,
+    ),
+    check(
+      "ai_mcp_connection_scope_check",
+      sql`(${table.scopeType} = 'agent' and ${table.agentProfileId} is not null and ${table.scopeUserId} is null) or (${table.scopeType} = 'personal' and ${table.agentProfileId} is null and ${table.scopeUserId} is not null and ${table.authenticatedByUserId} = ${table.scopeUserId})`,
     ),
   ],
 );
@@ -2398,9 +2409,11 @@ export const aiMcpActivity = pgTable(
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => workspace.id, { onDelete: "cascade" }),
+    scopeType: text("scope_type").notNull().default("agent"),
     agentProfileId: text("agent_profile_id")
-      .notNull()
       .references(() => aiAgentProfile.id, { onDelete: "cascade" }),
+    scopeUserId: text("scope_user_id")
+      .references(() => user.id, { onDelete: "cascade" }),
     connectionId: text("connection_id").references(
       () => aiMcpConnection.id,
       { onDelete: "set null" },
@@ -2419,6 +2432,15 @@ export const aiMcpActivity = pgTable(
     index("ai_mcp_activity_profile_created_idx").on(
       table.agentProfileId,
       table.createdAt,
+    ),
+    index("ai_mcp_activity_personal_created_idx").on(
+      table.workspaceId,
+      table.scopeUserId,
+      table.createdAt,
+    ),
+    check(
+      "ai_mcp_activity_scope_check",
+      sql`(${table.scopeType} = 'agent' and ${table.agentProfileId} is not null and ${table.scopeUserId} is null) or (${table.scopeType} = 'personal' and ${table.agentProfileId} is null and ${table.scopeUserId} is not null)`,
     ),
   ],
 );
@@ -2747,6 +2769,10 @@ export const aiAgentPendingAction = pgTable(
       () => aiAgentProfile.id,
       { onDelete: "cascade" },
     ),
+    mcpScopeType: text("mcp_scope_type"),
+    mcpScopeUserId: text("mcp_scope_user_id").references(() => user.id, {
+      onDelete: "cascade",
+    }),
     connectionId: text("connection_id").references(() => aiMcpConnection.id, {
       onDelete: "cascade",
     }),
@@ -2781,6 +2807,10 @@ export const aiAgentPendingAction = pgTable(
       "ai_agent_pending_action_status_check",
       sql`${table.status} in ('pending', 'executing', 'succeeded', 'failed', 'rejected', 'expired')`,
     ),
+    check(
+      "ai_agent_pending_action_mcp_scope_check",
+      sql`${table.connectionId} is null or (${table.mcpScopeType} = 'agent' and ${table.agentProfileId} is not null and ${table.mcpScopeUserId} is null) or (${table.mcpScopeType} = 'personal' and ${table.agentProfileId} is null and ${table.mcpScopeUserId} is not null)`,
+    ),
   ],
 );
 
@@ -2791,9 +2821,11 @@ export const aiMcpDataset = pgTable(
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => workspace.id, { onDelete: "cascade" }),
+    scopeType: text("scope_type").notNull().default("agent"),
     agentProfileId: text("agent_profile_id")
-      .notNull()
       .references(() => aiAgentProfile.id, { onDelete: "cascade" }),
+    scopeUserId: text("scope_user_id")
+      .references(() => user.id, { onDelete: "cascade" }),
     connectionId: text("connection_id")
       .notNull()
       .references(() => aiMcpConnection.id, { onDelete: "cascade" }),
@@ -2826,6 +2858,10 @@ export const aiMcpDataset = pgTable(
     check(
       "ai_mcp_dataset_limits_check",
       sql`${table.rowCount} between 0 and 10000 and ${table.byteSize} between 0 and 26214400`,
+    ),
+    check(
+      "ai_mcp_dataset_scope_check",
+      sql`(${table.scopeType} = 'agent' and ${table.agentProfileId} is not null and ${table.scopeUserId} is null) or (${table.scopeType} = 'personal' and ${table.agentProfileId} is null and ${table.scopeUserId} is not null)`,
     ),
   ],
 );
@@ -2962,9 +2998,11 @@ export const aiMcpMaterialization = pgTable(
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => workspace.id, { onDelete: "cascade" }),
+    scopeType: text("scope_type").notNull().default("agent"),
     agentProfileId: text("agent_profile_id")
-      .notNull()
       .references(() => aiAgentProfile.id, { onDelete: "cascade" }),
+    scopeUserId: text("scope_user_id")
+      .references(() => user.id, { onDelete: "cascade" }),
     threadId: text("thread_id")
       .notNull()
       .references(() => aiChatThread.id, { onDelete: "cascade" }),
@@ -2990,6 +3028,10 @@ export const aiMcpMaterialization = pgTable(
     check(
       "ai_mcp_materialization_status_check",
       sql`${table.status} in ('queued', 'running', 'succeeded', 'partial', 'failed')`,
+    ),
+    check(
+      "ai_mcp_materialization_scope_check",
+      sql`(${table.scopeType} = 'agent' and ${table.agentProfileId} is not null and ${table.scopeUserId} is null) or (${table.scopeType} = 'personal' and ${table.agentProfileId} is null and ${table.scopeUserId} is not null)`,
     ),
   ],
 );

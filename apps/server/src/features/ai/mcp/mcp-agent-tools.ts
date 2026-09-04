@@ -13,6 +13,7 @@ import { isMcpEnabled, isMcpExternalWritesEnabled, MCP_LIMITS } from "./config";
 import { requestMcpActionApproval, dynamicMcpToolName } from "./mcp-approval";
 import { executeMcpTool, type McpExecutionDescriptor } from "./mcp-client";
 import { getWorkspaceMcpPolicy, recordMcpActivity } from "./mcp-service";
+import { agentMcpScope, personalMcpScope } from "./mcp-scope";
 
 export async function buildMcpAgentTools(input: {
   agentProfileId: string | null;
@@ -26,9 +27,12 @@ export async function buildMcpAgentTools(input: {
   workspaceId: string;
 }) {
   const auditDescriptors = new Map<string, McpExecutionDescriptor>();
-  if (!input.agentProfileId || !isMcpEnabled(input.env)) {
+  if (!isMcpEnabled(input.env)) {
     return { auditDescriptors, omitted: 0, tools: {} as ToolSet };
   }
+  const scope = input.agentProfileId
+    ? agentMcpScope(input.agentProfileId)
+    : personalMcpScope(input.userId);
   const policy = await getWorkspaceMcpPolicy(input.workspaceId);
   const rows = await db.select({
     connection: aiMcpConnection,
@@ -37,7 +41,10 @@ export async function buildMcpAgentTools(input: {
     aiMcpConnection,
     eq(aiMcpConnection.id, aiMcpToolSnapshot.connectionId),
   ).where(and(
-    eq(aiMcpConnection.agentProfileId, input.agentProfileId),
+    eq(aiMcpConnection.scopeType, scope.type),
+    scope.type === "agent"
+      ? eq(aiMcpConnection.agentProfileId, scope.agentProfileId)
+      : eq(aiMcpConnection.scopeUserId, scope.userId),
     eq(aiMcpConnection.workspaceId, input.workspaceId),
     eq(aiMcpConnection.state, "connected"),
     eq(aiMcpToolSnapshot.enabled, true),
@@ -88,9 +95,9 @@ export async function buildMcpAgentTools(input: {
             )).limit(1));
           const result = mustAsk
             ? await input.withDb(() => requestMcpActionApproval({
-                agentProfileId: input.agentProfileId!,
                 connection,
                 env: input.env,
+                scope,
                 snapshot,
                 threadId: input.threadId,
                 toolCallId: options.toolCallId,
@@ -99,11 +106,11 @@ export async function buildMcpAgentTools(input: {
                 workspaceId: input.workspaceId,
               }))
             : await input.withDb(() => executeMcpTool({
-                agentProfileId: input.agentProfileId!,
                 connectionId: connection.id,
                 env: input.env,
                 externalName: snapshot.externalName,
                 schemaHash: snapshot.schemaHash,
+                scope,
                 threadId: input.threadId,
                 toolInput,
                 toolExecutionId: execution?.id,
@@ -112,7 +119,6 @@ export async function buildMcpAgentTools(input: {
               }));
           await input.withDb(() => recordMcpActivity({
             actorUserId: input.userId,
-            agentProfileId: input.agentProfileId!,
             connectionId: connection.id,
             eventType: mustAsk ? "tool_approval_requested" : "tool_invoked",
             metadata: {
@@ -123,6 +129,7 @@ export async function buildMcpAgentTools(input: {
               ? "outcome_unknown"
               : result.ok ? "succeeded" : result.status,
             providerLabel: connection.serverLabel,
+            scope,
             toolName: snapshot.externalName,
             workspaceId: input.workspaceId,
           }));

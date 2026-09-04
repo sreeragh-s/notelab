@@ -9,6 +9,7 @@ import type {
   McpActivityEntry,
   McpApprovedServer,
   McpConnectionSummary,
+  McpConnectionScopeRef,
   McpServerCatalogEntry,
   McpWorkspacePolicy,
 } from "./mcp-contract"
@@ -44,7 +45,13 @@ export function useAiAgentProfile(agentId: string | null) {
 }
 
 export function useCreateAiAgentProfile() {
-  return useAgentMutation<{ name: string }, { agent: AiAgentProfileDetail }>(
+  return useAgentMutation<{
+    name: string
+    description?: string
+    instructions?: string
+    defaultModel?: string
+    icon?: unknown
+  }, { agent: AiAgentProfileDetail }>(
     () => "/api/ai/agents",
     "POST",
   )
@@ -156,34 +163,46 @@ export function useMcpPolicyMutation<TInput extends object, TOutput>(
   })
 }
 
-export function useMcpConnections(agentId: string | null) {
+export function mcpScopeApiPath(scope: McpConnectionScopeRef) {
+  return scope.type === "agent"
+    ? `/api/ai/agents/${encodeURIComponent(scope.agentProfileId)}`
+    : "/api/ai/mcp"
+}
+
+function mcpScopeQueryKey(scope: McpConnectionScopeRef | null) {
+  return scope?.type === "agent"
+    ? ["agent", scope.agentProfileId]
+    : ["personal"]
+}
+
+export function useMcpConnections(scope: McpConnectionScopeRef | null) {
   const { apiFetch } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
   return useQuery({
-    enabled: Boolean(workspaceId && agentId),
-    queryKey: ["workspaces", workspaceId ?? "none", "agents", agentId, "mcp-connections"],
+    enabled: Boolean(workspaceId && scope),
+    queryKey: ["workspaces", workspaceId ?? "none", "mcp", ...mcpScopeQueryKey(scope), "connections"],
     queryFn: ({ signal }) => apiFetch<{ connections: McpConnectionSummary[] }>(
-      `/api/ai/agents/${encodeURIComponent(agentId!)}/connections`,
+      `${mcpScopeApiPath(scope!)}/connections`,
       workspaceRequestOptions(workspaceId, { signal }),
     ).then((result) => result.connections),
   })
 }
 
-export function useMcpActivity(agentId: string | null, enabled: boolean) {
+export function useMcpActivity(scope: McpConnectionScopeRef | null, enabled: boolean) {
   const { apiFetch } = useZilobaseFeatures()
   const workspaceId = useActiveWorkspaceId()
   return useQuery({
-    enabled: Boolean(workspaceId && agentId && enabled),
-    queryKey: ["workspaces", workspaceId ?? "none", "agents", agentId, "mcp-activity"],
+    enabled: Boolean(workspaceId && scope && enabled),
+    queryKey: ["workspaces", workspaceId ?? "none", "mcp", ...mcpScopeQueryKey(scope), "activity"],
     queryFn: ({ signal }) => apiFetch<{ activity: McpActivityEntry[] }>(
-      `/api/ai/agents/${encodeURIComponent(agentId!)}/activity`,
+      `${mcpScopeApiPath(scope!)}/activity`,
       workspaceRequestOptions(workspaceId, { signal }),
     ).then((result) => result.activity),
   })
 }
 
 export function useMcpConnectionMutation<TInput extends object, TOutput>(
-  agentId: string | null,
+  scope: McpConnectionScopeRef | null,
   path: (input: TInput) => string,
   method: "POST" | "PUT" | "DELETE",
 ) {
@@ -201,7 +220,7 @@ export function useMcpConnectionMutation<TInput extends object, TOutput>(
     }),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: ["workspaces", workspaceId ?? "none", "agents", agentId, "mcp-connections"],
+        queryKey: ["workspaces", workspaceId ?? "none", "mcp", ...mcpScopeQueryKey(scope), "connections"],
       })
       void queryClient.invalidateQueries({ queryKey: aiAgentProfilesQueryKey(workspaceId) })
     },

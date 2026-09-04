@@ -23,19 +23,24 @@ import {
 } from "../../../shared/config/config";
 import { decryptMcpSecret, encryptMcpSecret } from "./credential-crypto";
 import { discoverConnectionTools } from "./mcp-client";
-import { requireAgentProfileRole } from "../agents/agent-profile-service";
 import { getMembership } from "../../access";
 import { createSecureMcpFetch } from "./secure-egress";
 import { McpServiceError } from "./mcp-service";
+import {
+  getMcpCredentialScopeId,
+  getMcpScopeFromConnection,
+  requireMcpScopeAccess,
+  type McpScope,
+} from "./mcp-scope";
 
 const OAUTH_ATTEMPT_TTL_MS = 10 * 60 * 1_000;
 
 export async function beginMcpOAuth(input: {
-  agentProfileId: string;
   connectionId: string;
   env: RuntimeEnv;
   userId: string;
   workspaceId: string;
+  scope: McpScope;
 }) {
   const connection = await requireOAuthConnection(input);
   const fetchFn = createSecureMcpFetch({ approvedUrls: new Set(), allowAnyPublicHttps: true });
@@ -72,7 +77,7 @@ export async function beginMcpOAuth(input: {
   const encryptedVerifier = await encryptMcpSecret(input.env, started.codeVerifier, {
     authenticatedByUserId: input.userId,
     connectionId: connection.id,
-    profileId: connection.agentProfileId,
+    profileId: getMcpCredentialScopeId(connection),
     purpose: "oauth_code_verifier",
     workspaceId: connection.workspaceId,
   });
@@ -120,9 +125,9 @@ export async function completeMcpOAuth(input: {
   if (!consumed) throw new McpServiceError("mcp_oauth_state_replayed", "OAuth request was already used.", 409);
   if (
     !(await getMembership(record.connection.workspaceId, record.connection.authenticatedByUserId)) ||
-    !(await requireAgentProfileRole({
+    !(await requireMcpScopeAccess({
       minimum: "editor",
-      profileId: record.connection.agentProfileId,
+      scope: getMcpScopeFromConnection(record.connection),
       userId: record.connection.authenticatedByUserId,
       workspaceId: record.connection.workspaceId,
     }).then(() => true).catch(() => false))
@@ -150,7 +155,7 @@ export async function completeMcpOAuth(input: {
   }, {
     authenticatedByUserId: record.connection.authenticatedByUserId,
     connectionId: record.connection.id,
-    profileId: record.connection.agentProfileId,
+    profileId: getMcpCredentialScopeId(record.connection),
     purpose: "oauth_code_verifier",
     workspaceId: record.connection.workspaceId,
   });
@@ -179,7 +184,7 @@ export async function completeMcpOAuth(input: {
   const encrypted = await encryptMcpSecret(input.env, JSON.stringify(credentialPayload), {
     authenticatedByUserId: record.connection.authenticatedByUserId,
     connectionId: record.connection.id,
-    profileId: record.connection.agentProfileId,
+    profileId: getMcpCredentialScopeId(record.connection),
     purpose: "connection_auth",
     workspaceId: record.connection.workspaceId,
   });
@@ -201,6 +206,15 @@ export async function completeMcpOAuth(input: {
     // The connection state describes the safe failure and the user can retry discovery.
   }
   return record.connection;
+}
+
+export async function getMcpOAuthCallbackScope(state: string) {
+  const [record] = await db.select({ connection: aiMcpConnection })
+    .from(aiMcpOauthAttempt)
+    .innerJoin(aiMcpConnection, eq(aiMcpConnection.id, aiMcpOauthAttempt.connectionId))
+    .where(eq(aiMcpOauthAttempt.stateHash, await sha256(state)))
+    .limit(1);
+  return record ? getMcpScopeFromConnection(record.connection) : null;
 }
 
 export function getMcpClientMetadata(env: RuntimeEnv) {
@@ -260,7 +274,7 @@ export async function refreshStoredMcpOAuthCredential(input: {
   const encrypted = await encryptMcpSecret(input.env, JSON.stringify(credential), {
     authenticatedByUserId: input.connection.authenticatedByUserId,
     connectionId: input.connection.id,
-    profileId: input.connection.agentProfileId,
+    profileId: getMcpCredentialScopeId(input.connection),
     purpose: "connection_auth",
     workspaceId: input.connection.workspaceId,
   });
@@ -287,7 +301,7 @@ export async function revokeStoredMcpOAuthCredential(input: {
   }, {
     authenticatedByUserId: input.connection.authenticatedByUserId,
     connectionId: input.connection.id,
-    profileId: input.connection.agentProfileId,
+    profileId: getMcpCredentialScopeId(input.connection),
     purpose: stored.secretPurpose,
     workspaceId: input.connection.workspaceId,
   });
@@ -379,7 +393,7 @@ async function resolveClientInformation(input: {
     ? await encryptMcpSecret(input.env, clientSecret, {
         authenticatedByUserId: input.connection.authenticatedByUserId,
         connectionId: input.connection.id,
-        profileId: input.connection.agentProfileId,
+        profileId: getMcpCredentialScopeId(input.connection),
         purpose: `oauth_client_secret:${input.issuer}`,
         workspaceId: input.connection.workspaceId,
       })
@@ -423,7 +437,7 @@ async function loadClientRegistration(
     }, {
       authenticatedByUserId: connection.authenticatedByUserId,
       connectionId: connection.id,
-      profileId: connection.agentProfileId,
+      profileId: getMcpCredentialScopeId(connection),
       purpose: `oauth_client_secret:${issuer}`,
       workspaceId: connection.workspaceId,
     });
@@ -433,20 +447,23 @@ async function loadClientRegistration(
 }
 
 async function requireOAuthConnection(input: {
-  agentProfileId: string;
   connectionId: string;
+  scope: McpScope;
   userId: string;
   workspaceId: string;
 }) {
-  await requireAgentProfileRole({
+  await requireMcpScopeAccess({
     minimum: "editor",
-    profileId: input.agentProfileId,
+    scope: input.scope,
     userId: input.userId,
     workspaceId: input.workspaceId,
   });
   const [connection] = await db.select().from(aiMcpConnection).where(and(
     eq(aiMcpConnection.id, input.connectionId),
-    eq(aiMcpConnection.agentProfileId, input.agentProfileId),
+    eq(aiMcpConnection.scopeType, input.scope.type),
+    input.scope.type === "agent"
+      ? eq(aiMcpConnection.agentProfileId, input.scope.agentProfileId)
+      : eq(aiMcpConnection.scopeUserId, input.scope.userId),
     eq(aiMcpConnection.workspaceId, input.workspaceId),
     eq(aiMcpConnection.authenticatedByUserId, input.userId),
     eq(aiMcpConnection.authMethod, "oauth"),

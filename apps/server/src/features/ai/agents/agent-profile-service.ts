@@ -181,9 +181,10 @@ export async function getAgentProfileDetail(input: {
     db.select().from(aiAgentProfileAccess).where(
       eq(aiAgentProfileAccess.profileId, input.profileId),
     ),
-    db.select().from(aiMcpConnection).where(
+    db.select().from(aiMcpConnection).where(and(
+      eq(aiMcpConnection.scopeType, "agent"),
       eq(aiMcpConnection.agentProfileId, input.profileId),
-    ),
+    )),
   ]);
   return {
     ...serializeProfileSummary(profile, role),
@@ -340,6 +341,10 @@ function serializeConnection(
 ): McpConnectionSummary {
   return {
     agentProfileId: connection.agentProfileId,
+    scope: {
+      type: "agent",
+      agentProfileId: connection.agentProfileId!,
+    },
     alwaysAllowEnabled: connection.alwaysAllowEnabled,
     authenticatedByUserId: connection.authenticatedByUserId,
     authMethod: connection.authMethod as "oauth" | "headers",

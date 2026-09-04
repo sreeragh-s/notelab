@@ -23,7 +23,8 @@ import {
   updateMcpToolPolicies,
   updateWorkspaceMcpPolicy,
 } from "./mcp-service";
-import { beginMcpOAuth, completeMcpOAuth, getMcpClientMetadata } from "./oauth";
+import { beginMcpOAuth, completeMcpOAuth, getMcpClientMetadata, getMcpOAuthCallbackScope } from "./oauth";
+import { agentMcpScope, getMcpScopeFromConnection, personalMcpScope } from "./mcp-scope";
 
 const createConnectionSchema = z.object({
   approvedServerId: z.string().uuid().optional(),
@@ -100,14 +101,14 @@ aiMcpRoutes.delete("/mcp/approved-servers/:serverId", async (c) => handleAdmin(c
 })));
 
 aiMcpRoutes.get("/agents/:agentId/connections", async (c) => handle(c, async (auth) => ({
-  connections: await listMcpConnections({ ...auth, agentProfileId: c.req.param("agentId") }),
+  connections: await listMcpConnections({ ...auth, scope: agentMcpScope(c.req.param("agentId")) }),
 })));
 
 aiMcpRoutes.post("/agents/:agentId/connections", async (c) => handle(c, async (auth) => ({
   connection: await createMcpConnection({
     ...createConnectionSchema.parse(await c.req.json()),
     ...auth,
-    agentProfileId: c.req.param("agentId"),
+    scope: agentMcpScope(c.req.param("agentId")),
     env: c.env,
   }),
 }), 201));
@@ -116,7 +117,7 @@ aiMcpRoutes.put("/agents/:agentId/connections/:connectionId/headers", async (c) 
   connection: await submitMcpHeaders({
     ...headersSchema.parse(await c.req.json()),
     ...auth,
-    agentProfileId: c.req.param("agentId"),
+    scope: agentMcpScope(c.req.param("agentId")),
     connectionId: c.req.param("connectionId"),
     env: c.env,
   }),
@@ -125,7 +126,7 @@ aiMcpRoutes.put("/agents/:agentId/connections/:connectionId/headers", async (c) 
 aiMcpRoutes.post("/agents/:agentId/connections/:connectionId/oauth/start", async (c) => handle(c, async (auth) => {
   const result = await beginMcpOAuth({
     ...auth,
-    agentProfileId: c.req.param("agentId"),
+    scope: agentMcpScope(c.req.param("agentId")),
     connectionId: c.req.param("connectionId"),
     env: c.env,
   });
@@ -137,14 +138,23 @@ aiMcpRoutes.get("/mcp/oauth/callback", async (c) => {
   const code = c.req.query("code");
   const state = c.req.query("state");
   if (!code || !state) return c.json({ error: "OAuth callback is missing code or state." }, 400);
+  const callbackScope = await getMcpOAuthCallbackScope(state).catch(() => null);
   try {
     const connection = await completeMcpOAuth({ code, env: c.env, iss: c.req.query("iss"), state });
-    const target = new URL("/settings/zilobase-ai", getCanonicalWebOrigin(c.env));
-    target.searchParams.set("agent", connection.agentProfileId);
+    const target = new URL("/ai", getCanonicalWebOrigin(c.env));
+    const scope = getMcpScopeFromConnection(connection);
+    target.searchParams.set("panel", "settings");
+    target.searchParams.set("settingsScope", scope.type);
+    target.searchParams.set("settingsTab", "connectors");
+    if (scope.type === "agent") target.searchParams.set("agent", scope.agentProfileId);
     target.searchParams.set("mcp", "connected");
     return c.redirect(target.toString(), 302);
   } catch (error) {
-    const target = new URL("/settings/zilobase-ai", getCanonicalWebOrigin(c.env));
+    const target = new URL("/ai", getCanonicalWebOrigin(c.env));
+    target.searchParams.set("panel", "settings");
+    target.searchParams.set("settingsScope", callbackScope?.type ?? "personal");
+    target.searchParams.set("settingsTab", "connectors");
+    if (callbackScope?.type === "agent") target.searchParams.set("agent", callbackScope.agentProfileId);
     target.searchParams.set("mcp", "failed");
     return c.redirect(target.toString(), 302);
   }
@@ -153,7 +163,7 @@ aiMcpRoutes.get("/mcp/oauth/callback", async (c) => {
 aiMcpRoutes.post("/agents/:agentId/connections/:connectionId/refresh", async (c) => handle(c, async (auth) => (
   await refreshMcpConnection({
     ...auth,
-    agentProfileId: c.req.param("agentId"),
+    scope: agentMcpScope(c.req.param("agentId")),
     connectionId: c.req.param("connectionId"),
     env: c.env,
   })
@@ -163,7 +173,7 @@ aiMcpRoutes.put("/agents/:agentId/connections/:connectionId/tools", async (c) =>
   connection: await updateMcpToolPolicies({
     ...toolPoliciesSchema.parse(await c.req.json()),
     ...auth,
-    agentProfileId: c.req.param("agentId"),
+    scope: agentMcpScope(c.req.param("agentId")),
     connectionId: c.req.param("connectionId"),
   }),
 })));
@@ -172,7 +182,7 @@ aiMcpRoutes.put("/agents/:agentId/connections/:connectionId/always-allow", async
   connection: await setMcpAlwaysAllow({
     ...alwaysAllowSchema.parse(await c.req.json()),
     ...auth,
-    agentProfileId: c.req.param("agentId"),
+    scope: agentMcpScope(c.req.param("agentId")),
     connectionId: c.req.param("connectionId"),
   }),
 })));
@@ -180,14 +190,87 @@ aiMcpRoutes.put("/agents/:agentId/connections/:connectionId/always-allow", async
 aiMcpRoutes.delete("/agents/:agentId/connections/:connectionId", async (c) => handle(c, async (auth) => ({
   disconnected: await disconnectMcpConnection({
     ...auth,
-    agentProfileId: c.req.param("agentId"),
+    scope: agentMcpScope(c.req.param("agentId")),
     connectionId: c.req.param("connectionId"),
     env: c.env,
   }),
 })));
 
 aiMcpRoutes.get("/agents/:agentId/activity", async (c) => handle(c, async (auth) => ({
-  activity: await listMcpActivity({ ...auth, agentProfileId: c.req.param("agentId") }),
+  activity: await listMcpActivity({ ...auth, scope: agentMcpScope(c.req.param("agentId")) }),
+})));
+
+aiMcpRoutes.get("/mcp/connections", async (c) => handle(c, async (auth) => ({
+  connections: await listMcpConnections({ ...auth, scope: personalMcpScope(auth.userId) }),
+})));
+
+aiMcpRoutes.post("/mcp/connections", async (c) => handle(c, async (auth) => ({
+  connection: await createMcpConnection({
+    ...createConnectionSchema.parse(await c.req.json()),
+    ...auth,
+    env: c.env,
+    scope: personalMcpScope(auth.userId),
+  }),
+}), 201));
+
+aiMcpRoutes.put("/mcp/connections/:connectionId/headers", async (c) => handle(c, async (auth) => ({
+  connection: await submitMcpHeaders({
+    ...headersSchema.parse(await c.req.json()),
+    ...auth,
+    connectionId: c.req.param("connectionId"),
+    env: c.env,
+    scope: personalMcpScope(auth.userId),
+  }),
+})));
+
+aiMcpRoutes.post("/mcp/connections/:connectionId/oauth/start", async (c) => handle(c, async (auth) => {
+  const result = await beginMcpOAuth({
+    ...auth,
+    connectionId: c.req.param("connectionId"),
+    env: c.env,
+    scope: personalMcpScope(auth.userId),
+  });
+  return { authorizationUrl: result.authorizationUrl, expiresAt: result.expiresAt.toISOString() };
+}));
+
+aiMcpRoutes.post("/mcp/connections/:connectionId/refresh", async (c) => handle(c, async (auth) => (
+  await refreshMcpConnection({
+    ...auth,
+    connectionId: c.req.param("connectionId"),
+    env: c.env,
+    scope: personalMcpScope(auth.userId),
+  })
+)));
+
+aiMcpRoutes.put("/mcp/connections/:connectionId/tools", async (c) => handle(c, async (auth) => ({
+  connection: await updateMcpToolPolicies({
+    ...toolPoliciesSchema.parse(await c.req.json()),
+    ...auth,
+    connectionId: c.req.param("connectionId"),
+    scope: personalMcpScope(auth.userId),
+  }),
+})));
+
+aiMcpRoutes.put("/mcp/connections/:connectionId/always-allow", async (c) => handle(c, async (auth) => ({
+  connection: await setMcpAlwaysAllow({
+    ...alwaysAllowSchema.parse(await c.req.json()),
+    ...auth,
+    connectionId: c.req.param("connectionId"),
+    scope: personalMcpScope(auth.userId),
+  }),
+})));
+
+aiMcpRoutes.delete("/mcp/connections/:connectionId", async (c) => handle(c, async (auth) => ({
+  disconnected: await disconnectMcpConnection({
+    ...auth,
+    connectionId: c.req.param("connectionId"),
+    env: c.env,
+    scope: personalMcpScope(auth.userId),
+  }),
+})));
+
+aiMcpRoutes.get("/mcp/activity", async (c) => handle(c, async (auth) => ({
+  activity: await listMcpActivity({ ...auth, scope: personalMcpScope(auth.userId) }),
 })));
 
 async function handleAdmin(

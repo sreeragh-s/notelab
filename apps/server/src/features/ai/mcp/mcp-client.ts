@@ -22,6 +22,13 @@ import { getMembership } from "../../access";
 import { decryptMcpSecret } from "./credential-crypto";
 import { MCP_LIMITS, isMcpExecutionEnabled } from "./config";
 import { createSecureMcpFetch } from "./secure-egress";
+import {
+  getMcpCredentialScopeId,
+  getMcpScopeColumns,
+  getMcpScopeFromConnection,
+  isMcpScopeMatch,
+  type McpScope,
+} from "./mcp-scope";
 
 type StoredCredential =
   | { kind: "headers"; headers: Array<{ name: string; value: string }> }
@@ -83,7 +90,7 @@ export async function discoverConnectionTools(input: {
 }
 
 export async function executeMcpTool(input: {
-  agentProfileId: string;
+  scope: McpScope;
   connectionId: string;
   env: RuntimeEnv;
   externalName: string;
@@ -100,7 +107,7 @@ export async function executeMcpTool(input: {
   const context = await loadConnectionContext(input.connectionId, input.env);
   if (
     context.connection.workspaceId !== input.workspaceId ||
-    context.connection.agentProfileId !== input.agentProfileId
+    !isMcpScopeMatch(getMcpScopeFromConnection(context.connection), input.scope)
   ) {
     return failure("mcp_connection_forbidden", "Connector is unavailable.");
   }
@@ -220,7 +227,7 @@ async function loadConnectionContext(connectionId: string, env: RuntimeEnv) {
   }, {
     authenticatedByUserId: row.connection.authenticatedByUserId,
     connectionId: row.connection.id,
-    profileId: row.connection.agentProfileId,
+    profileId: getMcpCredentialScopeId(row.connection),
     purpose: row.credential.secretPurpose,
     workspaceId: row.connection.workspaceId,
   });
@@ -315,7 +322,7 @@ async function persistToolDiscovery(
 async function normalizeToolResult(
   result: CallToolResult,
   input: {
-    agentProfileId: string;
+    scope: McpScope;
     classification: string;
     connection: typeof aiMcpConnection.$inferSelect;
     connectionId: string;
@@ -382,7 +389,7 @@ async function normalizeToolResult(
 async function stageStructuredDataset(
   structured: unknown,
   input: {
-    agentProfileId: string;
+    scope: McpScope;
     connectionId: string;
     externalName: string;
     threadId: string;
@@ -412,7 +419,7 @@ async function stageStructuredDataset(
   const now = new Date();
   await db.transaction(async (tx) => {
     await tx.insert(aiMcpDataset).values({
-      agentProfileId: input.agentProfileId,
+      ...getMcpScopeColumns(input.scope),
       byteSize: bytes,
       connectionId: input.connectionId,
       createdAt: now,
