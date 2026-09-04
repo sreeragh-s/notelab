@@ -24,6 +24,7 @@ export type AiChatThreadRecord = {
   id: string;
   workspaceId: string;
   userId: string;
+  agentProfileId: string | null;
   title: string;
   pinnedAt: Date | null;
   createdAt: Date;
@@ -64,6 +65,7 @@ export async function listAiChatThreads(
       id: aiChatThread.id,
       workspaceId: aiChatThread.workspaceId,
       userId: aiChatThread.userId,
+      agentProfileId: aiChatThread.agentProfileId,
       title: aiChatThread.title,
       pinnedAt: aiChatThread.pinnedAt,
       createdAt: aiChatThread.createdAt,
@@ -81,6 +83,7 @@ export async function listAiChatThreads(
 }
 
 export async function createAiChatThread(input: {
+  agentProfileId?: string | null;
   workspaceId: string;
   userId: string;
   title?: string;
@@ -93,6 +96,7 @@ export async function createAiChatThread(input: {
     id,
     workspaceId: input.workspaceId,
     userId: input.userId,
+    agentProfileId: input.agentProfileId ?? null,
     title,
     createdAt: now,
     updatedAt: now,
@@ -116,6 +120,7 @@ export async function getAiChatThreadForUser(input: {
       id: aiChatThread.id,
       workspaceId: aiChatThread.workspaceId,
       userId: aiChatThread.userId,
+      agentProfileId: aiChatThread.agentProfileId,
       title: aiChatThread.title,
       pinnedAt: aiChatThread.pinnedAt,
       createdAt: aiChatThread.createdAt,
@@ -169,6 +174,7 @@ export async function renameAiChatThread(input: {
       id: aiChatThread.id,
       workspaceId: aiChatThread.workspaceId,
       userId: aiChatThread.userId,
+      agentProfileId: aiChatThread.agentProfileId,
       title: aiChatThread.title,
       pinnedAt: aiChatThread.pinnedAt,
       createdAt: aiChatThread.createdAt,
@@ -205,6 +211,7 @@ export async function setAiChatThreadPinned(input: {
       id: aiChatThread.id,
       workspaceId: aiChatThread.workspaceId,
       userId: aiChatThread.userId,
+      agentProfileId: aiChatThread.agentProfileId,
       title: aiChatThread.title,
       pinnedAt: aiChatThread.pinnedAt,
       createdAt: aiChatThread.createdAt,

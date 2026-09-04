@@ -1,6 +1,7 @@
 "use client";
 
 import { toApiUrl } from "@/features/desktop/network/api";
+import { useZilobaseFeatures } from "@zilobase/features";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import {
@@ -24,6 +25,7 @@ import {
   type ProposePageContentUpdateOutput,
 } from "@zilobase/features/ai-chat";
 import { getToolName, isToolUIPart, type ChatStatus, type UIMessage } from "ai";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { AgentActionReviews } from "./agent-action-review";
 import { AgentResourceBadges } from "./agent-resource-badges";
@@ -146,6 +148,117 @@ const PageEditToolPart = ({
     />
   );
 };
+
+function McpToolResultCard({
+  output,
+  toolCallId,
+  workspaceId,
+}: {
+  output: unknown;
+  toolCallId: string;
+  workspaceId: string | null;
+}) {
+  const { apiFetch } = useZilobaseFeatures();
+  const envelope = asRecord(output);
+  const data = asRecord(envelope?.data);
+  const dataset = asRecord(data?.dataset);
+  const job = asRecord(envelope?.job);
+  const jobId = typeof job?.id === "string" ? job.id : null;
+  const jobQuery = useQuery({
+    enabled: Boolean(jobId && workspaceId),
+    queryKey: ["workspaces", workspaceId ?? "none", "ai-job", jobId],
+    queryFn: () => apiFetch<{ job: {
+      error: string | null;
+      id: string;
+      output: unknown;
+      progress: number;
+      status: string;
+    } }>(`/api/ai/jobs/${encodeURIComponent(jobId!)}`, {
+      headers: workspaceId ? { "x-zilobase-workspace-id": workspaceId } : {},
+    }).then((result) => result.job),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status && ["succeeded", "failed", "cancelled"].includes(status)
+        ? false
+        : 1_500;
+    },
+  });
+  const sample = Array.isArray(dataset?.sample)
+    ? dataset.sample.filter((row): row is Record<string, unknown> => Boolean(asRecord(row))).slice(0, 20)
+    : [];
+  const columns = Array.isArray(asRecord(dataset?.schema)?.columns)
+    ? (asRecord(dataset?.schema)!.columns as unknown[]).filter((column): column is string => typeof column === "string").slice(0, 30)
+    : [];
+  const jobOutput = asRecord(jobQuery.data?.output);
+
+  if (!dataset && !jobId) return null;
+
+  return (
+    <div className="not-prose mb-3 grid gap-3 rounded-lg border bg-surface-canvas p-3" key={toolCallId}>
+      {dataset && (
+        <div className="grid gap-2">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-medium">Connector dataset preview</span>
+            <span className="text-content-secondary">{String(dataset.rowCount ?? 0)} rows</span>
+            {dataset.truncated === true && <span className="text-action-danger-text">Truncated</span>}
+          </div>
+          {sample.length > 0 && columns.length > 0 && (
+            <div className="max-h-72 overflow-auto rounded border">
+              <table className="w-full min-w-max text-left text-xs">
+                <thead className="sticky top-0 bg-surface-secondary">
+                  <tr>{columns.map((column) => <th className="px-2 py-1.5 font-medium" key={column}>{column}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {sample.map((row, rowIndex) => (
+                    <tr className="border-t" key={rowIndex}>
+                      {columns.map((column) => <td className="max-w-56 truncate px-2 py-1.5" key={column}>{displayPreviewCell(row[column])}</td>)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="text-xs text-content-secondary">Preview up to 20 rows before asking Ask AI to create a one-time native database.</p>
+        </div>
+      )}
+      {jobId && (
+        <div className="grid gap-2 text-sm">
+          <div className="flex items-center justify-between gap-3">
+            <span className="font-medium">Database import</span>
+            <span>{jobQuery.data?.status ?? "queued"} · {jobQuery.data?.progress ?? 0}%</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded bg-surface-secondary">
+            <div className="h-full bg-action-primary transition-[width]" style={{ width: `${jobQuery.data?.progress ?? 0}%` }} />
+          </div>
+          {jobQuery.data?.error && <p className="text-action-danger-text">{jobQuery.data.error}</p>}
+          {typeof jobOutput?.databaseId === "string" && (
+            <Button asChild className="w-fit" size="sm">
+              <a href={`/d/${encodeURIComponent(jobOutput.databaseId)}`}>Open imported database</a>
+            </Button>
+          )}
+          {jobOutput?.status === "partial" && (
+            <p className="text-action-danger-text">
+              Partial import: {String(jobOutput.completedRows ?? 0)} completed, {String(jobOutput.failedRows ?? 0)} failed.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function displayPreviewCell(value: unknown) {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
+}
 
 function collectMessageCitations(message: UIMessage) {
   const citations = message.parts.flatMap((part) => {
@@ -350,6 +463,12 @@ const ChatMessage = ({
     const table = readAgentResultTable(part.output);
     return table ? [{ table, toolCallId: part.toolCallId }] : [];
   });
+  const mcpResults = message.parts.flatMap((part) =>
+    isToolUIPart(part) && part.state === "output-available" &&
+      (getToolName(part).startsWith("mcp_") || getToolName(part) === "materializeConnectedDataAsDatabase")
+      ? [{ output: part.output, toolCallId: part.toolCallId }]
+      : [],
+  );
 
   return (
     <Message from={message.role}>
@@ -466,6 +585,14 @@ const ChatMessage = ({
         })}
         {tables.map(({ table, toolCallId }) => (
           <AgentResultTable key={toolCallId} table={table} />
+        ))}
+        {mcpResults.map(({ output, toolCallId }) => (
+          <McpToolResultCard
+            key={toolCallId}
+            output={output}
+            toolCallId={toolCallId}
+            workspaceId={workspaceId}
+          />
         ))}
         {threadId && workspaceId ? (
           <AgentActionReviews

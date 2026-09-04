@@ -19,12 +19,13 @@ export type AgentWorkspaceActionToolName =
 export type AgentToolStatus =
   | "succeeded"
   | "failed"
+  | "queued"
   | "approval_required"
   | "unavailable"
 
 export type AgentCitation = {
   id: string
-  source: "artifact" | "database" | "file" | "page" | "page-comment"
+  source: "artifact" | "database" | "external" | "file" | "page" | "page-comment"
   title: string
   url: string
   excerpt?: string
@@ -43,6 +44,10 @@ export type AgentToolResult<T = unknown> = {
   data?: T
   citations?: AgentCitation[]
   receipt?: AgentActionReceipt
+  job?: {
+    id: string
+    statusUrl: string
+  }
   error?: {
     code: string
     retryable: boolean
@@ -145,7 +150,7 @@ export function readAgentCitations(output: unknown): AgentCitation[] {
 function isAgentCitationSource(
   value: unknown,
 ): value is AgentCitation["source"] {
-  return value === "artifact" || value === "database" || value === "file" ||
+  return value === "artifact" || value === "database" || value === "external" || value === "file" ||
     value === "page" || value === "page-comment"
 }
 

@@ -237,12 +237,17 @@ export function AiChatHistoryList({
                       className="data-[active=false]:text-content-secondary"
                       isActive={isActive}
                       onClick={() => onSelectThread(thread.id)}
-                      title={`${thread.title} · ${formatRelativeTime(thread.lastActivityAt)}`}
+                      title={`${thread.title}${thread.agentProfile ? ` · ${thread.agentProfile.name}` : ""} · ${formatRelativeTime(thread.lastActivityAt)}`}
                       type="button"
                     >
                       <span className="min-w-0 flex-1 truncate">
                         {thread.title}
                       </span>
+                      {thread.agentProfile && (
+                        <span className="max-w-20 shrink-0 truncate rounded border px-1 text-[10px] opacity-70">
+                          {thread.agentProfile.name}
+                        </span>
+                      )}
                       <span className="ml-auto shrink-0 text-[10px] opacity-60 transition-opacity group-focus-within/nav-row:opacity-0 group-hover/nav-row:opacity-0">
                         {formatRelativeTime(thread.lastActivityAt)}
                       </span>

@@ -26,6 +26,7 @@ import { createNodeRealtimeBus } from "../../infrastructure/node/realtime-bus";
 import { createNodeCollaborationExtensions } from "../../infrastructure/node/collaboration-redis";
 import { setRealtimeReadinessProbe } from "../../infrastructure/realtime/readiness";
 import { fetchPinnedNodeWebhook } from "./pinned-webhook";
+import { fetchPinnedNodeMcp } from "./pinned-mcp";
 import { createNodeBackgroundCoordinator, publishNodeBackgroundNotification } from "./background-coordinator";
 import { setBackgroundReadinessProbe, getBackgroundOperationalSnapshot } from "../../infrastructure/background/health";
 import { renderPrometheusBackgroundMetrics } from "../../infrastructure/background/telemetry";
@@ -96,6 +97,7 @@ export function createNodeRuntime({
   const effectiveRuntimeAdapter: ServerRuntimeAdapter = {
     ...runtimeAdapter,
     fetchAutomationWebhook: runtimeAdapter.fetchAutomationWebhook ?? fetchPinnedNodeWebhook,
+    fetchMcpRequest: runtimeAdapter.fetchMcpRequest ?? fetchPinnedNodeMcp,
     publishDatabaseMutation: ({ event }) =>
       databaseRealtime.publishMutation(event),
     publishMailNotification: ({ event }) => mailRealtime.publishNotification(event),

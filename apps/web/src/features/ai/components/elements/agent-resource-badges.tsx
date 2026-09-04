@@ -7,6 +7,7 @@ import { toApiUrl } from "@/features/desktop/network/api";
 import { useOptionalPageSidePane } from "@/features/pages/context/index";
 import {
   DatabaseIcon,
+  ExternalLinkIcon,
   FileTextIcon,
 } from "@/shared/components/icons";
 import { getAgentCitationSidePaneTarget } from "./agent-citation-navigation";
@@ -36,7 +37,9 @@ export function AgentResourceBadges({
         const sidePaneTarget = getAgentCitationSidePaneTarget(citation);
         const ResourceIcon = citation.source === "database"
           ? DatabaseIcon
-          : FileTextIcon;
+          : citation.source === "external"
+            ? ExternalLinkIcon
+            : FileTextIcon;
 
         return (
           <a

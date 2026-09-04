@@ -1,6 +1,6 @@
 import type { Hono } from "hono";
 
-import { aiRoutes, aiThreadRoutes } from "../features/ai/routes";
+import { aiAgentProfileRoutes, aiMcpRoutes, aiRoutes, aiThreadRoutes } from "../features/ai/routes";
 import { apiKeyRoutes } from "../features/api-keys/routes";
 import { authRoutes } from "../features/auth/routes";
 import { sessionRoutes } from "../features/auth/session-routes";
@@ -30,6 +30,8 @@ export function registerRoutes(app: Hono<AppBindings>) {
   app.route("/", automationSlackProviderRoutes);
   app.route("/api/ai", aiRoutes);
   app.route("/api/ai", aiThreadRoutes);
+  app.route("/api/ai", aiAgentProfileRoutes);
+  app.route("/api/ai", aiMcpRoutes);
   app.route("/api/keys", apiKeyRoutes);
   app.route("/", desktopAuthRoutes);
   app.route("/", authRoutes);

@@ -5,6 +5,7 @@ import { PermanentAiJobError } from "./ai-jobs";
 import { compactAiThreadJob } from "../chat/ai-thread-summary-job";
 import { ServiceMutationError } from "../../../shared/errors/service-mutation-error";
 import { measureBackgroundProvider } from "../../../infrastructure/background/telemetry";
+import { materializeMcpDatasetJob } from "../mcp/materialization";
 
 const meetingSummaryJob: AiJobHandler = async ({ assertLease, env, job, reportProgress }) => {
   if (!job.userId) throw new PermanentAiJobError("Meeting summary job has no owner.");
@@ -39,4 +40,5 @@ export const AI_JOB_HANDLERS: Readonly<Record<string, AiJobHandler>> = {
   "thread-compaction": compactAiThreadJob,
   "meeting-summary": meetingSummaryJob,
   "upload-extraction": extractAiUploadJob,
+  "mcp-database-materialization": materializeMcpDatasetJob,
 };

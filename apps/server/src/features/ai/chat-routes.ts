@@ -29,6 +29,7 @@ import {
 import { hashAgentToolInput } from "./actions/agent-action-receipts";
 import { buildRegisteredAgentTools } from "./actions/agent-tool-registry";
 import { aiFileRoutes } from "./file-routes";
+import { executeApprovedMcpAction, isMcpPendingAction } from "./mcp/mcp-approval";
 
 const editorAiRequestSchema = z.object({
   model: z.string().trim().optional(),
@@ -219,6 +220,39 @@ aiRoutes.post("/threads/:threadId/actions/:actionId/approve", async (c) => {
     await expirePendingAgentAction(action.id);
     return c.json({ error: "Review request expired", status: "expired" }, 410);
   }
+  if (isMcpPendingAction(action)) {
+    const executing = await markPendingAgentActionExecuting({
+      actionId,
+      threadId,
+      userId: auth.user.id,
+      workspaceId: auth.workspaceId,
+    });
+    if (!executing) {
+      return c.json({ error: "Review request was already handled" }, 409);
+    }
+    try {
+      const result = await executeApprovedMcpAction({
+        action: executing,
+        env: c.env,
+        userId: auth.user.id,
+        workspaceId: auth.workspaceId,
+      });
+      if (!result.ok) {
+        await finishPendingAgentAction({
+          actionId,
+          error: result.summary,
+          result,
+        });
+        return c.json({ actionId, result, status: "failed" }, 409);
+      }
+      await finishPendingAgentAction({ actionId, result });
+      return c.json({ actionId, result, status: "succeeded" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Approved connector action failed";
+      await finishPendingAgentAction({ actionId, error: message });
+      return c.json({ error: message, status: "failed" }, 409);
+    }
+  }
   const descriptor = getAgentToolDescriptor(action.toolName);
   if (
     !descriptor ||
@@ -240,7 +274,13 @@ aiRoutes.post("/threads/:threadId/actions/:actionId/approve", async (c) => {
   }
 
   try {
+    const thread = await getAiChatThreadForUser({
+      threadId,
+      userId: auth.user.id,
+      workspaceId: auth.workspaceId,
+    });
     const tools = buildRegisteredAgentTools({
+      agentProfileId: thread?.agentProfileId ?? null,
       editablePageIds: [],
       env: c.env,
       primaryPageId: null,
@@ -264,6 +304,16 @@ aiRoutes.post("/threads/:threadId/actions/:actionId/approve", async (c) => {
       messages: [],
       toolCallId: `approved:${action.id}`,
     });
+    if (
+      result && typeof result === "object" && !Array.isArray(result) &&
+      "ok" in result && result.ok === false
+    ) {
+      const message = "summary" in result && typeof result.summary === "string"
+        ? result.summary
+        : "Approved action could not be completed.";
+      await finishPendingAgentAction({ actionId, error: message, result });
+      return c.json({ actionId, result, status: "failed" }, 409);
+    }
     await finishPendingAgentAction({ actionId, result });
     return c.json({ actionId, result, status: "succeeded" });
   } catch (error) {

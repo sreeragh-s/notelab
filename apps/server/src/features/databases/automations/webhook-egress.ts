@@ -163,7 +163,6 @@ function isBlockedHostname(hostname: string) {
 
 export function isBlockedAddress(value: string) {
   const normalized = value.toLowerCase().replace(/^\[|\]$/g, "");
-  if (normalized.startsWith("::ffff:")) return isBlockedAddress(normalized.slice(7));
   const parts = normalized.split(".").map(Number);
   if (parts.length === 4 && parts.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)) {
     const [a, b] = parts;
@@ -171,11 +170,47 @@ export function isBlockedAddress(value: string) {
       a === 169 && b === 254 || a === 172 && b! >= 16 && b! <= 31 ||
       a === 192 && b === 168 || a === 100 && b! >= 64 && b! <= 127 ||
       a === 198 && (b === 18 || b === 19) || a === 192 && b === 0 ||
+      a === 192 && b === 88 && parts[2] === 99 ||
       a === 198 && b === 51 && parts[2] === 100 ||
       a === 203 && b === 0 && parts[2] === 113;
   }
   if (!normalized.includes(":")) return false;
-  return normalized === "::" || normalized === "::1" || normalized.startsWith("fc") ||
-    normalized.startsWith("fd") || /^fe[89ab]/.test(normalized) ||
-    normalized.startsWith("ff") || normalized.startsWith("2001:db8:");
+  const words = parseIpv6Words(normalized);
+  if (!words) return true;
+  const [first, second, third] = words;
+  const mappedIpv4 = words.slice(0, 5).every((word) => word === 0) && words[5] === 0xffff;
+  return words.every((word) => word === 0) ||
+    words.slice(0, 7).every((word) => word === 0) && words[7] === 1 ||
+    mappedIpv4 ||
+    (first! & 0xfe00) === 0xfc00 ||
+    (first! & 0xffc0) === 0xfe80 ||
+    (first! & 0xff00) === 0xff00 ||
+    first === 0x0064 && second === 0xff9b ||
+    first === 0x0100 && second === 0 ||
+    first === 0x2001 && (
+      second === 0 || second === 2 || second === 0x10 || second === 0x20 || second === 0x0db8
+    ) ||
+    first === 0x2002 ||
+    first === 0x3fff && (second! & 0xf000) === 0;
+}
+
+function parseIpv6Words(value: string) {
+  if (value.includes("%") || value.split("::").length > 2) return null;
+  let source = value;
+  const dottedIndex = source.lastIndexOf(":");
+  const dotted = dottedIndex >= 0 ? source.slice(dottedIndex + 1) : "";
+  if (dotted.includes(".")) {
+    const octets = dotted.split(".").map(Number);
+    if (octets.length !== 4 || octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return null;
+    source = `${source.slice(0, dottedIndex)}:${((octets[0]! << 8) | octets[1]!).toString(16)}:${((octets[2]! << 8) | octets[3]!).toString(16)}`;
+  }
+  const [leftRaw, rightRaw] = source.split("::");
+  const left = leftRaw ? leftRaw.split(":") : [];
+  const right = rightRaw ? rightRaw.split(":") : [];
+  const hasCompression = source.includes("::");
+  if ((!hasCompression && left.length !== 8) || (hasCompression && left.length + right.length >= 8)) return null;
+  const fill = hasCompression ? Array(8 - left.length - right.length).fill("0") : [];
+  const encoded = [...left, ...fill, ...right];
+  if (encoded.length !== 8 || encoded.some((word) => !/^[0-9a-f]{1,4}$/.test(word))) return null;
+  return encoded.map((word) => Number.parseInt(word, 16));
 }

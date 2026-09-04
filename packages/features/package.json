@@ -42,6 +42,10 @@
       "types": "./src/ai-chat/agent-contract.ts",
       "default": "./src/ai-chat/agent-contract.ts"
     },
+    "./ai-chat/mcp-contract": {
+      "types": "./src/ai-chat/mcp-contract.ts",
+      "default": "./src/ai-chat/mcp-contract.ts"
+    },
     "./ai-chat/conversation-adapter": {
       "types": "./src/ai-chat/conversation-adapter.ts",
       "default": "./src/ai-chat/conversation-adapter.ts"

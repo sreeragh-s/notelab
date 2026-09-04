@@ -6,6 +6,13 @@ import { workspaceRequestOptions } from "../workspaces/queries"
 
 export type AiChatThread = {
   id: string
+  agentProfileId: string | null
+  agentProfile: {
+    icon: unknown | null
+    id: string
+    name: string
+    status: "active" | "archived"
+  } | null
   title: string
   pinned: boolean
   pinnedAt: string | null

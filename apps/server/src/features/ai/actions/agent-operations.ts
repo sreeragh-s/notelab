@@ -22,6 +22,7 @@ import {
   aiAgentTurn,
   aiChatArtifact,
   aiChatUpload,
+  aiMcpDataset,
 } from "../../../infrastructure/database/schema";
 import { createImageStorage } from "../../../infrastructure/storage/image-storage";
 
@@ -175,6 +176,7 @@ export function summarizeAiAgentTurnInput(
 }
 
 export async function reserveAiAgentTurn(input: {
+  agentProfileId?: string | null;
   clientTurnId?: string;
   env: RuntimeEnv;
   metrics: AiAgentTurnMetrics;
@@ -223,6 +225,7 @@ export async function reserveAiAgentTurn(input: {
       });
 
     await tx.insert(aiAgentTurn).values({
+      agentProfileId: input.agentProfileId ?? null,
       attachmentCount: input.metrics.attachmentCount,
       completedAt: rejection ? now : null,
       createdAt: now,
@@ -315,6 +318,10 @@ export async function finishAiAgentTurn(input: {
 }
 
 export async function startAiAgentToolExecution(input: {
+  actualEffect?: "read" | "write" | "unknown";
+  connectionId?: string;
+  externalToolName?: string;
+  schemaHash?: string;
   stepNumber?: number;
   toolCallId: string;
   toolName: string;
@@ -324,9 +331,15 @@ export async function startAiAgentToolExecution(input: {
   await db
     .insert(aiAgentToolExecution)
     .values({
+      actualEffect: input.actualEffect,
+      connectionId: input.connectionId,
       createdAt: now,
-      effect: getAiAgentToolEffect(input.toolName),
+      effect: input.actualEffect
+        ? input.actualEffect === "read" ? "read" : "write"
+        : getAiAgentToolEffect(input.toolName),
+      externalToolName: input.externalToolName,
       id: crypto.randomUUID(),
+      schemaHash: input.schemaHash,
       status: "running",
       stepNumber: input.stepNumber,
       toolCallId: input.toolCallId,
@@ -341,6 +354,7 @@ export async function finishAiAgentToolExecution(input: {
   durationMs: number;
   error?: unknown;
   success: boolean;
+  outcomeUnknown?: boolean;
   toolCallId: string;
   turnId: string;
 }) {
@@ -351,6 +365,7 @@ export async function finishAiAgentToolExecution(input: {
       completedAt: now,
       durationMs: normalizeCount(input.durationMs),
       errorCode: input.success ? null : normalizeAiAgentErrorCode(input.error),
+      outcomeUnknown: input.outcomeUnknown ?? false,
       status: input.success ? "succeeded" : "failed",
       updatedAt: now,
     })
@@ -507,6 +522,16 @@ export async function cleanupExpiredAiAgentData(
   ]);
   const deletedUploadIds = await deleteStoredObjects(storage, uploads);
   const deletedArtifactIds = await deleteStoredObjects(storage, artifacts);
+  const expiredDatasets = await db.select({ id: aiMcpDataset.id })
+    .from(aiMcpDataset)
+    .where(lte(aiMcpDataset.expiresAt, now))
+    .limit(limits.cleanupBatchSize);
+  if (expiredDatasets.length > 0) {
+    await db.delete(aiMcpDataset).where(inArray(
+      aiMcpDataset.id,
+      expiredDatasets.map((dataset) => dataset.id),
+    ));
+  }
 
   if (deletedUploadIds.length > 0) {
     await db
@@ -574,6 +599,7 @@ export async function cleanupExpiredAiAgentData(
 
   return {
     artifactsExpired: deletedArtifactIds.length,
+    datasetsExpired: expiredDatasets.length,
     uploadsExpired: deletedUploadIds.length,
   };
 }
@@ -599,7 +625,11 @@ export function normalizeAiAgentErrorCode(error: unknown) {
 export function getAiAgentToolEffect(
   toolName: string,
 ): "read" | "write" | "analysis" | "artifact" {
-  return getAgentToolDescriptor(toolName)?.effect ?? "read";
+  const descriptor = getAgentToolDescriptor(toolName);
+  if (!descriptor) {
+    throw new Error(`Agent tool ${toolName} has no trusted audit descriptor.`);
+  }
+  return descriptor.effect;
 }
 
 function validateTurnInputMetrics(

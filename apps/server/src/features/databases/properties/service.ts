@@ -30,6 +30,8 @@ export async function createDatabasePropertyService(input: {
   position?: number;
   type?: string;
   userId: string;
+  newDatabasePropertyId?: string;
+  newPagePropertyId?: string;
 }) {
   const existing = await requireDataSourceEditAccess(
     input.databaseId,
@@ -55,8 +57,8 @@ export async function createDatabasePropertyService(input: {
       ),
     );
 
-  const pagePropertyId = crypto.randomUUID();
-  const databasePropertyId = crypto.randomUUID();
+  const pagePropertyId = input.newPagePropertyId ?? crypto.randomUUID();
+  const databasePropertyId = input.newDatabasePropertyId ?? crypto.randomUUID();
   const targetPosition =
     input.position === undefined
       ? columns.length

@@ -13,8 +13,10 @@ import { buildWorkspaceActionTools } from "../tools/ask-ai-workspace-action-tool
 import { buildWorkspaceReadTools } from "../tools/ask-ai-workspace-tools";
 import { requestAgentActionApproval } from "./agent-approvals";
 import type { AgentProgressPublisher } from "../chat/agent-progress";
+import { buildMcpMaterializationTools } from "../mcp/materialization";
 
 export type AgentToolRegistryContext = {
+  agentProfileId?: string | null;
   editablePageIds: string[];
   env: RuntimeEnv;
   primaryPageId: string | null;
@@ -41,6 +43,14 @@ export function buildRegisteredAgentTools(
     ...buildDatabaseConfigTools({
       ...context,
       allowedPageIds: new Set(context.editablePageIds),
+    }),
+    ...buildMcpMaterializationTools({
+      agentProfileId: context.agentProfileId ?? null,
+      env: context.env,
+      threadId: context.threadId,
+      userId: context.userId,
+      workspaceId: context.workspaceId,
+      withDb: context.withDb,
     }),
     ...(context.editablePageIds.length > 0
       ? buildPageEditTools(context.editablePageIds)

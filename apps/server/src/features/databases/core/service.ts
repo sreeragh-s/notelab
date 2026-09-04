@@ -33,6 +33,7 @@ import { ServiceMutationError } from "../../../shared/errors/service-mutation-er
 import { enqueueNavigationInvalidation, publishCommittedNavigationInvalidation } from "../../workspaces/navigation-realtime/outbox";
 
 export async function createDatabaseService(input: {
+  config?: Record<string, unknown>;
   defaultViewIcon?: string;
   icon?: string;
   name?: string;
@@ -42,6 +43,9 @@ export async function createDatabaseService(input: {
   teamspaceId?: string | null;
   userId: string;
   env?: RuntimeEnv;
+  newDatabaseId?: string;
+  newDataSourceId?: string;
+  newDefaultViewId?: string;
 }) {
   const name = input.name?.trim() || "New database";
   const standalone = input.standalone === true;
@@ -101,9 +105,9 @@ export async function createDatabaseService(input: {
     throw new ServiceMutationError("Forbidden", 403);
   }
 
-  const databaseId = crypto.randomUUID();
-  const dataSourceId = crypto.randomUUID();
-  const defaultViewId = crypto.randomUUID();
+  const databaseId = input.newDatabaseId ?? crypto.randomUUID();
+  const dataSourceId = input.newDataSourceId ?? crypto.randomUUID();
+  const defaultViewId = input.newDefaultViewId ?? crypto.randomUUID();
   const parentPlacementId = standalone ? null : crypto.randomUUID();
   const [parentFavorite] =
     !standalone && input.pageId
@@ -127,7 +131,7 @@ export async function createDatabaseService(input: {
       pageId: standalone ? null : input.pageId,
       ...(teamspaceId ? { teamspaceId } : {}),
       name,
-      config: input.icon ? { emoji: input.icon } : {},
+      config: { ...(input.config ?? {}), ...(input.icon ? { emoji: input.icon } : {}) },
     });
     await tx.insert(dataSource).values({
       id: dataSourceId,
@@ -135,7 +139,7 @@ export async function createDatabaseService(input: {
       parentDatabaseId: databaseId,
       createdById: input.userId,
       name,
-      config: input.icon ? { emoji: input.icon } : {},
+      config: { ...(input.config ?? {}), ...(input.icon ? { emoji: input.icon } : {}) },
     });
     await tx.insert(databaseDataSource).values({
       databaseId,

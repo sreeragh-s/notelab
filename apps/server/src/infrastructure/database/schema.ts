@@ -2127,6 +2127,302 @@ export const pageItemPlacement = pgTable(
   ],
 );
 
+export const aiAgentProfile = pgTable(
+  "ai_agent_profile",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    ownerUserId: text("owner_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    icon: jsonb("icon"),
+    instructions: text("instructions").notNull().default(""),
+    defaultModel: text("default_model").notNull().default("auto"),
+    status: text("status").notNull().default("active"),
+    version: integer("version").notNull().default(1),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    ...timestampColumns(),
+  },
+  (table) => [
+    index("ai_agent_profile_workspace_status_idx").on(
+      table.workspaceId,
+      table.status,
+      table.updatedAt,
+    ),
+    check(
+      "ai_agent_profile_status_check",
+      sql`${table.status} in ('active', 'archived')`,
+    ),
+    check("ai_agent_profile_version_check", sql`${table.version} > 0`),
+  ],
+);
+
+export const aiAgentProfileAccess = pgTable(
+  "ai_agent_profile_access",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => aiAgentProfile.id, { onDelete: "cascade" }),
+    principalType: text("principal_type").notNull(),
+    principalId: text("principal_id").notNull(),
+    role: text("role").notNull(),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    ...timestampColumns(),
+  },
+  (table) => [
+    uniqueIndex("ai_agent_profile_access_unique").on(
+      table.profileId,
+      table.principalType,
+      table.principalId,
+    ),
+    index("ai_agent_profile_access_principal_idx").on(
+      table.principalType,
+      table.principalId,
+      table.profileId,
+    ),
+    check(
+      "ai_agent_profile_access_principal_check",
+      sql`${table.principalType} in ('user', 'team')`,
+    ),
+    check(
+      "ai_agent_profile_access_role_check",
+      sql`${table.role} in ('editor', 'user')`,
+    ),
+  ],
+);
+
+export const aiWorkspaceMcpPolicy = pgTable(
+  "ai_workspace_mcp_policy",
+  {
+    workspaceId: text("workspace_id")
+      .primaryKey()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    customServersEnabled: boolean("custom_servers_enabled").notNull().default(false),
+    installationPolicy: text("installation_policy")
+      .notNull()
+      .default("approved_and_catalog"),
+    externalWritesEnabled: boolean("external_writes_enabled").notNull().default(false),
+    ...timestampColumns(),
+  },
+  (table) => [
+    check(
+      "ai_workspace_mcp_installation_policy_check",
+      sql`${table.installationPolicy} in ('approved_and_catalog', 'approved_only')`,
+    ),
+  ],
+);
+
+export const aiMcpApprovedServer = pgTable(
+  "ai_mcp_approved_server",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    endpointUrl: text("endpoint_url").notNull(),
+    label: text("label").notNull(),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    ...timestampColumns(),
+  },
+  (table) => [
+    uniqueIndex("ai_mcp_approved_server_workspace_url_unique").on(
+      table.workspaceId,
+      table.endpointUrl,
+    ),
+  ],
+);
+
+export const aiMcpConnection = pgTable(
+  "ai_mcp_connection",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    agentProfileId: text("agent_profile_id")
+      .notNull()
+      .references(() => aiAgentProfile.id, { onDelete: "cascade" }),
+    catalogId: text("catalog_id"),
+    approvedServerId: text("approved_server_id").references(
+      () => aiMcpApprovedServer.id,
+      { onDelete: "restrict" },
+    ),
+    endpointUrl: text("endpoint_url").notNull(),
+    serverLabel: text("server_label").notNull(),
+    authMethod: text("auth_method").notNull(),
+    authenticatedByUserId: text("authenticated_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    state: text("state").notNull().default("connecting"),
+    alwaysAllowEnabled: boolean("always_allow_enabled").notNull().default(false),
+    lastDiscoveredAt: timestamp("last_discovered_at", { withTimezone: true }),
+    lastErrorCode: varchar("last_error_code", { length: 80 }),
+    disabledAt: timestamp("disabled_at", { withTimezone: true }),
+    ...timestampColumns(),
+  },
+  (table) => [
+    uniqueIndex("ai_mcp_connection_profile_endpoint_unique").on(
+      table.agentProfileId,
+      table.endpointUrl,
+    ),
+    index("ai_mcp_connection_profile_state_idx").on(
+      table.agentProfileId,
+      table.state,
+    ),
+    check(
+      "ai_mcp_connection_auth_method_check",
+      sql`${table.authMethod} in ('oauth', 'headers')`,
+    ),
+    check(
+      "ai_mcp_connection_state_check",
+      sql`${table.state} in ('connecting', 'connected', 'degraded', 'reconnect_required', 'disabled')`,
+    ),
+  ],
+);
+
+export const aiMcpCredential = pgTable("ai_mcp_credential", {
+  connectionId: text("connection_id")
+    .primaryKey()
+    .references(() => aiMcpConnection.id, { onDelete: "cascade" }),
+  keyVersion: text("key_version").notNull(),
+  secretPurpose: text("secret_purpose").notNull(),
+  ciphertext: text("ciphertext").notNull(),
+  iv: text("iv").notNull(),
+  authTag: text("auth_tag").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  ...timestampColumns(),
+});
+
+export const aiMcpOauthAttempt = pgTable(
+  "ai_mcp_oauth_attempt",
+  {
+    id: text("id").primaryKey(),
+    connectionId: text("connection_id")
+      .notNull()
+      .references(() => aiMcpConnection.id, { onDelete: "cascade" }),
+    stateHash: text("state_hash").notNull().unique(),
+    keyVersion: text("key_version").notNull(),
+    codeVerifierCiphertext: text("code_verifier_ciphertext").notNull(),
+    codeVerifierIv: text("code_verifier_iv").notNull(),
+    codeVerifierAuthTag: text("code_verifier_auth_tag").notNull(),
+    issuer: text("issuer"),
+    redirectUri: text("redirect_uri").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index("ai_mcp_oauth_attempt_expiry_idx").on(table.expiresAt, table.consumedAt),
+  ],
+);
+
+export const aiMcpClientRegistration = pgTable(
+  "ai_mcp_client_registration",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    issuer: text("issuer").notNull(),
+    connectionId: text("connection_id")
+      .notNull()
+      .references(() => aiMcpConnection.id, { onDelete: "cascade" }),
+    clientId: text("client_id").notNull(),
+    keyVersion: text("key_version"),
+    clientSecretCiphertext: text("client_secret_ciphertext"),
+    clientSecretIv: text("client_secret_iv"),
+    clientSecretAuthTag: text("client_secret_auth_tag"),
+    ...timestampColumns(),
+  },
+  (table) => [
+    uniqueIndex("ai_mcp_client_registration_connection_issuer_unique").on(
+      table.connectionId,
+      table.issuer,
+    ),
+  ],
+);
+
+export const aiMcpToolSnapshot = pgTable(
+  "ai_mcp_tool_snapshot",
+  {
+    id: text("id").primaryKey(),
+    connectionId: text("connection_id")
+      .notNull()
+      .references(() => aiMcpConnection.id, { onDelete: "cascade" }),
+    externalName: text("external_name").notNull(),
+    description: text("description").notNull().default(""),
+    inputSchema: jsonb("input_schema").notNull(),
+    annotations: jsonb("annotations").notNull().default({}),
+    schemaHash: text("schema_hash").notNull(),
+    classification: text("classification").notNull().default("unknown"),
+    executionMode: text("execution_mode").notNull().default("always_ask"),
+    enabled: boolean("enabled").notNull().default(false),
+    available: boolean("available").notNull().default(true),
+    discoveredAt: timestamp("discovered_at", { withTimezone: true }).notNull(),
+    ...timestampColumns(),
+  },
+  (table) => [
+    uniqueIndex("ai_mcp_tool_snapshot_connection_name_unique").on(
+      table.connectionId,
+      table.externalName,
+    ),
+    index("ai_mcp_tool_snapshot_enabled_idx").on(
+      table.connectionId,
+      table.enabled,
+      table.available,
+    ),
+    check(
+      "ai_mcp_tool_snapshot_classification_check",
+      sql`${table.classification} in ('read', 'write', 'unknown')`,
+    ),
+    check(
+      "ai_mcp_tool_snapshot_execution_mode_check",
+      sql`${table.executionMode} in ('automatic', 'always_ask')`,
+    ),
+  ],
+);
+
+export const aiMcpActivity = pgTable(
+  "ai_mcp_activity",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    agentProfileId: text("agent_profile_id")
+      .notNull()
+      .references(() => aiAgentProfile.id, { onDelete: "cascade" }),
+    connectionId: text("connection_id").references(
+      () => aiMcpConnection.id,
+      { onDelete: "set null" },
+    ),
+    actorUserId: text("actor_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    eventType: text("event_type").notNull(),
+    outcome: text("outcome").notNull(),
+    providerLabel: text("provider_label"),
+    toolName: text("tool_name"),
+    metadata: jsonb("metadata").notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index("ai_mcp_activity_profile_created_idx").on(
+      table.agentProfileId,
+      table.createdAt,
+    ),
+  ],
+);
+
 export const aiChatThread = pgTable(
   "ai_chat_thread",
   {
@@ -2137,6 +2433,10 @@ export const aiChatThread = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    agentProfileId: text("agent_profile_id").references(
+      () => aiAgentProfile.id,
+      { onDelete: "restrict" },
+    ),
     title: text("title").notNull().default("New chat"),
     nextMessageSequence: integer("next_message_sequence").notNull().default(0),
     pinnedAt: timestamp("pinned_at", { withTimezone: true }),
@@ -2159,6 +2459,11 @@ export const aiChatThread = pgTable(
       table.userId,
       table.archivedAt,
       table.deletedAt,
+      table.lastActivityAt,
+    ),
+    index("ai_chat_thread_agent_profile_idx").on(
+      table.agentProfileId,
+      table.userId,
       table.lastActivityAt,
     ),
   ],
@@ -2284,6 +2589,10 @@ export const aiAgentTurn = pgTable(
     threadId: text("thread_id")
       .notNull()
       .references(() => aiChatThread.id, { onDelete: "cascade" }),
+    agentProfileId: text("agent_profile_id").references(
+      () => aiAgentProfile.id,
+      { onDelete: "set null" },
+    ),
     clientTurnId: text("client_turn_id"),
     userMessageId: text("user_message_id").references(() => aiChatMessage.id, {
       onDelete: "set null",
@@ -2344,6 +2653,17 @@ export const aiAgentToolExecution = pgTable(
     toolCallId: text("tool_call_id").notNull(),
     toolName: text("tool_name").notNull(),
     effect: text("effect").notNull(),
+    connectionId: text("connection_id").references(() => aiMcpConnection.id, {
+      onDelete: "set null",
+    }),
+    externalToolName: text("external_tool_name"),
+    actualEffect: text("actual_effect"),
+    schemaHash: text("schema_hash"),
+    approvalActorUserId: text("approval_actor_user_id").references(
+      () => user.id,
+      { onDelete: "set null" },
+    ),
+    outcomeUnknown: boolean("outcome_unknown").notNull().default(false),
     stepNumber: integer("step_number"),
     status: text("status").notNull().default("running"),
     durationMs: integer("duration_ms"),
@@ -2423,6 +2743,18 @@ export const aiAgentPendingAction = pgTable(
     toolName: text("tool_name").notNull(),
     toolVersion: integer("tool_version").notNull(),
     toolInput: jsonb("tool_input").notNull(),
+    agentProfileId: text("agent_profile_id").references(
+      () => aiAgentProfile.id,
+      { onDelete: "cascade" },
+    ),
+    connectionId: text("connection_id").references(() => aiMcpConnection.id, {
+      onDelete: "cascade",
+    }),
+    externalToolName: text("external_tool_name"),
+    toolSchemaHash: text("tool_schema_hash"),
+    encryptedToolInput: text("encrypted_tool_input"),
+    encryptedToolInputIv: text("encrypted_tool_input_iv"),
+    encryptedToolInputAuthTag: text("encrypted_tool_input_auth_tag"),
     inputHash: text("input_hash").notNull(),
     status: text("status").notNull().default("pending"),
     result: jsonb("result"),
@@ -2448,6 +2780,73 @@ export const aiAgentPendingAction = pgTable(
     check(
       "ai_agent_pending_action_status_check",
       sql`${table.status} in ('pending', 'executing', 'succeeded', 'failed', 'rejected', 'expired')`,
+    ),
+  ],
+);
+
+export const aiMcpDataset = pgTable(
+  "ai_mcp_dataset",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    agentProfileId: text("agent_profile_id")
+      .notNull()
+      .references(() => aiAgentProfile.id, { onDelete: "cascade" }),
+    connectionId: text("connection_id")
+      .notNull()
+      .references(() => aiMcpConnection.id, { onDelete: "cascade" }),
+    threadId: text("thread_id")
+      .notNull()
+      .references(() => aiChatThread.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    toolExecutionId: text("tool_execution_id").references(
+      () => aiAgentToolExecution.id,
+      { onDelete: "set null" },
+    ),
+    externalToolName: text("external_tool_name").notNull(),
+    schema: jsonb("schema").notNull(),
+    sample: jsonb("sample").notNull().default([]),
+    rowCount: integer("row_count").notNull().default(0),
+    byteSize: integer("byte_size").notNull().default(0),
+    truncated: boolean("truncated").notNull().default(false),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    ...timestampColumns(),
+  },
+  (table) => [
+    index("ai_mcp_dataset_owner_expiry_idx").on(
+      table.workspaceId,
+      table.userId,
+      table.threadId,
+      table.expiresAt,
+    ),
+    check(
+      "ai_mcp_dataset_limits_check",
+      sql`${table.rowCount} between 0 and 10000 and ${table.byteSize} between 0 and 26214400`,
+    ),
+  ],
+);
+
+export const aiMcpDatasetChunk = pgTable(
+  "ai_mcp_dataset_chunk",
+  {
+    id: text("id").primaryKey(),
+    datasetId: text("dataset_id")
+      .notNull()
+      .references(() => aiMcpDataset.id, { onDelete: "cascade" }),
+    chunkIndex: integer("chunk_index").notNull(),
+    rows: jsonb("rows").notNull(),
+    rowCount: integer("row_count").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("ai_mcp_dataset_chunk_dataset_index_unique").on(
+      table.datasetId,
+      table.chunkIndex,
     ),
   ],
 );
@@ -2553,6 +2952,82 @@ export const aiJob = pgTable(
       sql`${table.status} in ('queued', 'running', 'succeeded', 'failed', 'cancelled')`,
     ),
     check("ai_job_progress_check", sql`${table.progress} between 0 and 100`),
+  ],
+);
+
+export const aiMcpMaterialization = pgTable(
+  "ai_mcp_materialization",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    agentProfileId: text("agent_profile_id")
+      .notNull()
+      .references(() => aiAgentProfile.id, { onDelete: "cascade" }),
+    threadId: text("thread_id")
+      .notNull()
+      .references(() => aiChatThread.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    aiJobId: text("ai_job_id").references(() => aiJob.id, {
+      onDelete: "set null",
+    }),
+    databaseId: text("database_id"),
+    dataSourceId: text("data_source_id"),
+    name: text("name").notNull(),
+    mapping: jsonb("mapping").notNull(),
+    status: text("status").notNull().default("queued"),
+    completedRows: integer("completed_rows").notNull().default(0),
+    failedRows: integer("failed_rows").notNull().default(0),
+    errorCode: varchar("error_code", { length: 80 }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    ...timestampColumns(),
+  },
+  (table) => [
+    index("ai_mcp_materialization_job_idx").on(table.aiJobId),
+    check(
+      "ai_mcp_materialization_status_check",
+      sql`${table.status} in ('queued', 'running', 'succeeded', 'partial', 'failed')`,
+    ),
+  ],
+);
+
+export const aiMcpMaterializationReservation = pgTable(
+  "ai_mcp_materialization_reservation",
+  {
+    id: text("id").primaryKey(),
+    materializationId: text("materialization_id")
+      .notNull()
+      .references(() => aiMcpMaterialization.id, { onDelete: "cascade" }),
+    datasetId: text("dataset_id")
+      .notNull()
+      .references(() => aiMcpDataset.id, { onDelete: "cascade" }),
+    sourceRowIndex: integer("source_row_index").notNull(),
+    rowId: text("row_id").notNull(),
+    pageId: text("page_id").notNull(),
+    status: text("status").notNull().default("reserved"),
+    errorCode: varchar("error_code", { length: 80 }),
+    ...timestampColumns(),
+  },
+  (table) => [
+    uniqueIndex("ai_mcp_materialization_source_row_unique").on(
+      table.materializationId,
+      table.datasetId,
+      table.sourceRowIndex,
+    ),
+    uniqueIndex("ai_mcp_materialization_row_id_unique").on(table.rowId),
+    uniqueIndex("ai_mcp_materialization_page_id_unique").on(table.pageId),
+    index("ai_mcp_materialization_reservation_status_idx").on(
+      table.materializationId,
+      table.status,
+      table.sourceRowIndex,
+    ),
+    check(
+      "ai_mcp_materialization_reservation_status_check",
+      sql`${table.status} in ('reserved', 'inserted', 'failed')`,
+    ),
   ],
 );
 

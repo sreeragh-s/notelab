@@ -68,6 +68,7 @@ export async function createDatabaseViewService(input: {
   dataSourceId: string;
   env?: RuntimeEnv;
   name?: string;
+  newViewId?: string;
   type?: string;
   userId: string;
 }) {
@@ -103,7 +104,7 @@ export async function createDatabaseViewService(input: {
     .where(eq(databaseView.databaseId, existing.id))
     .orderBy(asc(databaseView.position));
 
-  const viewId = crypto.randomUUID();
+  const viewId = input.newViewId ?? crypto.randomUUID();
   const nextName = getNextDatabaseViewName(
     baseName,
     new Set(existingViews.map((view) => view.name)),

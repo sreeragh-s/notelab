@@ -39,10 +39,18 @@ import {
   type AiChatFeedback,
   type AiChatThreadMessagesResponse,
   type PageEditSnapshotPart,
+  useAiAgentProfiles,
   useCreateAiChatThread,
   useSubmitAiChatFeedback,
   useWorkspaceAiModels,
 } from "@zilobase/features/ai-chat";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 import { useAgentConversation } from "@zilobase/ai-conversation-adapter";
 import {
   useAiDevMessageTrace,
@@ -142,6 +150,8 @@ const Chatbot = (props: ChatbotProps) => {
     return (
       <ChatbotConversationController
         {...props}
+        initialAgentProfileId={null}
+        initialAgentProfileName={null}
         initialMessages={emptyAgentChatMessages}
         initialFeedback={[]}
         key={initialMessagesKey}
@@ -164,6 +174,8 @@ const Chatbot = (props: ChatbotProps) => {
   return (
     <ChatbotConversationController
       {...props}
+      initialAgentProfileId={threadMessagesQuery.data?.thread.agentProfileId ?? null}
+      initialAgentProfileName={threadMessagesQuery.data?.thread.agentProfile?.name ?? null}
       initialMessages={seededInitialMessages.messages}
       initialFeedback={queriedInitialFeedback}
       key={initialMessagesKey}
@@ -179,7 +191,11 @@ const ChatbotConversationController = ({
   onThreadCreated,
   threadId,
   pageId = null,
+  initialAgentProfileId,
+  initialAgentProfileName,
 }: ChatbotProps & {
+  initialAgentProfileId: string | null;
+  initialAgentProfileName: string | null;
   initialFeedback: AiChatFeedback[];
   initialMessages: UIMessage[];
 }) => {
@@ -187,6 +203,9 @@ const ChatbotConversationController = ({
   const previousMessageCountRef = useRef(0);
   const threadCreationPromiseRef = useRef<Promise<string> | null>(null);
   const [model, setModel] = useState<string>("auto");
+  const [selectedAgentProfileId, setSelectedAgentProfileId] = useState(
+    initialAgentProfileId ?? "personal",
+  );
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
   const [text, setText] = useState<string>("");
   const [textCursor, setTextCursor] = useState(0);
@@ -277,6 +296,10 @@ const ChatbotConversationController = ({
     primarySource: effectivePrimarySource,
   });
   const aiModelsQuery = useWorkspaceAiModels();
+  const agentProfilesQuery = useAiAgentProfiles();
+  const availableAgentProfiles = agentProfilesQuery.data?.filter(
+    (agent) => agent.status === "active",
+  ) ?? [];
   const models = useMemo(() => {
     const queryModels = aiModelsQuery.data?.models ?? [];
 
@@ -940,7 +963,12 @@ const ChatbotConversationController = ({
         }
 
         threadCreationPromiseRef.current = createThread
-          .mutateAsync({})
+          .mutateAsync({
+            agentProfileId:
+              selectedAgentProfileId === "personal"
+                ? null
+                : selectedAgentProfileId,
+          })
           .then((response) => response.thread.id);
 
         try {
@@ -1048,6 +1076,7 @@ const ChatbotConversationController = ({
       sendMessage,
       threadId,
       workspaceId,
+      selectedAgentProfileId,
     ],
   );
 
@@ -1256,6 +1285,35 @@ const ChatbotConversationController = ({
       }
       ref={rootRef}
     >
+      {availableAgentProfiles.length > 0 && (
+        <div className="mx-auto mb-2 flex w-full max-w-3xl items-center justify-end gap-2 px-3 text-xs text-content-secondary">
+          <span>Agent</span>
+          {threadId ? (
+            <span className="rounded-md border px-2 py-1 font-medium text-content-primary">
+              {initialAgentProfileName ?? availableAgentProfiles.find(
+                (agent) => agent.id === initialAgentProfileId,
+              )?.name ?? "Personal Ask AI"}
+            </span>
+          ) : (
+            <Select
+              onValueChange={setSelectedAgentProfileId}
+              value={selectedAgentProfileId}
+            >
+              <SelectTrigger className="h-8 w-48" aria-label="Ask AI agent">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="personal">Personal Ask AI</SelectItem>
+                {availableAgentProfiles.map((agent) => (
+                  <SelectItem key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      )}
       <ChatbotMessages
         applyingToolCallIds={applyingToolCallIds}
         debuggerContent={import.meta.env.DEV ? (

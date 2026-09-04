@@ -23,6 +23,7 @@ import {
 } from "@zilobase/features/pages"
 
 import { ZilobaseAiSection } from "./zilobase-ai/components/zilobase-ai-section"
+import { CustomAgentsSection } from "./zilobase-ai/components/custom-agents-section"
 import { toast } from "sonner"
 
 export default function ZilobaseAiSettingsPage() {
@@ -78,10 +79,12 @@ export default function ZilobaseAiSettingsPage() {
     <main className="flex flex-1 flex-col gap-6 px-4 py-8">
       <SettingsHeader
         title="Zilobase AI"
-        description="Manage pages used as AI instructions and skills."
+        description="Manage Custom Agents, connected tools, personal instructions, and skills."
       />
 
       <div className="mx-auto grid w-full max-w-3xl gap-6">
+        <CustomAgentsSection />
+        <Separator />
         <section className="grid gap-4">
           <div className="space-y-1">
             <h3 className="font-heading text-base leading-snug font-medium">

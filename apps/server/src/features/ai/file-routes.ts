@@ -272,6 +272,7 @@ function toJobResponse(job: Awaited<ReturnType<typeof enqueueAiJob>>) {
   return {
     error: job.status === "failed" ? job.error : null,
     id: job.id,
+    output: job.status === "succeeded" ? job.output : null,
     progress: job.progress,
     status: job.status,
     type: job.type,

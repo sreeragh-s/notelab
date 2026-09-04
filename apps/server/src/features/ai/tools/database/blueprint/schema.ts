@@ -99,7 +99,7 @@ const databaseBlueprintPropertySchema = z.object({
   type: agentCreatableDatabasePropertyTypeSchema,
 });
 
-const databaseBlueprintViewSchema = z.object({
+export const databaseBlueprintViewSchema = z.object({
   filters: z.array(z.object({
     joinOperator: z.enum(["and", "or"]).optional(),
     operator: databaseFilterOperatorSchema,

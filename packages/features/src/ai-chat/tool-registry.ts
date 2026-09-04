@@ -31,6 +31,7 @@ export const AGENT_TOOL_DESCRIPTORS = [
   descriptor("updateDataSource", "page-database.configure", "write", "review", "Update data source"),
   descriptor("createDatabaseRow", "page-database.configure", "write", "none", "Add database row", 2),
   descriptor("setDatabaseCellValue", "page-database.configure", "write", "none", "Set cell value"),
+  descriptor("materializeConnectedDataAsDatabase", "page-database.configure", "write", "review", "Import connector data"),
 ] as const satisfies readonly AgentToolDescriptor[];
 
 export const AGENT_TOOL_REGISTRY_VERSION = Math.max(
