@@ -38,7 +38,7 @@ export async function beginMcpOAuth(input: {
   workspaceId: string;
 }) {
   const connection = await requireOAuthConnection(input);
-  const fetchFn = createSecureMcpFetch({ approvedUrls: new Set(), allowAnyPublicHttps: true, env: input.env });
+  const fetchFn = createSecureMcpFetch({ approvedUrls: new Set(), allowAnyPublicHttps: true });
   const discovered = await discoverOAuthServerInfo(connection.endpointUrl, { fetchFn });
   if (!discovered.authorizationServerMetadata) {
     throw new McpServiceError("mcp_oauth_discovery_failed", "The server did not publish valid OAuth metadata.", 409);
@@ -135,7 +135,7 @@ export async function completeMcpOAuth(input: {
     throw new McpServiceError("mcp_oauth_authenticator_inactive", "The connection authenticator is no longer eligible.", 409);
   }
 
-  const fetchFn = createSecureMcpFetch({ approvedUrls: new Set(), allowAnyPublicHttps: true, env: input.env });
+  const fetchFn = createSecureMcpFetch({ approvedUrls: new Set(), allowAnyPublicHttps: true });
   const discovered = await discoverOAuthServerInfo(record.connection.endpointUrl, { fetchFn });
   const metadata = discovered.authorizationServerMetadata;
   if (!metadata?.issuer || metadata.issuer !== record.attempt.issuer) {
@@ -227,7 +227,7 @@ export async function refreshStoredMcpOAuthCredential(input: {
   };
   env: RuntimeEnv;
 }) {
-  const fetchFn = createSecureMcpFetch({ approvedUrls: new Set(), allowAnyPublicHttps: true, env: input.env });
+  const fetchFn = createSecureMcpFetch({ approvedUrls: new Set(), allowAnyPublicHttps: true });
   const discovered = await discoverOAuthServerInfo(input.connection.endpointUrl, { fetchFn });
   const metadata = discovered.authorizationServerMetadata;
   if (!metadata?.issuer || metadata.issuer !== input.credential.issuer) {
@@ -298,7 +298,7 @@ export async function revokeStoredMcpOAuthCredential(input: {
     refreshToken?: string;
   };
   if (credential.kind !== "oauth" || !credential.issuer) return;
-  const fetchFn = createSecureMcpFetch({ approvedUrls: new Set(), allowAnyPublicHttps: true, env: input.env });
+  const fetchFn = createSecureMcpFetch({ approvedUrls: new Set(), allowAnyPublicHttps: true });
   const discovered = await discoverOAuthServerInfo(input.connection.endpointUrl, { fetchFn });
   const metadata = discovered.authorizationServerMetadata;
   const revocationEndpoint = metadata && "revocation_endpoint" in metadata &&

@@ -20,7 +20,7 @@ import { getMcpCatalogEntry } from "./catalog";
 import { MCP_LIMITS, isMcpCustomServersEnabled } from "./config";
 import { encryptMcpSecret } from "./credential-crypto";
 import { discoverConnectionTools } from "./mcp-client";
-import { McpEgressError, normalizeMcpEndpoint, resolvePublicMcpTarget, validateMcpCustomHeaderName } from "./secure-egress";
+import { McpEgressError, normalizeMcpEndpoint, validateMcpCustomHeaderName } from "./secure-egress";
 
 export class McpServiceError extends Error {
   constructor(
@@ -80,7 +80,6 @@ export async function addApprovedMcpServer(input: {
   workspaceId: string;
 }) {
   const endpointUrl = normalizeMcpEndpoint(input.endpointUrl);
-  await resolvePublicMcpTarget(endpointUrl);
   const now = new Date();
   const [server] = await db.insert(aiMcpApprovedServer).values({
     createdAt: now,
@@ -162,7 +161,6 @@ export async function createMcpConnection(input: {
   } else {
     throw new McpServiceError("mcp_server_required", "Choose a catalog or approved custom server.");
   }
-  await resolvePublicMcpTarget(endpointUrl);
   const now = new Date();
   const [connection] = await db.insert(aiMcpConnection).values({
     agentProfileId: input.agentProfileId,

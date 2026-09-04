@@ -50,7 +50,7 @@ export async function discoverConnectionTools(input: {
 }) {
   const startedAt = performance.now();
   const context = await loadConnectionContext(input.connectionId, input.env);
-  const { client, close } = await connectClient(context, input.env);
+  const { client, close } = await connectClient(context);
   try {
     const result = await client.listTools();
     await persistToolDiscovery(context.connection, result.tools);
@@ -114,7 +114,7 @@ export async function executeMcpTool(input: {
     return failure("mcp_tool_changed", "The connector tool changed and must be reviewed again.");
   }
 
-  const { client, close } = await connectClient(context, input.env);
+  const { client, close } = await connectClient(context);
   try {
     const attempts = snapshot.classification === "read" ? 2 : 1;
     for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -159,7 +159,6 @@ export async function executeMcpTool(input: {
 
 async function connectClient(
   context: Awaited<ReturnType<typeof loadConnectionContext>>,
-  env: RuntimeEnv,
 ) {
   const headers = credentialHeaders(context.credential);
   const client = new Client(
@@ -175,7 +174,6 @@ async function connectClient(
     {
       fetch: createSecureMcpFetch({
         approvedUrls: new Set([context.connection.endpointUrl]),
-        env,
         timeoutMs: MCP_LIMITS.timeoutMs,
       }),
       onInsufficientScope: "throw",

@@ -1,10 +1,10 @@
 import type { FetchLike } from "@modelcontextprotocol/client";
 
 import { fetchMcpRequest } from "../../../infrastructure/runtime/runtime-adapter";
-import type { RuntimeEnv } from "../../../shared/config/config";
-import { requestSignal } from "../../../shared/http/request";
 import { isBlockedAddress } from "../../databases/automations/webhook-egress";
 import { MCP_LIMITS } from "./config";
+
+const MAX_MCP_REQUEST_BYTES = 1024 * 1024;
 
 const BLOCKED_CUSTOM_HEADERS = new Set([
   "connection", "content-length", "cookie", "forwarded", "host", "keep-alive",
@@ -38,6 +38,10 @@ export function normalizeMcpEndpoint(rawUrl: string) {
   }
   url.hostname = url.hostname.toLowerCase();
   if (url.port === "443") url.port = "";
+  const hostname = url.hostname.replace(/^\[|\]$/g, "");
+  if (isBlockedHostname(hostname) || isBlockedAddress(hostname)) {
+    throw new McpEgressError("mcp_private_destination", "MCP destination is private or reserved.");
+  }
   return url.toString();
 }
 
@@ -54,35 +58,14 @@ export function validateMcpCustomHeaderName(name: string) {
   return normalized;
 }
 
-export async function resolvePublicMcpTarget(
-  rawUrl: string,
-  resolver: (hostname: string) => Promise<string[]> = resolveWithDoh,
-) {
-  const normalizedUrl = normalizeMcpEndpoint(rawUrl);
-  const url = new URL(normalizedUrl);
-  const hostname = url.hostname.replace(/^\[|\]$/g, "");
-  if (isBlockedHostname(hostname) || isBlockedAddress(hostname)) {
-    throw new McpEgressError("mcp_private_destination", "MCP destination is private or reserved.");
-  }
-  const addresses = isIpAddress(hostname) ? [hostname] : await resolver(hostname);
-  const unique = [...new Set(addresses.map((address) => address.toLowerCase().replace(/^\[|\]$/g, "")))].sort();
-  if (unique.length === 0) {
-    throw new McpEgressError("mcp_dns_failed", "MCP endpoint could not be resolved.");
-  }
-  if (unique.some(isBlockedAddress)) {
-    throw new McpEgressError("mcp_private_destination", "MCP DNS resolved to a private or reserved address.");
-  }
-  return { pinnedAddress: unique[0]!, url };
-}
-
 export function createSecureMcpFetch(input: {
   approvedUrls: ReadonlySet<string>;
   allowAnyPublicHttps?: boolean;
-  env: RuntimeEnv;
-  resolver?: (hostname: string) => Promise<string[]>;
+  transport?: typeof fetchMcpRequest;
   timeoutMs?: number;
 }): FetchLike {
   const approved = new Set([...input.approvedUrls].map(normalizeMcpEndpoint));
+  const transport = input.transport ?? fetchMcpRequest;
   return async (requestInput, init) => {
     const request = new Request(requestInput, init);
     let currentUrl = normalizeMcpEndpoint(request.url);
@@ -94,16 +77,13 @@ export function createSecureMcpFetch(input: {
       if (!input.allowAnyPublicHttps && !approved.has(currentUrl)) {
         throw new McpEgressError("mcp_endpoint_not_approved", "MCP request target is not workspace-approved.");
       }
-      const target = await resolvePublicMcpTarget(currentUrl, input.resolver);
-      const response = await fetchMcpRequest({
+      const response = await transport({
         body,
-        env: input.env,
         headers: Object.fromEntries(headers.entries()),
         method,
-        pinnedAddress: target.pinnedAddress,
         signal: request.signal,
         timeoutMs: input.timeoutMs ?? MCP_LIMITS.timeoutMs,
-        url: target.url.toString(),
+        url: currentUrl,
       });
       if (response.status < 300 || response.status >= 400) {
         return boundMcpResponse(response);
@@ -113,12 +93,11 @@ export function createSecureMcpFetch(input: {
         throw new McpEgressError("mcp_redirect_rejected", "MCP redirect was rejected.");
       }
       const previousOrigin = new URL(currentUrl).origin;
-      currentUrl = normalizeMcpEndpoint(new URL(location, currentUrl).toString());
-      if (new URL(currentUrl).origin !== previousOrigin) {
-        for (const name of [...headers.keys()]) {
-          if (name !== "accept" && name !== "content-type") headers.delete(name);
-        }
+      const nextUrl = normalizeMcpEndpoint(new URL(location, currentUrl).toString());
+      if (new URL(nextUrl).origin !== previousOrigin) {
+        throw new McpEgressError("mcp_redirect_rejected", "Cross-origin MCP redirects are not allowed.");
       }
+      currentUrl = nextUrl;
       if (response.status === 303 || ((response.status === 301 || response.status === 302) && method === "POST")) {
         method = "GET";
         body = null;
@@ -130,9 +109,28 @@ export function createSecureMcpFetch(input: {
 }
 
 async function readBoundedRequestBody(request: Request) {
-  const bytes = new Uint8Array(await request.arrayBuffer());
-  if (bytes.byteLength > 1024 * 1024) {
+  const declared = Number(request.headers.get("content-length") ?? 0);
+  if (declared > MAX_MCP_REQUEST_BYTES) {
     throw new McpEgressError("mcp_request_too_large", "MCP request exceeded 1 MiB.");
+  }
+  const reader = request.body!.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const chunk = await reader.read();
+    if (chunk.done) break;
+    total += chunk.value.byteLength;
+    if (total > MAX_MCP_REQUEST_BYTES) {
+      await reader.cancel();
+      throw new McpEgressError("mcp_request_too_large", "MCP request exceeded 1 MiB.");
+    }
+    chunks.push(chunk.value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
   }
   return new TextDecoder().decode(bytes);
 }
@@ -159,26 +157,6 @@ function boundMcpResponse(response: Response) {
     status: response.status,
     statusText: response.statusText,
   });
-}
-
-async function resolveWithDoh(hostname: string) {
-  const addresses: string[] = [];
-  for (const type of ["A", "AAAA"] as const) {
-    const response = await fetch(
-      `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(hostname)}&type=${type}`,
-      { headers: { accept: "application/dns-json" }, signal: requestSignal(5_000) },
-    );
-    if (!response.ok) throw new McpEgressError("mcp_dns_failed", "MCP DNS lookup failed.");
-    const payload = await response.json() as { Answer?: Array<{ data?: string }> };
-    for (const answer of payload.Answer ?? []) {
-      if (answer.data && isIpAddress(answer.data)) addresses.push(answer.data);
-    }
-  }
-  return addresses;
-}
-
-function isIpAddress(value: string) {
-  return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(value) || value.includes(":");
 }
 
 function isBlockedHostname(hostname: string) {

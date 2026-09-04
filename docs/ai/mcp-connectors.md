@@ -34,23 +34,25 @@ database permissions.
 | OAuth, PKCE, protected-resource discovery | Yes | Yes |
 | Up to five custom headers | Yes | Yes |
 | Public HTTPS custom servers | Admin-approved exact URLs | Admin-approved exact URLs |
-| DNS/IP and redirect validation | Per request | Per request |
+| Destination enforcement | DNS filter and pinned public IP per hop | Cloudflare public-only network enforcement |
 | One-time database import | PostgreSQL `ai.job` worker | Queue-backed `ai.job` worker |
 | stdio/local servers | No | No |
 | MCP prompts/resources/sampling/tasks/roots | No | No |
 
-The Node adapter pins each request to the validated IP while retaining the TLS
-hostname. The Cloudflare adapter sends the same bounded request through its
-private `MCP_EGRESS` Container binding. The container connects to the validated
-IP and supplies the original hostname for TLS certificate verification and SNI.
-If the binding is absent, connector execution fails closed; it never falls back
-to an unpinned Worker `fetch()`.
+The shared MCP boundary validates approved HTTPS endpoints, follows redirects
+manually, isolates credentials, and enforces request, response, timeout, and
+cancellation limits. The Node adapter resolves every hop, filters blocked DNS
+answers, connects to one selected public address, and retains the original
+hostname for `Host`, TLS certificate validation, and SNI. The Cloudflare adapter
+uses native Worker `fetch()` with `global_fetch_strictly_public`; Cloudflare's
+network layer limits the actual connection to public destinations and prevents
+same-zone requests from bypassing the public front door.
 
 ## Threat model and controls
 
 | Threat | Control |
 | --- | --- |
-| SSRF, DNS rebinding, redirect escape | HTTPS-only normalized URLs, exact workspace approval, A/AAAA validation before every discovery/call, blocked special ranges, manually revalidated redirects, Node or Cloudflare Container destination-IP pinning |
+| SSRF, DNS rebinding, redirect escape | HTTPS-only normalized URLs, exact workspace approval, blocked literal/local destinations, manually revalidated redirects, Node destination pinning, and Cloudflare strict-public network enforcement |
 | Credential disclosure | AES-256-GCM keyring, context-bound AAD, write-only header endpoint, no secret serialization, log/activity allowlists |
 | OAuth mix-up or replay | PKCE S256, hashed single-use state, exact callback, issuer-bound registration, resource indicators, audience isolation |
 | Tool schema replacement | Immutable discovery snapshot and hash; live schema check before approved execution; changed tools quarantined |
@@ -109,10 +111,12 @@ one-time imports, approved custom servers, then automatic writes. Figma stays
 visible but unavailable until Zilobase is approved as a supported remote MCP
 client.
 
-Cloudflare deployments also require the checked-in `MCP_EGRESS` Durable Object
-binding and `McpEgressContainer` image. Containers require a Workers Paid plan;
-the deploy environment must be able to build the Dockerfile. Run a production
-smoke test through the deployed binding before enabling `AI_MCP_ENABLED`.
+Cloudflare API and background Workers must both enable the
+`global_fetch_strictly_public` compatibility flag while retaining the existing
+compatibility date. No Container, Docker image, or paid Container allocation is
+required. Before enabling `AI_MCP_ENABLED`, run deployed negative tests against
+private-only DNS, same-zone routing, and an unapproved redirect, followed by a
+curated read-only discovery and tool call.
 
 Rollback order is:
 

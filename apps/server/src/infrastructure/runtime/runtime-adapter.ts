@@ -23,10 +23,8 @@ export type OutboundEmailMessage = {
 export type ServerRuntimeAdapter = {
   fetchMcpRequest?(input: {
     body: string | null;
-    env: RuntimeEnv;
     headers: Record<string, string>;
     method: string;
-    pinnedAddress: string;
     signal?: AbortSignal;
     timeoutMs: number;
     url: string;
@@ -347,17 +345,15 @@ export async function fetchAutomationWebhook(input: {
 
 export async function fetchMcpRequest(input: {
   body: string | null;
-  env: RuntimeEnv;
   headers: Record<string, string>;
   method: string;
-  pinnedAddress: string;
   signal?: AbortSignal;
   timeoutMs: number;
   url: string;
 }) {
   const adapter = getRuntimeAdapter();
   if (adapter.fetchMcpRequest) return adapter.fetchMcpRequest(input);
-  throw new Error("A pinned MCP transport is required for MCP connections");
+  throw new Error("A secure MCP transport is required for MCP connections");
 }
 
 export function isSelfHostedRuntime() {
