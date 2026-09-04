@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Dispatch, ReactNode, SetStateAction } from "react"
-import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router"
+import { Outlet, useNavigate, useRouter, useRouterState } from "@tanstack/react-router"
 import { ChevronsRightIcon, SidebarSimpleIcon } from "@/shared/components/icons"
 
 import { AppSidebar } from "@/features/sidebar"
@@ -206,8 +206,10 @@ function AppLayoutContent({
   utilitySidebar?: ReactNode
   utilitySidebarOpen: boolean
 }) {
-  const { pathname, searchStr } = useRouterState({
+  const router = useRouter()
+  const { hash, pathname, searchStr } = useRouterState({
     select: (state) => ({
+      hash: state.location.hash,
       pathname: state.location.pathname,
       searchStr: state.location.searchStr,
     }),
@@ -224,6 +226,14 @@ function AppLayoutContent({
     : null
   const aiWorkspaceSidePaneOpen =
     aiWorkspacePanel === "settings" || aiWorkspacePanel === "history"
+  const closeAiWorkspaceSidePane = useCallback(() => {
+    const search = new URLSearchParams(searchStr)
+    search.delete("panel")
+    search.delete("settingsScope")
+    search.delete("settingsTab")
+    const query = search.toString()
+    router.history.replace(`${pathname}${query ? `?${query}` : ""}${hash}`)
+  }, [hash, pathname, router.history, searchStr])
   const isMailPage = pathname === "/mail"
   const pageId = useRoutePageId(pathname)
   const databaseId = getDatabaseId(pathname)
@@ -600,6 +610,11 @@ function AppLayoutContent({
                         : undefined
                     }
                     pageSidebarOpen={pageLayoutSidebarOpen}
+                    onCloseAuxiliarySidePane={
+                      showAiWorkspaceSidePaneLayout
+                        ? closeAiWorkspaceSidePane
+                        : undefined
+                    }
                     onCloseSidePane={closeSidePane}
                     pathname={pathname}
                     renderedSidePanePageId={

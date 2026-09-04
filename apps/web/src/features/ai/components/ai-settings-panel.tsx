@@ -46,6 +46,7 @@ export function AiSettingsPanel({
   onAgentCreated,
   onClose,
   scope,
+  showCloseButton = true,
 }: {
   agentId: string | null
   creatingAgent?: boolean
@@ -53,6 +54,7 @@ export function AiSettingsPanel({
   onAgentCreated?: (agentId: string) => void
   onClose: () => void
   scope: "personal" | "agent"
+  showCloseButton?: boolean
 }) {
   const [personalTab, setPersonalTab] = React.useState<PersonalTab>(
     isPersonalTab(initialTab) ? initialTab : "preferences",
@@ -75,9 +77,11 @@ export function AiSettingsPanel({
               : "Manage your private AI preferences and workspace-scoped connectors."}
           </p>
           </div>
-          <Button aria-label="Close AI settings" onClick={onClose} size="icon-sm" type="button" variant="ghost">
-            <XIcon className="size-4" />
-          </Button>
+          {showCloseButton ? (
+            <Button aria-label="Close AI settings" onClick={onClose} size="icon-sm" type="button" variant="ghost">
+              <XIcon className="size-4" />
+            </Button>
+          ) : null}
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           {creatingAgent ? (

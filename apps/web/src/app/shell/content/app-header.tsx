@@ -1,4 +1,9 @@
-import { getDatabaseId, MainPaneHeaderLeadingControl, PagePaneHeader } from "@/features/pages/components"
+import {
+  getDatabaseId,
+  MainPaneHeaderLeadingControl,
+  PagePaneHeader,
+  PageSidePaneCollapseButton,
+} from "@/features/pages/components"
 import { PageSidePaneHeaderCell, useOptionalPageLayoutSidebar } from "@/features/pages/context"
 
 export function AppHeader({
@@ -8,6 +13,7 @@ export function AppHeader({
   onToggleDiscussions,
   onTogglePageSidebar,
   pageSidebarOpen,
+  onCloseAuxiliarySidePane,
   onCloseSidePane,
   pathname,
   renderedSidePaneDatabaseId,
@@ -21,6 +27,7 @@ export function AppHeader({
   onToggleDiscussions?: () => void
   onTogglePageSidebar?: () => void
   pageSidebarOpen?: boolean
+  onCloseAuxiliarySidePane?: () => void
   onCloseSidePane: () => void
   pathname: string
   renderedSidePaneDatabaseId: string | null
@@ -67,6 +74,13 @@ export function AppHeader({
               rowNavigationDatabaseId={rowNavigationDatabaseId}
               showBreadcrumb={false}
             />
+          ) : onCloseAuxiliarySidePane ? (
+            <div className="flex h-full items-center px-3">
+              <PageSidePaneCollapseButton
+                label="Close AI settings"
+                onClick={onCloseAuxiliarySidePane}
+              />
+            </div>
           ) : null}
         </PageSidePaneHeaderCell>
       ) : null}

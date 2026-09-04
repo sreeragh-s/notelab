@@ -3,6 +3,7 @@ export { EmbeddedItemPresentationDropdown } from "./embedded-item-presentation-d
 export {
   MainPaneHeaderLeadingControl,
   PagePaneHeader,
+  PageSidePaneCollapseButton,
   getDatabaseId,
   useRoutePageId,
 } from "./page-pane-header";

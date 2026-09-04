@@ -3,7 +3,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState, type ReactNode } from "react"
 import { toast } from "sonner"
 import { useAiAgentProfiles } from "@zilobase/features/ai-chat"
-import { useRouter } from "@tanstack/react-router"
+import { useRouter, useRouterState } from "@tanstack/react-router"
 
 import {
   ChevronsRightIcon,
@@ -49,6 +49,9 @@ export function AgentChatWorkspace({
   presentationMode?: ChatPresentationMode
 }) {
   const router = useRouter()
+  const routeSearch = useRouterState({
+    select: (state) => state.location.searchStr,
+  })
   const {
     activeThreadId,
     draftAgentProfileId,
@@ -79,6 +82,11 @@ export function AgentChatWorkspace({
       updatePanelSearch(panel, selectedAgentId, settingsTab, router.history.replace)
     }
   }, [isSidebar, panel, router.history, selectedAgentId, settingsTab])
+
+  useEffect(() => {
+    if (isSidebar) return
+    setPanelState(readPanelFromSearch(routeSearch))
+  }, [isSidebar, routeSearch])
 
   useEffect(() => {
     if (isSidebar) return
@@ -144,6 +152,7 @@ export function AgentChatWorkspace({
       }}
       onClose={() => setPanel(null)}
       scope={selectedAgentId || creatingAgent ? "agent" : "personal"}
+      showCloseButton={isSidebar}
     />
   )
   const historyPanel = (
@@ -155,18 +164,18 @@ export function AgentChatWorkspace({
   )
   const main = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-surface-canvas">
-      <ChatHeader
-        isSidebar={isSidebar}
-        onClose={onClose}
-        onPresentationModeChange={onPresentationModeChange}
-        onSettings={openSettings}
-        panel={panel}
-        presentationMode={presentationMode}
-      />
+      {isSidebar ? (
+        <ChatHeader
+          onClose={onClose}
+          onPresentationModeChange={onPresentationModeChange}
+          presentationMode={presentationMode}
+        />
+      ) : null}
       <AgentRail
         compact={isSidebar}
         onAddAgent={addAgent}
         onSelect={switchAgent}
+        onSettings={openSettings}
         profiles={profiles}
         selectedAgentId={selectedAgentId}
       />
@@ -206,23 +215,17 @@ export function AgentChatWorkspace({
 }
 
 function ChatHeader({
-  isSidebar,
   onClose,
   onPresentationModeChange,
-  onSettings,
-  panel,
   presentationMode,
 }: {
-  isSidebar: boolean
   onClose?: () => void
   onPresentationModeChange?: (mode: ChatPresentationMode) => void
-  onSettings: () => void
-  panel: WorkspacePanel
   presentationMode: ChatPresentationMode
 }) {
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
-      {isSidebar && onClose ? (
+      {onClose ? (
         <Button aria-label="Close Ask AI" onClick={onClose} size="icon-sm" type="button" variant="ghost">
           {presentationMode === "floating" ? <XIcon /> : <ChevronsRightIcon />}
         </Button>
@@ -230,7 +233,7 @@ function ChatHeader({
       <div className="min-w-0 flex-1">
         <h2 className="truncate font-heading text-sm font-medium">Ask AI</h2>
       </div>
-      {isSidebar && onPresentationModeChange ? (
+      {onPresentationModeChange ? (
         <Button
           aria-label={presentationMode === "sidebar" ? "Switch to floating chat" : "Dock chat in sidebar"}
           onClick={() => onPresentationModeChange(presentationMode === "sidebar" ? "floating" : "sidebar")}
@@ -241,9 +244,6 @@ function ChatHeader({
           {presentationMode === "sidebar" ? <PictureInPicture2Icon className="size-4" /> : <SidebarSimpleIcon className="size-4" mirrored />}
         </Button>
       ) : null}
-      <Button aria-label="Ask AI settings" aria-pressed={panel === "settings"} onClick={onSettings} size="icon-sm" type="button" variant="ghost">
-        <SlidersHorizontalIcon className="size-4" />
-      </Button>
     </header>
   )
 }
@@ -252,31 +252,42 @@ function AgentRail({
   compact,
   onAddAgent,
   onSelect,
+  onSettings,
   profiles,
   selectedAgentId,
 }: {
   compact: boolean
   onAddAgent: () => void
   onSelect: (agentId: string | null) => void
+  onSettings: () => void
   profiles: Array<{ id: string; name: string }>
   selectedAgentId: string | null
 }) {
   return (
     <Tabs
-      className="block shrink-0 border-b px-3 py-2"
+      className="block shrink-0 px-3 py-2"
       onValueChange={(value) => onSelect(value === "personal" ? null : value)}
       value={selectedAgentId ?? "personal"}
     >
       <div className="flex min-w-0 items-center gap-1">
         <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <TabsList aria-label="Ask AI agents" className="rounded-none p-0">
+          <TabsList aria-label="Ask AI agents" className="w-max min-w-0 justify-start">
             <AgentTab compact={compact} label="Personal Ask AI" value="personal" />
             {profiles.map((agent) => (
               <AgentTab compact={compact} key={agent.id} label={agent.name} value={agent.id} />
             ))}
           </TabsList>
         </div>
-        <Button className="h-8 shrink-0" onClick={onAddAgent} size="sm" type="button" variant="ghost">
+        <Button
+          aria-label="Ask AI settings"
+          onClick={onSettings}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+        >
+          <SlidersHorizontalIcon className="size-4" />
+        </Button>
+        <Button className="database-new-button shrink-0" onClick={onAddAgent} type="button">
           <PlusIcon className="size-4" />
           Add Agent
         </Button>
@@ -288,7 +299,7 @@ function AgentRail({
 function AgentTab({ compact, label, value }: { compact: boolean; label: string; value: string }) {
   return (
     <TabsTrigger
-      className="grow-0"
+      className="h-8 shrink-0 grow-0 gap-2 px-3"
       title={compact ? label : undefined}
       value={value}
     >
@@ -327,7 +338,11 @@ function LoadingChat() {
 
 function readInitialPanel(isSidebar: boolean): WorkspacePanel {
   if (isSidebar || typeof window === "undefined") return null
-  const value = new URLSearchParams(window.location.search).get("panel")
+  return readPanelFromSearch(window.location.search)
+}
+
+function readPanelFromSearch(search: string): WorkspacePanel {
+  const value = new URLSearchParams(search).get("panel")
   return value === "history" || value === "settings" ? value : null
 }
 

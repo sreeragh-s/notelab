@@ -167,6 +167,27 @@ export function MainPaneHeaderLeadingControl() {
   );
 }
 
+export function PageSidePaneCollapseButton({
+  label = "Close",
+  onClick,
+}: {
+  label?: string;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      aria-label={label}
+      data-page-side-pane-promoted-hide
+      onClick={onClick}
+      size="icon"
+      type="button"
+      variant="ghost"
+    >
+      <ChevronsRight />
+    </Button>
+  );
+}
+
 function PagePaneControls({
   leadingControl,
   onClose,
@@ -261,16 +282,7 @@ function PagePaneControls({
   return (
     <div className="flex shrink-0 items-center gap-1">
       {onClose ? (
-        <Button
-          aria-label="Close"
-          data-page-side-pane-promoted-hide
-          onClick={onClose}
-          size="icon"
-          type="button"
-          variant="ghost"
-        >
-          <ChevronsRight />
-        </Button>
+        <PageSidePaneCollapseButton onClick={onClose} />
       ) : (
         leadingControl
       )}

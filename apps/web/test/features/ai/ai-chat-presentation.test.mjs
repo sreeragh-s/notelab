@@ -59,4 +59,18 @@ export function register({ readSource, assert, test }) {
     assert.match(headerSource, /auxiliarySidePaneOpen \|\| showItemSidePaneHeader/)
     assert.doesNotMatch(aiPageSource, /<main className="[^"]*overflow-hidden/)
   })
+
+  test("Ask AI uses the database toolbar and standard side-pane controls", async () => {
+    const workspaceSource = await readSource("/src/features/ai/components/agent-chat-workspace.tsx")
+    const headerSource = await readSource("/src/app/shell/content/app-header.tsx")
+    const paneHeaderSource = await readSource("/src/features/pages/components/page-pane-header.tsx")
+
+    assert.match(workspaceSource, /\{isSidebar \? \(\s*<ChatHeader/)
+    assert.match(workspaceSource, /className="block shrink-0 px-3 py-2"/)
+    assert.match(workspaceSource, /className="w-max min-w-0 justify-start"/)
+    assert.match(workspaceSource, /aria-label="Ask AI settings"[\s\S]*?className="database-new-button shrink-0"/)
+    assert.match(headerSource, /<PageSidePaneCollapseButton[\s\S]*?label="Close AI settings"/)
+    assert.match(paneHeaderSource, /export function PageSidePaneCollapseButton/)
+    assert.match(paneHeaderSource, /<PageSidePaneCollapseButton onClick=\{onClose\} \/>/)
+  })
 }
