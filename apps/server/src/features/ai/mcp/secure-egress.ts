@@ -1,6 +1,7 @@
 import type { FetchLike } from "@modelcontextprotocol/client";
 
 import { fetchMcpRequest } from "../../../infrastructure/runtime/runtime-adapter";
+import type { RuntimeEnv } from "../../../shared/config/config";
 import { requestSignal } from "../../../shared/http/request";
 import { isBlockedAddress } from "../../databases/automations/webhook-egress";
 import { MCP_LIMITS } from "./config";
@@ -77,6 +78,7 @@ export async function resolvePublicMcpTarget(
 export function createSecureMcpFetch(input: {
   approvedUrls: ReadonlySet<string>;
   allowAnyPublicHttps?: boolean;
+  env: RuntimeEnv;
   resolver?: (hostname: string) => Promise<string[]>;
   timeoutMs?: number;
 }): FetchLike {
@@ -95,6 +97,7 @@ export function createSecureMcpFetch(input: {
       const target = await resolvePublicMcpTarget(currentUrl, input.resolver);
       const response = await fetchMcpRequest({
         body,
+        env: input.env,
         headers: Object.fromEntries(headers.entries()),
         method,
         pinnedAddress: target.pinnedAddress,

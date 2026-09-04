@@ -40,17 +40,17 @@ database permissions.
 | MCP prompts/resources/sampling/tasks/roots | No | No |
 
 The Node adapter pins each request to the validated IP while retaining the TLS
-hostname. Cloudflare's `resolveOverride` is only honored for hostnames inside the
-same Cloudflare zone; deployments that allow arbitrary custom servers must route
-MCP egress through an approved worker/service binding that enforces the validated
-destination. Do not enable custom servers on a Worker deployment until that
-egress control is present. Catalog-only endpoints remain exact, checked-in URLs.
+hostname. The Cloudflare adapter sends the same bounded request through its
+private `MCP_EGRESS` Container binding. The container connects to the validated
+IP and supplies the original hostname for TLS certificate verification and SNI.
+If the binding is absent, connector execution fails closed; it never falls back
+to an unpinned Worker `fetch()`.
 
 ## Threat model and controls
 
 | Threat | Control |
 | --- | --- |
-| SSRF, DNS rebinding, redirect escape | HTTPS-only normalized URLs, exact workspace approval, A/AAAA validation before every discovery/call, blocked special ranges, manually revalidated redirects, Node IP pinning |
+| SSRF, DNS rebinding, redirect escape | HTTPS-only normalized URLs, exact workspace approval, A/AAAA validation before every discovery/call, blocked special ranges, manually revalidated redirects, Node or Cloudflare Container destination-IP pinning |
 | Credential disclosure | AES-256-GCM keyring, context-bound AAD, write-only header endpoint, no secret serialization, log/activity allowlists |
 | OAuth mix-up or replay | PKCE S256, hashed single-use state, exact callback, issuer-bound registration, resource indicators, audience isolation |
 | Tool schema replacement | Immutable discovery snapshot and hash; live schema check before approved execution; changed tools quarantined |
@@ -108,6 +108,11 @@ keep execution disabled while testing local fixtures. Roll out catalog reads,
 one-time imports, approved custom servers, then automatic writes. Figma stays
 visible but unavailable until Zilobase is approved as a supported remote MCP
 client.
+
+Cloudflare deployments also require the checked-in `MCP_EGRESS` Durable Object
+binding and `McpEgressContainer` image. Containers require a Workers Paid plan;
+the deploy environment must be able to build the Dockerfile. Run a production
+smoke test through the deployed binding before enabling `AI_MCP_ENABLED`.
 
 Rollback order is:
 

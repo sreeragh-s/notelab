@@ -23,6 +23,7 @@ export type OutboundEmailMessage = {
 export type ServerRuntimeAdapter = {
   fetchMcpRequest?(input: {
     body: string | null;
+    env: RuntimeEnv;
     headers: Record<string, string>;
     method: string;
     pinnedAddress: string;
@@ -346,6 +347,7 @@ export async function fetchAutomationWebhook(input: {
 
 export async function fetchMcpRequest(input: {
   body: string | null;
+  env: RuntimeEnv;
   headers: Record<string, string>;
   method: string;
   pinnedAddress: string;
@@ -355,21 +357,7 @@ export async function fetchMcpRequest(input: {
 }) {
   const adapter = getRuntimeAdapter();
   if (adapter.fetchMcpRequest) return adapter.fetchMcpRequest(input);
-  if (adapter.selfHosted !== false) {
-    throw new Error("A pinned MCP transport is required for self-hosted connections");
-  }
-  const timeoutSignal = requestSignal(input.timeoutMs);
-  const signal = input.signal
-    ? AbortSignal.any([input.signal, timeoutSignal])
-    : timeoutSignal;
-  return fetch(input.url, {
-    body: input.body,
-    headers: input.headers,
-    method: input.method,
-    redirect: "manual",
-    signal,
-    ...({ cf: { resolveOverride: input.pinnedAddress } } as Record<string, unknown>),
-  });
+  throw new Error("A pinned MCP transport is required for MCP connections");
 }
 
 export function isSelfHostedRuntime() {

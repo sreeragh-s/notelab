@@ -175,6 +175,7 @@ async function connectClient(
     {
       fetch: createSecureMcpFetch({
         approvedUrls: new Set([context.connection.endpointUrl]),
+        env,
         timeoutMs: MCP_LIMITS.timeoutMs,
       }),
       onInsufficientScope: "throw",
