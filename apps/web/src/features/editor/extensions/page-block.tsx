@@ -293,7 +293,7 @@ function PageBlockView({
 
                   return (
                     <button
-                      className="flex min-h-8 items-center gap-2 rounded-md px-2 py-1 text-left text-xs outline-none hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:bg-action-neutral-hover focus-visible:text-action-on-neutral data-[selected=true]:bg-action-neutral-hover data-[selected=true]:text-action-on-neutral"
+                      className="flex min-h-7 items-center gap-2 rounded-md px-2 py-1 text-left text-xs outline-none hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:bg-action-neutral-hover focus-visible:text-action-on-neutral data-[selected=true]:bg-action-neutral-hover data-[selected=true]:text-action-on-neutral"
                       data-selected={selectedIndex === index ? true : undefined}
                       key={page.id}
                       onClick={() => linkPage(page.id)}
@@ -320,7 +320,7 @@ function PageBlockView({
               <>
                 <div className="my-1 h-px bg-stroke-default" />
                 <Button
-                  className="mt-1 flex h-8 w-full justify-start gap-2 px-2 text-xs data-[selected=true]:bg-action-neutral-hover data-[selected=true]:text-action-on-neutral [&_svg]:size-4"
+                  className="mt-1 flex h-7 w-full justify-start gap-2 px-2 text-xs data-[selected=true]:bg-action-neutral-hover data-[selected=true]:text-action-on-neutral [&_svg]:size-4"
                   data-selected={
                     selectedIndex === linkablePages.length ? true : undefined
                   }

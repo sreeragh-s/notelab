@@ -103,7 +103,7 @@ function SingleWorkspaceLabel({
         <DropDrawer>
           <DropDrawerTrigger asChild>
             <SidebarMenuButton
-              className="h-8 w-full max-w-full px-1.5"
+              className="h-7 w-full max-w-full px-1.5"
               disabled={isLoading}
             >
               <div className="flex aspect-square size-5 items-center justify-center rounded-md bg-action-selected text-action-on-selected">
@@ -223,7 +223,7 @@ function MultiWorkspaceSwitcher({
           <DropDrawer>
             <DropDrawerTrigger asChild>
               <SidebarMenuButton
-                className="h-8 w-full max-w-full px-1.5 py-0"
+                className="h-7 w-full max-w-full px-1.5 py-0"
                 disabled={isLoading}
               >
                 <div className="flex aspect-square size-5 items-center justify-center rounded-md bg-action-selected text-action-on-selected">

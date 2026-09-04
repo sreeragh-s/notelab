@@ -133,7 +133,7 @@ function ConditionalColorPropertyPicker({
 
   return (
     <div>
-      <div className="flex h-8 items-center gap-2 px-2 text-sm">
+      <div className="flex h-7 items-center gap-2 px-2 text-sm">
         <Search className="size-4 shrink-0 text-content-secondary" />
         <input
           aria-label="Search for a property"
@@ -149,7 +149,7 @@ function ConditionalColorPropertyPicker({
         {filteredOptions.length > 0 ? (
           filteredOptions.map((option) => (
             <button
-              className="flex h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:bg-action-neutral-hover focus-visible:text-action-on-neutral focus-visible:outline-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-content-secondary"
+              className="flex h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:bg-action-neutral-hover focus-visible:text-action-on-neutral focus-visible:outline-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-content-secondary"
               key={option.value}
               onClick={() => onSelect(option.value)}
               type="button"
@@ -216,7 +216,7 @@ function ConditionalColorRuleItem({
               onValueChange={(value) => onUpdateSetting({ color: value })}
               value={setting.color}
             >
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className="text-xs">
                 <span
                   className={cn(
                     "size-3 rounded-sm border",
@@ -250,7 +250,7 @@ function ConditionalColorRuleItem({
               }
               value={setting.applyTo}
             >
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className="text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent align="start">
@@ -421,7 +421,7 @@ export function ConditionalColorPanel({
           />
         ) : (
           <Button
-            className="h-8 w-full justify-start gap-2 text-xs"
+            className="w-full justify-start gap-2 text-xs"
             disabled={filterFieldOptions.length === 0}
             onClick={() => setIsChoosingProperty(true)}
             type="button"

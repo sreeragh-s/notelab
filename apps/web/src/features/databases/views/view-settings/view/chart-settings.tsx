@@ -171,7 +171,7 @@ export function DatabaseChartSettingsSection({
             aria-label={option.label}
             aria-pressed={settings.type === option.value}
             className={cn(
-              "flex h-8 items-center justify-center rounded-md border text-content-secondary transition-colors hover:bg-action-neutral-hover hover:text-content-primary",
+              "flex h-7 items-center justify-center rounded-md border text-content-secondary transition-colors hover:bg-action-neutral-hover hover:text-content-primary",
               settings.type === option.value && "border-action-selected-border text-action-selected-text",
             )}
             key={option.value}

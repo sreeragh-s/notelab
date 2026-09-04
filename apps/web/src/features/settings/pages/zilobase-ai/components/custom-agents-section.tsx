@@ -576,7 +576,7 @@ function ConnectionCard({
               onValueChange={(classification) => void saveTool(tool, { classification: classification as McpToolPolicy["classification"] })}
               value={tool.classification}
             >
-              <SelectTrigger className="hidden h-8 md:flex"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="hidden md:flex"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="read">Read</SelectItem>
                 <SelectItem value="write">Write</SelectItem>
@@ -588,7 +588,7 @@ function ConnectionCard({
               onValueChange={(executionMode) => void saveTool(tool, { executionMode: executionMode as McpToolPolicy["executionMode"] })}
               value={tool.executionMode}
             >
-              <SelectTrigger className="hidden h-8 md:flex"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="hidden md:flex"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="automatic">Automatic</SelectItem>
                 <SelectItem value="always_ask">Always ask</SelectItem>

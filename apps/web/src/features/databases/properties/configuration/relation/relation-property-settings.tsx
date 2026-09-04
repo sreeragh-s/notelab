@@ -330,7 +330,6 @@ export function RelationPropertySettings({
           <div className="px-2 py-1.5">
             <Input
               aria-label="Related property name"
-              className="h-8"
               onChange={(event) => setRelatedPropertyName(event.target.value)}
               onKeyDown={(event) => event.stopPropagation()}
               placeholder="Related property name"

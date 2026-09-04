@@ -53,7 +53,7 @@ export function DatePicker({
       <PopoverTrigger asChild>
         <Button
           aria-label={ariaLabel}
-          className={cn("h-8 w-full justify-start gap-2 px-2 font-normal", !value && "text-content-secondary", className)}
+          className={cn("w-full justify-start gap-2 font-normal", !value && "text-content-secondary", className)}
           type="button"
           variant="outline"
         >

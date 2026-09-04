@@ -245,7 +245,7 @@ function DateConditionInput({
       <CalendarIcon className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-content-secondary" />
       <Input
         aria-label={label}
-        className="h-8 w-full min-w-0 border-0 bg-transparent pl-7 pr-2 text-xs shadow-none focus-visible:border-transparent focus-visible:ring-0"
+        className="w-full min-w-0 border-0 bg-transparent pl-7 pr-2 text-xs shadow-none focus-visible:border-transparent focus-visible:ring-0"
         onBlur={(event) => onCommit(event.target.value)}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
@@ -560,7 +560,7 @@ function DatabaseDateConditionValueControl({
     <Popover modal open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
       <PopoverTrigger asChild>
         <button
-          className="inline-flex h-8 w-full items-center gap-1.5 rounded-lg border border-control-border px-2 text-left text-sm transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral"
+          className="inline-flex h-7 w-full items-center gap-1.5 rounded-lg border border-control-border px-2 text-left text-sm transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral"
           type="button"
         >
           <CalendarIcon className="size-4 shrink-0 text-content-secondary" />
@@ -587,7 +587,7 @@ function DatabaseDateConditionValueControl({
         )}
         {condition.values.length > 0 ? (
           <Button
-            className="h-8 w-full justify-start px-2 text-xs"
+            className="w-full justify-start text-xs"
             onClick={() => updateValues([])}
             type="button"
             variant="ghost"
@@ -657,7 +657,7 @@ function DatabaseChoiceConditionValueControl({
       <PopoverTrigger asChild>
         <button
           aria-label={`${condition.label} filter options`}
-          className="flex min-h-8 w-full min-w-0 items-center gap-1.5 rounded-lg border border-control-border px-2 py-1 text-left text-sm transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral"
+          className="flex min-h-7 w-full min-w-0 items-center gap-1.5 rounded-lg border border-control-border px-2 py-1 text-left text-sm transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral"
           type="button"
         >
           <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
@@ -679,7 +679,7 @@ function DatabaseChoiceConditionValueControl({
 
             return (
               <div
-                className="flex min-h-8 items-center gap-2 rounded-md px-2 py-1 hover:bg-action-neutral-hover"
+                className="flex min-h-7 items-center gap-2 rounded-md px-2 py-1 hover:bg-action-neutral-hover"
                 key={option.value}
               >
                 <Checkbox
@@ -725,7 +725,7 @@ export function DatabaseConditionValueControl({
 
   if (!conditionOperatorNeedsValue(condition.operator)) {
     return (
-      <span className="inline-flex h-8 w-full items-center rounded-lg border border-transparent px-2 text-sm text-content-secondary">
+      <span className="inline-flex h-7 w-full items-center rounded-lg border border-transparent px-2 text-sm text-content-secondary">
         No value
       </span>
     )
@@ -785,7 +785,7 @@ export function DatabaseConditionValueControl({
     <div className="flex w-full items-center gap-2">
       <Input
         aria-label={`${condition.label} condition value`}
-        className="h-8 min-w-0 flex-1"
+        className="min-w-0 flex-1"
         onChange={(event) => setValue(0, event.target.value)}
         placeholder="Value"
         type={getConditionInputType(condition.propertyType)}
@@ -794,7 +794,7 @@ export function DatabaseConditionValueControl({
       {condition.operator === "is_between" ? (
         <Input
           aria-label={`${condition.label} second condition value`}
-          className="h-8 min-w-0 flex-1"
+          className="min-w-0 flex-1"
           onChange={(event) => setValue(1, event.target.value)}
           placeholder="Value"
           type={getConditionInputType(condition.propertyType)}
@@ -861,7 +861,7 @@ export function DatabaseConditionEditor({
   const conditionControls = (
     <>
       <Select onValueChange={updateField} value={condition.propertyId}>
-        <SelectTrigger className={cn("w-full", isStacked && "h-8 text-xs")}>
+        <SelectTrigger className={cn("w-full", isStacked && "text-xs")}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent align="start">
@@ -878,7 +878,7 @@ export function DatabaseConditionEditor({
         }
         value={condition.operator}
       >
-        <SelectTrigger className={cn("w-full", isStacked && "h-8 text-xs")}>
+        <SelectTrigger className={cn("w-full", isStacked && "text-xs")}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent align="start">
@@ -906,7 +906,7 @@ export function DatabaseConditionEditor({
         "inline-flex shrink-0 items-center justify-center text-content-secondary transition-colors hover:text-content-primary focus-visible:ring-2 focus-visible:ring-action-focus-ring focus-visible:outline-none",
         isStacked
           ? "mt-1 size-7 rounded-full hover:bg-surface-canvas"
-          : "size-8 rounded-md hover:bg-action-neutral-hover"
+          : "size-7 rounded-md hover:bg-action-neutral-hover"
       )}
       onClick={onRemove}
       type="button"

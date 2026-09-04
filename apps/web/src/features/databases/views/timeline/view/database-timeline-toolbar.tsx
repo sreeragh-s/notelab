@@ -50,7 +50,7 @@ export function DatabaseTimelineToolbarChrome({
         >
           <Button
             aria-label="Collapse sidebar"
-            className="database-timeline-toolbar-collapse h-8 w-8 shrink-0 px-0"
+            className="database-timeline-toolbar-collapse h-7 w-7 shrink-0 px-0"
             onClick={() => onSidebarCollapsedChange(true)}
             type="button"
             variant="ghost"
@@ -113,7 +113,7 @@ function DatabaseTimelineToolbar({
         {sidebarCollapsed ? (
           <Button
             aria-label="Expand sidebar"
-            className="database-timeline-toolbar-expand h-8 w-8 shrink-0 px-0"
+            className="database-timeline-toolbar-expand h-7 w-7 shrink-0 px-0"
             onClick={() => onSidebarCollapsedChange(false)}
             type="button"
             variant="ghost"
@@ -130,7 +130,7 @@ function DatabaseTimelineToolbar({
           onValueChange={(value) => onRangeChange(value as Range)}
           value={range}
         >
-          <SelectTrigger className="database-timeline-toolbar-range h-8 w-[6.5rem]">
+          <SelectTrigger className="database-timeline-toolbar-range w-[6.5rem]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent align="end">
@@ -142,7 +142,7 @@ function DatabaseTimelineToolbar({
           </SelectContent>
         </Select>
         <Button
-          className="database-timeline-toolbar-nav h-8 w-8 shrink-0 px-0"
+          className="database-timeline-toolbar-nav h-7 w-7 shrink-0 px-0"
           onClick={() => shiftFocus(-1)}
           type="button"
           variant="ghost"
@@ -150,7 +150,7 @@ function DatabaseTimelineToolbar({
           <ChevronLeft className="size-4" />
         </Button>
         <Button
-          className="database-timeline-toolbar-today h-8 px-2.5"
+          className="database-timeline-toolbar-today"
           onClick={() => scrollTo(new Date())}
           type="button"
           variant="ghost"
@@ -158,7 +158,7 @@ function DatabaseTimelineToolbar({
           Today
         </Button>
         <Button
-          className="database-timeline-toolbar-nav h-8 w-8 shrink-0 px-0"
+          className="database-timeline-toolbar-nav h-7 w-7 shrink-0 px-0"
           onClick={() => shiftFocus(1)}
           type="button"
           variant="ghost"

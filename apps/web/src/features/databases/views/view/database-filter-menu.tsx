@@ -124,7 +124,7 @@ function DatabaseFilterMenuContent({
           >
             <DropDrawerTrigger asChild>
               <Button
-                className="h-8 w-full justify-start gap-2 text-xs"
+                className="w-full justify-start gap-2 text-xs"
                 type="button"
                 variant="secondary"
               >
@@ -155,7 +155,7 @@ function DatabaseFilterMenuContent({
           </DropDrawer>
         ) : null}
         <Button
-          className="h-8 w-full justify-start gap-2 text-xs"
+          className="w-full justify-start gap-2 text-xs"
           disabled={activeDatabaseFilters.length === 0}
           onClick={onClearDatabaseFilter}
           type="button"

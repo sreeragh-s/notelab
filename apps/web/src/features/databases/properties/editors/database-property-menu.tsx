@@ -282,7 +282,7 @@ export function DatabasePropertyMenu({
                 <PopoverTrigger asChild>
                   <button
                     aria-label="Change property icon"
-                    className="flex size-8 items-center justify-center rounded-md border bg-surface-canvas transition-colors hover:bg-action-neutral-hover focus-visible:ring-2 focus-visible:ring-action-focus-ring focus-visible:outline-none"
+                    className="flex size-7 items-center justify-center rounded-md border bg-surface-canvas transition-colors hover:bg-action-neutral-hover focus-visible:ring-2 focus-visible:ring-action-focus-ring focus-visible:outline-none"
                     type="button"
                   >
                     {renderPropertyIcon()}
@@ -320,7 +320,7 @@ export function DatabasePropertyMenu({
             </Popover>
             <Input
               aria-label="Property name"
-              className="h-8 min-w-0 flex-1 text-sm font-medium"
+              className="min-w-0 flex-1 text-sm font-medium"
               defaultValue={name}
               onBlur={(event) => {
                 const nextName = event.target.value.trim();

@@ -94,7 +94,7 @@ export function register({ readSource, assert, test }) {
     assert.match(sidebarCustomizeSource, /sortable\.isDragging \|\| sortable\.isOver \|\| menuOpen/)
     assert.match(sidebarCustomizeSource, /verticalListSortingStrategy/)
     assert.match(sidebarCustomizeSource, /group\/editor-row relative cursor-grab/)
-    assert.match(sidebarCustomizeSource, /flex h-8 w-full items-center gap-2 rounded-md p-2 pr-8/)
+    assert.match(sidebarCustomizeSource, /flex h-7 w-full items-center gap-2 rounded-md px-2 pr-8/)
     assert.match(sidebarCustomizeSource, /absolute right-1 top-1\.5 inline-flex size-5/)
     const addShortcutMenu = sidebarCustomizeSource.slice(
       sidebarCustomizeSource.indexOf("function AddShortcutMenu"),

@@ -80,7 +80,7 @@ export function ColorPicker({
       <div className="grid gap-1">
         {colorTokens.map((token) => (
           <button
-            className="flex min-h-8 items-center gap-2 rounded-md px-2 py-1 text-left text-xs outline-none hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:bg-action-neutral-hover focus-visible:text-action-on-neutral"
+            className="flex min-h-7 items-center gap-2 rounded-md px-2 py-1 text-left text-xs outline-none hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:bg-action-neutral-hover focus-visible:text-action-on-neutral"
             key={`text-${token.name}`}
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => onTextColorSelect(token.value)}
@@ -103,7 +103,7 @@ export function ColorPicker({
       <div className="grid gap-1">
         {colorTokens.map((token) => (
           <button
-            className="flex min-h-8 items-center gap-2 rounded-md px-2 py-1 text-left text-xs outline-none hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:bg-action-neutral-hover focus-visible:text-action-on-neutral"
+            className="flex min-h-7 items-center gap-2 rounded-md px-2 py-1 text-left text-xs outline-none hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:bg-action-neutral-hover focus-visible:text-action-on-neutral"
             key={`background-${token.name}`}
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => onBackgroundColorSelect(token.value)}

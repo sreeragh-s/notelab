@@ -202,7 +202,7 @@ export function DatabaseFormView({ preview = false }: { preview?: boolean }) {
               footer={
                 canEditQuestions && property && isOptionProperty(property) ? (
                   <Button
-                    className="relative z-10 h-8 gap-2 px-1 text-content-secondary"
+                    className="relative z-10 h-7 gap-2 px-1 text-content-secondary"
                     onClick={(event) => {
                       event.stopPropagation()
                       void addFormPropertyOption(
@@ -557,7 +557,6 @@ function QuestionOptions({
             <PropertyIcon className="size-4 shrink-0 text-content-secondary" />
             <Input
               aria-label="Linked property name"
-              className="h-8"
               defaultValue={propertyName}
               key={propertyName}
               onBlur={(event) => {

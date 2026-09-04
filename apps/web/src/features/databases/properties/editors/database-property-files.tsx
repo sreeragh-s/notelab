@@ -284,7 +284,7 @@ export function DatabasePropertyFiles({
                   </a>
                   <button
                     aria-label={`Remove ${getFileLabel(file)}`}
-                    className="inline-flex size-8 items-center justify-center rounded-md text-content-secondary transition-colors hover:bg-surface-canvas hover:text-content-primary focus-visible:ring-2 focus-visible:ring-action-focus-ring focus-visible:outline-none"
+                    className="inline-flex size-7 items-center justify-center rounded-md text-content-secondary transition-colors hover:bg-surface-canvas hover:text-content-primary focus-visible:ring-2 focus-visible:ring-action-focus-ring focus-visible:outline-none"
                     onClick={() => removeFile(file)}
                     type="button"
                   >

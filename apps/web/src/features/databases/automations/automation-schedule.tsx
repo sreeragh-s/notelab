@@ -35,7 +35,7 @@ export function ScheduleEditor({ onChange, schedule }: {
         Frequency
         <AutomationSelect
           ariaLabel="Schedule frequency"
-          className="h-8 text-sm text-content-primary"
+          className="h-7 text-sm text-content-primary"
           onValueChange={(frequency) => patch({ frequency: frequency as ScheduleDraft["frequency"] })}
           options={[
             { label: "Daily", value: "daily" },
@@ -52,7 +52,7 @@ export function ScheduleEditor({ onChange, schedule }: {
           Repeat unit
           <AutomationSelect
             ariaLabel="Custom schedule unit"
-            className="h-8 text-sm text-content-primary"
+            className="h-7 text-sm text-content-primary"
             onValueChange={(customPattern) => patch({ customPattern: customPattern as ScheduleDraft["customPattern"] })}
             options={[
               { label: "Days", value: "daily" },
@@ -96,7 +96,7 @@ export function ScheduleEditor({ onChange, schedule }: {
           Day of month
           <AutomationSelect
             ariaLabel="Schedule day of month"
-            className="h-8 text-sm text-content-primary"
+            className="h-7 text-sm text-content-primary"
             onValueChange={(dayOfMonth) => patch({ dayOfMonth })}
             options={[
               ...Array.from({ length: 31 }, (_, index) => ({ label: String(index + 1), value: String(index + 1) })),
@@ -164,4 +164,3 @@ function toggleNumber(values: number[], value: number) {
   if (values.includes(value)) return values.length === 1 ? values : values.filter((item) => item !== value);
   return [...values, value].sort((left, right) => left - right);
 }
-

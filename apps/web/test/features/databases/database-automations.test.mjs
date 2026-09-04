@@ -170,7 +170,8 @@ export function register({ assert, readSource, test }) {
     assert.match(manager, /Close automation editor/)
     assert.match(manager, /onOpenAutoFocus=\{\(event\) => event\.preventDefault\(\)\}/)
     assert.match(actions, /grid min-w-0 grid-cols-2 gap-1\.5/)
-    assert.match(actions, /className="w-full data-\[size=default\]:h-8" ariaLabel=\{`Property/)
+    assert.match(actions, /className="w-full" ariaLabel=\{`Property/)
+    assert.doesNotMatch(actions, /data-\[size=default\]:h-8/)
     assert.doesNotMatch(manager, /useIsMobile\(\)/)
   })
 

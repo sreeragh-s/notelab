@@ -70,7 +70,7 @@ export function MailboxTopbar({
             <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-content-secondary" />
             <Input
               aria-label="Search mail"
-              className="h-8 bg-transparent pl-8"
+              className="bg-transparent pl-8"
               onChange={(event) => onQueryChange(event.target.value)}
               placeholder={online ? "Search Gmail" : "Search downloaded mail"}
               value={query}

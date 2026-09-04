@@ -377,7 +377,7 @@ const AssistantFeedback = ({
           <Input
             aria-label="Optional feedback reason"
             autoFocus
-            className="h-8 text-xs"
+            className="text-xs"
             maxLength={500}
             onChange={(event) => setReason(event.target.value)}
             onKeyDown={(event) => {

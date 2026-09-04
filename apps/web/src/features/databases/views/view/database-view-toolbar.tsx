@@ -751,7 +751,7 @@ export function DatabaseViewToolbar() {
                               <PopoverTrigger asChild>
                                 <button
                                   aria-label="Change view icon"
-                                  className="flex size-8 items-center justify-center rounded-md border bg-surface-canvas text-content-secondary transition-colors hover:bg-action-neutral-hover focus-visible:ring-2 focus-visible:ring-action-focus-ring focus-visible:outline-none"
+                                  className="flex size-7 items-center justify-center rounded-md border bg-surface-canvas text-content-secondary transition-colors hover:bg-action-neutral-hover focus-visible:ring-2 focus-visible:ring-action-focus-ring focus-visible:outline-none"
                                   disabled={!editable || !databaseId}
                                   type="button"
                                 >
@@ -798,7 +798,7 @@ export function DatabaseViewToolbar() {
                           </Popover>
                           <Input
                             aria-label="View name"
-                            className="h-8 min-w-0 flex-1 text-sm font-medium"
+                            className="min-w-0 flex-1 text-sm font-medium"
                             defaultValue={
                               isActiveView ? draftViewTitle : view.name
                             }
@@ -1030,7 +1030,7 @@ export function DatabaseViewToolbar() {
                 <DropDrawerTrigger asChild>
                   <Button
                     aria-label={`${overflowViewTabs.length} more database views`}
-                    className="h-8 shrink-0 px-3 text-content-secondary"
+                    className="h-7 shrink-0 px-3 text-content-secondary"
                     type="button"
                     variant="ghost"
                   >
@@ -1130,7 +1130,7 @@ export function DatabaseViewToolbar() {
             >
               {viewTabs.map((view) => (
                 <span
-                  className="inline-flex h-8 items-center gap-2 px-3 text-sm font-medium"
+                  className="inline-flex h-7 items-center gap-2 px-3 text-sm font-medium"
                   data-view-tab-measurement
                   key={view.id}
                 >
@@ -1146,7 +1146,7 @@ export function DatabaseViewToolbar() {
             </div>
             <span
               aria-hidden="true"
-              className="pointer-events-none invisible absolute left-0 top-0 inline-flex h-8 items-center px-3 text-sm font-medium"
+              className="pointer-events-none invisible absolute left-0 top-0 inline-flex h-7 items-center px-3 text-sm font-medium"
               ref={overflowTriggerMeasurementRef}
             >
               {viewTabs.length} more…
@@ -1170,7 +1170,7 @@ export function DatabaseViewToolbar() {
                 >
                   <Button
                     aria-label="Open filter options"
-                    className="group h-8 shrink-0 rounded-md px-3"
+                    className="group h-7 shrink-0 rounded-md px-3"
                     type="button"
                     variant="secondary"
                   >
@@ -1196,7 +1196,7 @@ export function DatabaseViewToolbar() {
                 >
                   <Button
                     aria-label="Open sort options"
-                    className="group h-8 shrink-0 rounded-md px-3"
+                    className="group h-7 shrink-0 rounded-md px-3"
                     type="button"
                     variant="secondary"
                   >
@@ -1432,7 +1432,7 @@ export function DatabaseViewToolbar() {
                 <div className="ml-2 flex items-center gap-2">
                   <Button
                     aria-label="Preview form"
-                    className="h-8 gap-1.5 px-3"
+                    className="h-7 gap-1.5 px-3"
                     onClick={() => setFormPreviewOpen(true)}
                     type="button"
                     variant="outline"

@@ -67,7 +67,7 @@ export function TimePicker({
       <PopoverTrigger asChild>
         <Button
           aria-label={ariaLabel}
-          className={cn("h-8 w-full justify-start gap-2 px-2 font-normal", className)}
+          className={cn("w-full justify-start gap-2 font-normal", className)}
           type="button"
           variant="outline"
         >

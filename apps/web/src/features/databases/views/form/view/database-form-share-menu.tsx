@@ -96,7 +96,7 @@ export function DatabaseFormShareMenu() {
       <DropDrawerTrigger asChild>
         <Button
           aria-label="Share form"
-          className="h-8 gap-1.5 px-3"
+          className="h-7 gap-1.5 px-3"
           disabled={!databaseId || !updateDatabaseFormShareSettings}
           type="button"
         >

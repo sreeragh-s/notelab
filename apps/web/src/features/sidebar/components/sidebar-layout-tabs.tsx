@@ -83,7 +83,7 @@ export function SidebarLayoutTabs({
                   <TooltipTrigger asChild>
                     <button
                       aria-label="Add tab"
-                      className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-content-secondary outline-none transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:ring-2 focus-visible:ring-action-focus-ring active:bg-action-neutral-pressed"
+                      className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-content-secondary outline-none transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:ring-2 focus-visible:ring-action-focus-ring active:bg-action-neutral-pressed"
                       onClick={onAddTab}
                       type="button"
                     >
@@ -99,7 +99,7 @@ export function SidebarLayoutTabs({
             <TooltipTrigger asChild>
               <button
                 aria-label="Search"
-                className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-content-secondary outline-none transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:ring-2 focus-visible:ring-action-focus-ring active:bg-action-neutral-pressed"
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-content-secondary outline-none transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:ring-2 focus-visible:ring-action-focus-ring active:bg-action-neutral-pressed"
                 onClick={onOpenSearch}
                 type="button"
               >

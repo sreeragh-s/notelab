@@ -189,9 +189,9 @@ function PropertyOperationsEditor({ catalog, dataSourceId, onChange, operations,
       }
       return <div className="grid gap-1" key={`${operation.propertyId}:${index}`}>
         <div className="grid min-w-0 grid-cols-2 gap-1.5">
-          <BuilderSelect className="w-full data-[size=default]:h-8" ariaLabel={`Property ${index + 1}`} onValueChange={(propertyId) => onChange(replaceAt(operations, index, { mode: "set", propertyId, value: { type: "literal", value: "" } }))} options={propertyOptions} value={operation.propertyId} />
+          <BuilderSelect className="w-full" ariaLabel={`Property ${index + 1}`} onValueChange={(propertyId) => onChange(replaceAt(operations, index, { mode: "set", propertyId, value: { type: "literal", value: "" } }))} options={propertyOptions} value={operation.propertyId} />
           <div className="flex min-w-0 gap-1">
-            <BuilderSelect className="w-full data-[size=default]:h-8" ariaLabel={`Property ${index + 1} operation`} onValueChange={(mode) => onChange(replaceAt(operations, index, mode === "clear" ? { mode: "clear", propertyId: operation.propertyId } : { ...operation, mode: mode as "set" | "add" | "remove", value: operation.value ?? { type: "literal", value: "" } }))} options={[
+            <BuilderSelect className="w-full" ariaLabel={`Property ${index + 1} operation`} onValueChange={(mode) => onChange(replaceAt(operations, index, mode === "clear" ? { mode: "clear", propertyId: operation.propertyId } : { ...operation, mode: mode as "set" | "add" | "remove", value: operation.value ?? { type: "literal", value: "" } }))} options={[
               { label: "Set", value: "set" },
               ...(collection ? [{ label: "Add", value: "add" }, { label: "Remove", value: "remove" }] : []),
               { label: "Clear", value: "clear" },
@@ -542,7 +542,7 @@ function PropertyValueEditor({ ariaLabel, catalog, onChange, property, scheduled
     if (selected && !options.some(({ id }) => id === selected)) {
       selectOptions.push({ label: "Deleted option", value: selected });
     }
-    return <div className="grid min-w-0 grid-cols-2 gap-1.5"><ExpressionModeSelect allowFormula onChange={(mode) => onChange(expressionForMode(mode))} value="literal" /><BuilderSelect className="w-full data-[size=default]:h-8" ariaLabel={ariaLabel} onValueChange={(id) => onChange({ type: "literal", value: { entityType: "option", id, type: "entity" } })} options={selectOptions} value={selected} /></div>;
+    return <div className="grid min-w-0 grid-cols-2 gap-1.5"><ExpressionModeSelect allowFormula onChange={(mode) => onChange(expressionForMode(mode))} value="literal" /><BuilderSelect className="w-full" ariaLabel={ariaLabel} onValueChange={(id) => onChange({ type: "literal", value: { entityType: "option", id, type: "entity" } })} options={selectOptions} value={selected} /></div>;
   }
   if (property && property.type === "multi_select") {
     const selected = new Set(entityIds(value.value));
@@ -577,7 +577,7 @@ function ExpressionEditor({ allowFormula = true, ariaLabel, catalog, onChange, s
 }
 
 function ExpressionModeSelect({ allowFormula, onChange, value }: { allowFormula: boolean; onChange: (value: "formula" | "literal" | "mention") => void; value: "formula" | "literal" | "mention" }) {
-  return <BuilderSelect className="w-full data-[size=default]:h-8" ariaLabel="Value type" onValueChange={(next) => onChange(next as "formula" | "literal" | "mention")} options={[{ label: "Value", value: "literal" }, { label: "@ Mention", value: "mention" }, ...(allowFormula ? [{ label: "∑ Formula", value: "formula" }] : [])]} value={value} />;
+  return <BuilderSelect className="w-full" ariaLabel="Value type" onValueChange={(next) => onChange(next as "formula" | "literal" | "mention")} options={[{ label: "Value", value: "literal" }, { label: "@ Mention", value: "mention" }, ...(allowFormula ? [{ label: "∑ Formula", value: "formula" }] : [])]} value={value} />;
 }
 
 function ReferenceEditor({ ariaLabel, catalog, onChange, scheduled, value }: {

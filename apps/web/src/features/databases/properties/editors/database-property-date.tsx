@@ -346,7 +346,7 @@ export function DatabasePropertyDate({
           ) : null}
         </div>
         <Button
-          className="h-8 w-full justify-start rounded-md border-t px-2 py-1"
+          className="w-full justify-start rounded-md border-t"
           onClick={() => {
             onSelect("")
             setDraftStartValue("")

@@ -117,7 +117,7 @@ function DatabaseSortMenuContent({
             </Select>
             <button
               aria-label={`Remove ${sort.label} sort`}
-              className="inline-flex size-8 items-center justify-center rounded-md text-content-secondary transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral active:bg-action-neutral-pressed active:text-action-on-neutral"
+              className="inline-flex size-7 items-center justify-center rounded-md text-content-secondary transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral active:bg-action-neutral-pressed active:text-action-on-neutral"
               onClick={() => onRemoveDatabaseSort(index)}
               type="button"
             >

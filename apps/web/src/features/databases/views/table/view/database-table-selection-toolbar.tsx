@@ -350,7 +350,6 @@ export function DatabaseTableSelectionToolbar({
               <Input
                 aria-label="Search selected row actions"
                 autoFocus
-                className="h-8"
                 onChange={(event) => setMoreSearch(event.target.value)}
                 onKeyDown={(event) => event.stopPropagation()}
                 placeholder="Search actions..."
@@ -422,4 +421,3 @@ export function DatabaseTableSelectionToolbar({
     </div>
   )
 }
-

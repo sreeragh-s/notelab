@@ -47,7 +47,7 @@ export function AgentResultTable({ table }: { table: AgentResultTableData }) {
       <div className="flex flex-wrap items-center gap-2 border-b p-2">
         <div className="relative min-w-40 flex-1">
           <SearchIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-content-secondary" />
-          <Input aria-label="Filter table" className="h-8 pl-7 text-xs" onChange={(event) => setFilter(event.target.value)} placeholder="Filter rows" value={filter} />
+          <Input aria-label="Filter table" className="pl-7 text-xs" onChange={(event) => setFilter(event.target.value)} placeholder="Filter rows" value={filter} />
         </div>
         <Button aria-label="Copy table" onClick={() => void copy()} size="icon-sm" variant="ghost"><CopyIcon className="size-3.5" /></Button>
         <Button aria-label="Download table as CSV" onClick={download} size="icon-sm" variant="ghost"><DownloadIcon className="size-3.5" /></Button>
