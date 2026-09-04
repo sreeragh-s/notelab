@@ -312,7 +312,8 @@ function SidebarGroupLabel({
       data-slot="sidebar-group-label"
       data-sidebar="group-label"
       className={cn(
-        "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-content-secondary ring-action-focus-ring outline-hidden transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        buttonControlHeightClassName,
+        "flex shrink-0 items-center rounded-md px-2 text-xs font-medium text-content-secondary ring-action-focus-ring outline-hidden transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         className,
       )}
       {...props}

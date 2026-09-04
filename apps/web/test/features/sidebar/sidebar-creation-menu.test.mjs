@@ -36,6 +36,10 @@ export function register({ readSource, assert, test }) {
       sidebarPrimitiveSource,
       /buttonControlHeightClassName,[\s\S]*?peer\/menu-button group\/menu-button flex w-full items-center/,
     )
+    assert.match(
+      sidebarPrimitiveSource,
+      /data-sidebar="group-label"[\s\S]*?buttonControlHeightClassName,[\s\S]*?"flex shrink-0 items-center/,
+    )
     assert.match(sidebarPrimitiveSource, /text-sm font-medium text-content-secondary ring-action-focus-ring/)
     assert.doesNotMatch(navListSource, /data-\[active=false\]:opacity-80/)
     assert.match(navListSource, /flex min-w-0 flex-col gap-px/)
