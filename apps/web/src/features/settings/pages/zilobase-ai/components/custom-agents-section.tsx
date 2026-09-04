@@ -170,17 +170,19 @@ export function AgentEditor({ agentId, initialTab }: { agentId: string | null; i
       onValueChange={(value) => setTab(value as AgentTab)}
       value={tab}
     >
-      <TabsList className="w-full justify-start overflow-x-auto rounded-none border-b p-0 pb-2">
-        {tabs.map((item) => (
-          <TabsTrigger
-            className="grow-0"
-            key={item.id}
-            value={item.id}
-          >
-            {item.label}
-          </TabsTrigger>
-        ))}
-      </TabsList>
+      <div className="overflow-x-auto border-b pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <TabsList className="rounded-none p-0">
+          {tabs.map((item) => (
+            <TabsTrigger
+              className="grow-0"
+              key={item.id}
+              value={item.id}
+            >
+              {item.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </div>
       <div>
         {tab === "instructions" && <AgentInstructions agent={detailQuery.data} />}
         {tab === "tools" && (

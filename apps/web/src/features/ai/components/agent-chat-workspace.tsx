@@ -3,6 +3,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState, type ReactNode } from "react"
 import { toast } from "sonner"
 import { useAiAgentProfiles } from "@zilobase/features/ai-chat"
+import { useRouter } from "@tanstack/react-router"
 
 import {
   ChevronsRightIcon,
@@ -47,6 +48,7 @@ export function AgentChatWorkspace({
   pageId?: string | null
   presentationMode?: ChatPresentationMode
 }) {
+  const router = useRouter()
   const {
     activeThreadId,
     draftAgentProfileId,
@@ -67,12 +69,16 @@ export function AgentChatWorkspace({
 
   const setPanel = useCallback((next: WorkspacePanel) => {
     setPanelState(next)
-    if (!isSidebar) updatePanelSearch(next, selectedAgentId, settingsTab)
-  }, [isSidebar, selectedAgentId, settingsTab])
+    if (!isSidebar) {
+      updatePanelSearch(next, selectedAgentId, settingsTab, router.history.replace)
+    }
+  }, [isSidebar, router.history, selectedAgentId, settingsTab])
 
   useEffect(() => {
-    if (!isSidebar && panel) updatePanelSearch(panel, selectedAgentId, settingsTab)
-  }, [isSidebar, panel, selectedAgentId, settingsTab])
+    if (!isSidebar && panel) {
+      updatePanelSearch(panel, selectedAgentId, settingsTab, router.history.replace)
+    }
+  }, [isSidebar, panel, router.history, selectedAgentId, settingsTab])
 
   useEffect(() => {
     if (isSidebar) return
@@ -195,8 +201,6 @@ export function AgentChatWorkspace({
       sidePane={aiSidePane ?? externalSidePane}
       sidePaneOpen={Boolean(aiSidePane) || externalSidePaneOpen}
       sidePaneVisible={Boolean(aiSidePane) || externalSidePaneVisible}
-      standalone
-      viewportHeightClass="h-full"
     />
   )
 }
@@ -264,12 +268,14 @@ function AgentRail({
       value={selectedAgentId ?? "personal"}
     >
       <div className="flex min-w-0 items-center gap-1">
-        <TabsList aria-label="Ask AI agents" className="min-w-0 flex-1 justify-start overflow-x-auto rounded-none p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <AgentTab compact={compact} label="Personal Ask AI" value="personal" />
-          {profiles.map((agent) => (
-            <AgentTab compact={compact} key={agent.id} label={agent.name} value={agent.id} />
-          ))}
-        </TabsList>
+        <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsList aria-label="Ask AI agents" className="rounded-none p-0">
+            <AgentTab compact={compact} label="Personal Ask AI" value="personal" />
+            {profiles.map((agent) => (
+              <AgentTab compact={compact} key={agent.id} label={agent.name} value={agent.id} />
+            ))}
+          </TabsList>
+        </div>
         <Button className="h-8 shrink-0" onClick={onAddAgent} size="sm" type="button" variant="ghost">
           <PlusIcon className="size-4" />
           Add Agent
@@ -329,7 +335,12 @@ function readSearchParam(name: string) {
   return typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get(name)
 }
 
-function updatePanelSearch(panel: WorkspacePanel, agentId: string | null, settingsTab: string | null) {
+function updatePanelSearch(
+  panel: WorkspacePanel,
+  agentId: string | null,
+  settingsTab: string | null,
+  replace: (path: string) => void,
+) {
   if (typeof window === "undefined" || window.location.pathname !== "/ai") return
   const url = new URL(window.location.href)
   if (panel) url.searchParams.set("panel", panel)
@@ -341,7 +352,7 @@ function updatePanelSearch(panel: WorkspacePanel, agentId: string | null, settin
     url.searchParams.delete("settingsScope")
     url.searchParams.delete("settingsTab")
   }
-  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`)
+  replace(`${url.pathname}${url.search}${url.hash}`)
 }
 
 function clearSearchParams(...names: string[]) {

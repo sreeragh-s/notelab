@@ -2,6 +2,7 @@ import { getDatabaseId, MainPaneHeaderLeadingControl, PagePaneHeader } from "@/f
 import { PageSidePaneHeaderCell, useOptionalPageLayoutSidebar } from "@/features/pages/context"
 
 export function AppHeader({
+  auxiliarySidePaneOpen = false,
   discussionsOpen,
   isSettingsPage,
   onToggleDiscussions,
@@ -14,6 +15,7 @@ export function AppHeader({
   sidePaneAnimatedOpen,
   sidePaneDatabaseId,
 }: {
+  auxiliarySidePaneOpen?: boolean
   discussionsOpen: boolean
   isSettingsPage: boolean
   onToggleDiscussions?: () => void
@@ -27,7 +29,8 @@ export function AppHeader({
   sidePaneDatabaseId: string | null
 }) {
   const pageLayoutSidebar = useOptionalPageLayoutSidebar()
-  const showSidePaneHeader = Boolean(renderedSidePanePageId || renderedSidePaneDatabaseId)
+  const showItemSidePaneHeader = Boolean(renderedSidePanePageId || renderedSidePaneDatabaseId)
+  const showSidePaneHeader = auxiliarySidePaneOpen || showItemSidePaneHeader
   const splitActive = showSidePaneHeader && sidePaneAnimatedOpen
   const sidePanePathname = renderedSidePaneDatabaseId
     ? `/d/${encodeURIComponent(renderedSidePaneDatabaseId)}`
@@ -52,17 +55,19 @@ export function AppHeader({
       </PageSidePaneHeaderCell>
       {showSidePaneHeader ? (
         <PageSidePaneHeaderCell side="side" splitActive={splitActive}>
-          <PagePaneHeader
-            className="min-w-0 flex-1"
-            onClose={onCloseSidePane}
-            onTogglePageSidebar={renderedSidePanePageId && sidePaneHasLayoutSidebar
-              ? () => pageLayoutSidebar?.toggleOverlay(renderedSidePanePageId)
-              : undefined}
-            pageSidebarOpen={pageLayoutSidebar?.overlayPageId === renderedSidePanePageId}
-            pathname={sidePanePathname}
-            rowNavigationDatabaseId={rowNavigationDatabaseId}
-            showBreadcrumb={false}
-          />
+          {showItemSidePaneHeader ? (
+            <PagePaneHeader
+              className="min-w-0 flex-1"
+              onClose={onCloseSidePane}
+              onTogglePageSidebar={renderedSidePanePageId && sidePaneHasLayoutSidebar
+                ? () => pageLayoutSidebar?.toggleOverlay(renderedSidePanePageId)
+                : undefined}
+              pageSidebarOpen={pageLayoutSidebar?.overlayPageId === renderedSidePanePageId}
+              pathname={sidePanePathname}
+              rowNavigationDatabaseId={rowNavigationDatabaseId}
+              showBreadcrumb={false}
+            />
+          ) : null}
         </PageSidePaneHeaderCell>
       ) : null}
     </>

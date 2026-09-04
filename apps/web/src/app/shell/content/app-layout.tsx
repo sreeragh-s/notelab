@@ -206,8 +206,11 @@ function AppLayoutContent({
   utilitySidebar?: ReactNode
   utilitySidebarOpen: boolean
 }) {
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
+  const { pathname, searchStr } = useRouterState({
+    select: (state) => ({
+      pathname: state.location.pathname,
+      searchStr: state.location.searchStr,
+    }),
   })
   const embeddedMobileViewer = isEmbeddedMobileViewer()
   const {
@@ -216,6 +219,11 @@ function AppLayoutContent({
     setOpen: setAppSidebarOpen,
   } = useSidebar()
   const isAiPage = pathname === "/ai"
+  const aiWorkspacePanel = isAiPage
+    ? new URLSearchParams(searchStr).get("panel")
+    : null
+  const aiWorkspaceSidePaneOpen =
+    aiWorkspacePanel === "settings" || aiWorkspacePanel === "history"
   const isMailPage = pathname === "/mail"
   const pageId = useRoutePageId(pathname)
   const databaseId = getDatabaseId(pathname)
@@ -464,10 +472,14 @@ function AppLayoutContent({
     sidePanePageId,
   ])
 
-  const showSidePaneLayout =
+  const showEmbeddedSidePaneLayout =
     !utilitySidebarOpen &&
     !pageLayoutSidebarOpen &&
     Boolean(renderedSidePanePageId || renderedSidePaneDatabaseId)
+  const showAiWorkspaceSidePaneLayout =
+    !utilitySidebarOpen && !pageLayoutSidebarOpen && aiWorkspaceSidePaneOpen
+  const showSidePaneLayout =
+    showAiWorkspaceSidePaneLayout || showEmbeddedSidePaneLayout
   const pageSidebarPanel = pageLayoutSidebar?.hasSidebar ? (
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
@@ -576,6 +588,7 @@ function AppLayoutContent({
               header={
                 embeddedMobileViewer || isMailPage ? undefined : (
                   <AppHeader
+                    auxiliarySidePaneOpen={showAiWorkspaceSidePaneLayout}
                     discussionsOpen={discussionsSidebarOpen}
                     isSettingsPage={isSettingsPage || isAiPage}
                     onToggleDiscussions={
@@ -590,19 +603,27 @@ function AppLayoutContent({
                     onCloseSidePane={closeSidePane}
                     pathname={pathname}
                     renderedSidePanePageId={
-                      showSidePaneLayout ? renderedSidePanePageId : null
+                      showEmbeddedSidePaneLayout && !showAiWorkspaceSidePaneLayout
+                        ? renderedSidePanePageId
+                        : null
                     }
                     renderedSidePaneDatabaseId={
-                      showSidePaneLayout ? renderedSidePaneDatabaseId : null
+                      showEmbeddedSidePaneLayout && !showAiWorkspaceSidePaneLayout
+                        ? renderedSidePaneDatabaseId
+                        : null
                     }
                     sidePaneAnimatedOpen={
-                      showSidePaneLayout && sidePaneAnimatedOpen
+                      showAiWorkspaceSidePaneLayout ||
+                      (showEmbeddedSidePaneLayout && sidePaneAnimatedOpen)
                     }
                     sidePaneDatabaseId={sidePaneDatabaseId}
                   />
                 )
               }
-              open={showSidePaneLayout && sidePaneAnimatedOpen}
+              open={
+                showAiWorkspaceSidePaneLayout ||
+                (showEmbeddedSidePaneLayout && sidePaneAnimatedOpen)
+              }
               visible={showSidePaneLayout}
             />
           </SidebarInset>

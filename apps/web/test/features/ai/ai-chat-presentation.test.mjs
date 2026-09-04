@@ -44,6 +44,7 @@ export function register({ readSource, assert, test }) {
     const workspaceSource = await readSource("/src/features/ai/components/agent-chat-workspace.tsx")
     const chatbotSource = await readChatbotSource(readSource)
     const layoutSource = await readSource("/src/app/shell/content/app-layout.tsx")
+    const headerSource = await readSource("/src/app/shell/content/app-header.tsx")
     const sidePaneSource = await readSource("/src/features/pages/context/page-side-pane.tsx")
 
     assert.match(layoutSource, /chatSidebarOpen \|\| isAiPage \|\| isMailPage \? null/)
@@ -52,8 +53,10 @@ export function register({ readSource, assert, test }) {
     assert.match(chatbotSource, /isSidebar\s*\? undefined\s*:\s*"h-auto! overflow-visible! \[scrollbar-gutter:auto\]!"/)
     assert.match(aiPageSource, /<AgentChatWorkspace/)
     assert.match(workspaceSource, /mainScrollClassName="overscroll-y-none"/)
-    assert.match(workspaceSource, /standalone/)
-    assert.match(workspaceSource, /viewportHeightClass="h-full"/)
+    assert.doesNotMatch(workspaceSource, /standalone/)
+    assert.match(layoutSource, /aiWorkspaceSidePaneOpen/)
+    assert.match(layoutSource, /auxiliarySidePaneOpen=\{showAiWorkspaceSidePaneLayout\}/)
+    assert.match(headerSource, /auxiliarySidePaneOpen \|\| showItemSidePaneHeader/)
     assert.doesNotMatch(aiPageSource, /<main className="[^"]*overflow-hidden/)
   })
 }
