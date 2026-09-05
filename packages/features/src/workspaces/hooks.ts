@@ -77,6 +77,14 @@ export function resolveActiveWorkspaceId(input: {
   // that has not yet been checked against the user's current workspace list.
   // If that list is unavailable, retain the previous fallback so the rest of
   // the application can continue operating in a degraded network state.
+  return unavailableWorkspaceFallback(status, sessionWorkspaceId, preferredActiveWorkspaceId)
+}
+
+function unavailableWorkspaceFallback(
+  status: "error" | "pending" | "success",
+  sessionWorkspaceId: string | null | undefined,
+  preferredActiveWorkspaceId: string | null | undefined,
+) {
   return status === "error"
     ? sessionWorkspaceId ?? preferredActiveWorkspaceId ?? null
     : null

@@ -917,30 +917,20 @@ function ItemShareDropdownContent({
     [session?.user?.id, targets?.members],
   );
   const targetByKey = React.useMemo(() => {
-    const map = new Map<string, { label: string; detail?: string }>();
-
-    for (const member of targets?.members ?? []) {
-      map.set(`user:${member.id}`, {
+    return new Map<string, { label: string; detail?: string }>([
+      ...(targets?.members ?? []).map((member): [string, { label: string; detail: string }] => [`user:${member.id}`, {
         detail: member.email,
         label: member.name || member.email,
-      });
-    }
-
-    for (const guest of personTargets?.guests ?? []) {
-      map.set(`user:${guest.id}`, {
+      }]),
+      ...(personTargets?.guests ?? []).map((guest): [string, { label: string; detail: string }] => [`user:${guest.id}`, {
         detail: `${guest.email} · Guest`,
         label: guest.name || guest.email,
-      });
-    }
-
-    for (const agent of customAgents) {
-      map.set(`agent:${agent.id}`, {
+      }]),
+      ...customAgents.map((agent): [string, { label: string; detail: string }] => [`agent:${agent.id}`, {
         detail: "Custom Agent",
         label: agent.name || "Untitled agent",
-      });
-    }
-
-    return map;
+      }]),
+    ]);
   }, [customAgents, personTargets?.guests, targets?.members]);
   const guestUserIds = React.useMemo(
     () => new Set((personTargets?.guests ?? []).map((guest) => guest.id)),

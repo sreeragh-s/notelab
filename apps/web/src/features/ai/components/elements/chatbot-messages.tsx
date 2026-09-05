@@ -148,54 +148,36 @@ const PageEditToolPart = ({
   );
 };
 
-function McpToolResultCard({
-  output,
-  toolCallId,
-  workspaceId,
-}: {
-  output: unknown;
-  toolCallId: string;
-  workspaceId: string | null;
-}) {
-  const { apiFetch } = useZilobaseFeatures();
+function McpToolResultCard({ output, toolCallId, workspaceId }: { output: unknown; toolCallId: string; workspaceId: string | null }) {
+  const { dataset, jobId } = readMcpToolOutput(output);
+  if (!dataset && !jobId) return null;
+  return <div className="not-prose mb-3 grid gap-3 rounded-lg border bg-surface-canvas p-3" key={toolCallId}>
+    {dataset && <McpDatasetPreview dataset={dataset} />}
+    {jobId && <McpImportProgress jobId={jobId} workspaceId={workspaceId} />}
+  </div>;
+}
+
+function readMcpToolOutput(output: unknown) {
   const envelope = asRecord(output);
-  const data = asRecord(envelope?.data);
-  const dataset = asRecord(data?.dataset);
+  const dataset = asRecord(asRecord(envelope?.data)?.dataset);
   const job = asRecord(envelope?.job);
   const jobId = typeof job?.id === "string" ? job.id : null;
-  const jobQuery = useQuery({
-    enabled: Boolean(jobId && workspaceId),
-    queryKey: ["workspaces", workspaceId ?? "none", "ai-job", jobId],
-    queryFn: () => apiFetch<{ job: {
-      error: string | null;
-      id: string;
-      output: unknown;
-      progress: number;
-      status: string;
-    } }>(`/api/ai/jobs/${encodeURIComponent(jobId!)}`, {
-      headers: workspaceId ? { "x-zilobase-workspace-id": workspaceId } : {},
-    }).then((result) => result.job),
-    refetchInterval: (query) => {
-      const status = query.state.data?.status;
-      return status && ["succeeded", "failed", "cancelled"].includes(status)
-        ? false
-        : 1_500;
-    },
-  });
+  return { dataset, jobId };
+}
+
+function readDatasetPreview(dataset: Record<string, unknown>) {
   const sample = Array.isArray(dataset?.sample)
     ? dataset.sample.filter((row): row is Record<string, unknown> => Boolean(asRecord(row))).slice(0, 20)
     : [];
   const columns = Array.isArray(asRecord(dataset?.schema)?.columns)
     ? (asRecord(dataset?.schema)!.columns as unknown[]).filter((column): column is string => typeof column === "string").slice(0, 30)
     : [];
-  const jobOutput = asRecord(jobQuery.data?.output);
+  return { sample, columns };
+}
 
-  if (!dataset && !jobId) return null;
-
-  return (
-    <div className="not-prose mb-3 grid gap-3 rounded-lg border bg-surface-canvas p-3" key={toolCallId}>
-      {dataset && (
-        <div className="grid gap-2">
+function McpDatasetPreview({ dataset }: { dataset: Record<string, unknown> }) {
+  const { sample, columns } = readDatasetPreview(dataset);
+  return (        <div className="grid gap-2">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span className="font-medium">Connector dataset preview</span>
             <span className="text-content-secondary">{String(dataset.rowCount ?? 0)} rows</span>
@@ -218,32 +200,58 @@ function McpToolResultCard({
             </div>
           )}
           <p className="text-xs text-content-secondary">Preview up to 20 rows before asking Ask AI to create a one-time native database.</p>
-        </div>
-      )}
-      {jobId && (
-        <div className="grid gap-2 text-sm">
+        </div>);
+}
+
+function useMcpImportJob(jobId: string, workspaceId: string | null) {
+  const { apiFetch } = useZilobaseFeatures();
+  const jobQuery = useQuery({
+    enabled: Boolean(jobId && workspaceId),
+    queryKey: ["workspaces", workspaceId ?? "none", "ai-job", jobId],
+    queryFn: ({ signal }) => apiFetch<{ job: {
+      error: string | null;
+      id: string;
+      output: unknown;
+      progress: number;
+      status: string;
+    } }>(`/api/ai/jobs/${encodeURIComponent(jobId!)}`, {
+      signal,
+      headers: workspaceId ? { "x-zilobase-workspace-id": workspaceId } : {},
+    }).then((result) => result.job),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status && ["succeeded", "failed", "cancelled"].includes(status)
+        ? false
+        : 1_500;
+    },
+  });
+  return jobQuery;
+}
+
+function McpImportProgress({ jobId, workspaceId }: { jobId: string; workspaceId: string | null }) {
+  const jobQuery = useMcpImportJob(jobId, workspaceId);
+  const data = jobQuery.data ?? { status: "queued", progress: 0, error: null, output: null };
+  const jobOutput = asRecord(data.output) ?? {};
+  return (        <div className="grid gap-2 text-sm">
           <div className="flex items-center justify-between gap-3">
             <span className="font-medium">Database import</span>
-            <span>{jobQuery.data?.status ?? "queued"} · {jobQuery.data?.progress ?? 0}%</span>
+            <span>{data.status} · {data.progress}%</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded bg-surface-secondary">
-            <div className="h-full bg-action-primary transition-[width]" style={{ width: `${jobQuery.data?.progress ?? 0}%` }} />
+            <div className="h-full bg-action-primary transition-[width]" style={{ width: `${data.progress}%` }} />
           </div>
-          {jobQuery.data?.error && <p className="text-action-danger-text">{jobQuery.data.error}</p>}
-          {typeof jobOutput?.databaseId === "string" && (
+          {data.error && <p className="text-action-danger-text">{data.error}</p>}
+          {typeof jobOutput.databaseId === "string" && (
             <Button asChild className="w-fit" size="sm">
               <a href={`/d/${encodeURIComponent(jobOutput.databaseId)}`}>Open imported database</a>
             </Button>
           )}
-          {jobOutput?.status === "partial" && (
+          {jobOutput.status === "partial" && (
             <p className="text-action-danger-text">
               Partial import: {String(jobOutput.completedRows ?? 0)} completed, {String(jobOutput.failedRows ?? 0)} failed.
             </p>
           )}
-        </div>
-      )}
-    </div>
-  );
+        </div>);
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
