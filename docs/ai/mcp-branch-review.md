@@ -40,35 +40,48 @@ changes were left untouched and excluded from these commits.
 
 ## Remaining merge blockers
 
-1. **Durable approval continuation is incomplete.**
-   `mcp/mcp-approval.ts`, `executeApprovedMcpRunAction`, marks a run succeeded
-   after one approved tool result. It does not resume the rest of the saved run.
-   Implement durable model/tool-result
-   checkpoints and test multiple approvals, cancellation, and queue redelivery.
-
-2. **Coverage fails the existing repository gate.**
-   Latest measured server coverage: statements 41.19%, branches 36.78%,
-   functions 43.34%, lines 42.77%. Required: 45%, 40%, 45%, 45% respectively.
-   Existing source-string contract tests do not establish runtime ACL,
-   idempotency, or migration correctness. Add behavioral database-backed tests,
-   especially for grants, OAuth/approvals, trigger delivery, and materialization.
-   Do not lower thresholds or exclude these services.
-
-3. **New complexity findings remain.**
+1. **New complexity findings remain.**
    `quality:fallow:health` fails its identity baseline. Examples include MCP
    approval execution, `processAgentRun`, database event dispatch,
    materialization, and Custom Agent Settings. Split validation, persistence,
    orchestration, and presentation at their existing domain boundaries; do not
    regenerate the baseline to absorb the new findings.
 
+## Blocker follow-up
+
+- Implemented encrypted model/tool-result checkpoints. Approved tools now
+  persist their results and resume the remaining model conversation, rather
+  than marking the run complete after one tool. Multiple approvals wait for
+  all results; cancelled/failed runs do not resume. Missing legacy checkpoints
+  fail closed. Native-only agent runs also require the configured encryption
+  keyring because their model history may contain private workspace data.
+- Added atomic tool-call reservations, cumulative MCP receipt quotas, and
+  recovery for trigger receipts reserved before queue submission failed.
+- Fixed personal connector quotas accidentally counting other workspaces,
+  departed members retaining profile access, failed MCP handshakes not closing
+  their client, and concurrent profile edits reading a stale revision before
+  acquiring the update lock.
+- Server coverage now passes the unchanged thresholds: statements 45.30%,
+  branches 40.98%, functions 47.44%, lines 46.94%. Added behavioral tests for
+  orchestration, encryption, approvals, membership, triggers, and MCP clients.
+  These tests mock database/provider boundaries; they are not a substitute for
+  real Postgres concurrency tests or authenticated end-to-end permission tests.
+- Split MCP approval validation and chat result presentation into focused
+  helpers. Import-job queries preserve their scoped query keys and now pass
+  TanStack Query cancellation signals to the request.
+- No coverage threshold, source exclusion, or complexity baseline was relaxed.
+- Full `verify:core` now reaches the final Fallow audit after passing tests,
+  coverage, typechecks, and the web build/bundle budget. It still exits nonzero
+  on 46 complexity findings. `verify:architecture` likewise passes dead-code
+  and duplication checks, then fails its unchanged health baseline.
+
 ## Verification recorded
 
-- Server suite: 768 tests passed before the final additional approval-gate test.
-- Focused MCP/agent/Node egress suites: 70 tests passed after the final
-  capability-snapshot and execution-context changes; server typecheck passed.
+- Follow-up server suite: 909 tests passed; the separate query regression suite
+  passed 278 tests, followed by server typecheck/build.
 - Web typecheck and source-contract suite passed during the refactor.
-- Full core verification passed earlier stages, including the web production
-  build/bundle budget, then failed server coverage.
+- Full core verification passes the web production build/bundle budget and
+  server coverage, then fails the final complexity audit.
 - Dead-code/boundary gate: zero unresolved imports, cycles, unused exports,
   unused dependencies, or boundary violations after cleanup.
 - Duplication remained approximately 2.2%, below the 3% ceiling.
