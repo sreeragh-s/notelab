@@ -18,6 +18,7 @@ export function AppHeader({
   agentId,
   auxiliarySidePaneCloseLabel = "Close AI settings",
   auxiliarySidePaneOpen = false,
+  auxiliarySidePanePageId,
   discussionsOpen,
   isSettingsPage,
   onToggleDiscussions,
@@ -34,6 +35,7 @@ export function AppHeader({
   agentId?: string | null
   auxiliarySidePaneCloseLabel?: string
   auxiliarySidePaneOpen?: boolean
+  auxiliarySidePanePageId?: string | null
   discussionsOpen: boolean
   isSettingsPage: boolean
   onToggleDiscussions?: () => void
@@ -79,15 +81,17 @@ export function AppHeader({
       </PageSidePaneHeaderCell>
       {showSidePaneHeader ? (
         <PageSidePaneHeaderCell side="side" splitActive={splitActive}>
-          {showItemSidePaneHeader ? (
+          {showItemSidePaneHeader || auxiliarySidePanePageId ? (
             <PagePaneHeader
               className="min-w-0 flex-1"
-              onClose={onCloseSidePane}
+              onClose={auxiliarySidePanePageId ? onCloseAuxiliarySidePane : onCloseSidePane}
               onTogglePageSidebar={renderedSidePanePageId && sidePaneHasLayoutSidebar
                 ? () => pageLayoutSidebar?.toggleOverlay(renderedSidePanePageId)
                 : undefined}
               pageSidebarOpen={pageLayoutSidebar?.overlayPageId === renderedSidePanePageId}
-              pathname={sidePanePathname}
+              pathname={auxiliarySidePanePageId
+                ? `/p/${encodeURIComponent(auxiliarySidePanePageId)}`
+                : sidePanePathname}
               rowNavigationDatabaseId={rowNavigationDatabaseId}
               showBreadcrumb={false}
             />

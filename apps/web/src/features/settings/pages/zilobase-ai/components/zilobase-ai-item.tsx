@@ -1,6 +1,5 @@
 import * as React from "react"
-import { useNavigate } from "@tanstack/react-router"
-import { Loader2Icon, XIcon } from "@/shared/components/icons"
+import { Loader2Icon, Maximize2, XIcon } from "@/shared/components/icons"
 import { toast } from "sonner"
 
 import {
@@ -14,9 +13,9 @@ import {
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog"
 import { Button } from "@/shared/ui/button"
-import { cn } from "@/shared/lib/utils"
 import { getApiErrorMessage } from "@/features/desktop/network/api"
-import { PageIcon } from "@/features/pages/index"
+import { PageEditorPane } from "@/features/pages/pages/index"
+import { PageWorkspaceGate } from "@/features/workspaces"
 import { useZilobaseFeatures } from "@zilobase/features"
 import {
   useUpdatePage,
@@ -33,30 +32,18 @@ const modeLabels: Record<ZilobaseAiMode, string> = {
 }
 
 export function ZilobaseAiItem({
-  isFirst,
-  isLast,
   mode,
+  onExpandPage,
   page,
-  pageRecord,
 }: {
-  isFirst: boolean
-  isLast: boolean
   mode: ZilobaseAiMode
+  onExpandPage?: (pageId: string) => void
   page: ZilobaseAiPageSummary
-  pageRecord?: Page
 }) {
-  const navigate = useNavigate()
   const { apiFetch, queryClient } = useZilobaseFeatures()
   const updatePage = useUpdatePage()
   const [confirmOpen, setConfirmOpen] = React.useState(false)
   const isRemoving = updatePage.isPending
-
-  const openPage = () => {
-    void navigate({
-      params: { pageId: page.id },
-      to: "/p/$pageId",
-    })
-  }
 
   const remove = async () => {
     let metadata: PageMetadata = {}
@@ -97,53 +84,48 @@ export function ZilobaseAiItem({
 
   return (
     <>
-      <div
-        className={cn(
-          "flex cursor-pointer items-center gap-3 px-4 py-2 hover:bg-action-neutral-hover hover:text-action-on-neutral",
-          isFirst && "rounded-t-none",
-          isLast && "rounded-b-none",
-        )}
-        onClick={openPage}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault()
-            openPage()
-          }
-        }}
-        role="link"
-        tabIndex={0}
-      >
-        <span className="flex size-5 shrink-0 items-center justify-center">
-          <PageIcon
-            page={
-              pageRecord ?? {
-                content: undefined,
-                metadata: page.metadata,
-              }
-            }
-          />
-        </span>
-        <span className="min-w-0 flex-1 truncate font-medium">
-          {page.name || "Untitled"}
-        </span>
-        <Button
-          aria-label={`Remove as ${modeLabels[mode]}`}
-          className="shrink-0 text-content-secondary hover:text-content-primary"
-          disabled={isRemoving}
-          onClick={(event) => {
-            event.stopPropagation()
-            setConfirmOpen(true)
-          }}
-          size="icon-sm"
-          type="button"
-          variant="ghost"
-        >
-          {isRemoving ? (
-            <Loader2Icon className="animate-spin" />
-          ) : (
-            <XIcon />
-          )}
-        </Button>
+      <div className="relative min-h-72 overflow-hidden rounded-lg bg-surface-canvas ring-1 ring-border">
+        <div className="absolute right-3 top-3 z-20 flex items-center gap-1 rounded-md bg-surface-canvas p-0.5 shadow-sm">
+          {onExpandPage ? (
+            <Button
+              aria-label={`Expand ${page.name || modeLabels[mode]}`}
+              onClick={() => onExpandPage(page.id)}
+              size="icon-sm"
+              title="Expand page"
+              type="button"
+              variant="ghost"
+            >
+              <Maximize2 />
+            </Button>
+          ) : null}
+          <Button
+            aria-label={`Remove as ${modeLabels[mode]}`}
+            className="text-content-secondary hover:text-content-primary"
+            disabled={isRemoving}
+            onClick={() => setConfirmOpen(true)}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          >
+            {isRemoving ? (
+              <Loader2Icon className="animate-spin" />
+            ) : (
+              <XIcon />
+            )}
+          </Button>
+        </div>
+        <div className="max-h-[32rem] min-h-72 overflow-y-auto">
+          <PageWorkspaceGate pageId={page.id}>
+            <PageEditorPane
+              className="min-h-72"
+              enableComments={false}
+              key={page.id}
+              layoutPanelMode="overlay"
+              onOpenPage={(pageId) => onExpandPage?.(pageId)}
+              pageId={page.id}
+            />
+          </PageWorkspaceGate>
+        </div>
       </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -173,6 +155,6 @@ export function ZilobaseAiItemList({
   children: React.ReactNode
 }) {
   return (
-    <div className="divide-y divide-border">{children}</div>
+    <div className="grid gap-3">{children}</div>
   )
 }

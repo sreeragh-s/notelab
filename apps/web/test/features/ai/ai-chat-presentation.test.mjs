@@ -108,4 +108,19 @@ export function register({ readSource, assert, test }) {
     assert.match(menuSource, /existingPageIds\.length > 0[\s\S]*\? config\.addItemLabel[\s\S]*: config\.createItemLabel/)
     assert.match(menuSource, /<span>\{config\.createItemLabel\}<\/span>/)
   })
+
+  test("Ask AI settings use editable instruction pages without preference controls", async () => {
+    const settingsSource = await readSource("/src/features/ai/components/ai-settings-panel.tsx")
+    const itemSource = await readSource("/src/features/settings/pages/zilobase-ai/components/zilobase-ai-item.tsx")
+    const workspaceSource = await readSource("/src/features/ai/components/agent-chat-workspace.tsx")
+    const layoutSource = await readSource("/src/app/shell/content/app-layout.tsx")
+
+    assert.doesNotMatch(settingsSource, /label: "Preferences"/)
+    assert.doesNotMatch(settingsSource, /Response style|Save preferences/)
+    assert.match(settingsSource, /isPersonalTab\(initialTab\) \? initialTab : "knowledge"/)
+    assert.match(itemSource, /<PageEditorPane/)
+    assert.match(itemSource, /aria-label=\{`Expand \$\{page\.name/)
+    assert.match(workspaceSource, /routeSearch\.get\("settingsPage"\)/)
+    assert.match(layoutSource, /if \(search\.has\("settingsPage"\)\)/)
+  })
 }

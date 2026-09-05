@@ -1,15 +1,11 @@
 import * as React from "react"
 import { toast } from "sonner"
-
 import {
-  type AiAgentPreference,
-  useAiAgentPreference,
   useCreateAiAgentProfile,
   useMcpWorkspacePolicy,
-  useUpdateAiAgentPreference,
   useWorkspaceAiModels,
 } from "@zilobase/features/ai-chat"
-import { usePages, useZilobaseAiPages } from "@zilobase/features/pages"
+import { useZilobaseAiPages } from "@zilobase/features/pages"
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
 
 import { Button } from "@/shared/ui/button"
@@ -33,7 +29,6 @@ import {
 import { ZilobaseAiSection } from "@/features/settings/pages/zilobase-ai/components/zilobase-ai-section"
 
 type PersonalTab =
-  | "preferences"
   | "knowledge"
   | "connectors"
   | "activity"
@@ -45,6 +40,7 @@ export function AiSettingsPanel({
   initialTab,
   onAgentCreated,
   onClose,
+  onExpandPage,
   scope,
   showCloseButton = true,
 }: {
@@ -53,11 +49,12 @@ export function AiSettingsPanel({
   initialTab?: string | null
   onAgentCreated?: (agentId: string) => void
   onClose: () => void
+  onExpandPage?: (pageId: string) => void
   scope: "personal" | "agent"
   showCloseButton?: boolean
 }) {
   const [personalTab, setPersonalTab] = React.useState<PersonalTab>(
-    isPersonalTab(initialTab) ? initialTab : "preferences",
+    isPersonalTab(initialTab) ? initialTab : "knowledge",
   )
 
   React.useEffect(() => {
@@ -74,7 +71,7 @@ export function AiSettingsPanel({
           <p className="mt-0.5 text-xs leading-relaxed text-content-secondary">
             {scope === "agent"
               ? "Configure this shared agent without exposing private conversations."
-              : "Manage your private AI preferences and workspace-scoped connectors."}
+              : "Manage your private AI instructions, skills, and workspace-scoped connectors."}
           </p>
         </div>
         {showCloseButton ? (
@@ -89,7 +86,11 @@ export function AiSettingsPanel({
         ) : scope === "agent" ? (
           <AgentEditor agentId={agentId} initialTab={initialTab} plain />
         ) : (
-          <PersonalSettings tab={personalTab} onTabChange={setPersonalTab} />
+          <PersonalSettings
+            onExpandPage={onExpandPage}
+            tab={personalTab}
+            onTabChange={setPersonalTab}
+          />
         )}
       </div>
     </div>
@@ -97,15 +98,16 @@ export function AiSettingsPanel({
 }
 
 function PersonalSettings({
+  onExpandPage,
   onTabChange,
   tab,
 }: {
+  onExpandPage?: (pageId: string) => void
   onTabChange: (tab: PersonalTab) => void
   tab: PersonalTab
 }) {
   const policyQuery = useMcpWorkspacePolicy()
   const tabs: Array<{ id: PersonalTab; label: string }> = [
-    { id: "preferences", label: "Preferences" },
     { id: "knowledge", label: "Instructions & Skills" },
     { id: "connectors", label: "Connectors" },
     { id: "activity", label: "Activity" },
@@ -127,8 +129,7 @@ function PersonalSettings({
         </TabsList>
       </div>
       <div>
-        {tab === "preferences" && <PersonalPreferences />}
-        {tab === "knowledge" && <PersonalKnowledge />}
+        {tab === "knowledge" && <PersonalKnowledge onExpandPage={onExpandPage} />}
         {tab === "connectors" && <PersonalMcpConnections />}
         {tab === "activity" && <PersonalMcpActivity />}
         {tab === "policy" && <WorkspaceMcpPolicyPanel />}
@@ -137,79 +138,23 @@ function PersonalSettings({
   )
 }
 
-function PersonalPreferences() {
-  const preferenceQuery = useAiAgentPreference()
-  const updatePreference = useUpdateAiAgentPreference()
-  const [instructions, setInstructions] = React.useState("")
-  const [responseStyle, setResponseStyle] = React.useState<AiAgentPreference["responseStyle"]>("concise")
-
-  React.useEffect(() => {
-    if (!preferenceQuery.data) return
-    setInstructions(preferenceQuery.data.instructions)
-    setResponseStyle(preferenceQuery.data.responseStyle)
-  }, [preferenceQuery.data])
-
-  const save = async () => {
-    try {
-      await updatePreference.mutateAsync({ instructions, responseStyle })
-      toast.success("AI preferences saved.")
-    } catch (error) {
-      toast.error("Could not save AI preferences", {
-        description: error instanceof Error ? error.message : "Try again.",
-      })
-    }
-  }
-
-  return (
-    <div className="grid gap-4">
-      <label className="grid gap-1 text-sm">
-        <span className="font-medium">Personal instructions</span>
-        <span className="text-xs text-content-secondary">Applied below system and agent policy.</span>
-        <Textarea
-          className="min-h-32"
-          disabled={preferenceQuery.isLoading}
-          maxLength={4000}
-          onChange={(event) => setInstructions(event.target.value)}
-          value={instructions}
-        />
-      </label>
-      <label className="grid gap-1 text-sm">
-        <span className="font-medium">Response style</span>
-        <Select onValueChange={(value) => setResponseStyle(value as AiAgentPreference["responseStyle"])} value={responseStyle}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="concise">Concise</SelectItem>
-            <SelectItem value="balanced">Balanced</SelectItem>
-            <SelectItem value="detailed">Detailed</SelectItem>
-          </SelectContent>
-        </Select>
-      </label>
-      <Button className="w-fit" disabled={updatePreference.isPending} onClick={() => void save()} type="button">
-        {updatePreference.isPending ? "Saving…" : "Save preferences"}
-      </Button>
-    </div>
-  )
-}
-
-function PersonalKnowledge() {
+function PersonalKnowledge({ onExpandPage }: { onExpandPage?: (pageId: string) => void }) {
   const workspaceId = useActiveWorkspaceId()
   const { data: aiPages = [], isLoading } = useZilobaseAiPages(workspaceId)
-  const { data: pages = [] } = usePages(workspaceId)
-  const pagesById = React.useMemo(() => new Map(pages.map((page) => [page.id, page])), [pages])
   return (
     <div className="grid gap-6">
       <ZilobaseAiSection
         isLoading={isLoading}
         items={aiPages.filter((page) => page.metadata.zilobaseai === "instruction")}
         mode="instruction"
-        pagesById={pagesById}
+        onExpandPage={onExpandPage}
         workspaceId={workspaceId ?? null}
       />
       <ZilobaseAiSection
         isLoading={isLoading}
         items={aiPages.filter((page) => page.metadata.zilobaseai === "skill")}
         mode="skill"
-        pagesById={pagesById}
+        onExpandPage={onExpandPage}
         workspaceId={workspaceId ?? null}
       />
     </div>
@@ -276,5 +221,5 @@ function CreateAgentForm({ onCreated }: { onCreated?: (agentId: string) => void 
 }
 
 function isPersonalTab(value?: string | null): value is PersonalTab {
-  return value === "preferences" || value === "knowledge" || value === "connectors" || value === "activity" || value === "policy"
+  return value === "knowledge" || value === "connectors" || value === "activity" || value === "policy"
 }

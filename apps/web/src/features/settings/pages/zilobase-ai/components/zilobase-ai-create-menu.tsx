@@ -1,5 +1,4 @@
 import * as React from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { Loader2Icon, PlusIcon, SearchIcon } from "@/shared/components/icons";
 import { toast } from "sonner";
 
@@ -80,13 +79,14 @@ function buildLinkablePageOptions(
 export function ZilobaseAiCreateMenu({
   existingPageIds,
   mode,
+  onOpenPage,
   workspaceId,
 }: {
   existingPageIds: string[];
   mode: ZilobaseAiMode;
+  onOpenPage?: (pageId: string) => void;
   workspaceId: string | null;
 }) {
-  const navigate = useNavigate();
   const { apiFetch, queryClient } = useZilobaseFeatures();
   const createPage = useCreatePage();
   const updatePage = useUpdatePage();
@@ -136,10 +136,7 @@ export function ZilobaseAiCreateMenu({
 
   const openPage = (pageId: string) => {
     closeMenu();
-    void navigate({
-      params: { pageId },
-      to: "/p/$pageId",
-    });
+    onOpenPage?.(pageId);
   };
 
   const resolvePageMetadata = async (pageId: string) => {

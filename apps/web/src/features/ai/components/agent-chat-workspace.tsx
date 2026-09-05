@@ -1,11 +1,14 @@
 "use client"
 
-import { lazy, Suspense, useCallback, useEffect, useState, type ReactNode } from "react"
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import { useRouter, useRouterState } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 import { ChevronsRightIcon, PictureInPicture2Icon, SidebarSimpleIcon, SlidersHorizontalIcon, XIcon } from "@/shared/components/icons"
 import { Button } from "@/shared/ui/button"
 import { PageSidePaneLayout } from "@/features/pages/context"
+import { PageEditorPane } from "@/features/pages/pages"
+import { PageWorkspaceGate } from "@/features/workspaces"
 
 import { useAiChatThreadState } from "../conversation/use-ai-chat-thread-state"
 import type { ChatPresentationMode } from "./chat-sidebar"
@@ -37,23 +40,34 @@ export function AgentChatWorkspace({
   pageId?: string | null
   presentationMode?: ChatPresentationMode
 }) {
+  const router = useRouter()
+  const searchStr = useRouterState({ select: (state) => state.location.searchStr })
+  const routeSearch = useMemo(() => new URLSearchParams(searchStr), [searchStr])
   const { activeThreadId, isBootstrapping, setActiveThreadId } = useAiChatThreadState({ enabled: open })
   const [, setDraftDirty] = useState(false)
   const [pendingInitialSubmission, setPendingInitialSubmission] = useState<PendingInitialChatSubmission | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(() => readSettingsOpen(isSidebar))
-  const [settingsTab] = useState<string | null>(() => readSearchParam("settingsTab"))
+  const settingsTab = isSidebar ? null : routeSearch.get("settingsTab")
+  const expandedSettingsPageId = isSidebar ? null : routeSearch.get("settingsPage")
 
   const setSettings = useCallback((next: boolean) => {
     setSettingsOpen(next)
-    if (!isSidebar) updateSettingsSearch(next, settingsTab)
-  }, [isSidebar, settingsTab])
+    if (!isSidebar) updateSettingsSearch(router, next, settingsTab)
+  }, [isSidebar, router, settingsTab])
+
+  const setExpandedSettingsPage = useCallback((pageId: string | null) => {
+    if (isSidebar) return
+    const search = new URLSearchParams(searchStr)
+    if (pageId) search.set("settingsPage", pageId)
+    else search.delete("settingsPage")
+    const query = search.toString()
+    router.history.replace(`/ai${query ? `?${query}` : ""}`)
+  }, [isSidebar, router.history, searchStr])
 
   useEffect(() => {
-    if (isSidebar || typeof window === "undefined") return
-    const sync = () => setSettingsOpen(new URLSearchParams(window.location.search).get("panel") === "settings")
-    window.addEventListener("popstate", sync)
-    return () => window.removeEventListener("popstate", sync)
-  }, [isSidebar])
+    if (isSidebar) return
+    setSettingsOpen(routeSearch.get("panel") === "settings")
+  }, [isSidebar, routeSearch])
 
   useEffect(() => {
     if (isSidebar) return
@@ -83,11 +97,23 @@ export function AgentChatWorkspace({
     </Suspense>
   )
 
-  const settingsPanel = (
+  const settingsPanel = expandedSettingsPageId ? (
+    <PageWorkspaceGate pageId={expandedSettingsPageId}>
+      <PageEditorPane
+        className="min-h-0 flex-1 overflow-y-auto"
+        enableComments={false}
+        key={expandedSettingsPageId}
+        layoutPanelMode="overlay"
+        onOpenPage={setExpandedSettingsPage}
+        pageId={expandedSettingsPageId}
+      />
+    </PageWorkspaceGate>
+  ) : (
     <AiSettingsPanel
       agentId={null}
       initialTab={settingsTab}
       onClose={() => setSettings(false)}
+      onExpandPage={isSidebar ? undefined : setExpandedSettingsPage}
       scope="personal"
       showCloseButton={isSidebar}
     />
@@ -158,7 +184,11 @@ function readSearchParam(name: string) {
   return typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get(name)
 }
 
-function updateSettingsSearch(open: boolean, settingsTab: string | null) {
+function updateSettingsSearch(
+  router: ReturnType<typeof useRouter>,
+  open: boolean,
+  settingsTab: string | null,
+) {
   if (typeof window === "undefined" || window.location.pathname !== "/ai") return
   const url = new URL(window.location.href)
   if (open) {
@@ -169,8 +199,9 @@ function updateSettingsSearch(open: boolean, settingsTab: string | null) {
     url.searchParams.delete("panel")
     url.searchParams.delete("settingsScope")
     url.searchParams.delete("settingsTab")
+    url.searchParams.delete("settingsPage")
   }
-  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`)
+  router.history.replace(`${url.pathname}${url.search}${url.hash}`)
 }
 
 function clearSearchParams(...names: string[]) {

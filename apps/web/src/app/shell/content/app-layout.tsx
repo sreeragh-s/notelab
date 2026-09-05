@@ -225,10 +225,20 @@ function AppLayoutContent({
   const aiWorkspacePanel = isAiPage
     ? new URLSearchParams(searchStr).get("panel")
     : null
+  const aiSettingsPageId =
+    isAiPage && aiWorkspacePanel === "settings"
+      ? new URLSearchParams(searchStr).get("settingsPage")
+      : null
   const aiWorkspaceSidePaneOpen =
     aiWorkspacePanel === "settings" || aiWorkspacePanel === "history"
   const closeAuxiliaryWorkspaceSidePane = useCallback(() => {
     const search = new URLSearchParams(searchStr)
+    if (search.has("settingsPage")) {
+      search.delete("settingsPage")
+      const query = search.toString()
+      router.history.replace(`${pathname}${query ? `?${query}` : ""}${hash}`)
+      return
+    }
     search.delete("panel")
     search.delete("settingsScope")
     search.delete("settingsTab")
@@ -614,6 +624,7 @@ function AppLayoutContent({
                 embeddedMobileViewer || isMailPage ? undefined : (
                   <AppHeader
                     agentId={agentId}
+                    auxiliarySidePanePageId={aiSettingsPageId}
                     auxiliarySidePaneCloseLabel={agentId ? "Close Custom Agent settings" : "Close AI settings"}
                     auxiliarySidePaneOpen={showAuxiliaryWorkspaceSidePaneLayout}
                     discussionsOpen={discussionsSidebarOpen}

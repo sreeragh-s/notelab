@@ -9,11 +9,9 @@ import {
   EmptyTitle,
 } from "@/shared/ui/empty"
 import { Skeleton } from "@/shared/ui/skeleton"
-import { cn } from "@/shared/lib/utils"
 import type {
   ZilobaseAiMode,
   ZilobaseAiPageSummary,
-  Page,
 } from "@zilobase/features/pages"
 
 import { ZilobaseAiCreateMenu } from "./zilobase-ai-create-menu"
@@ -51,19 +49,18 @@ export function ZilobaseAiSection({
   isLoading,
   items,
   mode,
+  onExpandPage,
   workspaceId,
-  pagesById,
 }: {
   isLoading: boolean
   items: ZilobaseAiPageSummary[]
   mode: ZilobaseAiMode
+  onExpandPage?: (pageId: string) => void
   workspaceId: string | null
-  pagesById: Map<string, Page>
 }) {
   const config = sectionConfig[mode]
   const existingPageIds = items.map((page) => page.id)
   const isEmpty = items.length === 0
-  const showList = !isLoading && !isEmpty
 
   return (
     <section className="grid gap-3">
@@ -78,12 +75,13 @@ export function ZilobaseAiSection({
           <ZilobaseAiCreateMenu
             existingPageIds={existingPageIds}
             mode={mode}
+            onOpenPage={onExpandPage}
             workspaceId={workspaceId}
           />
         ) : null}
       </div>
 
-      <div className={cn(showList && "overflow-hidden rounded-md border")}>
+      <div>
           {isLoading ? (
             <ZilobaseAiSectionSkeleton />
           ) : isEmpty ? (
@@ -96,14 +94,12 @@ export function ZilobaseAiSection({
             </Empty>
           ) : (
             <ZilobaseAiItemList>
-              {items.map((page, index) => (
+              {items.map((page) => (
                 <ZilobaseAiItem
                   key={page.id}
-                  isFirst={index === 0}
-                  isLast={index === items.length - 1}
                   mode={mode}
+                  onExpandPage={onExpandPage}
                   page={page}
-                  pageRecord={pagesById.get(page.id)}
                 />
               ))}
             </ZilobaseAiItemList>
