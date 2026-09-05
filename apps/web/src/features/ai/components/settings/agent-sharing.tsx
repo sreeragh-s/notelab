@@ -1,7 +1,7 @@
 import {
   ChevronsUpDownIcon,
   LockIcon,
-  Trash2Icon
+  Trash2Icon,
 } from "@/shared/components/icons"
 import * as React from "react"
 import { toast } from "sonner"
@@ -10,7 +10,7 @@ import {
   type AiAgentProfileDetail,
   useArchiveAiAgentProfile,
   useReplaceAiAgentProfileAccess,
-  useTransferAiAgentProfile
+  useTransferAiAgentProfile,
 } from "@zilobase/features/ai-chat"
 import { usePageAccessTargets } from "@zilobase/features/pages"
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
@@ -57,9 +57,12 @@ export function AgentSharePopover({ agent }: { agent: AiAgentProfileDetail }) {
           onOpenAutoFocus={(event) => event.preventDefault()}
         >
           <div className="mb-4 grid gap-1.5">
-            <div className="font-semibold leading-none tracking-tight">Share agent</div>
+            <div className="font-semibold leading-none tracking-tight">
+              Share agent
+            </div>
             <div className="text-sm text-content-secondary">
-              Members can chat with this agent using the agent's own explicitly granted access.
+              Members can chat with this agent using the agent's own explicitly
+              granted access.
             </div>
           </div>
           <AgentShare agent={agent} showLifecycle={false} />
@@ -82,11 +85,13 @@ export function AgentShare({
   const transferOwnership = useTransferAiAgentProfile(agent.id)
   const archiveAgent = useArchiveAiAgentProfile(agent.id)
   const [principalId, setPrincipalId] = React.useState("")
-  const [principalType, setPrincipalType] = React.useState<"user" | "team">("user")
+  const [principalType, setPrincipalType] = React.useState<"user" | "team">(
+    "user",
+  )
   const [targetPickerOpen, setTargetPickerOpen] = React.useState(false)
   const [role, setRole] = React.useState<"editor" | "user">("user")
   const [newOwnerUserId, setNewOwnerUserId] = React.useState("")
-  const canEdit = agent.role === "owner" || agent.role === "editor"
+  const canEdit = ["owner", "editor"].includes(agent.role)
   const targetValue = principalId ? `${principalType}:${principalId}` : ""
   const targetByKey = React.useMemo(() => {
     const map = new Map<string, { detail?: string; label: string }>()
@@ -106,17 +111,158 @@ export function AgentShare({
   const save = async (grants: AiAgentProfileDetail["access"]) => {
     try {
       await replaceAccess.mutateAsync({
-        grants: grants.map(({ principalId: id, principalType: type, role: grantRole }) => ({
-          principalId: id,
-          principalType: type,
-          role: grantRole,
-        })),
+        grants: grants.map(
+          ({ principalId: id, principalType: type, role: grantRole }) => ({
+            principalId: id,
+            principalType: type,
+            role: grantRole,
+          }),
+        ),
       })
       setPrincipalId("")
       toast.success("Agent sharing updated.")
     } catch (error) {
       showError("Could not update sharing", error)
     }
+  }
+
+  function renderTargetPicker() {
+    return (
+      <Popover onOpenChange={setTargetPickerOpen} open={targetPickerOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            className="min-w-44 flex-1 justify-between"
+            role="combobox"
+            type="button"
+            variant="outline"
+          >
+            <span className="min-w-0 truncate text-left">
+              {selectedTarget
+                ? `${selectedTarget.label}${selectedTarget.detail ? ` · ${selectedTarget.detail}` : ""}`
+                : "Search members or teams"}
+            </span>
+            <ChevronsUpDownIcon className="opacity-60" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          className="w-[min(28rem,calc(100vw-3rem))] p-0"
+        >
+          <Command>
+            <CommandInput placeholder="Search by name or email..." />
+            <CommandList>
+              <CommandEmpty>No members or teams found.</CommandEmpty>
+              <CommandGroup heading="Members">
+                {(targets.data?.members ?? [])
+                  .filter((member) => member.id !== agent.ownerUserId)
+                  .map((member) => (
+                    <CommandItem
+                      key={member.id}
+                      onSelect={() => {
+                        setPrincipalType("user")
+                        setPrincipalId(member.id)
+                        setTargetPickerOpen(false)
+                      }}
+                      value={`${member.name} ${member.email}`}
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">
+                          {member.name || member.email}
+                        </div>
+                        <div className="truncate text-xs text-content-secondary">
+                          {member.email}
+                        </div>
+                      </div>
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+              {(targets.data?.teams.length ?? 0) > 0 ? (
+                <CommandGroup heading="Teams">
+                  {targets.data?.teams.map((team) => (
+                    <CommandItem
+                      key={team.id}
+                      onSelect={() => {
+                        setPrincipalType("team")
+                        setPrincipalId(team.id)
+                        setTargetPickerOpen(false)
+                      }}
+                      value={`${team.name} team`}
+                    >
+                      {team.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ) : null}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    )
+  }
+
+  function renderOwnershipLifecycle() {
+    return (
+      showLifecycle &&
+      agent.role === "owner" && (
+        <div className="mt-3 grid gap-2 border-t pt-3">
+          <p className="text-sm font-medium">Ownership and lifecycle</p>
+          <p className="text-xs text-content-secondary">
+            Transferring ownership does not transfer connector credentials. All
+            connections will require their authenticators to reconnect.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Input
+              className="min-w-48 flex-1"
+              onChange={(event) => setNewOwnerUserId(event.target.value)}
+              placeholder="New owner user ID"
+              value={newOwnerUserId}
+            />
+            <Button
+              disabled={!newOwnerUserId.trim() || transferOwnership.isPending}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Transfer this agent and require every connection to reauthenticate?",
+                  )
+                ) {
+                  void transferOwnership
+                    .mutateAsync({ newOwnerUserId: newOwnerUserId.trim() })
+                    .then(() => toast.success("Agent ownership transferred."))
+                    .catch((error) =>
+                      showError("Could not transfer ownership", error),
+                    )
+                }
+              }}
+              type="button"
+              variant="outline"
+            >
+              Transfer ownership
+            </Button>
+            <Button
+              disabled={archiveAgent.isPending}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Archive this agent? Its shared history stays readable, but no new runs or connector calls can start.",
+                  )
+                ) {
+                  void archiveAgent
+                    .mutateAsync({})
+                    .then(() => toast.success("Agent archived."))
+                    .catch((error) =>
+                      showError("Could not archive agent", error),
+                    )
+                }
+              }}
+              type="button"
+              variant="destructive"
+            >
+              Archive agent
+            </Button>
+          </div>
+        </div>
+      )
+    )
   }
 
   return (
@@ -127,138 +273,88 @@ export function AgentShare({
         diagnostics remain editor-only.
       </p>
       <div className="rounded-md bg-feedback-warning-background px-3 py-2 text-xs text-feedback-warning-text">
-        This agent uses its own resource permissions. People you share it with may receive information from granted pages or databases even when they cannot open those resources directly.
+        This agent uses its own resource permissions. People you share it with
+        may receive information from granted pages or databases even when they
+        cannot open those resources directly.
       </div>
       <div className="flex items-center gap-2 rounded border p-2 text-sm">
         <Badge variant="outline">owner</Badge>
         <span className="min-w-0 truncate">
-          {targetByKey.get(`user:${agent.ownerUserId}`)?.label ?? agent.ownerUserId}
+          {targetByKey.get(`user:${agent.ownerUserId}`)?.label ??
+            agent.ownerUserId}
         </span>
         <span className="ml-auto text-content-secondary">Full access</span>
       </div>
       {agent.access.map((grant) => (
-        <div className="flex items-center gap-2 rounded border p-2 text-sm" key={grant.id}>
+        <div
+          className="flex items-center gap-2 rounded border p-2 text-sm"
+          key={grant.id}
+        >
           <Badge variant="outline">{grant.principalType}</Badge>
           <span className="min-w-0 truncate">
-            {targetByKey.get(`${grant.principalType}:${grant.principalId}`)?.label ?? grant.principalId}
+            {targetByKey.get(`${grant.principalType}:${grant.principalId}`)
+              ?.label ?? grant.principalId}
           </span>
-          <span className="ml-auto text-content-secondary">{grant.role === "editor" ? "Can edit" : "Can use"}</span>
+          <span className="ml-auto text-content-secondary">
+            {grant.role === "editor" ? "Can edit" : "Can use"}
+          </span>
           {canEdit && (
             <Button
               aria-label="Remove access"
-              onClick={() => void save(agent.access.filter((item) => item.id !== grant.id))}
+              onClick={() =>
+                void save(agent.access.filter((item) => item.id !== grant.id))
+              }
               size="icon"
               type="button"
               variant="ghost"
-            ><Trash2Icon className="size-4" /></Button>
+            >
+              <Trash2Icon className="size-4" />
+            </Button>
           )}
         </div>
       ))}
       {canEdit && (
         <div className="flex flex-wrap gap-2">
-          <Popover onOpenChange={setTargetPickerOpen} open={targetPickerOpen}>
-            <PopoverTrigger asChild>
-              <Button className="min-w-44 flex-1 justify-between" role="combobox" type="button" variant="outline">
-                <span className="min-w-0 truncate text-left">
-                  {selectedTarget ? `${selectedTarget.label}${selectedTarget.detail ? ` · ${selectedTarget.detail}` : ""}` : "Search members or teams"}
-                </span>
-                <ChevronsUpDownIcon className="opacity-60" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-[min(28rem,calc(100vw-3rem))] p-0">
-              <Command>
-                <CommandInput placeholder="Search by name or email..." />
-                <CommandList>
-                  <CommandEmpty>No members or teams found.</CommandEmpty>
-                  <CommandGroup heading="Members">
-                    {(targets.data?.members ?? []).filter((member) => member.id !== agent.ownerUserId).map((member) => (
-                      <CommandItem
-                        key={member.id}
-                        onSelect={() => {
-                          setPrincipalType("user")
-                          setPrincipalId(member.id)
-                          setTargetPickerOpen(false)
-                        }}
-                        value={`${member.name} ${member.email}`}
-                      >
-                        <div className="min-w-0">
-                          <div className="truncate font-medium">{member.name || member.email}</div>
-                          <div className="truncate text-xs text-content-secondary">{member.email}</div>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                  {(targets.data?.teams.length ?? 0) > 0 ? (
-                    <CommandGroup heading="Teams">
-                      {targets.data?.teams.map((team) => (
-                        <CommandItem
-                          key={team.id}
-                          onSelect={() => {
-                            setPrincipalType("team")
-                            setPrincipalId(team.id)
-                            setTargetPickerOpen(false)
-                          }}
-                          value={`${team.name} team`}
-                        >
-                          {team.name}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  ) : null}
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-          <Select onValueChange={(value) => setRole(value as "editor" | "user")} value={role}>
-            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="user">Can use</SelectItem><SelectItem value="editor">Can edit</SelectItem></SelectContent>
+          {renderTargetPicker()}
+          <Select
+            onValueChange={(value) => setRole(value as "editor" | "user")}
+            value={role}
+          >
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="user">Can use</SelectItem>
+              <SelectItem value="editor">Can edit</SelectItem>
+            </SelectContent>
           </Select>
           <Button
             disabled={!principalId.trim() || replaceAccess.isPending}
             onClick={() => {
-              const grants = agent.access.filter((item) => !(item.principalId === principalId.trim() && item.principalType === principalType))
-              void save([...grants, { id: crypto.randomUUID(), principalId: principalId.trim(), principalType, role }])
+              const grants = agent.access.filter(
+                (item) =>
+                  !(
+                    item.principalId === principalId.trim() &&
+                    item.principalType === principalType
+                  ),
+              )
+              void save([
+                ...grants,
+                {
+                  id: crypto.randomUUID(),
+                  principalId: principalId.trim(),
+                  principalType,
+                  role,
+                },
+              ])
             }}
             type="button"
-          >Share</Button>
+          >
+            Share
+          </Button>
         </div>
       )}
-      {showLifecycle && agent.role === "owner" && (
-        <div className="mt-3 grid gap-2 border-t pt-3">
-          <p className="text-sm font-medium">Ownership and lifecycle</p>
-          <p className="text-xs text-content-secondary">
-            Transferring ownership does not transfer connector credentials. All
-            connections will require their authenticators to reconnect.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Input className="min-w-48 flex-1" onChange={(event) => setNewOwnerUserId(event.target.value)} placeholder="New owner user ID" value={newOwnerUserId} />
-            <Button
-              disabled={!newOwnerUserId.trim() || transferOwnership.isPending}
-              onClick={() => {
-                if (window.confirm("Transfer this agent and require every connection to reauthenticate?")) {
-                  void transferOwnership.mutateAsync({ newOwnerUserId: newOwnerUserId.trim() })
-                    .then(() => toast.success("Agent ownership transferred."))
-                    .catch((error) => showError("Could not transfer ownership", error))
-                }
-              }}
-              type="button"
-              variant="outline"
-            >Transfer ownership</Button>
-            <Button
-              disabled={archiveAgent.isPending}
-              onClick={() => {
-                if (window.confirm("Archive this agent? Its shared history stays readable, but no new runs or connector calls can start.")) {
-                  void archiveAgent.mutateAsync({})
-                    .then(() => toast.success("Agent archived."))
-                    .catch((error) => showError("Could not archive agent", error))
-                }
-              }}
-              type="button"
-              variant="destructive"
-            >Archive agent</Button>
-          </div>
-        </div>
-      )}
+      {renderOwnershipLifecycle()}
     </div>
   )
 }

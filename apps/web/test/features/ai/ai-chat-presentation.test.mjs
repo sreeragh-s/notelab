@@ -67,11 +67,11 @@ export function register({ readSource, assert, test }) {
     const headerSource = await readSource("/src/app/shell/content/app-header.tsx")
     const paneHeaderSource = await readSource("/src/features/pages/components/page-pane-header.tsx")
 
-    assert.match(workspaceSource, /\{isSidebar \? <ChatHeader/)
+    assert.match(workspaceSource, /\{isSidebar\s*\?\s*\(?\s*<ChatHeader/)
     assert.match(workspaceSource, /aria-label="Ask AI settings"/)
     assert.doesNotMatch(workspaceSource, /AgentRail|Add Agent|draftAgentProfileId=\{selectedAgentId\}/)
     assert.doesNotMatch(workspaceSource, /draftAgentProfileId|draftAgentName|draftAgentDescription/)
-    assert.match(headerSource, /<PageSidePaneCollapseButton[\s\S]*?label=\{auxiliarySidePaneCloseLabel\}/)
+    assert.match(headerSource, /<PageSidePaneCollapseButton[\s\S]*?label=\{\s*props\.auxiliarySidePaneCloseLabel \?\? "Close AI settings"\s*\}/)
     assert.match(paneHeaderSource, /export function PageSidePaneCollapseButton/)
     assert.match(paneHeaderSource, /<PageSidePaneCollapseButton onClick=\{onClose\} \/>/)
     assert.doesNotMatch(settingsSource, /<header className="[^"]*border-b/)
@@ -124,7 +124,7 @@ export function register({ readSource, assert, test }) {
     assert.match(workspaceSource, /<PageSidePaneLayout/)
     assert.match(agentPageSource, /<PageSidePaneLayout/)
     assert.match(headerSource, /showAgentActionsInSidePane/)
-    assert.match(headerSource, /<CustomAgentShareHeaderAction agentId=\{agentId\}/)
+    assert.match(headerSource, /<CustomAgentShareHeaderAction agentId=\{props\.agentId\}/)
   })
 
   test("Instruction and skill menus distinguish creating from adding", async () => {
@@ -152,7 +152,8 @@ export function register({ readSource, assert, test }) {
     assert.match(itemSource, /right-3 top-3 z-\[80\]/)
     assert.match(itemSource, /showCollaborationPresence=\{false\}/)
     assert.doesNotMatch(itemSource, /ring-1 ring-border/)
-    assert.match(workspaceSource, /routeSearch\.get\("settingsPage"\)/)
+    assert.match(workspaceSource, /settingsLocation\(\s*routeSearch,\s*isSidebar,?\s*\)/)
+    assert.match(workspaceSource, /expandedSettingsPageId: search\.get\("settingsPage"\)/)
     assert.match(layoutSource, /if \(search\.has\("settingsPage"\)\)/)
   })
 }
