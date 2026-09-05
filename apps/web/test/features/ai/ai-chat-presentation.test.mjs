@@ -100,6 +100,15 @@ export function register({ readSource, assert, test }) {
     assert.match(layoutSource, /auxiliarySidePaneCloseLabel=\{agentId \? "Close Custom Agent settings" : "Close AI settings"\}/)
   })
 
+  test("the Agents sidebar header creates a standalone agent", async () => {
+    const agentsSectionSource = await readSource("/src/features/sidebar/components/agents-section.tsx")
+
+    assert.match(agentsSectionSource, /aria-label="Create agent"/)
+    assert.match(agentsSectionSource, /mutateAsync\(\{ name: "Untitled agent" \}\)/)
+    assert.match(agentsSectionSource, /to: "\/agents\/\$agentId"/)
+    assert.doesNotMatch(agentsSectionSource, /if \(!agents\.data\?\.length\) return null/)
+  })
+
   test("Ask AI and Custom Agents share route-driven side pane behavior", async () => {
     const workspaceSource = await readSource("/src/features/ai/components/agent-chat-workspace.tsx")
     const agentPageSource = await readSource("/src/features/ai/pages/custom-agent.tsx")
