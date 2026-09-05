@@ -41,6 +41,12 @@ import { Textarea } from "@/shared/ui/textarea"
 
 type AgentPanelTab = "overview" | "tools" | "triggers" | "activity" | "share" | "versions"
 
+const DEFAULT_AGENT_NAME = "Untitled agent"
+
+function getAgentTitleDraft(name: string) {
+  return name === DEFAULT_AGENT_NAME ? "" : name
+}
+
 export default function CustomAgentPage() {
   const { agentId } = useParams({ strict: false }) as { agentId: string }
   const router = useRouter()
@@ -65,7 +71,7 @@ export default function CustomAgentPage() {
 
   React.useEffect(() => {
     if (!agentQuery.data) return
-    setName(agentQuery.data.name)
+    setName(getAgentTitleDraft(agentQuery.data.name))
     setDescription(agentQuery.data.description)
     setCover(agentQuery.data.cover ?? "")
     setIcon(typeof agentQuery.data.icon === "string" ? agentQuery.data.icon : "")
@@ -73,12 +79,12 @@ export default function CustomAgentPage() {
   }, [agentQuery.data?.id])
 
   const saveTitle = async () => {
-    const next = name.trim() || "Untitled agent"
+    const next = name.trim() || DEFAULT_AGENT_NAME
     if (!agentQuery.data || next === agentQuery.data.name) return
     try {
       await updateAgent.mutateAsync({ name: next })
     } catch (error) {
-      setName(agentQuery.data.name)
+      setName(getAgentTitleDraft(agentQuery.data.name))
       toast.error(error instanceof Error ? error.message : "Could not rename agent.")
     }
   }

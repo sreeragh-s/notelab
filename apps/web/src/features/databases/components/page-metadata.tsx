@@ -827,7 +827,7 @@ export function PageMetadata({
             ) : null}
             <textarea
               aria-label={headingLabel ? `${headingLabel} title` : "Page title"}
-            className="min-h-10 min-w-0 flex-1 resize-none overflow-hidden border-0 bg-transparent px-3 py-0 text-4xl font-semibold leading-tight tracking-normal whitespace-pre-wrap text-balance text-content-primary shadow-none outline-none placeholder:text-content-secondary focus-visible:ring-0 dark:bg-transparent"
+            className="min-h-10 min-w-0 flex-1 resize-none overflow-hidden border-0 bg-transparent px-3 py-0 text-4xl font-semibold leading-tight tracking-normal whitespace-pre-wrap text-balance text-content-primary shadow-none outline-none placeholder:text-content-secondary placeholder:opacity-60 focus-visible:ring-0 dark:bg-transparent"
             onBlur={onTitleBlur}
             onChange={(event) => updateTitle(event.target.value)}
             onKeyDown={(event) => {
@@ -857,7 +857,7 @@ export function PageMetadata({
                   ? `${headingLabel} description`
                   : "Page description"
               }
-              className="min-h-6 min-w-0 flex-1 resize-none overflow-hidden border-0 bg-transparent px-3 py-0 text-base leading-relaxed text-content-secondary shadow-none outline-none placeholder:text-content-secondary focus-visible:ring-0 dark:bg-transparent"
+              className="min-h-6 min-w-0 flex-1 resize-none overflow-hidden border-0 bg-transparent px-3 py-0 text-base leading-relaxed text-content-secondary shadow-none outline-none placeholder:text-content-secondary placeholder:opacity-60 focus-visible:ring-0 dark:bg-transparent"
               onBlur={onDescriptionBlur}
               onChange={(event) => updateDescription(event.target.value)}
               placeholder={descriptionPlaceholder}

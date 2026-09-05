@@ -84,6 +84,7 @@ export function register({ readSource, assert, test }) {
     const agentPageSource = await readSource("/src/features/ai/pages/custom-agent.tsx")
     const agentHeaderSource = await readSource("/src/features/ai/components/custom-agent-header-actions.tsx")
     const layoutSource = await readSource("/src/app/shell/content/app-layout.tsx")
+    const pageMetadataSource = await readSource("/src/features/databases/components/page-metadata.tsx")
 
     assert.match(agentPageSource, /<PageSidePaneLayout/)
     assert.match(agentPageSource, /<PageMetadata/)
@@ -94,7 +95,10 @@ export function register({ readSource, assert, test }) {
     assert.match(agentHeaderSource, /Open Custom Agent settings/)
     assert.match(agentPageSource, /Build, run, and control this sandboxed Custom Agent/)
     assert.match(agentPageSource, /<AgentChat agentId=\{agentId\}/)
+    assert.match(agentPageSource, /name === DEFAULT_AGENT_NAME \? "" : name/)
+    assert.match(agentPageSource, /titlePlaceholder="Untitled agent"/)
     assert.doesNotMatch(agentPageSource, /<TabsTrigger value="chat">/)
+    assert.match(pageMetadataSource, /placeholder:text-content-secondary placeholder:opacity-60/)
     assert.match(layoutSource, /agentWorkspaceSidePaneOpen = agentWorkspacePanel === "settings"/)
     assert.match(layoutSource, /showAiWorkspaceSidePaneLayout \|\| showAgentWorkspaceSidePaneLayout/)
     assert.match(layoutSource, /auxiliarySidePaneCloseLabel=\{agentId \? "Close Custom Agent settings" : "Close AI settings"\}/)
