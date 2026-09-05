@@ -48,10 +48,23 @@ coordinator; Cloudflare consumes the same task from Queues. Failures are leased
 and retryable, cancellation is durable, event receipts deduplicate trigger
 delivery, and chain depth prevents recursion.
 
+Run workers renew their lease every 20 seconds and enforce a five-minute model
+attempt deadline. Every newly invoked tool checks durable lease ownership.
+Cancellation stops further invocations; an already-issued remote write cannot
+be undone. A retry that finds a previous write receipt fails closed with
+`AGENT_RETRY_REQUIRES_REVIEW`, because model/tool-result checkpoints are not yet
+implemented. Inspect the previous outcome before manually starting another run.
+
 MCP writes retain the existing write kill switches and approval model.
 Background calls that require confirmation put the run into
 `waiting_approval`. Provider results, tool arguments, and sensitive diagnostics
 are never placed in shared activity.
+
+Background approval continuation remains incomplete: the current approval
+handler records the approved tool result as the final run result rather than
+resuming the remaining model steps. Do not enable background write workflows
+that depend on multi-step approval continuation until this is implemented and
+tested. See the [branch review](./mcp-branch-review.md) for merge blockers.
 
 ## Triggers
 
