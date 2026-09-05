@@ -959,7 +959,7 @@ const ChatbotConversationController = ({
         return;
       }
 
-      if (!isComposerReady) {
+      if (!isComposerReady || !workspaceId) {
         toast.error("Ask AI failed", {
           description:
             "Sign in and select an active workspace before using AI.",

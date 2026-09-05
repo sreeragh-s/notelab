@@ -37,8 +37,28 @@ export function useWorkspaces() {
 export function useActiveWorkspaceId() {
   const { auth, preferredActiveWorkspaceId } = useZilobaseFeatures()
   const { data: sessionData } = useSession()
-  const { data: workspaces = [] } = useQuery(workspacesQueryOptions(auth))
-  const sessionWorkspaceId = sessionData?.session?.activeWorkspaceId ?? null
+  const workspacesQuery = useQuery(workspacesQueryOptions(auth))
+
+  return resolveActiveWorkspaceId({
+    preferredActiveWorkspaceId,
+    sessionWorkspaceId: sessionData?.session?.activeWorkspaceId ?? null,
+    status: workspacesQuery.status,
+    workspaces: workspacesQuery.data ?? [],
+  })
+}
+
+export function resolveActiveWorkspaceId(input: {
+  preferredActiveWorkspaceId: string | null | undefined
+  sessionWorkspaceId: string | null | undefined
+  status: "error" | "pending" | "success"
+  workspaces: ReadonlyArray<Pick<Workspace, "id">>
+}) {
+  const {
+    preferredActiveWorkspaceId,
+    sessionWorkspaceId,
+    status,
+    workspaces,
+  } = input
   const storedWorkspace = workspaces.find(
     (workspace) => workspace.id === preferredActiveWorkspaceId,
   )
@@ -46,13 +66,20 @@ export function useActiveWorkspaceId() {
     (workspace) => workspace.id === sessionWorkspaceId,
   )
 
-  return (
+  const validatedWorkspaceId =
     storedWorkspace?.id ??
     sessionWorkspace?.id ??
-    workspaces[0]?.id ??
-    sessionWorkspaceId ??
-    preferredActiveWorkspaceId
-  )
+    workspaces[0]?.id
+
+  if (validatedWorkspaceId) return validatedWorkspaceId
+
+  // Do not start workspace-scoped queries or realtime connections with an ID
+  // that has not yet been checked against the user's current workspace list.
+  // If that list is unavailable, retain the previous fallback so the rest of
+  // the application can continue operating in a degraded network state.
+  return status === "error"
+    ? sessionWorkspaceId ?? preferredActiveWorkspaceId ?? null
+    : null
 }
 
 export function useWorkspaceAccessTargets(
