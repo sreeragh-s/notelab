@@ -7,7 +7,6 @@ import { SlidersHorizontalIcon } from "@/shared/components/icons"
 import { Button } from "@/shared/ui/button"
 
 export function CustomAgentHeaderActions({ agentId }: { agentId: string }) {
-  const agent = useAiAgentProfile(agentId)
   const router = useRouter()
   const { hash, pathname, searchStr } = useRouterState({
     select: (state) => ({
@@ -46,8 +45,13 @@ export function CustomAgentHeaderActions({ agentId }: { agentId: string }) {
       >
         <SlidersHorizontalIcon />
       </Button>
-      {agent.data ? <AgentSharePopover agent={agent.data} /> : null}
+      <CustomAgentShareHeaderAction agentId={agentId} />
     </div>
   )
 }
 
+export function CustomAgentShareHeaderAction({ agentId }: { agentId: string }) {
+  const agent = useAiAgentProfile(agentId)
+
+  return agent.data ? <AgentSharePopover agent={agent.data} /> : null
+}

@@ -13,6 +13,11 @@ const CustomAgentHeaderActions = lazy(() =>
     default: module.CustomAgentHeaderActions,
   })),
 )
+const CustomAgentShareHeaderAction = lazy(() =>
+  import("@/features/ai/components/custom-agent-header-actions").then((module) => ({
+    default: module.CustomAgentShareHeaderAction,
+  })),
+)
 
 export function AppHeader({
   agentId,
@@ -51,6 +56,9 @@ export function AppHeader({
 }) {
   const pageLayoutSidebar = useOptionalPageLayoutSidebar()
   const showItemSidePaneHeader = Boolean(renderedSidePanePageId || renderedSidePaneDatabaseId)
+  const showAgentActionsInSidePane = Boolean(
+    agentId && auxiliarySidePaneOpen && !auxiliarySidePanePageId,
+  )
   const showSidePaneHeader = auxiliarySidePaneOpen || showItemSidePaneHeader
   const splitActive = showSidePaneHeader && sidePaneAnimatedOpen
   const sidePanePathname = renderedSidePaneDatabaseId
@@ -64,7 +72,7 @@ export function AppHeader({
     <>
       <PageSidePaneHeaderCell className="z-10" side="main" splitActive={splitActive}>
         <PagePaneHeader
-          actions={agentId ? (
+          actions={agentId && !showAgentActionsInSidePane ? (
             <Suspense fallback={null}>
               <CustomAgentHeaderActions agentId={agentId} />
             </Suspense>
@@ -76,7 +84,7 @@ export function AppHeader({
           onTogglePageSidebar={onTogglePageSidebar}
           pageSidebarOpen={pageSidebarOpen}
           pathname={pathname}
-          showActions={!isSettingsPage || Boolean(agentId)}
+          showActions={(!isSettingsPage || Boolean(agentId)) && !showAgentActionsInSidePane}
         />
       </PageSidePaneHeaderCell>
       {showSidePaneHeader ? (
@@ -96,11 +104,18 @@ export function AppHeader({
               showBreadcrumb={false}
             />
           ) : onCloseAuxiliarySidePane ? (
-            <div className="flex h-full items-center px-3">
+            <div className="flex h-full w-full items-center px-3">
               <PageSidePaneCollapseButton
                 label={auxiliarySidePaneCloseLabel}
                 onClick={onCloseAuxiliarySidePane}
               />
+              {showAgentActionsInSidePane && agentId ? (
+                <div className="ml-auto">
+                  <Suspense fallback={null}>
+                    <CustomAgentShareHeaderAction agentId={agentId} />
+                  </Suspense>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </PageSidePaneHeaderCell>

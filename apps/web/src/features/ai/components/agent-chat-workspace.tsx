@@ -46,13 +46,19 @@ export function AgentChatWorkspace({
   const { activeThreadId, isBootstrapping, setActiveThreadId } = useAiChatThreadState({ enabled: open })
   const [, setDraftDirty] = useState(false)
   const [pendingInitialSubmission, setPendingInitialSubmission] = useState<PendingInitialChatSubmission | null>(null)
-  const [settingsOpen, setSettingsOpen] = useState(() => readSettingsOpen(isSidebar))
+  const [sidebarSettingsOpen, setSidebarSettingsOpen] = useState(false)
+  const settingsOpen = isSidebar
+    ? sidebarSettingsOpen
+    : routeSearch.get("panel") === "settings"
   const settingsTab = isSidebar ? null : routeSearch.get("settingsTab")
   const expandedSettingsPageId = isSidebar ? null : routeSearch.get("settingsPage")
 
   const setSettings = useCallback((next: boolean) => {
-    setSettingsOpen(next)
-    if (!isSidebar) updateSettingsSearch(router, next, settingsTab)
+    if (isSidebar) {
+      setSidebarSettingsOpen(next)
+      return
+    }
+    updateSettingsSearch(router, next, settingsTab)
   }, [isSidebar, router, settingsTab])
 
   const setExpandedSettingsPage = useCallback((pageId: string | null) => {
@@ -63,11 +69,6 @@ export function AgentChatWorkspace({
     const query = search.toString()
     router.history.replace(`/ai${query ? `?${query}` : ""}`)
   }, [isSidebar, router.history, searchStr])
-
-  useEffect(() => {
-    if (isSidebar) return
-    setSettingsOpen(routeSearch.get("panel") === "settings")
-  }, [isSidebar, routeSearch])
 
   useEffect(() => {
     if (isSidebar) return
@@ -176,10 +177,6 @@ function LoadingChat() {
   return <div className="flex h-full min-h-40 items-center justify-center text-sm text-content-secondary">Loading chat…</div>
 }
 
-function readSettingsOpen(isSidebar: boolean) {
-  return !isSidebar && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("panel") === "settings"
-}
-
 function readSearchParam(name: string) {
   return typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get(name)
 }
@@ -194,6 +191,8 @@ function updateSettingsSearch(
   if (open) {
     url.searchParams.set("panel", "settings")
     url.searchParams.set("settingsScope", "personal")
+    url.searchParams.delete("p")
+    url.searchParams.delete("d")
     if (settingsTab) url.searchParams.set("settingsTab", settingsTab)
   } else {
     url.searchParams.delete("panel")

@@ -90,6 +90,7 @@ export function register({ readSource, assert, test }) {
     assert.match(agentPageSource, /contentClassName="mx-auto max-w-\[900px\]"/)
     assert.match(agentPageSource, /enableComments=\{false\}/)
     assert.match(agentHeaderSource, /<AgentSharePopover agent=\{agent\.data\}/)
+    assert.match(agentHeaderSource, /export function CustomAgentShareHeaderAction/)
     assert.match(agentHeaderSource, /Open Custom Agent settings/)
     assert.match(agentPageSource, /Build, run, and control this sandboxed Custom Agent/)
     assert.match(agentPageSource, /<AgentChat agentId=\{agentId\}/)
@@ -97,6 +98,20 @@ export function register({ readSource, assert, test }) {
     assert.match(layoutSource, /agentWorkspaceSidePaneOpen = agentWorkspacePanel === "settings"/)
     assert.match(layoutSource, /showAiWorkspaceSidePaneLayout \|\| showAgentWorkspaceSidePaneLayout/)
     assert.match(layoutSource, /auxiliarySidePaneCloseLabel=\{agentId \? "Close Custom Agent settings" : "Close AI settings"\}/)
+  })
+
+  test("Ask AI and Custom Agents share route-driven side pane behavior", async () => {
+    const workspaceSource = await readSource("/src/features/ai/components/agent-chat-workspace.tsx")
+    const agentPageSource = await readSource("/src/features/ai/pages/custom-agent.tsx")
+    const headerSource = await readSource("/src/app/shell/content/app-header.tsx")
+
+    assert.match(workspaceSource, /routeSearch\.get\("panel"\) === "settings"/)
+    assert.match(workspaceSource, /url\.searchParams\.delete\("p"\)/)
+    assert.match(workspaceSource, /url\.searchParams\.delete\("d"\)/)
+    assert.match(workspaceSource, /<PageSidePaneLayout/)
+    assert.match(agentPageSource, /<PageSidePaneLayout/)
+    assert.match(headerSource, /showAgentActionsInSidePane/)
+    assert.match(headerSource, /<CustomAgentShareHeaderAction agentId=\{agentId\}/)
   })
 
   test("Instruction and skill menus distinguish creating from adding", async () => {
