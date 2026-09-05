@@ -7,6 +7,7 @@ import { getStringEnv, type RuntimeEnv } from "../../../shared/config/config";
 import { AgentProfileError } from "./agent-profile-service";
 import { listAgentResourcesForExecution } from "./agent-resource-service";
 import { appendRunEvent, serializeRun } from "./agent-run-records";
+import { captureAgentMcpToolGrants } from "../mcp/mcp-run-snapshot";
 
 export const RESOURCE_EDITOR_PAUSE_REASON = "Agent execution is paused because a granted resource no longer has an active agent editor with sufficient human access.";
 
@@ -54,6 +55,7 @@ export async function enqueueAgentRun(input: {
   }
   const now = new Date();
   const id = crypto.randomUUID();
+  const mcpTools = await captureAgentMcpToolGrants(input.profileId, input.workspaceId);
   const [inserted] = await db.insert(aiAgentRun).values({
     availableAt: now,
     chainDepth: input.chainDepth ?? 0,
@@ -64,6 +66,7 @@ export async function enqueueAgentRun(input: {
     occurrenceKey: input.occurrenceKey ?? null,
     permissionSnapshot: {
       capturedAt: now.toISOString(),
+      mcpTools,
       resources: resources.map(({ accessLevel, resourceId, resourceType }) => ({ accessLevel, resourceId, resourceType })),
     },
     profileId: input.profileId,

@@ -20,6 +20,7 @@ import {
 import type { RuntimeEnv } from "../../../shared/config/config";
 import { getMembership } from "../../access";
 import { MCP_LIMITS, isMcpExecutionEnabled } from "./config";
+import { isMcpExecutionContextAllowed } from "./mcp-execution-context";
 import { decryptMcpSecret } from "./credential-crypto";
 import {
   getMcpCredentialScopeId,
@@ -90,6 +91,7 @@ export async function discoverConnectionTools(input: {
 }
 
 export async function executeMcpTool(input: {
+  expectedPolicy: { classification: string; executionMode: string; alwaysAllowEnabled: boolean };
   scope: McpScope;
   connectionId: string;
   env: RuntimeEnv;
@@ -123,6 +125,14 @@ export async function executeMcpTool(input: {
   )).limit(1);
   if (!snapshot || snapshot.schemaHash !== input.schemaHash) {
     return failure("mcp_tool_changed", "The connector tool changed and must be reviewed again.");
+  }
+  if (snapshot.classification !== input.expectedPolicy.classification ||
+      snapshot.executionMode !== input.expectedPolicy.executionMode ||
+      context.connection.alwaysAllowEnabled !== input.expectedPolicy.alwaysAllowEnabled) {
+    return failure("mcp_policy_changed", "The connector policy changed. Review the tool and try again.");
+  }
+  if (!(await isMcpExecutionContextAllowed(input, snapshot.classification))) {
+    return failure("mcp_context_forbidden", "Connector access or execution policy changed. Start a new run or reconnect after reviewing permissions.");
   }
 
   const { client, close } = await connectClient(context);

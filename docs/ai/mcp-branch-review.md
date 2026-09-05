@@ -26,6 +26,13 @@ changes were left untouched and excluded from these commits.
 - Redacted raw provider diagnostics from shared run summaries.
 - Failed closed when retrying a run with prior write receipts, instead of
   restarting the model and potentially issuing the write again.
+- Captured MCP tool/schema/classification identities and approval requirements
+  when queueing runs. Execution intersects these with current grants; enabling
+  a connector or relaxing confirmation later does not expand a queued run.
+  Legacy queued runs without this snapshot cannot use MCP: start a fresh run.
+- Rechecked thread/run ownership, live write policy, and agent lifecycle before
+  MCP I/O, and rejected policies changed since tool selection. Approval completion
+  now preserves concurrent run cancellation.
 - Released ignored redirect response streams and rejected local hostname
   aliases such as `localhost.` and single-label intranet names.
 - Removed an unused direct MCP dependency and patched transitive `browserslist`
@@ -36,18 +43,10 @@ changes were left untouched and excluded from these commits.
 1. **Durable approval continuation is incomplete.**
    `mcp/mcp-approval.ts`, `executeApprovedMcpRunAction`, marks a run succeeded
    after one approved tool result. It does not resume the rest of the saved run.
-   It also needs conditional terminal updates so cancellation during the
-   external call cannot be overwritten. Implement durable model/tool-result
+   Implement durable model/tool-result
    checkpoints and test multiple approvals, cancellation, and queue redelivery.
 
-2. **Run capability snapshots do not capture MCP tool grants.**
-   `agents/agent-run-queue.ts` snapshots native resources, but
-   `mcp/mcp-run-tools.ts` selects live connector tools at processing time.
-   A connector/tool enabled after enqueue can therefore enter an older run.
-   Snapshot connector/tool/schema identities and intersect them with live
-   permissions; test both expansion and revocation across queued runs.
-
-3. **Coverage fails the existing repository gate.**
+2. **Coverage fails the existing repository gate.**
    Latest measured server coverage: statements 41.19%, branches 36.78%,
    functions 43.34%, lines 42.77%. Required: 45%, 40%, 45%, 45% respectively.
    Existing source-string contract tests do not establish runtime ACL,
@@ -55,7 +54,7 @@ changes were left untouched and excluded from these commits.
    especially for grants, OAuth/approvals, trigger delivery, and materialization.
    Do not lower thresholds or exclude these services.
 
-4. **New complexity findings remain.**
+3. **New complexity findings remain.**
    `quality:fallow:health` fails its identity baseline. Examples include MCP
    approval execution, `processAgentRun`, database event dispatch,
    materialization, and Custom Agent Settings. Split validation, persistence,
@@ -65,7 +64,8 @@ changes were left untouched and excluded from these commits.
 ## Verification recorded
 
 - Server suite: 768 tests passed before the final additional approval-gate test.
-- Focused MCP/agent/Node egress suites: 57 tests passed after that addition.
+- Focused MCP/agent/Node egress suites: 70 tests passed after the final
+  capability-snapshot and execution-context changes; server typecheck passed.
 - Web typecheck and source-contract suite passed during the refactor.
 - Full core verification passed earlier stages, including the web production
   build/bundle budget, then failed server coverage.

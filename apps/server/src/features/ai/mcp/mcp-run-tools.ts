@@ -14,10 +14,12 @@ import { isMcpEnabled, isMcpExternalWritesEnabled, MCP_LIMITS } from "./config";
 import { dynamicMcpToolName, requestMcpActionApproval } from "./mcp-approval";
 import { executeMcpTool } from "./mcp-client";
 import { agentMcpScope } from "./mcp-scope";
+import { findAgentMcpToolGrant } from "./mcp-run-snapshot";
 import { getWorkspaceMcpPolicy, recordMcpActivity } from "./mcp-service";
 
 export async function buildMcpAgentRunTools(input: {
   env: RuntimeEnv;
+  permissionSnapshot: unknown;
   profileId: string;
   query: string;
   runId: string;
@@ -39,7 +41,15 @@ export async function buildMcpAgentRunTools(input: {
       eq(aiMcpToolSnapshot.available, true),
     ));
   const externalWritesEnabled = policy.externalWritesEnabled && isMcpExternalWritesEnabled(input.env);
-  const executable = rows.filter(({ snapshot }) => snapshot.classification === "read" || externalWritesEnabled);
+  const executable = rows.filter(({ connection, snapshot }) =>
+    (snapshot.classification === "read" || externalWritesEnabled) &&
+    findAgentMcpToolGrant(input.permissionSnapshot, {
+      connectionId: connection.id,
+      externalName: snapshot.externalName,
+      schemaHash: snapshot.schemaHash,
+      classification: snapshot.classification,
+    }),
+  );
   const selected = executable
     .map((row) => ({ row, score: relevanceScore(input.query, row.connection.serverLabel, row.snapshot.externalName, row.snapshot.description) }))
     .sort((left, right) => right.score - left.score || left.row.snapshot.externalName.localeCompare(right.row.snapshot.externalName))
@@ -77,7 +87,14 @@ export async function buildMcpAgentRunTools(input: {
           provider: connection.serverLabel,
           tool: snapshot.externalName,
         });
-        const mustAsk = snapshot.executionMode === "always_ask" && !connection.alwaysAllowEnabled;
+        const grant = findAgentMcpToolGrant(input.permissionSnapshot, {
+          connectionId: connection.id,
+          externalName: snapshot.externalName,
+          schemaHash: snapshot.schemaHash,
+          classification: snapshot.classification,
+        });
+        const mustAsk = grant?.requiresApproval ||
+          (snapshot.executionMode === "always_ask" && !connection.alwaysAllowEnabled);
         const result = mustAsk
           ? await requestMcpActionApproval({
               agentRunId: input.runId,
@@ -91,6 +108,7 @@ export async function buildMcpAgentRunTools(input: {
               workspaceId: input.workspaceId,
             })
           : await executeMcpTool({
+              expectedPolicy: { classification: snapshot.classification, executionMode: snapshot.executionMode, alwaysAllowEnabled: connection.alwaysAllowEnabled },
               agentRunId: input.runId,
               connectionId: connection.id,
               env: input.env,

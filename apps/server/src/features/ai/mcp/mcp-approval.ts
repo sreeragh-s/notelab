@@ -19,6 +19,7 @@ import { decryptMcpSecret, encryptMcpSecret } from "./credential-crypto";
 import { isMcpExternalWritesEnabled } from "./config";
 import { discoverConnectionTools, executeMcpTool } from "./mcp-client";
 import { getWorkspaceMcpPolicy } from "./mcp-service";
+import { findAgentMcpToolGrant } from "./mcp-run-snapshot";
 import {
   getMcpCredentialScopeId,
   getMcpScopeFromConnection,
@@ -216,6 +217,7 @@ export async function executeApprovedMcpAction(input: {
     ))
     .limit(1);
   const result = await executeMcpTool({
+    expectedPolicy: { classification: context.snapshot.classification, executionMode: context.snapshot.executionMode, alwaysAllowEnabled: context.connection.alwaysAllowEnabled },
     connectionId: context.connection.id,
     env: input.env,
     externalName: context.snapshot.externalName,
@@ -279,6 +281,12 @@ async function executeApprovedMcpRunAction(
       !context.snapshot.available || context.snapshot.schemaHash !== action.toolSchemaHash) {
     throw new Error("MCP tool or connection changed after approval was requested.");
   }
+  if (!findAgentMcpToolGrant(run.permissionSnapshot, {
+    connectionId: context.connection.id,
+    externalName: context.snapshot.externalName,
+    schemaHash: context.snapshot.schemaHash,
+    classification: context.snapshot.classification,
+  })) throw new Error("MCP tool was not granted to this run when it was queued.");
   if (!(await getMembership(input.workspaceId, context.connection.authenticatedByUserId))) {
     throw new Error("MCP connection authenticator is no longer active.");
   }
@@ -305,6 +313,7 @@ async function executeApprovedMcpRunAction(
   const [toolExecution] = await db.select({ id: aiAgentToolExecution.id }).from(aiAgentToolExecution)
     .where(and(eq(aiAgentToolExecution.agentRunId, run.id), eq(aiAgentToolExecution.toolCallId, action.toolCallId))).limit(1);
   const result = await executeMcpTool({
+    expectedPolicy: { classification: context.snapshot.classification, executionMode: context.snapshot.executionMode, alwaysAllowEnabled: context.connection.alwaysAllowEnabled },
     agentRunId: run.id,
     connectionId: context.connection.id,
     env: input.env,
@@ -327,7 +336,7 @@ async function executeApprovedMcpRunAction(
       status: succeeded ? "succeeded" : "failed",
       updatedAt: completedAt,
     }).where(and(eq(aiAgentToolExecution.agentRunId, run.id), eq(aiAgentToolExecution.toolCallId, action.toolCallId)));
-    await tx.update(aiAgentRun).set({
+    const [completedRun] = await tx.update(aiAgentRun).set({
       completedAt,
       errorCode: succeeded ? null : result.error?.code ?? "mcp_approved_action_failed",
       errorSummary: succeeded ? null : result.summary,
@@ -335,7 +344,9 @@ async function executeApprovedMcpRunAction(
       outputSummary: succeeded ? result.summary : null,
       status: succeeded ? "succeeded" : "failed",
       updatedAt: completedAt,
-    }).where(eq(aiAgentRun.id, run.id));
+    }).where(and(eq(aiAgentRun.id, run.id), eq(aiAgentRun.status, "waiting_approval")))
+      .returning({ id: aiAgentRun.id });
+    if (!completedRun) return;
     await tx.update(aiAgentConversationMessage).set({
       parts: [{ status: succeeded ? "succeeded" : "failed", text: result.summary, type: "run" }],
       status: succeeded ? "completed" : "failed",

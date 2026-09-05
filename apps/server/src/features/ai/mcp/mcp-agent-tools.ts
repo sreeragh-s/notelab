@@ -106,6 +106,7 @@ export async function buildMcpAgentTools(input: {
                 workspaceId: input.workspaceId,
               }))
             : await input.withDb(() => executeMcpTool({
+                expectedPolicy: { classification: snapshot.classification, executionMode: snapshot.executionMode, alwaysAllowEnabled: connection.alwaysAllowEnabled },
                 connectionId: connection.id,
                 env: input.env,
                 externalName: snapshot.externalName,

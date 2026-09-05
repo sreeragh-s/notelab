@@ -152,6 +152,7 @@ export async function processAgentRun(
     const prompt = readRunPrompt(run.input);
     const mcpTools = await buildMcpAgentRunTools({
       env,
+      permissionSnapshot: run.permissionSnapshot,
       profileId: run.profileId,
       query: prompt,
       runId: run.id,
