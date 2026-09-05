@@ -9,12 +9,12 @@ import {
   aiMcpToolSnapshot,
 } from "../../../infrastructure/database/schema";
 import type { RuntimeEnv } from "../../../shared/config/config";
-import { appendRunEvent } from "../agents/agent-run-service";
+import { appendRunEvent } from "../agents/agent-run-records";
+import { isMcpEnabled, isMcpExternalWritesEnabled, MCP_LIMITS } from "./config";
 import { dynamicMcpToolName, requestMcpActionApproval } from "./mcp-approval";
 import { executeMcpTool } from "./mcp-client";
-import { isMcpEnabled, isMcpExternalWritesEnabled, MCP_LIMITS } from "./config";
-import { getWorkspaceMcpPolicy, recordMcpActivity } from "./mcp-service";
 import { agentMcpScope } from "./mcp-scope";
+import { getWorkspaceMcpPolicy, recordMcpActivity } from "./mcp-service";
 
 export async function buildMcpAgentRunTools(input: {
   env: RuntimeEnv;
@@ -112,7 +112,7 @@ export async function buildMcpAgentRunTools(input: {
         }).where(eq(aiAgentToolExecution.id, executionId));
         if (mustAsk) {
           await db.update(aiAgentRun).set({ status: "waiting_approval", updatedAt: completedAt })
-            .where(eq(aiAgentRun.id, input.runId));
+            .where(and(eq(aiAgentRun.id, input.runId), eq(aiAgentRun.status, "running")));
           await appendRunEvent(input.runId, "approval_required", "shared", {
             provider: connection.serverLabel,
             tool: snapshot.externalName,

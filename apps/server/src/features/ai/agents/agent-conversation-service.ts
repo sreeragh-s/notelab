@@ -4,17 +4,17 @@ import type {
 } from "@zilobase/features/ai-chat/custom-agent-contract";
 import { and, asc, eq } from "drizzle-orm";
 
-import type { RuntimeEnv } from "../../../shared/config/config";
 import { db } from "../../../infrastructure/database";
 import {
   aiAgentConversation,
   aiAgentConversationMessage,
   aiAgentProfile,
 } from "../../../infrastructure/database/schema";
+import type { RuntimeEnv } from "../../../shared/config/config";
 import { definitionForProfile, normalizeAgentDefinition } from "./agent-definition";
 import { AgentProfileError, requireAgentProfileRole } from "./agent-profile-service";
 import { applyAgentDefinition, getCurrentAgentRevision } from "./agent-revision-service";
-import { enqueueAgentRun } from "./agent-run-service";
+import { enqueueAgentRun } from "./agent-run-queue";
 
 export async function listAgentConversation(input: {
   profileId: string;

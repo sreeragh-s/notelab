@@ -12,7 +12,7 @@ import {
   aiMcpConnection,
   aiMcpToolSnapshot,
 } from "../../../infrastructure/database/schema";
-import type { RuntimeEnv } from "../../../shared/config/config";
+import { getStringEnv, type RuntimeEnv } from "../../../shared/config/config";
 import { getMembership } from "../../access";
 import { hashAgentToolInput } from "../actions/agent-action-receipts";
 import { decryptMcpSecret, encryptMcpSecret } from "./credential-crypto";
@@ -115,6 +115,10 @@ export async function executeApprovedMcpAction(input: {
   workspaceId: string;
 }) {
   const action = input.action;
+  if (action.agentRunId && (getStringEnv(input.env, "AI_CUSTOM_AGENTS_ENABLED") !== "true" ||
+      getStringEnv(input.env, "AI_CUSTOM_AGENT_EXECUTION_DISABLED") === "true")) {
+    throw new Error("Custom Agent execution is disabled.");
+  }
   if (
     !action.mcpScopeType || !action.connectionId || !action.externalToolName ||
     !action.toolSchemaHash || !action.encryptedToolInput ||

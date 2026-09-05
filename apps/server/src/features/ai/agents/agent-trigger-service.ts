@@ -5,7 +5,6 @@ import type {
 import { and, asc, eq, inArray, lte } from "drizzle-orm";
 import * as Y from "yjs";
 
-import { getStringEnv, type RuntimeEnv } from "../../../shared/config/config";
 import { db } from "../../../infrastructure/database";
 import {
   aiAgentEventReceipt,
@@ -18,12 +17,13 @@ import {
   meeting,
   page,
 } from "../../../infrastructure/database/schema";
-import { encryptAutomationSecret } from "../../databases/automations/secret-crypto";
+import { getStringEnv, type RuntimeEnv } from "../../../shared/config/config";
 import { canAgentAccessDatabase, canAgentAccessPage } from "../../access";
-import { AgentProfileError, requireAgentProfileRole } from "./agent-profile-service";
-import { enqueueAgentRun } from "./agent-run-service";
-import { applyAgentDefinition, getCurrentAgentRevision } from "./agent-revision-service";
+import { encryptAutomationSecret } from "../../databases/automations/secret-crypto";
 import { computeNextAgentSchedule, normalizeAgentDefinition } from "./agent-definition";
+import { AgentProfileError, requireAgentProfileRole } from "./agent-profile-service";
+import { applyAgentDefinition, getCurrentAgentRevision } from "./agent-revision-service";
+import { enqueueAgentRun } from "./agent-run-queue";
 
 export async function listAgentTriggers(input: {
   profileId: string;

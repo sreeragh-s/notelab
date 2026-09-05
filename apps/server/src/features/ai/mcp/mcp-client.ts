@@ -1,4 +1,3 @@
-import type { AgentCitation, AgentToolResult } from "@zilobase/features/ai-chat/agent-contract";
 import {
   Client,
   StreamableHTTPClientTransport,
@@ -7,7 +6,8 @@ import {
   type CallToolResult,
   type Tool,
 } from "@modelcontextprotocol/client";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import type { AgentCitation, AgentToolResult } from "@zilobase/features/ai-chat/agent-contract";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "../../../infrastructure/database";
 import {
@@ -19,9 +19,8 @@ import {
 } from "../../../infrastructure/database/schema";
 import type { RuntimeEnv } from "../../../shared/config/config";
 import { getMembership } from "../../access";
-import { decryptMcpSecret } from "./credential-crypto";
 import { MCP_LIMITS, isMcpExecutionEnabled } from "./config";
-import { createSecureMcpFetch } from "./secure-egress";
+import { decryptMcpSecret } from "./credential-crypto";
 import {
   getMcpCredentialScopeId,
   getMcpScopeColumns,
@@ -29,6 +28,7 @@ import {
   isMcpScopeMatch,
   type McpScope,
 } from "./mcp-scope";
+import { createSecureMcpFetch } from "./secure-egress";
 
 type StoredCredential =
   | { kind: "headers"; headers: Array<{ name: string; value: string }> }
@@ -241,7 +241,7 @@ async function loadConnectionContext(connectionId: string, env: RuntimeEnv) {
     credential.expiresAt && Date.parse(credential.expiresAt) <= Date.now() + 60_000
   ) {
     try {
-      const { refreshStoredMcpOAuthCredential } = await import("./oauth");
+      const { refreshStoredMcpOAuthCredential } = await import("./oauth-credentials");
       credential = await refreshStoredMcpOAuthCredential({
         connection: row.connection,
         credential: { ...credential, refreshToken: credential.refreshToken },

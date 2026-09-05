@@ -20,7 +20,6 @@ import { getMcpCatalogEntry } from "./catalog";
 import { MCP_LIMITS, isMcpCustomServersEnabled } from "./config";
 import { encryptMcpSecret } from "./credential-crypto";
 import { discoverConnectionTools } from "./mcp-client";
-import { McpEgressError, normalizeMcpEndpoint, validateMcpCustomHeaderName } from "./secure-egress";
 import {
   getMcpCredentialScopeId,
   getMcpScopeColumns,
@@ -29,17 +28,9 @@ import {
   requireMcpScopeAccess,
   type McpScope,
 } from "./mcp-scope";
+import { McpEgressError, normalizeMcpEndpoint, validateMcpCustomHeaderName } from "./secure-egress";
 
-export class McpServiceError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly status: 400 | 403 | 404 | 409 | 503 = 400,
-  ) {
-    super(message);
-    this.name = "McpServiceError";
-  }
-}
+import { McpServiceError } from "./mcp-errors";
 
 export async function getWorkspaceMcpPolicy(workspaceId: string) {
   const [policy] = await db.select().from(aiWorkspaceMcpPolicy)
@@ -415,7 +406,7 @@ export async function disconnectMcpConnection(input: {
   if (!connection) return false;
   if (connection.authMethod === "oauth") {
     try {
-      const { revokeStoredMcpOAuthCredential } = await import("./oauth");
+      const { revokeStoredMcpOAuthCredential } = await import("./oauth-credentials");
       await revokeStoredMcpOAuthCredential({ connection, env: input.env });
     } catch {
       // Revocation is best-effort. Local deletion below remains authoritative.

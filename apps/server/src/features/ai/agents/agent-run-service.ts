@@ -1,112 +1,31 @@
 import { generateText, stepCountIs } from "ai";
 import { and, asc, desc, eq, isNull, lt, lte, or, sql } from "drizzle-orm";
+import { RESOURCE_EDITOR_PAUSE_REASON } from "./agent-run-queue";
+import { appendRunEvent, serializeRun, serializeRunEvent } from "./agent-run-records";
 
-import type { RuntimeEnv } from "../../../shared/config/config";
-import { getStringEnv } from "../../../shared/config/config";
 import { createBackgroundTask } from "../../../infrastructure/background/contracts";
 import { dispatchBackgroundTasks } from "../../../infrastructure/background/dispatch";
 import { db } from "../../../infrastructure/database";
 import {
-  aiAgentProfile,
-  aiAgentPendingAction,
   aiAgentConversationMessage,
-  aiAgentToolExecution,
+  aiAgentPendingAction,
+  aiAgentProfile,
   aiAgentRevision,
   aiAgentRun,
   aiAgentRunEvent,
+  aiAgentToolExecution,
 } from "../../../infrastructure/database/schema";
-import { resolveWorkspaceAiModel } from "../providers/ai-provider";
+import type { RuntimeEnv } from "../../../shared/config/config";
+import { getStringEnv } from "../../../shared/config/config";
+import type { AgentPermissionSnapshotGrant } from "../../access";
 import { buildMcpAgentRunTools } from "../mcp/mcp-run-tools";
+import { resolveWorkspaceAiModel } from "../providers/ai-provider";
 import { buildAgentNativeRunTools } from "./agent-native-run-tools";
 import { AgentProfileError, requireAgentProfileRole } from "./agent-profile-service";
 import { listAgentResourcesForExecution } from "./agent-resource-service";
-import type { AgentPermissionSnapshotGrant } from "../../access";
 
-const LEASE_MS = 60_000;
-const RESOURCE_EDITOR_PAUSE_REASON = "Agent execution is paused because a granted resource no longer has an active agent editor with sufficient human access.";
+import { AGENT_RUN_LEASE_MS, maintainAgentRunLease } from "./agent-run-lease";
 
-export async function enqueueAgentRun(input: {
-  chainDepth?: number;
-  env?: RuntimeEnv;
-  input: Record<string, unknown>;
-  initiatedByUserId?: string | null;
-  occurrenceKey?: string | null;
-  profileId: string;
-  revisionId?: string;
-  triggerId?: string | null;
-  triggerKind: typeof aiAgentRun.$inferInsert.triggerKind;
-  workspaceId: string;
-}) {
-  if ((input.chainDepth ?? 0) > 8) {
-    throw new AgentProfileError("agent_chain_depth_exceeded", "Agent trigger chain is too deep.", 409);
-  }
-  const [profile] = await db.select().from(aiAgentProfile).where(and(
-    eq(aiAgentProfile.id, input.profileId),
-    eq(aiAgentProfile.workspaceId, input.workspaceId),
-    eq(aiAgentProfile.status, "active"),
-  )).limit(1);
-  if (!profile?.currentRevisionId) throw new AgentProfileError("agent_not_ready", "Agent has no active revision.", 409);
-  if (profile.executionDisabledReason && profile.executionDisabledReason !== RESOURCE_EDITOR_PAUSE_REASON) {
-    throw new AgentProfileError("agent_execution_paused", profile.executionDisabledReason, 409);
-  }
-  if (getStringEnv(input.env ?? {}, "AI_CUSTOM_AGENT_EXECUTION_DISABLED") === "true") {
-    throw new AgentProfileError("agent_execution_disabled", "Custom Agent execution is temporarily disabled.", 503);
-  }
-  const resources = await listAgentResourcesForExecution({
-    profileId: input.profileId,
-    workspaceId: input.workspaceId,
-  });
-  if (resources.some((resource) => resource.eligibleEditorCount === 0)) {
-    await db.update(aiAgentProfile).set({
-      executionDisabledReason: RESOURCE_EDITOR_PAUSE_REASON,
-      updatedAt: new Date(),
-    }).where(eq(aiAgentProfile.id, input.profileId));
-    throw new AgentProfileError("agent_resource_access_paused", RESOURCE_EDITOR_PAUSE_REASON, 409);
-  }
-  if (profile.executionDisabledReason === RESOURCE_EDITOR_PAUSE_REASON) {
-    await db.update(aiAgentProfile).set({ executionDisabledReason: null, updatedAt: new Date() })
-      .where(eq(aiAgentProfile.id, input.profileId));
-  }
-  const now = new Date();
-  const id = crypto.randomUUID();
-  await db.insert(aiAgentRun).values({
-    availableAt: now,
-    chainDepth: input.chainDepth ?? 0,
-    createdAt: now,
-    id,
-    initiatedByUserId: input.initiatedByUserId ?? null,
-    input: input.input,
-    occurrenceKey: input.occurrenceKey ?? null,
-    permissionSnapshot: {
-      capturedAt: now.toISOString(),
-      resources: resources.map(({ accessLevel, resourceId, resourceType }) => ({ accessLevel, resourceId, resourceType })),
-    },
-    profileId: input.profileId,
-    revisionId: input.revisionId ?? profile.currentRevisionId,
-    status: "queued",
-    triggerId: input.triggerId ?? null,
-    triggerKind: input.triggerKind,
-    updatedAt: now,
-    workspaceId: input.workspaceId,
-  }).onConflictDoNothing();
-  const [run] = input.occurrenceKey
-    ? await db.select().from(aiAgentRun).where(and(
-        eq(aiAgentRun.profileId, input.profileId),
-        eq(aiAgentRun.occurrenceKey, input.occurrenceKey),
-      )).limit(1)
-    : await db.select().from(aiAgentRun).where(eq(aiAgentRun.id, id)).limit(1);
-  if (!run) throw new Error("Unable to reserve Custom Agent run.");
-  await appendRunEvent(run.id, "queued", "shared", { triggerKind: run.triggerKind });
-  if (input.env && run.status === "queued") {
-    await dispatchBackgroundTasks(input.env, [createBackgroundTask({
-      availableAt: run.availableAt,
-      env: input.env,
-      kind: "agent.run",
-      resourceId: run.id,
-    })]);
-  }
-  return serializeRun(run);
-}
 
 export async function listAgentRuns(input: {
   profileId: string;
@@ -117,7 +36,7 @@ export async function listAgentRuns(input: {
   return (await db.select().from(aiAgentRun).where(and(
     eq(aiAgentRun.profileId, input.profileId),
     eq(aiAgentRun.workspaceId, input.workspaceId),
-  )).orderBy(desc(aiAgentRun.createdAt)).limit(100)).map(serializeRun);
+  )).orderBy(desc(aiAgentRun.createdAt)).limit(100)).map((run) => serializeRun(run));
 }
 
 export async function getAgentRunDetail(input: {
@@ -137,7 +56,7 @@ export async function getAgentRunDetail(input: {
     eq(aiAgentRunEvent.runId, run.id),
     role === "user" ? eq(aiAgentRunEvent.visibility, "shared") : undefined,
   )).orderBy(asc(aiAgentRunEvent.sequence));
-  return { events: events.map(serializeRunEvent), run: serializeRun(run) };
+  return { events: events.map(serializeRunEvent), run: serializeRun(run, role !== "user") };
 }
 
 export async function cancelAgentRun(input: {
@@ -169,8 +88,12 @@ export async function processAgentRun(
   env: RuntimeEnv,
   input: { runId: string; workerId: string },
 ) {
+  if (getStringEnv(env, "AI_CUSTOM_AGENTS_ENABLED") !== "true" ||
+      getStringEnv(env, "AI_CUSTOM_AGENT_EXECUTION_DISABLED") === "true") {
+    return { availableAt: new Date(Date.now() + 60_000).toISOString(), outcome: "retry" as const };
+  }
   const now = new Date();
-  const leaseExpiresAt = new Date(now.getTime() + LEASE_MS);
+  const leaseExpiresAt = new Date(now.getTime() + AGENT_RUN_LEASE_MS);
   const [run] = await db.transaction(async (tx) => {
     const [candidate] = await tx.select().from(aiAgentRun).where(and(
       eq(aiAgentRun.id, input.runId),
@@ -193,8 +116,14 @@ export async function processAgentRun(
     return claimed ? [claimed] : [];
   });
   if (!run) return { outcome: "noop" as const };
-  await appendRunEvent(run.id, "started", "shared", { attempt: run.attempts });
+  const lease = maintainAgentRunLease(run.id, input.workerId);
   try {
+    await appendRunEvent(run.id, "started", "shared", { attempt: run.attempts });
+    // A restarted model produces new tool-call IDs. Until model/tool results
+    // are durably checkpointed, replaying a run after a write is unsafe.
+    if (run.attempts > 1 && await hasAgentWriteReceipt(run.id)) {
+      throw new PermanentAgentRunError("A prior attempt performed a write. Review its outcome before starting another run.", "AGENT_RETRY_REQUIRES_REVIEW");
+    }
     const [revision, profile] = await Promise.all([
       db.select().from(aiAgentRevision).where(and(
         eq(aiAgentRevision.id, run.revisionId),
@@ -238,6 +167,7 @@ export async function processAgentRun(
       workspaceId: run.workspaceId,
     });
     const result = await generateText({
+      abortSignal: lease.signal,
       model: model.model,
       providerOptions: model.providerOptions,
       system: [
@@ -248,7 +178,7 @@ export async function processAgentRun(
       ].join("\n\n"),
       prompt,
       stopWhen: stepCountIs(15),
-      tools: { ...nativeTools, ...mcpTools.tools },
+      tools: lease.guardTools({ ...nativeTools, ...mcpTools.tools }),
     });
     if (await hasAmbiguousAgentWrite(run.id)) {
       throw new PermanentAgentRunError(
@@ -260,7 +190,7 @@ export async function processAgentRun(
       .where(eq(aiAgentRun.id, run.id)).limit(1);
     if (liveRun?.status === "waiting_approval") {
       await db.update(aiAgentRun).set({ leaseExpiresAt: null, leaseOwner: null, updatedAt: new Date() })
-        .where(eq(aiAgentRun.id, run.id));
+        .where(and(eq(aiAgentRun.id, run.id), eq(aiAgentRun.leaseOwner, input.workerId)));
       return { outcome: "completed" as const };
     }
     const completedAt = new Date();
@@ -286,6 +216,14 @@ export async function processAgentRun(
     }).where(eq(aiAgentConversationMessage.runId, run.id));
     return { outcome: "completed" as const };
   } catch (error) {
+    const [live] = await db.select().from(aiAgentRun).where(eq(aiAgentRun.id, run.id)).limit(1);
+    if (live?.leaseOwner !== input.workerId || live.status !== "running") {
+      if (live?.leaseOwner === input.workerId && live.status === "waiting_approval") {
+        await db.update(aiAgentRun).set({ leaseExpiresAt: null, leaseOwner: null })
+          .where(and(eq(aiAgentRun.id, run.id), eq(aiAgentRun.leaseOwner, input.workerId)));
+      }
+      return { outcome: "noop" as const };
+    }
     const ambiguousWrite = await hasAmbiguousAgentWrite(run.id);
     const permanent = ambiguousWrite || error instanceof PermanentAgentRunError || run.attempts >= run.maxAttempts;
     const failedAt = new Date();
@@ -295,7 +233,7 @@ export async function processAgentRun(
       : error instanceof PermanentAgentRunError
         ? error.code
         : "AGENT_RUN_FAILED";
-    await db.update(aiAgentRun).set({
+    const [failed] = await db.update(aiAgentRun).set({
       availableAt,
       completedAt: permanent ? failedAt : null,
       errorCode: code,
@@ -304,7 +242,8 @@ export async function processAgentRun(
       leaseOwner: null,
       status: permanent ? "failed" : "queued",
       updatedAt: failedAt,
-    }).where(and(eq(aiAgentRun.id, run.id), eq(aiAgentRun.leaseOwner, input.workerId)));
+    }).where(and(eq(aiAgentRun.id, run.id), eq(aiAgentRun.leaseOwner, input.workerId), eq(aiAgentRun.status, "running"))).returning({ id: aiAgentRun.id });
+    if (!failed) return { outcome: "noop" as const };
     await appendRunEvent(run.id, permanent ? "failed" : "retry_scheduled", "shared", { code });
     if (permanent) {
       await db.update(aiAgentConversationMessage).set({
@@ -316,7 +255,15 @@ export async function processAgentRun(
     if (permanent) return { errorCode: code, outcome: "terminal" as const };
     await dispatchBackgroundTasks(env, [createBackgroundTask({ availableAt, env, kind: "agent.run", resourceId: run.id })]);
     return { availableAt: availableAt.toISOString(), errorCode: code, outcome: "retry" as const };
+  } finally {
+    await lease.stop();
   }
+}
+
+async function hasAgentWriteReceipt(runId: string) {
+  const [receipt] = await db.select({ id: aiAgentToolExecution.id }).from(aiAgentToolExecution)
+    .where(and(eq(aiAgentToolExecution.agentRunId, runId), eq(aiAgentToolExecution.effect, "write"))).limit(1);
+  return Boolean(receipt);
 }
 
 function readPermissionSnapshot(value: unknown): AgentPermissionSnapshotGrant[] {
@@ -389,64 +336,11 @@ export async function expireAgentRunApprovals(now = new Date()) {
   return runIds.length;
 }
 
-export async function appendRunEvent(
-  runId: string,
-  type: string,
-  visibility: "shared" | "editor",
-  payload: Record<string, unknown>,
-) {
-  return db.transaction(async (tx) => {
-    const [next] = await tx.select({ sequence: sql<number>`coalesce(max(${aiAgentRunEvent.sequence}), 0) + 1` })
-      .from(aiAgentRunEvent).where(eq(aiAgentRunEvent.runId, runId));
-    await tx.insert(aiAgentRunEvent).values({
-      createdAt: new Date(),
-      id: crypto.randomUUID(),
-      payload,
-      runId,
-      sequence: Number(next?.sequence ?? 1),
-      type,
-      visibility,
-    });
-  });
-}
-
 function readRunPrompt(value: unknown) {
   const input = value && typeof value === "object" ? value as Record<string, unknown> : {};
   const prompt = typeof input.prompt === "string" ? input.prompt.trim() : "Run the saved agent instructions now.";
   const trigger = input.triggerPayload === undefined ? "" : `\n\nTrigger input (untrusted JSON):\n${JSON.stringify(input.triggerPayload).slice(0, 20_000)}`;
   return `${prompt || "Run the saved agent instructions now."}${trigger}`;
-}
-
-function serializeRun(row: typeof aiAgentRun.$inferSelect) {
-  return {
-    agentId: row.profileId,
-    attempts: row.attempts,
-    completedAt: row.completedAt?.toISOString() ?? null,
-    createdAt: row.createdAt.toISOString(),
-    durationMs: row.durationMs,
-    errorCode: row.errorCode,
-    errorSummary: row.errorSummary,
-    id: row.id,
-    initiatedByUserId: row.initiatedByUserId,
-    outputSummary: row.outputSummary,
-    revisionId: row.revisionId,
-    startedAt: row.startedAt?.toISOString() ?? null,
-    status: row.status,
-    triggerId: row.triggerId,
-    triggerKind: row.triggerKind,
-  };
-}
-
-function serializeRunEvent(row: typeof aiAgentRunEvent.$inferSelect) {
-  return {
-    createdAt: row.createdAt.toISOString(),
-    id: row.id,
-    payload: row.payload as Record<string, unknown>,
-    runId: row.runId,
-    sequence: row.sequence,
-    type: row.type,
-    visibility: row.visibility,
-  };
 }
 
 class PermanentAgentRunError extends Error {

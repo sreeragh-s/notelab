@@ -2,22 +2,22 @@ import type { AgentCitation, AgentToolResult } from "@zilobase/features/ai-chat/
 import { resolvePageEditMarkdown } from "@zilobase/features/ai-chat/apply-page-content-patch";
 import { hasPageBodyContent } from "@zilobase/features/pages/content-state";
 import { prosemirrorToMarkdown } from "@zilobase/page-context/prosemirror-to-markdown";
-import { and, asc, eq, ilike, isNull, or } from "drizzle-orm";
 import { tool, type ToolCallOptions, type ToolSet } from "ai";
+import { and, asc, eq, ilike, isNull, or } from "drizzle-orm";
 import * as z from "zod";
 
 import { db } from "../../../infrastructure/database";
 import {
   aiAgentToolExecution,
-  database,
   databaseProperty,
   databaseRow,
   page,
   pageCollaborationDocument,
   pageProperty,
   pagePropertyValue,
-  searchDocument,
+  searchDocument
 } from "../../../infrastructure/database/schema";
+import type { RuntimeEnv } from "../../../shared/config/config";
 import {
   canAgentAccessDatabase,
   canAgentAccessPage,
@@ -25,21 +25,18 @@ import {
   canAgentSnapshotAccessPage,
   type AgentPermissionSnapshotGrant,
 } from "../../access";
-import type { RuntimeEnv } from "../../../shared/config/config";
-import { replacePageContent } from "../../collaboration/service";
-import { encodePageContentAsYjs } from "../../collaboration/service";
+import { encodePageContentAsYjs, replacePageContent } from "../../collaboration/service";
 import { getDatabaseRecord } from "../../databases/access";
+import { lockDatabaseAutomationFactRows } from "../../databases/automations/event-capture";
 import { getDatabasePayload } from "../../databases/core";
 import { commitDataSourceMutation } from "../../databases/core/commit";
-import { lockDatabaseAutomationFactRows } from "../../databases/automations/event-capture";
 import { validateCellValue } from "../../databases/properties/config";
-import { hashPageContentMarkdown } from "../conversion/page-content-version";
-import { isPageContentVersionCurrent } from "../conversion/page-content-version";
-import { markdownToPageContent } from "../conversion/markdown-to-page-content";
-import { buildDatabaseTable } from "../tools/ask-ai-workspace-tools";
-import { appendRunEvent } from "./agent-run-service";
 import { upsertPageItemPlacement } from "../../pages/placements";
 import { enqueueNavigationInvalidation, publishCommittedNavigationInvalidation } from "../../workspaces/navigation-realtime/outbox";
+import { markdownToPageContent } from "../conversion/markdown-to-page-content";
+import { hashPageContentMarkdown, isPageContentVersionCurrent } from "../conversion/page-content-version";
+import { buildDatabaseTable } from "../tools/ask-ai-workspace-tools";
+import { appendRunEvent } from "./agent-run-records";
 
 const MAX_PAGE_MARKDOWN_CHARS = 48_000;
 const MAX_PAGE_WRITE_MARKDOWN_CHARS = 64_000;

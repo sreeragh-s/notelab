@@ -1,13 +1,15 @@
 import { Hono, type Context } from "hono";
 import * as z from "zod";
+import { McpServiceError } from "./mcp-errors";
+import { getMcpClientMetadata } from "./oauth-credentials";
 
-import type { AppBindings } from "../../../shared/types";
 import { getCanonicalWebOrigin } from "../../../shared/config/config";
+import type { AppBindings } from "../../../shared/types";
 import { getMembership, isPrivilegedOrgRole } from "../../access";
 import { MCP_SERVER_CATALOG } from "./catalog";
 import { isMcpEnabled } from "./config";
+import { agentMcpScope, getMcpScopeFromConnection, personalMcpScope } from "./mcp-scope";
 import {
-  McpServiceError,
   addApprovedMcpServer,
   createMcpConnection,
   disconnectMcpConnection,
@@ -23,8 +25,7 @@ import {
   updateMcpToolPolicies,
   updateWorkspaceMcpPolicy,
 } from "./mcp-service";
-import { beginMcpOAuth, completeMcpOAuth, getMcpClientMetadata, getMcpOAuthCallbackScope } from "./oauth";
-import { agentMcpScope, getMcpScopeFromConnection, personalMcpScope } from "./mcp-scope";
+import { beginMcpOAuth, completeMcpOAuth, getMcpOAuthCallbackScope } from "./oauth";
 
 const createConnectionSchema = z.object({
   approvedServerId: z.string().uuid().optional(),

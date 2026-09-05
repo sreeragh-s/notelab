@@ -1,39 +1,41 @@
+import { and, eq, gt } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import * as z from "zod";
-import { and, eq, gt } from "drizzle-orm";
 
-import type { AppBindings } from "../../../shared/types";
-import { getStringEnv } from "../../../shared/config/config";
 import { db } from "../../../infrastructure/database";
 import {
   aiAgentConversationMessage,
   aiAgentPendingAction,
   aiAgentRun,
 } from "../../../infrastructure/database/schema";
+import { getStringEnv } from "../../../shared/config/config";
+import type { AppBindings } from "../../../shared/types";
 import { getMembership } from "../../access";
-import {
-  AgentProfileError,
-  archiveAgentProfile,
-  createAgentProfile,
-  duplicateAgentProfile,
-  getAgentProfileDetail,
-  listAccessibleAgentProfiles,
-  replaceAgentProfileAccess,
-  transferAgentProfileOwnership,
-  updateAgentProfile,
-  getAgentProfileRole,
-  requireAgentProfileRole,
-} from "./agent-profile-service";
+import { finishPendingAgentAction } from "../actions/agent-approvals";
+import { executeApprovedMcpAction } from "../mcp/mcp-approval";
 import {
   listAgentConversation,
   listLegacyAgentConversations,
   startManualAgentRun,
   submitAgentConversationMessage,
 } from "./agent-conversation-service";
-import { listAgentRevisions, revertAgentRevision } from "./agent-revision-service";
-import { grantAgentResource, listAgentResources, removeAgentResource } from "./agent-resource-service";
 import {
-  appendRunEvent,
+  AgentProfileError,
+  archiveAgentProfile,
+  createAgentProfile,
+  duplicateAgentProfile,
+  getAgentProfileDetail,
+  getAgentProfileRole,
+  listAccessibleAgentProfiles,
+  replaceAgentProfileAccess,
+  requireAgentProfileRole,
+  transferAgentProfileOwnership,
+  updateAgentProfile,
+} from "./agent-profile-service";
+import { grantAgentResource, listAgentResources, removeAgentResource } from "./agent-resource-service";
+import { listAgentRevisions, revertAgentRevision } from "./agent-revision-service";
+import { appendRunEvent } from "./agent-run-records";
+import {
   cancelAgentRun,
   getAgentRunDetail,
   listAgentRuns,
@@ -44,8 +46,6 @@ import {
   rotateAgentWebhookSecret,
   upsertAgentTrigger,
 } from "./agent-trigger-service";
-import { executeApprovedMcpAction } from "../mcp/mcp-approval";
-import { finishPendingAgentAction } from "../actions/agent-approvals";
 
 const createSchema = z.object({
   cover: z.string().max(2_000_000).nullable().optional(),

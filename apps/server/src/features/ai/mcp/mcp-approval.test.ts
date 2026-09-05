@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { dynamicMcpToolName } from "./mcp-approval";
+import type { aiAgentPendingAction } from "../../../infrastructure/database/schema";
+import { dynamicMcpToolName, executeApprovedMcpAction } from "./mcp-approval";
 
 describe("dynamicMcpToolName", () => {
+  it("does not execute queued agent approvals after the emergency switch is enabled", async () => {
+    await expect(executeApprovedMcpAction({
+      action: { agentRunId: "run" } as typeof aiAgentPendingAction.$inferSelect,
+      env: { AI_CUSTOM_AGENTS_ENABLED: "true", AI_CUSTOM_AGENT_EXECUTION_DISABLED: "true" },
+      userId: "user",
+      workspaceId: "workspace",
+    })).rejects.toThrow("Custom Agent execution is disabled");
+  });
   it("is deterministic, bounded, and connection scoped", () => {
     const snapshot = { externalName: "Create / update issue" };
     const first = dynamicMcpToolName({ id: "connection-a", serverLabel: "Linear" }, snapshot);
