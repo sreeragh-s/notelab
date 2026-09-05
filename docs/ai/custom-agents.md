@@ -51,20 +51,23 @@ delivery, and chain depth prevents recursion.
 Run workers renew their lease every 20 seconds and enforce a five-minute model
 attempt deadline. Every newly invoked tool checks durable lease ownership.
 Cancellation stops further invocations; an already-issued remote write cannot
-be undone. A retry that finds a previous write receipt fails closed with
-`AGENT_RETRY_REQUIRES_REVIEW`, because model/tool-result checkpoints are not yet
-implemented. Inspect the previous outcome before manually starting another run.
+be undone. Model steps are checkpointed in Postgres using the rotatable
+`MCP_CREDENTIAL_ENCRYPTION_KEYS` keyring (required for agent execution, including
+native-only runs). Checkpoints bind ciphertext to the workspace, agent, and run.
+A retry with a write receipt missing from its checkpoint fails closed with
+`AGENT_RETRY_REQUIRES_REVIEW`; it never blindly reissues an unrecorded write.
 
 MCP writes retain the existing write kill switches and approval model.
 Background calls that require confirmation put the run into
 `waiting_approval`. Provider results, tool arguments, and sensitive diagnostics
 are never placed in shared activity.
 
-Background approval continuation remains incomplete: the current approval
-handler records the approved tool result as the final run result rather than
-resuming the remaining model steps. Do not enable background write workflows
-that depend on multi-step approval continuation until this is implemented and
-tested. See the [branch review](./mcp-branch-review.md) for merge blockers.
+After all approvals for a saved step succeed, their results replace the pending
+tool results in the encrypted checkpoint and the same run is queued to continue.
+Approval itself does not mark the run complete. Cancellation and failed approvals
+prevent continuation. Model-step and MCP-call limits span resumptions. Legacy
+waiting runs without a checkpoint fail closed and must be started again.
+See the [branch review](./mcp-branch-review.md) for verification and merge status.
 
 ## Triggers
 

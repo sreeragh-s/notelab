@@ -5,7 +5,6 @@ import { db } from "../../../infrastructure/database";
 import {
   aiAgentPendingAction,
   aiAgentRun,
-  aiAgentConversationMessage,
   aiAgentToolExecution,
   aiAgentTurn,
   aiChatThread,
@@ -20,6 +19,7 @@ import { isMcpExternalWritesEnabled } from "./config";
 import { discoverConnectionTools, executeMcpTool } from "./mcp-client";
 import { getWorkspaceMcpPolicy } from "./mcp-service";
 import { findAgentMcpToolGrant } from "./mcp-run-snapshot";
+import { readAgentRunCheckpoint } from "../agents/agent-run-checkpoint";
 import {
   getMcpCredentialScopeId,
   getMcpScopeFromConnection,
@@ -120,13 +120,7 @@ export async function executeApprovedMcpAction(input: {
       getStringEnv(input.env, "AI_CUSTOM_AGENT_EXECUTION_DISABLED") === "true")) {
     throw new Error("Custom Agent execution is disabled.");
   }
-  if (
-    !action.mcpScopeType || !action.connectionId || !action.externalToolName ||
-    !action.toolSchemaHash || !action.encryptedToolInput ||
-    !action.encryptedToolInputIv || !action.encryptedToolInputAuthTag
-  ) {
-    throw new Error("MCP approval payload is incomplete.");
-  }
+  requireApprovalPayload(action);
   const scope: McpScope = action.mcpScopeType === "agent" && action.agentProfileId
     ? { type: "agent", agentProfileId: action.agentProfileId }
     : action.mcpScopeType === "personal" && action.mcpScopeUserId
@@ -153,58 +147,8 @@ export async function executeApprovedMcpAction(input: {
   ) {
     throw new Error("MCP approval does not match its chat context.");
   }
-  await discoverConnectionTools({ connectionId: action.connectionId, env: input.env });
-  const [context] = await db.select({
-    connection: aiMcpConnection,
-    snapshot: aiMcpToolSnapshot,
-  }).from(aiMcpConnection).innerJoin(
-    aiMcpToolSnapshot,
-    and(
-      eq(aiMcpToolSnapshot.connectionId, aiMcpConnection.id),
-      eq(aiMcpToolSnapshot.externalName, action.externalToolName),
-    ),
-  ).where(and(
-    eq(aiMcpConnection.id, action.connectionId),
-    eq(aiMcpConnection.scopeType, scope.type),
-    scope.type === "agent"
-      ? eq(aiMcpConnection.agentProfileId, scope.agentProfileId)
-      : eq(aiMcpConnection.scopeUserId, scope.userId),
-    eq(aiMcpConnection.workspaceId, input.workspaceId),
-  )).limit(1);
-  if (
-    !context || context.connection.state !== "connected" ||
-    !context.snapshot.enabled || !context.snapshot.available ||
-    context.snapshot.schemaHash !== action.toolSchemaHash
-  ) {
-    throw new Error("MCP tool or connection changed after approval was requested.");
-  }
-  if (!(await getMembership(input.workspaceId, context.connection.authenticatedByUserId))) {
-    throw new Error("MCP connection authenticator is no longer active.");
-  }
-  const policy = await getWorkspaceMcpPolicy(input.workspaceId);
-  if (
-    context.snapshot.classification !== "read" &&
-    (!policy.externalWritesEnabled || !isMcpExternalWritesEnabled(input.env))
-  ) {
-    throw new Error("External writes are disabled for this workspace.");
-  }
-  const [keyVersion, ciphertext] = splitEncryptedPayload(action.encryptedToolInput);
-  const plaintext = await decryptMcpSecret(input.env, {
-    authTag: action.encryptedToolInputAuthTag,
-    ciphertext,
-    iv: action.encryptedToolInputIv,
-    keyVersion,
-  }, {
-    authenticatedByUserId: context.connection.authenticatedByUserId,
-    connectionId: context.connection.id,
-    profileId: getMcpCredentialScopeId(context.connection),
-    purpose: `approval:${action.id}`,
-    workspaceId: input.workspaceId,
-  });
-  const toolInput = JSON.parse(plaintext) as unknown;
-  if (await hashAgentToolInput(toolInput) !== action.inputHash) {
-    throw new Error("MCP approval arguments failed integrity validation.");
-  }
+  const context = await loadApprovedMcpTool(input, action, scope);
+  const toolInput = await decryptApprovedToolInput(input, action, context.connection);
   const [toolExecution] = await db.select({ id: aiAgentToolExecution.id })
     .from(aiAgentToolExecution)
     .where(and(
@@ -251,12 +195,10 @@ export async function executeApprovedMcpAction(input: {
 
 async function executeApprovedMcpRunAction(
   input: { action: typeof aiAgentPendingAction.$inferSelect; env: RuntimeEnv; userId: string; workspaceId: string },
-  action: typeof aiAgentPendingAction.$inferSelect,
+  action: ApprovalPayload,
   scope: McpScope,
 ) {
-  if (scope.type !== "agent" || !action.agentRunId || !action.connectionId ||
-      !action.externalToolName || !action.toolSchemaHash || !action.encryptedToolInput ||
-      !action.encryptedToolInputIv || !action.encryptedToolInputAuthTag) {
+  if (scope.type !== "agent" || !action.agentRunId) {
     throw new Error("Custom Agent MCP approval payload is incomplete.");
   }
   const [run] = await db.select().from(aiAgentRun).where(and(
@@ -266,50 +208,16 @@ async function executeApprovedMcpRunAction(
     eq(aiAgentRun.status, "waiting_approval"),
   )).limit(1);
   if (!run) throw new Error("Custom Agent run is no longer waiting for this approval.");
-  await discoverConnectionTools({ connectionId: action.connectionId, env: input.env });
-  const [context] = await db.select({ connection: aiMcpConnection, snapshot: aiMcpToolSnapshot })
-    .from(aiMcpConnection).innerJoin(aiMcpToolSnapshot, and(
-      eq(aiMcpToolSnapshot.connectionId, aiMcpConnection.id),
-      eq(aiMcpToolSnapshot.externalName, action.externalToolName),
-    )).where(and(
-      eq(aiMcpConnection.id, action.connectionId),
-      eq(aiMcpConnection.scopeType, "agent"),
-      eq(aiMcpConnection.agentProfileId, scope.agentProfileId),
-      eq(aiMcpConnection.workspaceId, input.workspaceId),
-    )).limit(1);
-  if (!context || context.connection.state !== "connected" || !context.snapshot.enabled ||
-      !context.snapshot.available || context.snapshot.schemaHash !== action.toolSchemaHash) {
-    throw new Error("MCP tool or connection changed after approval was requested.");
-  }
+  const checkpoint = await readAgentRunCheckpoint(input.env, run);
+  if (!checkpoint.toolCallIds.includes(action.toolCallId)) throw new Error("Approval has no saved model checkpoint.");
+  const context = await loadApprovedMcpTool(input, action, scope);
   if (!findAgentMcpToolGrant(run.permissionSnapshot, {
     connectionId: context.connection.id,
     externalName: context.snapshot.externalName,
     schemaHash: context.snapshot.schemaHash,
     classification: context.snapshot.classification,
-  })) throw new Error("MCP tool was not granted to this run when it was queued.");
-  if (!(await getMembership(input.workspaceId, context.connection.authenticatedByUserId))) {
-    throw new Error("MCP connection authenticator is no longer active.");
-  }
-  const policy = await getWorkspaceMcpPolicy(input.workspaceId);
-  if (context.snapshot.classification !== "read" &&
-      (!policy.externalWritesEnabled || !isMcpExternalWritesEnabled(input.env))) {
-    throw new Error("External writes are disabled for this workspace.");
-  }
-  const [keyVersion, ciphertext] = splitEncryptedPayload(action.encryptedToolInput);
-  const plaintext = await decryptMcpSecret(input.env, {
-    authTag: action.encryptedToolInputAuthTag,
-    ciphertext,
-    iv: action.encryptedToolInputIv,
-    keyVersion,
-  }, {
-    authenticatedByUserId: context.connection.authenticatedByUserId,
-    connectionId: context.connection.id,
-    profileId: getMcpCredentialScopeId(context.connection),
-    purpose: `approval:${action.id}`,
-    workspaceId: input.workspaceId,
-  });
-  const toolInput = JSON.parse(plaintext) as unknown;
-  if (await hashAgentToolInput(toolInput) !== action.inputHash) throw new Error("MCP approval arguments failed integrity validation.");
+  })) throw new Error("MCP tool is not part of this run's captured permissions.");
+  const toolInput = await decryptApprovedToolInput(input, action, context.connection);
   const [toolExecution] = await db.select({ id: aiAgentToolExecution.id }).from(aiAgentToolExecution)
     .where(and(eq(aiAgentToolExecution.agentRunId, run.id), eq(aiAgentToolExecution.toolCallId, action.toolCallId))).limit(1);
   const result = await executeMcpTool({
@@ -336,22 +244,13 @@ async function executeApprovedMcpRunAction(
       status: succeeded ? "succeeded" : "failed",
       updatedAt: completedAt,
     }).where(and(eq(aiAgentToolExecution.agentRunId, run.id), eq(aiAgentToolExecution.toolCallId, action.toolCallId)));
-    const [completedRun] = await tx.update(aiAgentRun).set({
+    await tx.update(aiAgentPendingAction).set({
       completedAt,
-      errorCode: succeeded ? null : result.error?.code ?? "mcp_approved_action_failed",
-      errorSummary: succeeded ? null : result.summary,
-      output: succeeded ? { approvedToolResult: result } : null,
-      outputSummary: succeeded ? result.summary : null,
+      error: succeeded ? null : result.summary,
+      result,
       status: succeeded ? "succeeded" : "failed",
       updatedAt: completedAt,
-    }).where(and(eq(aiAgentRun.id, run.id), eq(aiAgentRun.status, "waiting_approval")))
-      .returning({ id: aiAgentRun.id });
-    if (!completedRun) return;
-    await tx.update(aiAgentConversationMessage).set({
-      parts: [{ status: succeeded ? "succeeded" : "failed", text: result.summary, type: "run" }],
-      status: succeeded ? "completed" : "failed",
-      updatedAt: completedAt,
-    }).where(eq(aiAgentConversationMessage.runId, run.id));
+    }).where(and(eq(aiAgentPendingAction.id, action.id), eq(aiAgentPendingAction.status, "executing")));
   });
   return result;
 }
@@ -385,4 +284,77 @@ function shortHash(value: string) {
     hash = Math.imul(hash, 16777619);
   }
   return (hash >>> 0).toString(36).padStart(7, "0").slice(0, 7);
+}
+
+type ApprovalInput = { env: RuntimeEnv; userId: string; workspaceId: string };
+type ApprovalPayload = typeof aiAgentPendingAction.$inferSelect & { connectionId: string; externalToolName: string; toolSchemaHash: string; encryptedToolInput: string; encryptedToolInputIv: string; encryptedToolInputAuthTag: string };
+
+async function loadApprovedMcpTool(input: ApprovalInput, action: ApprovalPayload, scope: McpScope) {
+  await discoverConnectionTools({ connectionId: action.connectionId, env: input.env });
+  const [context] = await db.select({
+    connection: aiMcpConnection,
+    snapshot: aiMcpToolSnapshot,
+  }).from(aiMcpConnection).innerJoin(
+    aiMcpToolSnapshot,
+    and(
+      eq(aiMcpToolSnapshot.connectionId, aiMcpConnection.id),
+      eq(aiMcpToolSnapshot.externalName, action.externalToolName),
+    ),
+  ).where(and(
+    eq(aiMcpConnection.id, action.connectionId),
+    eq(aiMcpConnection.scopeType, scope.type),
+    scope.type === "agent"
+      ? eq(aiMcpConnection.agentProfileId, scope.agentProfileId)
+      : eq(aiMcpConnection.scopeUserId, scope.userId),
+    eq(aiMcpConnection.workspaceId, input.workspaceId),
+  )).limit(1);
+  if (
+    !context || context.connection.state !== "connected" ||
+    !context.snapshot.enabled || !context.snapshot.available ||
+    context.snapshot.schemaHash !== action.toolSchemaHash
+  ) {
+    throw new Error("MCP tool or connection changed after approval was requested.");
+  }
+  if (!(await getMembership(input.workspaceId, context.connection.authenticatedByUserId))) {
+    throw new Error("MCP connection authenticator is no longer active.");
+  }
+  const policy = await getWorkspaceMcpPolicy(input.workspaceId);
+  if (
+    context.snapshot.classification !== "read" &&
+    (!policy.externalWritesEnabled || !isMcpExternalWritesEnabled(input.env))
+  ) {
+    throw new Error("External writes are disabled for this workspace.");
+  }
+  return context;
+}
+
+async function decryptApprovedToolInput(input: ApprovalInput, action: ApprovalPayload, connection: typeof aiMcpConnection.$inferSelect) {
+  const [keyVersion, ciphertext] = splitEncryptedPayload(action.encryptedToolInput);
+  const plaintext = await decryptMcpSecret(input.env, {
+    authTag: action.encryptedToolInputAuthTag,
+    ciphertext,
+    iv: action.encryptedToolInputIv,
+    keyVersion,
+  }, {
+    authenticatedByUserId: connection.authenticatedByUserId,
+    connectionId: connection.id,
+    profileId: getMcpCredentialScopeId(connection),
+    purpose: `approval:${action.id}`,
+    workspaceId: input.workspaceId,
+  });
+  const toolInput = JSON.parse(plaintext) as unknown;
+  if (await hashAgentToolInput(toolInput) !== action.inputHash) {
+    throw new Error("MCP approval arguments failed integrity validation.");
+  }
+  return toolInput;
+}
+
+function requireApprovalPayload(action: typeof aiAgentPendingAction.$inferSelect): asserts action is ApprovalPayload {
+  if (
+    !action.mcpScopeType || !action.connectionId || !action.externalToolName ||
+    !action.toolSchemaHash || !action.encryptedToolInput ||
+    !action.encryptedToolInputIv || !action.encryptedToolInputAuthTag
+  ) {
+    throw new Error("MCP approval payload is incomplete.");
+  }
 }

@@ -472,7 +472,7 @@ function auditedTool<TInput extends z.ZodTypeAny>(
     execute: async (input, options: ToolCallOptions) => {
       const id = crypto.randomUUID();
       const startedAt = new Date();
-      await db.insert(aiAgentToolExecution).values({
+      const [reserved] = await db.insert(aiAgentToolExecution).values({
         actualEffect: effect,
         agentRunId: context.runId,
         createdAt: startedAt,
@@ -482,7 +482,8 @@ function auditedTool<TInput extends z.ZodTypeAny>(
         toolCallId: options.toolCallId,
         toolName: name,
         updatedAt: startedAt,
-      }).onConflictDoNothing();
+      }).onConflictDoNothing().returning({ id: aiAgentToolExecution.id });
+      if (!reserved) throw new Error("Agent tool call already has a durable execution receipt.");
       await appendRunEvent(context.runId, "tool_started", "shared", { tool: name });
       try {
         const result = await execute(input as z.infer<TInput>);

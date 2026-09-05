@@ -25,6 +25,7 @@ import { AgentProfileError, requireAgentProfileRole } from "./agent-profile-serv
 import { listAgentResourcesForExecution } from "./agent-resource-service";
 
 import { AGENT_RUN_LEASE_MS, maintainAgentRunLease } from "./agent-run-lease";
+import { checkpointToolCallIds, readAgentRunCheckpoint, resumeAgentRunAfterApproval, saveAgentRunCheckpoint } from "./agent-run-checkpoint";
 
 
 export async function listAgentRuns(input: {
@@ -93,81 +94,24 @@ export async function processAgentRun(
     return { availableAt: new Date(Date.now() + 60_000).toISOString(), outcome: "retry" as const };
   }
   const now = new Date();
-  const leaseExpiresAt = new Date(now.getTime() + AGENT_RUN_LEASE_MS);
-  const [run] = await db.transaction(async (tx) => {
-    const [candidate] = await tx.select().from(aiAgentRun).where(and(
-      eq(aiAgentRun.id, input.runId),
-      or(
-        and(eq(aiAgentRun.status, "queued"), lte(aiAgentRun.availableAt, now)),
-        and(eq(aiAgentRun.status, "running"), or(isNull(aiAgentRun.leaseExpiresAt), lt(aiAgentRun.leaseExpiresAt, now))),
-      ),
-    )).limit(1).for("update", { skipLocked: true });
-    if (!candidate) return [];
-    const [claimed] = await tx.update(aiAgentRun).set({
-      attempts: candidate.attempts + 1,
-      errorCode: null,
-      errorSummary: null,
-      leaseExpiresAt,
-      leaseOwner: input.workerId,
-      startedAt: candidate.startedAt ?? now,
-      status: "running",
-      updatedAt: now,
-    }).where(eq(aiAgentRun.id, candidate.id)).returning();
-    return claimed ? [claimed] : [];
-  });
+  const run = await claimAgentRun(input, now);
   if (!run) return { outcome: "noop" as const };
   const lease = maintainAgentRunLease(run.id, input.workerId);
   try {
     await appendRunEvent(run.id, "started", "shared", { attempt: run.attempts });
     // A restarted model produces new tool-call IDs. Until model/tool results
     // are durably checkpointed, replaying a run after a write is unsafe.
-    if (run.attempts > 1 && await hasAgentWriteReceipt(run.id)) {
+    const checkpoint = await readAgentRunCheckpoint(env, run);
+    if (run.attempts > 1 && await hasAgentWriteReceipt(run.id, checkpoint.toolCallIds)) {
       throw new PermanentAgentRunError("A prior attempt performed a write. Review its outcome before starting another run.", "AGENT_RETRY_REQUIRES_REVIEW");
     }
-    const [revision, profile] = await Promise.all([
-      db.select().from(aiAgentRevision).where(and(
-        eq(aiAgentRevision.id, run.revisionId),
-        eq(aiAgentRevision.profileId, run.profileId),
-      )).limit(1).then((rows) => rows[0]),
-      db.select().from(aiAgentProfile).where(and(
-        eq(aiAgentProfile.id, run.profileId),
-        eq(aiAgentProfile.status, "active"),
-      )).limit(1).then((rows) => rows[0]),
-    ]);
-    if (!revision || !profile) throw new PermanentAgentRunError("Agent or revision is unavailable.", "AGENT_REVISION_UNAVAILABLE");
-    if (profile.executionDisabledReason) throw new PermanentAgentRunError(profile.executionDisabledReason, "AGENT_ACCESS_PAUSED");
-    const liveResources = await listAgentResourcesForExecution({
-      profileId: run.profileId,
-      workspaceId: run.workspaceId,
-    });
-    if (liveResources.some((resource) => resource.eligibleEditorCount === 0)) {
-      await db.update(aiAgentProfile).set({
-        executionDisabledReason: RESOURCE_EDITOR_PAUSE_REASON,
-        updatedAt: new Date(),
-      }).where(eq(aiAgentProfile.id, run.profileId));
-      throw new PermanentAgentRunError(RESOURCE_EDITOR_PAUSE_REASON, "AGENT_ACCESS_PAUSED");
-    }
-    const definition = revision.compiledDefinition as { defaultModel?: string; instructions?: string; name?: string };
-    const model = await resolveWorkspaceAiModel(run.workspaceId, definition.defaultModel, env, "chat");
-    const prompt = readRunPrompt(run.input);
-    const mcpTools = await buildMcpAgentRunTools({
-      env,
-      permissionSnapshot: run.permissionSnapshot,
-      profileId: run.profileId,
-      query: prompt,
-      runId: run.id,
-      userId: run.initiatedByUserId,
-      workspaceId: run.workspaceId,
-    });
-    const nativeTools = buildAgentNativeRunTools({
-      agentName: definition.name ?? profile.name,
-      env,
-      permissionSnapshot: readPermissionSnapshot(run.permissionSnapshot),
-      profileId: run.profileId,
-      runId: run.id,
-      workspaceId: run.workspaceId,
-    });
-    const result = await generateText({
+    const { definition, profile, model, prompt, mcpTools, nativeTools } = await prepareAgentRun(env, run);
+    if (checkpoint.steps >= 15 && !checkpoint.finalResult) throw new PermanentAgentRunError("Agent reached its model step limit.", "AGENT_STEP_LIMIT");
+    // Validate encryption and persistence before any tool can perform a write.
+    let waitingForApproval = await saveAgentRunCheckpoint(env, run, input.workerId, checkpoint);
+    if (waitingForApproval) return { outcome: "completed" as const };
+    let completedSteps = checkpoint.steps;
+    const result = checkpoint.finalResult ?? await generateText({
       abortSignal: lease.signal,
       model: model.model,
       providerOptions: model.providerOptions,
@@ -177,8 +121,16 @@ export async function processAgentRun(
         "You currently have no implicit workspace access. Do not claim to read or change resources unless a registered tool provided that result.",
         definition.instructions ?? "",
       ].join("\n\n"),
-      prompt,
-      stopWhen: stepCountIs(15),
+      messages: [{ role: "user", content: prompt }, ...checkpoint.messages],
+      stopWhen: [stepCountIs(15 - checkpoint.steps), () => waitingForApproval],
+      onStepFinish: async (step) => {
+        completedSteps += 1;
+        const messages = [...checkpoint.messages, ...step.response.messages];
+        waitingForApproval = await saveAgentRunCheckpoint(env, run, input.workerId, {
+          version: 1, messages, steps: completedSteps, toolCallIds: checkpointToolCallIds(messages),
+          ...(step.toolCalls.length === 0 ? { finalResult: { text: step.text, usage: step.usage } } : {}),
+        });
+      },
       tools: lease.guardTools({ ...nativeTools, ...mcpTools.tools }),
     });
     if (await hasAmbiguousAgentWrite(run.id)) {
@@ -217,54 +169,16 @@ export async function processAgentRun(
     }).where(eq(aiAgentConversationMessage.runId, run.id));
     return { outcome: "completed" as const };
   } catch (error) {
-    const [live] = await db.select().from(aiAgentRun).where(eq(aiAgentRun.id, run.id)).limit(1);
-    if (live?.leaseOwner !== input.workerId || live.status !== "running") {
-      if (live?.leaseOwner === input.workerId && live.status === "waiting_approval") {
-        await db.update(aiAgentRun).set({ leaseExpiresAt: null, leaseOwner: null })
-          .where(and(eq(aiAgentRun.id, run.id), eq(aiAgentRun.leaseOwner, input.workerId)));
-      }
-      return { outcome: "noop" as const };
-    }
-    const ambiguousWrite = await hasAmbiguousAgentWrite(run.id);
-    const permanent = ambiguousWrite || error instanceof PermanentAgentRunError || run.attempts >= run.maxAttempts;
-    const failedAt = new Date();
-    const availableAt = new Date(failedAt.getTime() + Math.min(60_000, 1_000 * 2 ** Math.max(0, run.attempts - 1)));
-    const code = ambiguousWrite
-      ? "AGENT_WRITE_OUTCOME_UNKNOWN"
-      : error instanceof PermanentAgentRunError
-        ? error.code
-        : "AGENT_RUN_FAILED";
-    const [failed] = await db.update(aiAgentRun).set({
-      availableAt,
-      completedAt: permanent ? failedAt : null,
-      errorCode: code,
-      errorSummary: (error instanceof Error ? error.message : String(error)).slice(0, 2_000),
-      leaseExpiresAt: null,
-      leaseOwner: null,
-      status: permanent ? "failed" : "queued",
-      updatedAt: failedAt,
-    }).where(and(eq(aiAgentRun.id, run.id), eq(aiAgentRun.leaseOwner, input.workerId), eq(aiAgentRun.status, "running"))).returning({ id: aiAgentRun.id });
-    if (!failed) return { outcome: "noop" as const };
-    await appendRunEvent(run.id, permanent ? "failed" : "retry_scheduled", "shared", { code });
-    if (permanent) {
-      await db.update(aiAgentConversationMessage).set({
-        parts: [{ status: "failed", text: "Run failed.", type: "run" }],
-        status: "failed",
-        updatedAt: failedAt,
-      }).where(eq(aiAgentConversationMessage.runId, run.id));
-    }
-    if (permanent) return { errorCode: code, outcome: "terminal" as const };
-    await dispatchBackgroundTasks(env, [createBackgroundTask({ availableAt, env, kind: "agent.run", resourceId: run.id })]);
-    return { availableAt: availableAt.toISOString(), errorCode: code, outcome: "retry" as const };
+    return handleAgentRunFailure(env, run, input.workerId, error);
   } finally {
     await lease.stop();
   }
 }
 
-async function hasAgentWriteReceipt(runId: string) {
-  const [receipt] = await db.select({ id: aiAgentToolExecution.id }).from(aiAgentToolExecution)
-    .where(and(eq(aiAgentToolExecution.agentRunId, runId), eq(aiAgentToolExecution.effect, "write"))).limit(1);
-  return Boolean(receipt);
+async function hasAgentWriteReceipt(runId: string, checkpointedToolCallIds: string[]) {
+  const receipts = await db.select({ toolCallId: aiAgentToolExecution.toolCallId }).from(aiAgentToolExecution)
+    .where(and(eq(aiAgentToolExecution.agentRunId, runId), eq(aiAgentToolExecution.effect, "write")));
+  return receipts.some((receipt) => !checkpointedToolCallIds.includes(receipt.toolCallId));
 }
 
 function readPermissionSnapshot(value: unknown): AgentPermissionSnapshotGrant[] {
@@ -290,6 +204,10 @@ export async function drainAgentRuns(
   input: { limit: number; workerId: string },
 ) {
   const now = new Date();
+  // Recover an approval committed before its request process could dispatch.
+  const waiting = await db.select({ id: aiAgentRun.id }).from(aiAgentRun)
+    .where(eq(aiAgentRun.status, "waiting_approval")).orderBy(asc(aiAgentRun.updatedAt)).limit(50);
+  for (const run of waiting) await resumeAgentRunAfterApproval(env, run.id);
   const candidates = await db.select({ id: aiAgentRun.id }).from(aiAgentRun)
     .where(or(
       and(eq(aiAgentRun.status, "queued"), lte(aiAgentRun.availableAt, now)),
@@ -311,7 +229,7 @@ export async function expireAgentRunApprovals(now = new Date()) {
     status: "expired",
     updatedAt: now,
   }).where(and(
-    eq(aiAgentPendingAction.status, "pending"),
+    or(eq(aiAgentPendingAction.status, "pending"), eq(aiAgentPendingAction.status, "executing")),
     lte(aiAgentPendingAction.expiresAt, now),
     sql`${aiAgentPendingAction.agentRunId} is not null`,
   )).returning({ runId: aiAgentPendingAction.agentRunId });
@@ -356,4 +274,119 @@ async function hasAmbiguousAgentWrite(runId: string) {
     eq(aiAgentToolExecution.outcomeUnknown, true),
   )).limit(1);
   return Boolean(row);
+}
+
+async function claimAgentRun(input: { runId: string; workerId: string }, now: Date) {
+  const leaseExpiresAt = new Date(now.getTime() + AGENT_RUN_LEASE_MS);
+  const [run] = await db.transaction(async (tx) => {
+    const [candidate] = await tx.select().from(aiAgentRun).where(and(
+      eq(aiAgentRun.id, input.runId),
+      or(
+        and(eq(aiAgentRun.status, "queued"), lte(aiAgentRun.availableAt, now)),
+        and(eq(aiAgentRun.status, "running"), or(isNull(aiAgentRun.leaseExpiresAt), lt(aiAgentRun.leaseExpiresAt, now))),
+      ),
+    )).limit(1).for("update", { skipLocked: true });
+    if (!candidate) return [];
+    const [claimed] = await tx.update(aiAgentRun).set({
+      attempts: candidate.attempts + 1,
+      errorCode: null,
+      errorSummary: null,
+      leaseExpiresAt,
+      leaseOwner: input.workerId,
+      startedAt: candidate.startedAt ?? now,
+      status: "running",
+      updatedAt: now,
+    }).where(eq(aiAgentRun.id, candidate.id)).returning();
+    return claimed ? [claimed] : [];
+  });
+  return run;
+}
+
+async function handleAgentRunFailure(env: RuntimeEnv, run: typeof aiAgentRun.$inferSelect, workerId: string, error: unknown) {
+    const [live] = await db.select().from(aiAgentRun).where(eq(aiAgentRun.id, run.id)).limit(1);
+    if (live?.leaseOwner !== workerId || live.status !== "running") {
+      if (live?.leaseOwner === workerId && live.status === "waiting_approval") {
+        await db.update(aiAgentRun).set({ leaseExpiresAt: null, leaseOwner: null })
+          .where(and(eq(aiAgentRun.id, run.id), eq(aiAgentRun.leaseOwner, workerId)));
+      }
+      return { outcome: "noop" as const };
+    }
+    const ambiguousWrite = await hasAmbiguousAgentWrite(run.id);
+    const permanent = ambiguousWrite || error instanceof PermanentAgentRunError || run.attempts >= run.maxAttempts;
+    const failedAt = new Date();
+    const availableAt = new Date(failedAt.getTime() + Math.min(60_000, 1_000 * 2 ** Math.max(0, run.attempts - 1)));
+    const code = ambiguousWrite
+      ? "AGENT_WRITE_OUTCOME_UNKNOWN"
+      : error instanceof PermanentAgentRunError
+        ? error.code
+        : "AGENT_RUN_FAILED";
+    const [failed] = await db.update(aiAgentRun).set({
+      availableAt,
+      completedAt: permanent ? failedAt : null,
+      errorCode: code,
+      errorSummary: (error instanceof Error ? error.message : String(error)).slice(0, 2_000),
+      leaseExpiresAt: null,
+      leaseOwner: null,
+      status: permanent ? "failed" : "queued",
+      updatedAt: failedAt,
+    }).where(and(eq(aiAgentRun.id, run.id), eq(aiAgentRun.leaseOwner, workerId), eq(aiAgentRun.status, "running"))).returning({ id: aiAgentRun.id });
+    if (!failed) return { outcome: "noop" as const };
+    await appendRunEvent(run.id, permanent ? "failed" : "retry_scheduled", "shared", { code });
+    if (permanent) {
+      await db.update(aiAgentConversationMessage).set({
+        parts: [{ status: "failed", text: "Run failed.", type: "run" }],
+        status: "failed",
+        updatedAt: failedAt,
+      }).where(eq(aiAgentConversationMessage.runId, run.id));
+    }
+    if (permanent) return { errorCode: code, outcome: "terminal" as const };
+    await dispatchBackgroundTasks(env, [createBackgroundTask({ availableAt, env, kind: "agent.run", resourceId: run.id })]);
+    return { availableAt: availableAt.toISOString(), errorCode: code, outcome: "retry" as const };
+}
+
+async function prepareAgentRun(env: RuntimeEnv, run: typeof aiAgentRun.$inferSelect) {
+    const [revision, profile] = await Promise.all([
+      db.select().from(aiAgentRevision).where(and(
+        eq(aiAgentRevision.id, run.revisionId),
+        eq(aiAgentRevision.profileId, run.profileId),
+      )).limit(1).then((rows) => rows[0]),
+      db.select().from(aiAgentProfile).where(and(
+        eq(aiAgentProfile.id, run.profileId),
+        eq(aiAgentProfile.status, "active"),
+      )).limit(1).then((rows) => rows[0]),
+    ]);
+    if (!revision || !profile) throw new PermanentAgentRunError("Agent or revision is unavailable.", "AGENT_REVISION_UNAVAILABLE");
+    if (profile.executionDisabledReason) throw new PermanentAgentRunError(profile.executionDisabledReason, "AGENT_ACCESS_PAUSED");
+    const liveResources = await listAgentResourcesForExecution({
+      profileId: run.profileId,
+      workspaceId: run.workspaceId,
+    });
+    if (liveResources.some((resource) => resource.eligibleEditorCount === 0)) {
+      await db.update(aiAgentProfile).set({
+        executionDisabledReason: RESOURCE_EDITOR_PAUSE_REASON,
+        updatedAt: new Date(),
+      }).where(eq(aiAgentProfile.id, run.profileId));
+      throw new PermanentAgentRunError(RESOURCE_EDITOR_PAUSE_REASON, "AGENT_ACCESS_PAUSED");
+    }
+    const definition = revision.compiledDefinition as { defaultModel?: string; instructions?: string; name?: string };
+    const model = await resolveWorkspaceAiModel(run.workspaceId, definition.defaultModel, env, "chat");
+    const prompt = readRunPrompt(run.input);
+    const mcpTools = await buildMcpAgentRunTools({
+      env,
+      permissionSnapshot: run.permissionSnapshot,
+      profileId: run.profileId,
+      query: prompt,
+      runId: run.id,
+      userId: run.initiatedByUserId,
+      workspaceId: run.workspaceId,
+    });
+    const nativeTools = buildAgentNativeRunTools({
+      agentName: definition.name ?? profile.name,
+      env,
+      permissionSnapshot: readPermissionSnapshot(run.permissionSnapshot),
+      profileId: run.profileId,
+      runId: run.id,
+      workspaceId: run.workspaceId,
+    });
+  return { definition, profile, model, prompt, mcpTools, nativeTools };
 }

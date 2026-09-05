@@ -13,6 +13,7 @@ import type { AppBindings } from "../../../shared/types";
 import { getMembership } from "../../access";
 import { finishPendingAgentAction } from "../actions/agent-approvals";
 import { executeApprovedMcpAction } from "../mcp/mcp-approval";
+import { resumeAgentRunAfterApproval } from "./agent-run-checkpoint";
 import {
   listAgentConversation,
   listLegacyAgentConversations,
@@ -276,10 +277,12 @@ aiAgentProfileRoutes.post("/agents/:agentId/runs/:runId/actions/:actionId/approv
   try {
     const result = await executeApprovedMcpAction({ action, env: c.env, userId: auth.userId, workspaceId: auth.workspaceId });
     await finishPendingAgentAction({ actionId: action.id, ...(result.ok ? { result } : { error: result.summary, result }) });
+    await resumeAgentRunAfterApproval(c.env, runId);
     return { actionId: action.id, result, status: result.ok ? "succeeded" : "failed" };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Approved connector action failed";
     await finishPendingAgentAction({ actionId: action.id, error: message });
+    await resumeAgentRunAfterApproval(c.env, runId);
     throw new AgentProfileError("agent_approval_failed", message, 409);
   }
 }));
@@ -332,6 +335,7 @@ async function requireRunApprovalActor(input: {
       eq(aiAgentRun.id, input.runId),
       eq(aiAgentRun.profileId, input.profileId),
       eq(aiAgentRun.workspaceId, input.workspaceId),
+      eq(aiAgentRun.status, "waiting_approval"),
     )).limit(1);
   if (!run) throw new AgentProfileError("agent_run_not_found", "Agent run not found.", 404);
   const role = await getAgentProfileRole(input);

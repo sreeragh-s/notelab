@@ -1,9 +1,8 @@
 import { jsonSchema, tool, type ToolSet } from "ai";
-import { and, eq } from "drizzle-orm";
+import { and, count, eq, isNotNull } from "drizzle-orm";
 
 import { db } from "../../../infrastructure/database";
 import {
-  aiAgentRun,
   aiAgentToolExecution,
   aiMcpConnection,
   aiMcpToolSnapshot,
@@ -55,7 +54,9 @@ export async function buildMcpAgentRunTools(input: {
     .sort((left, right) => right.score - left.score || left.row.snapshot.externalName.localeCompare(right.row.snapshot.externalName))
     .slice(0, MCP_LIMITS.maxModelToolsPerTurn)
     .map(({ row }) => row);
-  let callCount = 0;
+  const [previousCalls] = await db.select({ value: count() }).from(aiAgentToolExecution)
+    .where(and(eq(aiAgentToolExecution.agentRunId, input.runId), isNotNull(aiAgentToolExecution.connectionId)));
+  let callCount = Number(previousCalls?.value ?? 0);
   const tools: ToolSet = {};
   for (const { connection, snapshot } of selected) {
     const name = dynamicMcpToolName(connection, snapshot);
@@ -69,7 +70,7 @@ export async function buildMcpAgentRunTools(input: {
         }
         const now = new Date();
         const executionId = crypto.randomUUID();
-        await db.insert(aiAgentToolExecution).values({
+        const [reserved] = await db.insert(aiAgentToolExecution).values({
           actualEffect: snapshot.classification,
           agentRunId: input.runId,
           connectionId: connection.id,
@@ -82,7 +83,8 @@ export async function buildMcpAgentRunTools(input: {
           toolCallId: options.toolCallId,
           toolName: name,
           updatedAt: now,
-        }).onConflictDoNothing();
+        }).onConflictDoNothing().returning({ id: aiAgentToolExecution.id });
+        if (!reserved) throw new Error("Agent tool call already has a durable execution receipt.");
         await appendRunEvent(input.runId, "tool_started", "shared", {
           provider: connection.serverLabel,
           tool: snapshot.externalName,
@@ -129,8 +131,8 @@ export async function buildMcpAgentRunTools(input: {
           updatedAt: completedAt,
         }).where(eq(aiAgentToolExecution.id, executionId));
         if (mustAsk) {
-          await db.update(aiAgentRun).set({ status: "waiting_approval", updatedAt: completedAt })
-            .where(and(eq(aiAgentRun.id, input.runId), eq(aiAgentRun.status, "running")));
+          // The processor pauses only after all results from this model step
+          // are checkpointed. Approval execution cannot race that checkpoint.
           await appendRunEvent(input.runId, "approval_required", "shared", {
             provider: connection.serverLabel,
             tool: snapshot.externalName,
