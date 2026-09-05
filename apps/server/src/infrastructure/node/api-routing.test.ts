@@ -12,6 +12,7 @@ test("the combined Node runtime sends discovery, probes, and desktop auth to the
     "/demo/bootstrap",
     "/desktop",
     "/desktop/authorize",
+    "/page-layouts/resolve",
   ]) {
     assert.equal(isNodeApiPath(path), true, path);
   }
