@@ -1,5 +1,6 @@
 import { lookup } from "node:dns/promises";
 import https from "node:https";
+import type { IncomingHttpHeaders } from "node:http";
 import { isIP } from "node:net";
 import { Readable } from "node:stream";
 
@@ -22,14 +23,17 @@ export async function fetchPinnedNodeMcp(input: {
     ? AbortSignal.any([input.signal, timeoutSignal])
     : timeoutSignal;
   const url = new URL(input.url);
-  if (url.protocol !== "https:") throw new Error("MCP endpoints must use HTTPS");
+  if (url.protocol !== "https:")
+    throw new Error("MCP endpoints must use HTTPS");
   const pinnedAddress = await abortable(
     resolvePublicNodeMcpAddress(url.hostname),
     signal,
   );
 
   return new Promise<Response>((resolve, reject) => {
-    const request = https.request(buildPinnedMcpRequestOptions(input, pinnedAddress));
+    const request = https.request(
+      buildPinnedMcpRequestOptions(input, pinnedAddress),
+    );
     const connectTimeout = setTimeout(
       () => request.destroy(new Error("MCP connection timed out")),
       Math.min(5_000, input.timeoutMs),
@@ -67,24 +71,28 @@ export async function fetchPinnedNodeMcp(input: {
           controller.enqueue(chunk);
         },
       });
-      const body = (Readable.toWeb(response) as ReadableStream<Uint8Array>)
-        .pipeThrough(bounded);
-      const headers = new Headers();
-      for (const [name, value] of Object.entries(response.headers)) {
-        if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(", ") : value);
-      }
+      const body = (
+        Readable.toWeb(response) as ReadableStream<Uint8Array>
+      ).pipeThrough(bounded);
+      const headers = webHeaders(response.headers);
       response.once("close", cleanup);
       response.once("end", cleanup);
       const status = response.statusCode ?? 502;
-      const responseBody = input.method === "HEAD" || status === 204 || status === 205 || status === 304
-        ? null
-        : body;
+      const responseBody =
+        input.method === "HEAD" ||
+        status === 204 ||
+        status === 205 ||
+        status === 304
+          ? null
+          : body;
       if (!responseBody) response.resume();
-      resolve(new Response(responseBody, {
-        headers,
-        status,
-        statusText: response.statusMessage,
-      }));
+      resolve(
+        new Response(responseBody, {
+          headers,
+          status,
+          statusText: response.statusMessage,
+        }),
+      );
     });
     request.on("error", (error) => {
       cleanup();
@@ -98,16 +106,28 @@ export async function fetchPinnedNodeMcp(input: {
   });
 }
 
+function webHeaders(source: IncomingHttpHeaders) {
+  const headers = new Headers();
+  for (const [name, value] of Object.entries(source)) {
+    if (value !== undefined)
+      headers.set(name, Array.isArray(value) ? value.join(", ") : value);
+  }
+  return headers;
+}
+
 export async function resolvePublicNodeMcpAddress(
   rawHostname: string,
   resolver: AddressResolver = resolveSystemAddresses,
 ) {
   const hostname = stripAddressBrackets(rawHostname).toLowerCase();
   const addresses = isIP(hostname) ? [hostname] : await resolver(hostname);
-  const publicAddresses = [...new Set(addresses
-    .map((address) => stripAddressBrackets(address).toLowerCase())
-    .filter((address) => isIP(address) !== 0 && !isBlockedAddress(address)))]
-    .sort();
+  const publicAddresses = [
+    ...new Set(
+      addresses
+        .map((address) => stripAddressBrackets(address).toLowerCase())
+        .filter((address) => isIP(address) !== 0 && !isBlockedAddress(address)),
+    ),
+  ].sort();
   if (publicAddresses.length === 0) {
     throw new Error("MCP endpoint did not resolve to a public address");
   }
@@ -124,7 +144,8 @@ export function buildPinnedMcpRequestOptions(
   pinnedAddress: string,
 ): https.RequestOptions {
   const url = new URL(input.url);
-  if (url.protocol !== "https:") throw new Error("MCP endpoints must use HTTPS");
+  if (url.protocol !== "https:")
+    throw new Error("MCP endpoints must use HTTPS");
   const hostname = stripAddressBrackets(url.hostname);
   return {
     agent: false,
@@ -138,8 +159,14 @@ export function buildPinnedMcpRequestOptions(
   };
 }
 
-export function isPinnedMcpRemoteAddress(remoteAddress: string, pinnedAddress: string) {
-  return normalizeSocketAddress(remoteAddress) === normalizeSocketAddress(pinnedAddress);
+export function isPinnedMcpRemoteAddress(
+  remoteAddress: string,
+  pinnedAddress: string,
+) {
+  return (
+    normalizeSocketAddress(remoteAddress) ===
+    normalizeSocketAddress(pinnedAddress)
+  );
 }
 
 async function resolveSystemAddresses(hostname: string) {

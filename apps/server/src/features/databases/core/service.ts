@@ -30,26 +30,15 @@ import { commitDatabaseMutation } from "./commit";
 import type { DatabaseDelta } from "../realtime/delta";
 import { getDatabasePayload } from "./payload";
 import { ServiceMutationError } from "../../../shared/errors/service-mutation-error";
-import { enqueueNavigationInvalidation, publishCommittedNavigationInvalidation } from "../../workspaces/navigation-realtime/outbox";
+import {
+  enqueueNavigationInvalidation,
+  publishCommittedNavigationInvalidation,
+} from "../../workspaces/navigation-realtime/outbox";
 
-export async function createDatabaseService(input: {
-  config?: Record<string, unknown>;
-  defaultViewIcon?: string;
-  icon?: string;
-  name?: string;
-  workspaceId: string;
-  pageId?: string;
-  standalone?: boolean;
-  teamspaceId?: string | null;
-  userId: string;
-  env?: RuntimeEnv;
-  newDatabaseId?: string;
-  newDataSourceId?: string;
-  newDefaultViewId?: string;
-}) {
-  const name = input.name?.trim() || "New database";
-  const standalone = input.standalone === true;
-
+async function resolveCreationTeamspace(
+  input: Parameters<typeof createDatabaseService>[0],
+  standalone: boolean,
+) {
   const [pageRecord] =
     !standalone && input.pageId
       ? await db
@@ -105,6 +94,29 @@ export async function createDatabaseService(input: {
     throw new ServiceMutationError("Forbidden", 403);
   }
 
+  return teamspaceId;
+}
+
+export async function createDatabaseService(input: {
+  config?: Record<string, unknown>;
+  defaultViewIcon?: string;
+  icon?: string;
+  name?: string;
+  workspaceId: string;
+  pageId?: string;
+  standalone?: boolean;
+  teamspaceId?: string | null;
+  userId: string;
+  env?: RuntimeEnv;
+  newDatabaseId?: string;
+  newDataSourceId?: string;
+  newDefaultViewId?: string;
+}) {
+  const name = input.name?.trim() || "New database";
+  const standalone = input.standalone === true;
+
+  const teamspaceId = await resolveCreationTeamspace(input, standalone);
+
   const databaseId = input.newDatabaseId ?? crypto.randomUUID();
   const dataSourceId = input.newDataSourceId ?? crypto.randomUUID();
   const defaultViewId = input.newDefaultViewId ?? crypto.randomUUID();
@@ -131,7 +143,10 @@ export async function createDatabaseService(input: {
       pageId: standalone ? null : input.pageId,
       ...(teamspaceId ? { teamspaceId } : {}),
       name,
-      config: { ...(input.config ?? {}), ...(input.icon ? { emoji: input.icon } : {}) },
+      config: {
+        ...(input.config ?? {}),
+        ...(input.icon ? { emoji: input.icon } : {}),
+      },
     });
     await tx.insert(dataSource).values({
       id: dataSourceId,
@@ -139,7 +154,10 @@ export async function createDatabaseService(input: {
       parentDatabaseId: databaseId,
       createdById: input.userId,
       name,
-      config: { ...(input.config ?? {}), ...(input.icon ? { emoji: input.icon } : {}) },
+      config: {
+        ...(input.config ?? {}),
+        ...(input.icon ? { emoji: input.icon } : {}),
+      },
     });
     await tx.insert(databaseDataSource).values({
       databaseId,

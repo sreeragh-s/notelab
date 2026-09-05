@@ -4,15 +4,15 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import * as z from "zod";
 
-import { AiProviderConfigError, resolveWorkspaceAiModel } from "./providers/ai-provider";
+import {
+  AiProviderConfigError,
+  resolveWorkspaceAiModel,
+} from "./providers/ai-provider";
 import { canAccessPage, getMembership, getPageRecord } from "../access";
 import { db, runWithDbEnv } from "../../infrastructure/database";
 import { getStringEnv } from "../../shared/config/config";
 import type { AppBindings } from "../../shared/types";
-import {
-  coerceAiChatRequestBody,
-  runAiChatTurn,
-} from "./chat/chat-service";
+import { coerceAiChatRequestBody, runAiChatTurn } from "./chat/chat-service";
 import {
   appendCanonicalUserMessage,
   getAiChatThreadForUser,
@@ -29,7 +29,10 @@ import {
 import { hashAgentToolInput } from "./actions/agent-action-receipts";
 import { buildRegisteredAgentTools } from "./actions/agent-tool-registry";
 import { aiFileRoutes } from "./file-routes";
-import { executeApprovedMcpAction, isMcpPendingAction } from "./mcp/mcp-approval";
+import {
+  executeApprovedMcpAction,
+  isMcpPendingAction,
+} from "./mcp/mcp-approval";
 
 const editorAiRequestSchema = z.object({
   model: z.string().trim().optional(),
@@ -42,11 +45,16 @@ const createAgentTurnSchema = z.object({
   attachmentIds: z.array(z.string().trim().min(1)).max(5).default([]),
   clientMessageId: z.string().trim().min(1).max(160),
   clientTurnId: z.string().uuid(),
-  contextRefs: z.array(z.object({
-    id: z.string().trim().min(1),
-    role: z.enum(["primary", "attached"]),
-    type: z.enum(["page", "database"]),
-  })).max(20).default([]),
+  contextRefs: z
+    .array(
+      z.object({
+        id: z.string().trim().min(1),
+        role: z.enum(["primary", "attached"]),
+        type: z.enum(["page", "database"]),
+      }),
+    )
+    .max(20)
+    .default([]),
   debugStream: z.boolean().default(false),
   mentionedUserIds: z.array(z.string().trim().min(1)).max(12).default([]),
   modelId: z.string().trim().min(1).max(160).default("auto"),
@@ -59,10 +67,14 @@ aiRoutes.route("/", aiFileRoutes);
 
 aiRoutes.post("/chat", async (c) => {
   if (getStringEnv(c.env, "AI_LEGACY_CHAT_ENABLED") !== "true") {
-    return c.json({
-      code: "LEGACY_CHAT_DISABLED",
-      error: "This client uses a retired AI chat protocol. Refresh or update the application.",
-    }, 410);
+    return c.json(
+      {
+        code: "LEGACY_CHAT_DISABLED",
+        error:
+          "This client uses a retired AI chat protocol. Refresh or update the application.",
+      },
+      410,
+    );
   }
   const auth = await requireActiveWorkspace(c);
 
@@ -85,7 +97,7 @@ aiRoutes.post("/chat", async (c) => {
   }
 
   const messages = Array.isArray(raw.messages)
-    ? raw.messages as UIMessage[]
+    ? (raw.messages as UIMessage[])
     : [];
 
   if (messages.length === 0) {
@@ -127,12 +139,15 @@ aiRoutes.post("/threads/:threadId/turns", async (c) => {
     threadId,
   });
   if (existingTurn) {
-    return c.json({
-      code: "TURN_ALREADY_EXISTS",
-      error: "This turn was already accepted. Reload the canonical thread.",
-      status: existingTurn.status,
-      turnId: existingTurn.id,
-    }, 409);
+    return c.json(
+      {
+        code: "TURN_ALREADY_EXISTS",
+        error: "This turn was already accepted. Reload the canonical thread.",
+        status: existingTurn.status,
+        turnId: existingTurn.id,
+      },
+      409,
+    );
   }
 
   const userMessage = await appendCanonicalUserMessage({
@@ -142,7 +157,8 @@ aiRoutes.post("/threads/:threadId/turns", async (c) => {
   });
   const messages = await loadAiChatThreadMessages(threadId);
   const pageRefs = body.data.contextRefs.filter((ref) => ref.type === "page");
-  const primaryPageId = pageRefs.find((ref) => ref.role === "primary")?.id ?? null;
+  const primaryPageId =
+    pageRefs.find((ref) => ref.role === "primary")?.id ?? null;
 
   return runAiChatTurn({
     abortSignal: c.req.raw.signal,
@@ -211,10 +227,13 @@ aiRoutes.post("/threads/:threadId/actions/:actionId/approve", async (c) => {
     return c.json({ actionId, result: action.result, status: action.status });
   }
   if (action.status !== "pending") {
-    return c.json({
-      error: `Review request is ${action.status}`,
-      status: action.status,
-    }, 409);
+    return c.json(
+      {
+        error: `Review request is ${action.status}`,
+        status: action.status,
+      },
+      409,
+    );
   }
   if (action.expiresAt.getTime() <= Date.now()) {
     await expirePendingAgentAction(action.id);
@@ -248,7 +267,10 @@ aiRoutes.post("/threads/:threadId/actions/:actionId/approve", async (c) => {
       await finishPendingAgentAction({ actionId, result });
       return c.json({ actionId, result, status: "succeeded" });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Approved connector action failed";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Approved connector action failed";
       await finishPendingAgentAction({ actionId, error: message });
       return c.json({ error: message, status: "failed" }, 409);
     }
@@ -258,9 +280,12 @@ aiRoutes.post("/threads/:threadId/actions/:actionId/approve", async (c) => {
     !descriptor ||
     descriptor.risk !== "review" ||
     descriptor.version !== action.toolVersion ||
-    await hashAgentToolInput(action.toolInput) !== action.inputHash
+    (await hashAgentToolInput(action.toolInput)) !== action.inputHash
   ) {
-    return c.json({ error: "Review request no longer matches the executable tool" }, 409);
+    return c.json(
+      { error: "Review request no longer matches the executable tool" },
+      409,
+    );
   }
 
   const executing = await markPendingAgentActionExecuting({
@@ -279,23 +304,31 @@ aiRoutes.post("/threads/:threadId/actions/:actionId/approve", async (c) => {
       userId: auth.user.id,
       workspaceId: auth.workspaceId,
     });
-    const tools = buildRegisteredAgentTools({
-      agentProfileId: thread?.agentProfileId ?? null,
-      editablePageIds: [],
-      env: c.env,
-      primaryPageId: null,
-      threadId,
-      userId: auth.user.id,
-      workspaceId: auth.workspaceId,
-      withDb: (fn) => runWithDbEnv(c.env, fn),
-    }, { bypassApprovals: true });
-    const registeredTool = tools[action.toolName] as {
-      execute?: (input: unknown, options: {
-        abortSignal: AbortSignal;
-        messages: never[];
-        toolCallId: string;
-      }) => Promise<unknown> | unknown;
-    } | undefined;
+    const tools = buildRegisteredAgentTools(
+      {
+        agentProfileId: thread?.agentProfileId ?? null,
+        editablePageIds: [],
+        env: c.env,
+        primaryPageId: null,
+        threadId,
+        userId: auth.user.id,
+        workspaceId: auth.workspaceId,
+        withDb: (fn) => runWithDbEnv(c.env, fn),
+      },
+      { bypassApprovals: true },
+    );
+    const registeredTool = tools[action.toolName] as
+      | {
+          execute?: (
+            input: unknown,
+            options: {
+              abortSignal: AbortSignal;
+              messages: never[];
+              toolCallId: string;
+            },
+          ) => Promise<unknown> | unknown;
+        }
+      | undefined;
     if (!registeredTool?.execute) {
       throw new Error("Approved tool is no longer executable.");
     }
@@ -304,24 +337,29 @@ aiRoutes.post("/threads/:threadId/actions/:actionId/approve", async (c) => {
       messages: [],
       toolCallId: `approved:${action.id}`,
     });
-    if (
-      result && typeof result === "object" && !Array.isArray(result) &&
-      "ok" in result && result.ok === false
-    ) {
-      const message = "summary" in result && typeof result.summary === "string"
-        ? result.summary
-        : "Approved action could not be completed.";
+    const message = approvedActionFailure(result);
+    if (message !== null) {
       await finishPendingAgentAction({ actionId, error: message, result });
       return c.json({ actionId, result, status: "failed" }, 409);
     }
     await finishPendingAgentAction({ actionId, result });
     return c.json({ actionId, result, status: "succeeded" });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Approved action failed";
+    const message =
+      error instanceof Error ? error.message : "Approved action failed";
     await finishPendingAgentAction({ actionId, error: message });
     return c.json({ error: message, status: "failed" }, 409);
   }
 });
+
+function approvedActionFailure(result: unknown): string | null {
+  if (!result || typeof result !== "object" || Array.isArray(result))
+    return null;
+  if (!("ok" in result) || result.ok !== false) return null;
+  return "summary" in result && typeof result.summary === "string"
+    ? result.summary
+    : "Approved action could not be completed.";
+}
 
 aiRoutes.post("/threads/:threadId/actions/:actionId/reject", async (c) => {
   const auth = await requireActiveWorkspace(c);
@@ -392,7 +430,10 @@ aiRoutes.post("/editor", async (c) => {
       ].join("\n"),
       temperature: model.providerOptions ? undefined : 0.45,
       onError: ({ error }) => {
-        console.warn("Editor AI stream provider error", toProviderErrorMessage(error));
+        console.warn(
+          "Editor AI stream provider error",
+          toProviderErrorMessage(error),
+        );
       },
     });
 
@@ -424,10 +465,7 @@ async function resolveEditorSkillContext(
   skillPageId: string,
   workspaceId: string,
   userId: string,
-): Promise<
-  | { skill: EditorSkillContext }
-  | { response: Response }
-> {
+): Promise<{ skill: EditorSkillContext } | { response: Response }> {
   const skill = await getPageRecord(skillPageId);
 
   if (!skill || skill.workspaceId !== workspaceId) {
@@ -608,11 +646,7 @@ function prosemirrorToPlainText(content: unknown): string {
 }
 
 function serializeSkillBlocks(nodes: ProseMirrorNode[]) {
-  return nodes
-    .map(serializeSkillBlock)
-    .filter(Boolean)
-    .join("\n\n")
-    .trim();
+  return nodes.map(serializeSkillBlock).filter(Boolean).join("\n\n").trim();
 }
 
 function serializeSkillBlock(node: ProseMirrorNode): string {
@@ -719,8 +753,7 @@ async function parseJson<T extends z.ZodType>(
   c: Context<AppBindings>,
   schema: T,
 ): Promise<
-  | { success: true; data: z.infer<T> }
-  | { success: false; response: Response }
+  { success: true; data: z.infer<T> } | { success: false; response: Response }
 > {
   let body: unknown;
 

@@ -1,15 +1,36 @@
 import { and, asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { getAuthenticatedUser as requireUser } from "../../shared/http/auth";
-import { canAccessDatabaseInWorkspace, canAccessPageInWorkspace, getEffectivePageAccessInWorkspace, getEffectivePageAccessForUsers, getMembership, hasAccess, normalizeAccessLevel } from "../access";
+import {
+  canAccessDatabaseInWorkspace,
+  canAccessPageInWorkspace,
+  getEffectivePageAccessInWorkspace,
+  getEffectivePageAccessForUsers,
+  getMembership,
+  hasAccess,
+  normalizeAccessLevel,
+} from "../access";
 import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
 import { db } from "../../infrastructure/database";
-import { aiAgentProfile, favorite, itemVisit, member, team, user as userTable, page, pageAccess, workspaceGuest } from "../../infrastructure/database/schema";
+import {
+  aiAgentProfile,
+  favorite,
+  itemVisit,
+  member,
+  team,
+  user as userTable,
+  page,
+  pageAccess,
+  workspaceGuest,
+} from "../../infrastructure/database/schema";
 import type { AppBindings } from "../../shared/types";
 import { readJsonBody } from "../../shared/http/request";
 import { activeMembershipCondition } from "../memberships";
 import { getPageTeamspaceSecurityPolicy } from "../teamspaces";
-import { enqueueNavigationInvalidation, publishCommittedNavigationInvalidation } from "../workspaces/navigation-realtime/outbox";
+import {
+  enqueueNavigationInvalidation,
+  publishCommittedNavigationInvalidation,
+} from "../workspaces/navigation-realtime/outbox";
 import { enforceActiveWorkspace, getPage } from "./page-route-support";
 import { getAgentProfileRole } from "../ai/agents/agent-profile-service";
 
@@ -59,15 +80,21 @@ pageVisitRoutes.post("/item-visits", async (c) => {
 
   const canView =
     itemKind === "agent"
-      ? Boolean(await getAgentProfileRole({ profileId: itemId, userId: user.id, workspaceId }))
+      ? Boolean(
+          await getAgentProfileRole({
+            profileId: itemId,
+            userId: user.id,
+            workspaceId,
+          }),
+        )
       : itemKind === "page"
-      ? await canAccessPageInWorkspace(itemId, workspaceId, user.id, "view")
-      : await canAccessDatabaseInWorkspace(
-          itemId,
-          workspaceId,
-          user.id,
-          "view",
-        );
+        ? await canAccessPageInWorkspace(itemId, workspaceId, user.id, "view")
+        : await canAccessDatabaseInWorkspace(
+            itemId,
+            workspaceId,
+            user.id,
+            "view",
+          );
 
   if (!canView) {
     return c.json({ error: "Forbidden" }, 403);
@@ -101,7 +128,6 @@ pageVisitRoutes.post("/item-visits", async (c) => {
     lastVisitedAt: now,
   });
 });
-
 
 pageSharingRoutes.put("/:id/favorite", async (c) => {
   const user = requireUser(c);
@@ -361,13 +387,11 @@ pageSharingRoutes.put("/:id/access", async (c) => {
   };
   const normalizedAccessLevel = normalizeAccessLevel(accessLevel);
 
-  if (
-    targetType !== "public" &&
-    targetType !== "user" &&
-    targetType !== "team" &&
-    targetType !== "agent"
-  ) {
-    return c.json({ error: "targetType must be public, user, team, or agent" }, 400);
+  if (!isPageAccessTarget(targetType)) {
+    return c.json(
+      { error: "targetType must be public, user, team, or agent" },
+      400,
+    );
   }
 
   if (typeof targetId !== "string" || targetId.length === 0) {
@@ -382,7 +406,10 @@ pageSharingRoutes.put("/:id/access", async (c) => {
   }
 
   if (targetType === "agent" && normalizedAccessLevel === "full") {
-    return c.json({ error: "agent access must be view, comment, or edit" }, 400);
+    return c.json(
+      { error: "agent access must be view, comment, or edit" },
+      400,
+    );
   }
 
   if (targetType === "public") {
@@ -430,10 +457,7 @@ pageSharingRoutes.put("/:id/access", async (c) => {
       .select({ id: team.id })
       .from(team)
       .where(
-        and(
-          eq(team.organizationId, record.workspaceId),
-          eq(team.id, targetId),
-        ),
+        and(eq(team.organizationId, record.workspaceId), eq(team.id, targetId)),
       )
       .limit(1);
   } else {
@@ -487,7 +511,10 @@ pageSharingRoutes.put("/:id/access", async (c) => {
       })
       .returning();
     return {
-      navigationEvent: await enqueueNavigationInvalidation(tx, record.workspaceId),
+      navigationEvent: await enqueueNavigationInvalidation(
+        tx,
+        record.workspaceId,
+      ),
       rule,
     };
   });
@@ -495,6 +522,15 @@ pageSharingRoutes.put("/:id/access", async (c) => {
 
   return c.json({ access: rule });
 });
+
+function isPageAccessTarget(
+  value: unknown,
+): value is "public" | "user" | "team" | "agent" {
+  return (
+    typeof value === "string" &&
+    ["public", "user", "team", "agent"].includes(value)
+  );
+}
 
 pageSharingRoutes.delete("/:id/access/public", async (c) => {
   const requestUser = requireUser(c);
@@ -541,7 +577,10 @@ pageSharingRoutes.delete("/:id/access/public", async (c) => {
       )
       .returning();
     return {
-      navigationEvent: await enqueueNavigationInvalidation(tx, record.workspaceId),
+      navigationEvent: await enqueueNavigationInvalidation(
+        tx,
+        record.workspaceId,
+      ),
       rule,
     };
   });
@@ -594,7 +633,10 @@ pageSharingRoutes.delete("/:id/access/:ruleId", async (c) => {
       )
       .returning();
     return {
-      navigationEvent: await enqueueNavigationInvalidation(tx, record.workspaceId),
+      navigationEvent: await enqueueNavigationInvalidation(
+        tx,
+        record.workspaceId,
+      ),
       rule,
     };
   });
