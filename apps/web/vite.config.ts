@@ -169,6 +169,13 @@ export default defineConfig(async () => ({
     port: devPort,
     strictPort: true,
     host: host || process.env.VITE_DEV_HOST || "0.0.0.0",
+    // Local Node and Worker profiles reuse stable cache directories. Prevent a
+    // browser from retaining an optimized-dependency response across a Vite
+    // cache regeneration, which otherwise leaves old chunk URLs returning
+    // `504 Outdated Optimize Dep` until that browser's site cache is cleared.
+    headers: {
+      "Cache-Control": "no-store",
+    },
     proxy: {
       "/health": createBackendProxy(),
       "/api": createBackendProxy(),
