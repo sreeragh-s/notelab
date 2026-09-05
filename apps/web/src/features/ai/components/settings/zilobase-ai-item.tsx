@@ -1,7 +1,10 @@
-import * as React from "react"
 import { Loader2Icon, Maximize2, XIcon } from "@/shared/components/icons"
+import * as React from "react"
 import { toast } from "sonner"
 
+import { getApiErrorMessage } from "@/features/desktop/network/api"
+import { PageEditorPane } from "@/features/pages/pages/index"
+import { PageWorkspaceGate } from "@/features/workspaces"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,17 +16,14 @@ import {
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog"
 import { Button } from "@/shared/ui/button"
-import { getApiErrorMessage } from "@/features/desktop/network/api"
-import { PageEditorPane } from "@/features/pages/pages/index"
-import { PageWorkspaceGate } from "@/features/workspaces"
 import { useZilobaseFeatures } from "@zilobase/features"
 import {
-  useUpdatePage,
   pageQueryKey,
-  type ZilobaseAiMode,
-  type ZilobaseAiPageSummary,
+  useUpdatePage,
   type Page,
   type PageMetadata,
+  type ZilobaseAiMode,
+  type ZilobaseAiPageSummary,
 } from "@zilobase/features/pages"
 
 const modeLabels: Record<ZilobaseAiMode, string> = {

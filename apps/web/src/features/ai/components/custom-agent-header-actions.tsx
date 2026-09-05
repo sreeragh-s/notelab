@@ -2,7 +2,7 @@ import { useRouter, useRouterState } from "@tanstack/react-router"
 
 import { useAiAgentProfile } from "@zilobase/features/ai-chat"
 
-import { AgentSharePopover } from "@/features/settings/pages/zilobase-ai/components/custom-agents-section"
+import { AgentSharePopover } from "@/features/ai/components/settings/agent-sharing"
 import { SlidersHorizontalIcon } from "@/shared/components/icons"
 import { Button } from "@/shared/ui/button"
 

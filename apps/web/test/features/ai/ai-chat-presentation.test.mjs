@@ -63,7 +63,7 @@ export function register({ readSource, assert, test }) {
   test("Universal Ask AI uses the standard side-pane controls without an agent rail", async () => {
     const workspaceSource = await readSource("/src/features/ai/components/agent-chat-workspace.tsx")
     const settingsSource = await readSource("/src/features/ai/components/ai-settings-panel.tsx")
-    const agentSettingsSource = await readSource("/src/features/settings/pages/zilobase-ai/components/custom-agents-section.tsx")
+    const agentSettingsSource = await readSource("/src/features/ai/components/settings/agent-instructions.tsx")
     const headerSource = await readSource("/src/app/shell/content/app-header.tsx")
     const paneHeaderSource = await readSource("/src/features/pages/components/page-pane-header.tsx")
 
@@ -76,7 +76,7 @@ export function register({ readSource, assert, test }) {
     assert.match(paneHeaderSource, /<PageSidePaneCollapseButton onClick=\{onClose\} \/>/)
     assert.doesNotMatch(settingsSource, /<header className="[^"]*border-b/)
     assert.doesNotMatch(settingsSource, /overflow-x-auto border-b/)
-    assert.match(settingsSource, /<AgentEditor agentId=\{agentId\} initialTab=\{initialTab\} plain \/>/)
+    assert.doesNotMatch(settingsSource, /AgentEditor|CreateAgentForm|creatingAgent/)
     assert.doesNotMatch(agentSettingsSource, /overflow-x-auto border-b/)
   })
 
@@ -128,7 +128,7 @@ export function register({ readSource, assert, test }) {
   })
 
   test("Instruction and skill menus distinguish creating from adding", async () => {
-    const menuSource = await readSource("/src/features/settings/pages/zilobase-ai/components/zilobase-ai-create-menu.tsx")
+    const menuSource = await readSource("/src/features/ai/components/settings/zilobase-ai-create-menu.tsx")
 
     assert.match(menuSource, /addItemLabel: "Add instruction"/)
     assert.match(menuSource, /createItemLabel: "Create instruction"/)
@@ -139,7 +139,7 @@ export function register({ readSource, assert, test }) {
 
   test("Ask AI settings use editable instruction pages without preference controls", async () => {
     const settingsSource = await readSource("/src/features/ai/components/ai-settings-panel.tsx")
-    const itemSource = await readSource("/src/features/settings/pages/zilobase-ai/components/zilobase-ai-item.tsx")
+    const itemSource = await readSource("/src/features/ai/components/settings/zilobase-ai-item.tsx")
     const workspaceSource = await readSource("/src/features/ai/components/agent-chat-workspace.tsx")
     const layoutSource = await readSource("/src/app/shell/content/app-layout.tsx")
 

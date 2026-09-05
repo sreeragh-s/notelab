@@ -111,11 +111,9 @@ export function AgentChatWorkspace({
     </PageWorkspaceGate>
   ) : (
     <AiSettingsPanel
-      agentId={null}
       initialTab={settingsTab}
       onClose={() => setSettings(false)}
       onExpandPage={isSidebar ? undefined : setExpandedSettingsPage}
-      scope="personal"
       showCloseButton={isSidebar}
     />
   )

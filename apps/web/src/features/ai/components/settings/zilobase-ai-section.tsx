@@ -1,5 +1,5 @@
-import * as React from "react"
 import { BookOpenIcon, WandSparklesIcon } from "@/shared/components/icons"
+import * as React from "react"
 
 import {
   Empty,

@@ -1,32 +1,14 @@
-import * as React from "react"
-import { toast } from "sonner"
-import {
-  useCreateAiAgentProfile,
-  useMcpWorkspacePolicy,
-  useWorkspaceAiModels,
-} from "@zilobase/features/ai-chat"
+import { useMcpWorkspacePolicy } from "@zilobase/features/ai-chat"
 import { useZilobaseAiPages } from "@zilobase/features/pages"
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
+import * as React from "react"
 
-import { Button } from "@/shared/ui/button"
+import { PersonalMcpActivity, PersonalMcpConnections } from "@/features/ai/components/settings/mcp-connections"
+import { WorkspaceMcpPolicyPanel } from "@/features/ai/components/settings/workspace-mcp-policy"
+import { ZilobaseAiSection } from "@/features/ai/components/settings/zilobase-ai-section"
 import { XIcon } from "@/shared/components/icons"
-import { Input } from "@/shared/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/ui/select"
-import { Textarea } from "@/shared/ui/textarea"
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/app-tabs"
-import {
-  AgentEditor,
-  PersonalMcpActivity,
-  PersonalMcpConnections,
-  WorkspaceMcpPolicyPanel,
-} from "@/features/settings/pages/zilobase-ai/components/custom-agents-section"
-import { ZilobaseAiSection } from "@/features/settings/pages/zilobase-ai/components/zilobase-ai-section"
+import { Button } from "@/shared/ui/button"
 
 type PersonalTab =
   | "knowledge"
@@ -35,22 +17,14 @@ type PersonalTab =
   | "policy"
 
 export function AiSettingsPanel({
-  agentId,
-  creatingAgent = false,
   initialTab,
-  onAgentCreated,
   onClose,
   onExpandPage,
-  scope,
   showCloseButton = true,
 }: {
-  agentId: string | null
-  creatingAgent?: boolean
   initialTab?: string | null
-  onAgentCreated?: (agentId: string) => void
   onClose: () => void
   onExpandPage?: (pageId: string) => void
-  scope: "personal" | "agent"
   showCloseButton?: boolean
 }) {
   const [personalTab, setPersonalTab] = React.useState<PersonalTab>(
@@ -66,12 +40,10 @@ export function AiSettingsPanel({
       <header className="flex min-h-12 items-start gap-3 px-5 pb-2 pt-4">
         <div className="min-w-0 flex-1">
           <h2 className="font-heading text-sm font-medium text-content-primary">
-            {creatingAgent ? "Create agent" : scope === "agent" ? "Agent settings" : "Personal Ask AI"}
+            Personal Ask AI
           </h2>
           <p className="mt-0.5 text-xs leading-relaxed text-content-secondary">
-            {scope === "agent"
-              ? "Configure this shared agent without exposing private conversations."
-              : "Manage your private AI instructions, skills, and workspace-scoped connectors."}
+            Manage your private AI instructions, skills, and workspace-scoped connectors.
           </p>
         </div>
         {showCloseButton ? (
@@ -81,17 +53,11 @@ export function AiSettingsPanel({
         ) : null}
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-3">
-        {creatingAgent ? (
-          <CreateAgentForm onCreated={onAgentCreated} />
-        ) : scope === "agent" ? (
-          <AgentEditor agentId={agentId} initialTab={initialTab} plain />
-        ) : (
-          <PersonalSettings
-            onExpandPage={onExpandPage}
-            tab={personalTab}
-            onTabChange={setPersonalTab}
-          />
-        )}
+        <PersonalSettings
+          onExpandPage={onExpandPage}
+          tab={personalTab}
+          onTabChange={setPersonalTab}
+        />
       </div>
     </div>
   )
@@ -157,65 +123,6 @@ function PersonalKnowledge({ onExpandPage }: { onExpandPage?: (pageId: string) =
         onExpandPage={onExpandPage}
         workspaceId={workspaceId ?? null}
       />
-    </div>
-  )
-}
-
-function CreateAgentForm({ onCreated }: { onCreated?: (agentId: string) => void }) {
-  const createAgent = useCreateAiAgentProfile()
-  const modelsQuery = useWorkspaceAiModels()
-  const [name, setName] = React.useState("")
-  const [description, setDescription] = React.useState("")
-  const [instructions, setInstructions] = React.useState("")
-  const [defaultModel, setDefaultModel] = React.useState("auto")
-
-  const create = async () => {
-    try {
-      const result = await createAgent.mutateAsync({
-        defaultModel,
-        description: description.trim(),
-        instructions,
-        name: name.trim(),
-      })
-      toast.success("Custom Agent created.")
-      onCreated?.(result.agent.id)
-    } catch (error) {
-      toast.error("Could not create agent", {
-        description: error instanceof Error ? error.message : "Try again.",
-      })
-    }
-  }
-
-  return (
-    <div className="grid gap-4">
-      <label className="grid gap-1 text-sm">
-        <span className="font-medium">Name</span>
-        <Input autoFocus maxLength={120} onChange={(event) => setName(event.target.value)} value={name} />
-      </label>
-      <label className="grid gap-1 text-sm">
-        <span className="font-medium">Description</span>
-        <Input maxLength={500} onChange={(event) => setDescription(event.target.value)} value={description} />
-      </label>
-      <label className="grid gap-1 text-sm">
-        <span className="font-medium">Instructions</span>
-        <Textarea className="min-h-40" maxLength={20_000} onChange={(event) => setInstructions(event.target.value)} value={instructions} />
-      </label>
-      <label className="grid gap-1 text-sm">
-        <span className="font-medium">Default model</span>
-        <Select onValueChange={setDefaultModel} value={defaultModel}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="auto">Auto</SelectItem>
-            {modelsQuery.data?.models.map((model) => (
-              <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </label>
-      <p className="text-xs text-content-secondary">New agents are private until you share them.</p>
-      <Button disabled={!name.trim() || createAgent.isPending} onClick={() => void create()} type="button">
-        {createAgent.isPending ? "Creating…" : "Create agent"}
-      </Button>
     </div>
   )
 }

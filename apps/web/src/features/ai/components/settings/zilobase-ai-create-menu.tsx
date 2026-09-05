@@ -1,5 +1,5 @@
-import * as React from "react";
 import { Loader2Icon, PlusIcon, SearchIcon } from "@/shared/components/icons";
+import * as React from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/shared/ui/button";
@@ -12,17 +12,16 @@ import {
 import { Input } from "@/shared/ui/input";
 
 import { getApiErrorMessage } from "@/features/desktop/network/api";
-import { PageIcon } from "@/features/pages/index";
-import { buildPagePath } from "@/features/pages/index";
+import { buildPagePath, PageIcon } from "@/features/pages/index";
 import { useZilobaseFeatures } from "@zilobase/features";
 import {
-  useCreatePage,
-  useUpdatePage,
-  usePageNavigation,
   pageQueryKey,
-  type ZilobaseAiMode,
+  useCreatePage,
+  usePageNavigation,
+  useUpdatePage,
   type Page,
   type PageItemPlacement,
+  type ZilobaseAiMode,
 } from "@zilobase/features/pages";
 
 const modeConfig: Record<

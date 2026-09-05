@@ -1,4 +1,3 @@
-import * as React from "react"
 import { useParams, useRouter, useRouterState } from "@tanstack/react-router"
 import {
   useAiAgentProfile,
@@ -14,29 +13,27 @@ import {
   useRemoveCustomAgentTrigger,
   useRevertCustomAgentRevision,
   useRotateCustomAgentWebhookSecret,
-  useSubmitCustomAgentMessage,
   useStartCustomAgentRun,
-  useUpdateCustomAgentTrigger,
+  useSubmitCustomAgentMessage,
   useUpdateAiAgentProfile,
+  useUpdateCustomAgentTrigger,
   type AiAgentProfileDetail,
   type CustomAgentTriggerKind,
 } from "@zilobase/features/ai-chat"
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
+import * as React from "react"
 import { toast } from "sonner"
 
-import {
-  AgentInstructions,
-  AgentMcpActivity,
-  AgentMcpConnections,
-  AgentShare,
-} from "@/features/settings/pages/zilobase-ai/components/custom-agents-section"
-import { PageSidePaneLayout } from "@/features/pages/context"
+import { AgentInstructions } from "@/features/ai/components/settings/agent-instructions"
+import { AgentShare } from "@/features/ai/components/settings/agent-sharing"
+import { AgentMcpActivity, AgentMcpConnections } from "@/features/ai/components/settings/mcp-connections"
 import { PageMetadata } from "@/features/databases"
+import { PageSidePaneLayout } from "@/features/pages/context"
 import { BotIcon, KeyRoundIcon, Play, SendIcon, Trash2Icon } from "@/shared/components/icons"
+import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/app-tabs"
 import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select"
-import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/app-tabs"
 import { Textarea } from "@/shared/ui/textarea"
 
 type AgentPanelTab = "overview" | "tools" | "triggers" | "activity" | "share" | "versions"
