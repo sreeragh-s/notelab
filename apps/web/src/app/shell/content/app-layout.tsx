@@ -227,7 +227,7 @@ function AppLayoutContent({
     : null
   const aiWorkspaceSidePaneOpen =
     aiWorkspacePanel === "settings" || aiWorkspacePanel === "history"
-  const closeAiWorkspaceSidePane = useCallback(() => {
+  const closeAuxiliaryWorkspaceSidePane = useCallback(() => {
     const search = new URLSearchParams(searchStr)
     search.delete("panel")
     search.delete("settingsScope")
@@ -239,6 +239,10 @@ function AppLayoutContent({
   const pageId = useRoutePageId(pathname)
   const databaseId = getDatabaseId(pathname)
   const agentId = pathname.match(/^\/agents\/([^/]+)$/)?.[1] ?? null
+  const agentWorkspacePanel = agentId
+    ? new URLSearchParams(searchStr).get("panel")
+    : null
+  const agentWorkspaceSidePaneOpen = agentWorkspacePanel === "settings"
   const activeWorkspaceId = useActiveWorkspaceId()
   const { data: databasePayload } = useDatabase(databaseId, {
     includeDeleted: true,
@@ -495,8 +499,12 @@ function AppLayoutContent({
     Boolean(renderedSidePanePageId || renderedSidePaneDatabaseId)
   const showAiWorkspaceSidePaneLayout =
     !utilitySidebarOpen && !pageLayoutSidebarOpen && aiWorkspaceSidePaneOpen
+  const showAgentWorkspaceSidePaneLayout =
+    !utilitySidebarOpen && !pageLayoutSidebarOpen && agentWorkspaceSidePaneOpen
+  const showAuxiliaryWorkspaceSidePaneLayout =
+    showAiWorkspaceSidePaneLayout || showAgentWorkspaceSidePaneLayout
   const showSidePaneLayout =
-    showAiWorkspaceSidePaneLayout || showEmbeddedSidePaneLayout
+    showAuxiliaryWorkspaceSidePaneLayout || showEmbeddedSidePaneLayout
   const pageSidebarPanel = pageLayoutSidebar?.hasSidebar ? (
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
@@ -605,9 +613,10 @@ function AppLayoutContent({
               header={
                 embeddedMobileViewer || isMailPage ? undefined : (
                   <AppHeader
-                    auxiliarySidePaneOpen={showAiWorkspaceSidePaneLayout}
+                    auxiliarySidePaneCloseLabel={agentId ? "Close Custom Agent settings" : "Close AI settings"}
+                    auxiliarySidePaneOpen={showAuxiliaryWorkspaceSidePaneLayout}
                     discussionsOpen={discussionsSidebarOpen}
-                    isSettingsPage={isSettingsPage || isAiPage}
+                    isSettingsPage={isSettingsPage || isAiPage || Boolean(agentId)}
                     onToggleDiscussions={
                       discussionsEnabled ? toggleDiscussionsSidebar : undefined
                     }
@@ -618,24 +627,24 @@ function AppLayoutContent({
                     }
                     pageSidebarOpen={pageLayoutSidebarOpen}
                     onCloseAuxiliarySidePane={
-                      showAiWorkspaceSidePaneLayout
-                        ? closeAiWorkspaceSidePane
+                      showAuxiliaryWorkspaceSidePaneLayout
+                        ? closeAuxiliaryWorkspaceSidePane
                         : undefined
                     }
                     onCloseSidePane={closeSidePane}
                     pathname={pathname}
                     renderedSidePanePageId={
-                      showEmbeddedSidePaneLayout && !showAiWorkspaceSidePaneLayout
+                      showEmbeddedSidePaneLayout && !showAuxiliaryWorkspaceSidePaneLayout
                         ? renderedSidePanePageId
                         : null
                     }
                     renderedSidePaneDatabaseId={
-                      showEmbeddedSidePaneLayout && !showAiWorkspaceSidePaneLayout
+                      showEmbeddedSidePaneLayout && !showAuxiliaryWorkspaceSidePaneLayout
                         ? renderedSidePaneDatabaseId
                         : null
                     }
                     sidePaneAnimatedOpen={
-                      showAiWorkspaceSidePaneLayout ||
+                      showAuxiliaryWorkspaceSidePaneLayout ||
                       (showEmbeddedSidePaneLayout && sidePaneAnimatedOpen)
                     }
                     sidePaneDatabaseId={sidePaneDatabaseId}
@@ -643,7 +652,7 @@ function AppLayoutContent({
                 )
               }
               open={
-                showAiWorkspaceSidePaneLayout ||
+                showAuxiliaryWorkspaceSidePaneLayout ||
                 (showEmbeddedSidePaneLayout && sidePaneAnimatedOpen)
               }
               visible={showSidePaneLayout}
@@ -680,7 +689,7 @@ function AppLayoutContent({
           {chatPanel}
         </FloatingWidget>
       ) : null}
-      {chatSidebarOpen || isAiPage || isMailPage ? null : (
+      {chatSidebarOpen || isAiPage || Boolean(agentId) || isMailPage ? null : (
         <ChatSidebarTrigger
           adjacentSidebarOpen={
             utilitySidebarOpen ||

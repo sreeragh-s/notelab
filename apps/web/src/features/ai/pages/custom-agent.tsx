@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useParams } from "@tanstack/react-router"
+import { useParams, useRouter, useRouterState } from "@tanstack/react-router"
 import {
   useAiAgentProfile,
   useCreateCustomAgentTrigger,
@@ -18,26 +18,43 @@ import {
   useStartCustomAgentRun,
   useUpdateCustomAgentTrigger,
   useUpdateAiAgentProfile,
+  type AiAgentProfileDetail,
   type CustomAgentTriggerKind,
 } from "@zilobase/features/ai-chat"
 import { toast } from "sonner"
 
-import { AgentEditor } from "@/features/settings/pages/zilobase-ai/components/custom-agents-section"
-import { BotIcon, KeyRoundIcon, Play, SendIcon, Trash2Icon } from "@/shared/components/icons"
+import {
+  AgentInstructions,
+  AgentMcpActivity,
+  AgentMcpConnections,
+  AgentShare,
+} from "@/features/settings/pages/zilobase-ai/components/custom-agents-section"
+import { PageSidePaneLayout } from "@/features/pages/context"
+import { BotIcon, KeyRoundIcon, Play, SendIcon, SlidersHorizontalIcon, Trash2Icon } from "@/shared/components/icons"
 import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/app-tabs"
 import { Textarea } from "@/shared/ui/textarea"
 
-type AgentPageTab = "chat" | "activity" | "settings"
+type AgentPanelTab = "overview" | "tools" | "triggers" | "activity" | "share" | "versions"
 
 export default function CustomAgentPage() {
   const { agentId } = useParams({ strict: false }) as { agentId: string }
+  const router = useRouter()
+  const { hash, pathname, searchStr } = useRouterState({
+    select: (state) => ({
+      hash: state.location.hash,
+      pathname: state.location.pathname,
+      searchStr: state.location.searchStr,
+    }),
+  })
   const agentQuery = useAiAgentProfile(agentId)
   const updateAgent = useUpdateAiAgentProfile(agentId)
-  const [tab, setTab] = React.useState<AgentPageTab>("chat")
   const [name, setName] = React.useState("")
+  const search = new URLSearchParams(searchStr)
+  const panelOpen = search.get("panel") === "settings"
+  const panelTab = normalizePanelTab(search.get("settingsTab"))
 
   React.useEffect(() => setName(agentQuery.data?.name ?? ""), [agentQuery.data?.name])
 
@@ -52,41 +69,74 @@ export default function CustomAgentPage() {
     }
   }
 
+  const setPanel = (nextTab: AgentPanelTab | null) => {
+    const nextSearch = new URLSearchParams(searchStr)
+    if (nextTab) {
+      nextSearch.set("panel", "settings")
+      nextSearch.set("settingsTab", nextTab)
+    } else {
+      nextSearch.delete("panel")
+      nextSearch.delete("settingsTab")
+    }
+    const query = nextSearch.toString()
+    router.history.replace(`${pathname}${query ? `?${query}` : ""}${hash}`)
+  }
+
   if (agentQuery.isLoading) return <div className="flex h-full items-center justify-center text-sm text-content-secondary">Loading agent…</div>
   if (!agentQuery.data) return <div className="flex h-full items-center justify-center text-sm text-content-secondary">Agent unavailable.</div>
 
-  return (
-    <main className="h-full min-h-0 overflow-y-auto bg-surface-canvas">
-      <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col px-5 pb-12 pt-8 sm:px-8 md:px-16">
-        <div className="mb-5 flex items-center gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-secondary">
-            <BotIcon className="size-6" />
-          </span>
-          <Input
-            aria-label="Agent title"
-            autoFocus
-            className="h-auto border-transparent bg-transparent px-1 py-1 font-heading text-3xl font-semibold shadow-none hover:bg-action-neutral-hover focus-visible:bg-control-background"
-            disabled={agentQuery.data.role === "user"}
-            maxLength={120}
-            onBlur={() => void saveTitle()}
-            onChange={(event) => setName(event.target.value)}
-            onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur() }}
-            value={name}
-          />
+  const main = (
+    <main className="flex h-full min-h-0 flex-col bg-surface-canvas">
+      <div className="flex shrink-0 justify-end px-3 py-2">
+        <Button
+          aria-label="Custom agent settings"
+          onClick={() => setPanel(panelOpen ? null : panelTab)}
+          size="icon"
+          type="button"
+          variant="ghost"
+        >
+          <SlidersHorizontalIcon className="size-4" />
+        </Button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-8 sm:px-8 md:px-12">
+        <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col">
+          <div className="mb-5 flex items-center gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-secondary">
+              <BotIcon className="size-6" />
+            </span>
+            <Input
+              aria-label="Agent title"
+              autoFocus
+              className="h-auto border-transparent bg-transparent px-1 py-1 font-heading text-3xl font-semibold shadow-none hover:bg-action-neutral-hover focus-visible:bg-control-background"
+              disabled={agentQuery.data.role === "user"}
+              maxLength={120}
+              onBlur={() => void saveTitle()}
+              onChange={(event) => setName(event.target.value)}
+              onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur() }}
+              value={name}
+            />
+          </div>
+          <AgentChat agentId={agentId} />
         </div>
-
-        <Tabs className="min-h-0 flex-1 gap-5" onValueChange={(value) => setTab(value as AgentPageTab)} value={tab}>
-          <TabsList aria-label="Custom Agent">
-            <TabsTrigger value="chat">Chat</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
-          {tab === "chat" ? <AgentChat agentId={agentId} /> : null}
-          {tab === "activity" ? <AgentActivity agentId={agentId} /> : null}
-          {tab === "settings" ? <AgentSettings agentId={agentId} /> : null}
-        </Tabs>
       </div>
     </main>
+  )
+
+  return (
+    <PageSidePaneLayout
+      main={main}
+      mainScrollClassName="overscroll-y-none"
+      sidePane={panelOpen ? (
+        <AgentSidePanel
+          agent={agentQuery.data}
+          agentId={agentId}
+          onTabChange={setPanel}
+          tab={panelTab}
+        />
+      ) : null}
+      sidePaneOpen={panelOpen}
+      sidePaneVisible={panelOpen}
+    />
   )
 }
 
@@ -196,6 +246,56 @@ function MessagePart({ part }: { part: unknown }) {
   return typeof value.text === "string" ? <p className="whitespace-pre-wrap text-sm leading-relaxed">{value.text}</p> : null
 }
 
+function AgentSidePanel({
+  agent,
+  agentId,
+  onTabChange,
+  tab,
+}: {
+  agent: AiAgentProfileDetail
+  agentId: string
+  onTabChange: (tab: AgentPanelTab) => void
+  tab: AgentPanelTab
+}) {
+  const tabs: Array<{ id: AgentPanelTab; label: string }> = [
+    { id: "overview", label: "Overview" },
+    { id: "tools", label: "Tools & Access" },
+    { id: "triggers", label: "Triggers" },
+    { id: "activity", label: "Activity" },
+    { id: "share", label: "Share" },
+    { id: "versions", label: "Versions" },
+  ]
+
+  return (
+    <aside className="flex h-full min-h-0 flex-col bg-surface-canvas dark:bg-surface-navigation">
+      <div className="shrink-0 px-5 pb-3 pt-4">
+        <h2 className="truncate font-heading text-base font-medium">{agent.name}</h2>
+        <p className="mt-1 text-sm text-content-secondary">
+          Build, run, and control this sandboxed Custom Agent.
+        </p>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-8">
+        <Tabs
+          className="gap-5"
+          onValueChange={(value) => onTabChange(value as AgentPanelTab)}
+          value={tab}
+        >
+          <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <TabsList aria-label="Custom Agent settings">
+              {tabs.map((item) => (
+                <TabsTrigger className="grow-0" key={item.id} value={item.id}>
+                  {item.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+          <AgentSettingsPanel agent={agent} agentId={agentId} tab={tab} />
+        </Tabs>
+      </div>
+    </aside>
+  )
+}
+
 function AgentActivity({ agentId }: { agentId: string }) {
   const runs = useCustomAgentRuns(agentId)
   return (
@@ -213,7 +313,15 @@ function AgentActivity({ agentId }: { agentId: string }) {
   )
 }
 
-function AgentSettings({ agentId }: { agentId: string }) {
+function AgentSettingsPanel({
+  agent,
+  agentId,
+  tab,
+}: {
+  agent: AiAgentProfileDetail
+  agentId: string
+  tab: AgentPanelTab
+}) {
   const resources = useCustomAgentResources(agentId)
   const grant = useGrantCustomAgentResource(agentId)
   const removeResource = useRemoveCustomAgentResource(agentId)
@@ -292,10 +400,14 @@ function AgentSettings({ agentId }: { agentId: string }) {
     }
   }
 
-  return (
-    <div className="grid gap-8">
-      <section className="grid gap-3"><h2 className="font-heading text-lg font-medium">Overview, instructions, connectors, and sharing</h2><AgentEditor agentId={agentId} plain showActivity={false} /></section>
-      <section className="grid gap-3">
+  if (tab === "overview") {
+    return <AgentInstructions agent={agent} />
+  }
+
+  if (tab === "tools") {
+    return (
+      <div className="grid gap-8">
+        <section className="grid gap-3">
         <div><h2 className="font-heading text-lg font-medium">Resource access</h2><p className="text-sm text-content-secondary">Only explicitly granted resources are available to this agent.</p></div>
         {resources.data?.resources.map((resource) => (
           <div className="flex items-center gap-2 rounded-md bg-surface-secondary px-3 py-2 text-sm" key={`${resource.resourceType}:${resource.resourceId}`}>
@@ -326,7 +438,17 @@ function AgentSettings({ agentId }: { agentId: string }) {
           </Select>
           <Button disabled={!resourceId.trim() || grant.isPending} onClick={() => void addResource()}>Grant access</Button>
         </div>
-      </section>
+        </section>
+        <section className="grid gap-3">
+          <div><h2 className="font-heading text-lg font-medium">MCP connectors</h2><p className="text-sm text-content-secondary">These external tools belong only to this agent and never inherit from Personal Ask AI.</p></div>
+          <AgentMcpConnections agent={agent} />
+        </section>
+      </div>
+    )
+  }
+
+  if (tab === "triggers") {
+    return (
       <section className="grid gap-3">
         <div><h2 className="font-heading text-lg font-medium">Triggers</h2><p className="text-sm text-content-secondary">Manual runs are always available. Add schedules or supported workspace events here.</p></div>
         {triggers.data?.triggers.map((trigger) => (
@@ -439,11 +561,30 @@ function AgentSettings({ agentId }: { agentId: string }) {
           ) : triggerKind === "webhook" ? <span className="text-xs text-content-secondary sm:col-span-2">Create the trigger, then rotate its secret to reveal a signing key.</span> : null}
         </div>
       </section>
-      <section className="grid gap-3">
+    )
+  }
+
+  if (tab === "activity") {
+    return (
+      <div className="grid gap-8">
+        <AgentActivity agentId={agentId} />
+        <section className="grid gap-3">
+          <h2 className="font-heading text-lg font-medium">Connector activity</h2>
+          <AgentMcpActivity agent={agent} />
+        </section>
+      </div>
+    )
+  }
+
+  if (tab === "share") {
+    return <AgentShare agent={agent} />
+  }
+
+  return (
+    <section className="grid gap-3">
         <h2 className="font-heading text-lg font-medium">Version history</h2>
         {revisions.data?.revisions.map((revision, index) => <div className="flex items-center rounded-md bg-surface-secondary px-3 py-2 text-sm" key={revision.id}><span>Revision {revision.version}</span><span className="ml-2 text-content-secondary">{new Date(revision.createdAt).toLocaleString()}</span>{index > 0 ? <Button className="ml-auto" onClick={() => void revert.mutateAsync({ revisionId: revision.id })} size="sm" variant="ghost">Revert</Button> : null}</div>)}
-      </section>
-    </div>
+    </section>
   )
 }
 
@@ -466,4 +607,9 @@ function triggerTargetPlaceholder(kind: Exclude<CustomAgentTriggerKind, "manual"
   if (kind === "meeting") return "Meeting ID"
   if (kind === "slack") return "Slack channel ID"
   return "Curated event adapter ID"
+}
+
+function normalizePanelTab(value: string | null): AgentPanelTab {
+  if (value === "tools" || value === "triggers" || value === "activity" || value === "share" || value === "versions") return value
+  return "overview"
 }

@@ -204,13 +204,13 @@ export function AgentEditor({
           />
         )}
         {tab === "share" && <AgentShare agent={detailQuery.data} />}
-        {tab === "activity" && <AgentActivity agent={detailQuery.data} />}
+        {tab === "activity" && <AgentMcpActivity agent={detailQuery.data} />}
       </div>
     </Tabs>
   )
 }
 
-function AgentInstructions({ agent }: { agent: AiAgentProfileDetail }) {
+export function AgentInstructions({ agent }: { agent: AiAgentProfileDetail }) {
   const update = useUpdateAiAgentProfile(agent.id)
   const modelsQuery = useWorkspaceAiModels()
   const [name, setName] = React.useState(agent.name)
@@ -404,6 +404,16 @@ function McpConnectionsPanel({
   )
 }
 
+export function AgentMcpConnections({ agent }: { agent: AiAgentProfileDetail }) {
+  return (
+    <McpConnectionsPanel
+      canEdit={agent.role === "owner" || agent.role === "editor"}
+      delegated
+      scope={{ type: "agent", agentProfileId: agent.id }}
+    />
+  )
+}
+
 function ConnectionCard({
   canDisconnect,
   connection,
@@ -551,7 +561,7 @@ type McpToolPolicyInput = Pick<McpToolPolicy, "classification" | "enabled" | "ex
 
 type ServerSelection = { catalogId: string } | { approvedServerId: string }
 
-function AgentShare({ agent }: { agent: AiAgentProfileDetail }) {
+export function AgentShare({ agent }: { agent: AiAgentProfileDetail }) {
   const replaceAccess = useReplaceAiAgentProfileAccess(agent.id)
   const transferOwnership = useTransferAiAgentProfile(agent.id)
   const archiveAgent = useArchiveAiAgentProfile(agent.id)
@@ -654,7 +664,7 @@ function AgentShare({ agent }: { agent: AiAgentProfileDetail }) {
   )
 }
 
-function AgentActivity({ agent }: { agent: AiAgentProfileDetail }) {
+export function AgentMcpActivity({ agent }: { agent: AiAgentProfileDetail }) {
   const activityQuery = useMcpActivity({ type: "agent", agentProfileId: agent.id }, true)
   return <McpActivityList activity={activityQuery.data} />
 }

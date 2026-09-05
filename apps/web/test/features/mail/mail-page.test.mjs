@@ -48,7 +48,7 @@ export function register({ assert, loadModule, readSource, test }) {
 
     assert.match(
       appLayoutSource,
-      /chatSidebarOpen \|\| isAiPage \|\| isMailPage \? null : \([\s\S]*<ChatSidebarTrigger/,
+      /chatSidebarOpen \|\| isAiPage \|\| Boolean\(agentId\) \|\| isMailPage \? null : \([\s\S]*<ChatSidebarTrigger/,
     )
   })
 

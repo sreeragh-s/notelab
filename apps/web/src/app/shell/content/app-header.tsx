@@ -7,6 +7,7 @@ import {
 import { PageSidePaneHeaderCell, useOptionalPageLayoutSidebar } from "@/features/pages/context"
 
 export function AppHeader({
+  auxiliarySidePaneCloseLabel = "Close AI settings",
   auxiliarySidePaneOpen = false,
   discussionsOpen,
   isSettingsPage,
@@ -21,6 +22,7 @@ export function AppHeader({
   sidePaneAnimatedOpen,
   sidePaneDatabaseId,
 }: {
+  auxiliarySidePaneCloseLabel?: string
   auxiliarySidePaneOpen?: boolean
   discussionsOpen: boolean
   isSettingsPage: boolean
@@ -77,7 +79,7 @@ export function AppHeader({
           ) : onCloseAuxiliarySidePane ? (
             <div className="flex h-full items-center px-3">
               <PageSidePaneCollapseButton
-                label="Close AI settings"
+                label={auxiliarySidePaneCloseLabel}
                 onClick={onCloseAuxiliarySidePane}
               />
             </div>
