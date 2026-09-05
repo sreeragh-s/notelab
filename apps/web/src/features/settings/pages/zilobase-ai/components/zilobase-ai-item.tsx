@@ -84,8 +84,8 @@ export function ZilobaseAiItem({
 
   return (
     <>
-      <div className="relative min-h-72 overflow-hidden rounded-lg bg-surface-canvas ring-1 ring-border">
-        <div className="absolute right-3 top-3 z-20 flex items-center gap-1 rounded-md bg-surface-canvas p-0.5 shadow-sm">
+      <div className="relative min-h-72 overflow-hidden bg-inherit">
+        <div className="absolute right-3 top-3 z-20 flex items-center gap-1 rounded-md bg-inherit p-0.5">
           {onExpandPage ? (
             <Button
               aria-label={`Expand ${page.name || modeLabels[mode]}`}
@@ -123,6 +123,7 @@ export function ZilobaseAiItem({
               layoutPanelMode="overlay"
               onOpenPage={(pageId) => onExpandPage?.(pageId)}
               pageId={page.id}
+              showCollaborationPresence={false}
             />
           </PageWorkspaceGate>
         </div>

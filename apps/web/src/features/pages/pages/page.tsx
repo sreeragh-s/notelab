@@ -97,6 +97,7 @@ type PageEditorPaneProps = {
   onOpenPage: (pageId: string, options?: OpenPageOptions) => void;
   onTitleChange?: (title: string) => void;
   readOnly?: boolean;
+  showCollaborationPresence?: boolean;
   pageId: string;
 };
 
@@ -389,6 +390,7 @@ export function PageEditorPane({
   onOpenPage,
   onTitleChange,
   readOnly = false,
+  showCollaborationPresence = true,
   pageId,
 }: PageEditorPaneProps) {
   const demoMode = isHostedDemoRuntime();
@@ -1059,7 +1061,7 @@ export function PageEditorPane({
                 status: collaboration.status,
                 user: collaboration.user,
                 unsyncedChanges: collaboration.unsyncedChanges,
-                users: collaboration.users,
+                users: showCollaborationPresence ? collaboration.users : [],
               }
             : undefined
         }
