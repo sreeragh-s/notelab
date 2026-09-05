@@ -164,6 +164,17 @@ export default defineConfig(async () => ({
     manifest: true,
     sourcemap: process.env.POSTHOG_SOURCEMAPS === "true" ? "hidden" : false,
   },
+  // Bump this value whenever a released local-dev setup may have left browsers
+  // with immutable optimized-dependency entries. It changes Vite's dependency
+  // hash without affecting application behavior, so previously cached module
+  // graphs cannot reference chunks removed by a later optimization pass.
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        __ZILOBASE_OPTIMIZE_DEPS_CACHE_REVISION__: JSON.stringify("2"),
+      },
+    },
+  },
   // 2. tauri expects a fixed port, fail if that port is not available
   server: {
     port: devPort,
