@@ -17,7 +17,7 @@ export default defineConfig({
       ],
       include: ["src/**/*.ts"],
       provider: "v8",
-      reporter: ["text", "json-summary", "html"],
+      reporter: ["text", "json", "json-summary", "html"],
       // Measure every backend source file and keep each pass from lowering the
       // all-source baseline. The full command uses this same no-exemption gate.
       thresholds: {

@@ -201,7 +201,8 @@ export async function acceptAgentEvent(input: {
     eq(aiAgentEventReceipt.profileId, input.profileId),
     eq(aiAgentEventReceipt.eventKey, input.eventKey),
   )).limit(1);
-  if (!receipt || receipt.id !== receiptId) return { duplicate: true, run: null };
+  if (!receipt) throw new Error("Unable to reserve agent event receipt.");
+  if (receipt.runId) return { duplicate: true, run: null };
   const run = await enqueueAgentRun({
     chainDepth: input.chainDepth,
     env: input.env,
@@ -214,7 +215,7 @@ export async function acceptAgentEvent(input: {
     workspaceId: input.workspaceId,
   });
   await db.update(aiAgentEventReceipt).set({ runId: run.id })
-    .where(eq(aiAgentEventReceipt.id, receiptId));
+    .where(eq(aiAgentEventReceipt.id, receipt.id));
   return { duplicate: false, run };
 }
 

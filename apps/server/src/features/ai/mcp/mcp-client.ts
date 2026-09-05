@@ -201,7 +201,13 @@ async function connectClient(
       requestInit: { headers },
     },
   );
-  await client.connect(transport, { signal: AbortSignal.timeout(MCP_LIMITS.timeoutMs) });
+  try {
+    await client.connect(transport, { signal: AbortSignal.timeout(MCP_LIMITS.timeoutMs) });
+  } catch (error) {
+    await client.close().catch(() => undefined);
+    await markConnectionFailure(context.connection.id, error);
+    throw error;
+  }
   return {
     client,
     close: async () => {

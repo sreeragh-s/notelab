@@ -119,7 +119,7 @@ export async function createMcpConnection(input: {
     workspaceId: input.workspaceId,
   });
   const [connectionCount] = await db.select({ value: count() }).from(aiMcpConnection)
-    .where(scopeConnectionCondition(input.scope));
+    .where(and(scopeConnectionCondition(input.scope), eq(aiMcpConnection.workspaceId, input.workspaceId)));
   if (Number(connectionCount?.value ?? 0) >= MCP_LIMITS.maxConnectionsPerAgent) {
     throw new McpServiceError("mcp_connection_limit", "This Ask AI context can have at most 10 connections.", 409);
   }
@@ -344,6 +344,7 @@ export async function updateMcpToolPolicies(input: {
     .innerJoin(aiMcpConnection, eq(aiMcpConnection.id, aiMcpToolSnapshot.connectionId))
     .where(and(
       scopeConnectionCondition(input.scope),
+      eq(aiMcpConnection.workspaceId, input.workspaceId),
       eq(aiMcpToolSnapshot.enabled, true),
     ));
   const selectedCurrentlyEnabled = current.filter((tool) => tool.enabled).length;

@@ -48,6 +48,7 @@ export async function listAccessibleAgentProfiles(input: {
   userId: string;
   workspaceId: string;
 }) {
+  if (!(await isActiveMember(input.workspaceId, input.userId))) return [];
   const profiles = await db
     .select()
     .from(aiAgentProfile)
@@ -105,6 +106,9 @@ export async function createAgentProfile(input: {
   ownerUserId: string;
   workspaceId: string;
 }) {
+  if (!(await isActiveMember(input.workspaceId, input.ownerUserId))) {
+    throw new AgentProfileError("agent_membership_required", "An active workspace membership is required.", 403);
+  }
   const now = new Date();
   const id = crypto.randomUUID();
   const revisionId = crypto.randomUUID();
@@ -164,6 +168,7 @@ export async function getAgentProfileRole(input: {
   userId: string;
   workspaceId: string;
 }): Promise<AiAgentProfileRole | null> {
+  if (!(await isActiveMember(input.workspaceId, input.userId))) return null;
   const [profile] = await db
     .select({ ownerUserId: aiAgentProfile.ownerUserId })
     .from(aiAgentProfile)
@@ -266,39 +271,29 @@ export async function updateAgentProfile(input: {
   workspaceId: string;
 }) {
   await requireAgentProfileRole({ ...input, minimum: "editor" });
-  const [profile] = await db.select().from(aiAgentProfile).where(and(
-    eq(aiAgentProfile.id, input.profileId),
-    eq(aiAgentProfile.workspaceId, input.workspaceId),
-    eq(aiAgentProfile.status, "active"),
-  )).limit(1);
-  if (!profile) throw new AgentProfileError("agent_not_found", "Agent not found.", 404);
-  const [currentRevision] = profile.currentRevisionId
-    ? await db.select({ definition: aiAgentRevision.definition }).from(aiAgentRevision).where(and(
-        eq(aiAgentRevision.id, profile.currentRevisionId),
-        eq(aiAgentRevision.profileId, profile.id),
-      )).limit(1)
-    : [];
-  const current = currentRevision?.definition && typeof currentRevision.definition === "object"
-    ? normalizeAgentDefinition(currentRevision.definition)
-    : definitionForProfile(profile);
-  const definition = {
-    ...current,
-    ...(input.cover !== undefined ? { cover: input.cover } : {}),
-    ...(input.defaultModel !== undefined ? { defaultModel: input.defaultModel } : {}),
-    ...(input.description !== undefined ? { description: input.description } : {}),
-    ...(input.icon !== undefined ? { icon: input.icon } : {}),
-    ...(input.iconPosition !== undefined ? { iconPosition: input.iconPosition } : {}),
-    ...(input.instructions !== undefined ? { instructions: input.instructions } : {}),
-    ...(input.name !== undefined ? { name: input.name } : {}),
-  };
   const now = new Date();
   const revisionId = crypto.randomUUID();
   await db.transaction(async (tx) => {
-    const [locked] = await tx.select({ version: aiAgentProfile.version })
-      .from(aiAgentProfile).where(eq(aiAgentProfile.id, input.profileId))
-      .limit(1).for("update");
-    if (!locked) throw new AgentProfileError("agent_not_found", "Agent not found.", 404);
-    const version = locked.version + 1;
+    // Configuration reads and version allocation share a lock to prevent lost edits.
+    const [profile] = await tx.select().from(aiAgentProfile).where(and(
+      eq(aiAgentProfile.id, input.profileId),
+      eq(aiAgentProfile.workspaceId, input.workspaceId),
+      eq(aiAgentProfile.status, "active"),
+    )).limit(1).for("update");
+    if (!profile) throw new AgentProfileError("agent_not_found", "Agent not found.", 404);
+    const [currentRevision] = profile.currentRevisionId
+      ? await tx.select({ definition: aiAgentRevision.definition }).from(aiAgentRevision).where(and(
+          eq(aiAgentRevision.id, profile.currentRevisionId),
+          eq(aiAgentRevision.profileId, profile.id),
+        )).limit(1)
+      : [];
+    const current = currentRevision?.definition && typeof currentRevision.definition === "object"
+      ? normalizeAgentDefinition(currentRevision.definition)
+      : definitionForProfile(profile);
+    const editableKeys = ["cover", "defaultModel", "description", "icon", "iconPosition", "instructions", "name"] as const;
+    const patch = Object.fromEntries(editableKeys.filter((key) => input[key] !== undefined).map((key) => [key, input[key]]));
+    const definition = normalizeAgentDefinition({ ...current, ...patch });
+    const version = profile.version + 1;
     await tx.insert(aiAgentRevision).values({
       compiledDefinition: compileAgentDefinition(definition),
       createdAt: now,
