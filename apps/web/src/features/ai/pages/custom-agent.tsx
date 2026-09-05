@@ -21,6 +21,7 @@ import {
   type AiAgentProfileDetail,
   type CustomAgentTriggerKind,
 } from "@zilobase/features/ai-chat"
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
 import { toast } from "sonner"
 
 import {
@@ -30,7 +31,8 @@ import {
   AgentShare,
 } from "@/features/settings/pages/zilobase-ai/components/custom-agents-section"
 import { PageSidePaneLayout } from "@/features/pages/context"
-import { BotIcon, KeyRoundIcon, Play, SendIcon, SlidersHorizontalIcon, Trash2Icon } from "@/shared/components/icons"
+import { PageMetadata } from "@/features/databases"
+import { BotIcon, KeyRoundIcon, Play, SendIcon, Trash2Icon } from "@/shared/components/icons"
 import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select"
@@ -51,12 +53,24 @@ export default function CustomAgentPage() {
   })
   const agentQuery = useAiAgentProfile(agentId)
   const updateAgent = useUpdateAiAgentProfile(agentId)
+  const workspaceId = useActiveWorkspaceId()
   const [name, setName] = React.useState("")
+  const [description, setDescription] = React.useState("")
+  const [cover, setCover] = React.useState("")
+  const [icon, setIcon] = React.useState("")
+  const [iconPosition, setIconPosition] = React.useState<"inline" | "top">("inline")
   const search = new URLSearchParams(searchStr)
   const panelOpen = search.get("panel") === "settings"
   const panelTab = normalizePanelTab(search.get("settingsTab"))
 
-  React.useEffect(() => setName(agentQuery.data?.name ?? ""), [agentQuery.data?.name])
+  React.useEffect(() => {
+    if (!agentQuery.data) return
+    setName(agentQuery.data.name)
+    setDescription(agentQuery.data.description)
+    setCover(agentQuery.data.cover ?? "")
+    setIcon(typeof agentQuery.data.icon === "string" ? agentQuery.data.icon : "")
+    setIconPosition(agentQuery.data.iconPosition ?? "inline")
+  }, [agentQuery.data?.id])
 
   const saveTitle = async () => {
     const next = name.trim() || "Untitled agent"
@@ -66,6 +80,28 @@ export default function CustomAgentPage() {
     } catch (error) {
       setName(agentQuery.data.name)
       toast.error(error instanceof Error ? error.message : "Could not rename agent.")
+    }
+  }
+
+  const saveDescription = async () => {
+    if (!agentQuery.data || description === agentQuery.data.description) return
+    try {
+      await updateAgent.mutateAsync({ description })
+    } catch (error) {
+      setDescription(agentQuery.data.description)
+      toast.error(error instanceof Error ? error.message : "Could not update agent description.")
+    }
+  }
+
+  const saveAppearance = async (
+    patch: { cover?: string | null; icon?: string; iconPosition?: "inline" | "top" },
+    rollback: () => void,
+  ) => {
+    try {
+      await updateAgent.mutateAsync(patch)
+    } catch (error) {
+      rollback()
+      toast.error(error instanceof Error ? error.message : "Could not update agent appearance.")
     }
   }
 
@@ -87,35 +123,41 @@ export default function CustomAgentPage() {
 
   const main = (
     <main className="flex h-full min-h-0 flex-col bg-surface-canvas">
-      <div className="flex shrink-0 justify-end px-3 py-2">
-        <Button
-          aria-label="Custom agent settings"
-          onClick={() => setPanel(panelOpen ? null : panelTab)}
-          size="icon"
-          type="button"
-          variant="ghost"
-        >
-          <SlidersHorizontalIcon className="size-4" />
-        </Button>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-8 sm:px-8 md:px-12">
-        <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col">
-          <div className="mb-5 flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-secondary">
-              <BotIcon className="size-6" />
-            </span>
-            <Input
-              aria-label="Agent title"
-              autoFocus
-              className="h-auto border-transparent bg-transparent px-1 py-1 font-heading text-3xl font-semibold shadow-none hover:bg-action-neutral-hover focus-visible:bg-control-background"
-              disabled={agentQuery.data.role === "user"}
-              maxLength={120}
-              onBlur={() => void saveTitle()}
-              onChange={(event) => setName(event.target.value)}
-              onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur() }}
-              value={name}
-            />
-          </div>
+      <div className="min-h-0 flex-1 overflow-y-auto pb-8">
+        <PageMetadata
+          contentClassName="mx-auto max-w-[900px]"
+          cover={cover}
+          description={description}
+          descriptionPlaceholder="Describe what this agent does…"
+          editable={agentQuery.data.role !== "user"}
+          enableComments={false}
+          headingLabel="Agent"
+          icon={icon}
+          iconPosition={iconPosition}
+          onCoverChange={(nextCover) => {
+            const previous = cover
+            setCover(nextCover)
+            void saveAppearance({ cover: nextCover || null }, () => setCover(previous))
+          }}
+          onDescriptionBlur={() => void saveDescription()}
+          onDescriptionChange={setDescription}
+          onIconChange={(nextIcon) => {
+            const previous = icon
+            setIcon(nextIcon)
+            void saveAppearance({ icon: nextIcon }, () => setIcon(previous))
+          }}
+          onIconPositionChange={(nextPosition) => {
+            const previous = iconPosition
+            setIconPosition(nextPosition)
+            void saveAppearance({ iconPosition: nextPosition }, () => setIconPosition(previous))
+          }}
+          onTitleBlur={() => void saveTitle()}
+          onTitleChange={setName}
+          title={name}
+          titlePlaceholder="Untitled agent"
+          workspaceId={workspaceId}
+        />
+        <div className="mx-auto flex min-h-[calc(100%-10rem)] w-full max-w-[900px] flex-col px-5 sm:px-8 md:px-20 lg:px-24">
           <AgentChat agentId={agentId} />
         </div>
       </div>

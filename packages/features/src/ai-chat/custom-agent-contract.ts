@@ -13,6 +13,8 @@ export type CustomAgentDefinition = {
   name: string
   description: string
   icon: unknown | null
+  cover: string | null
+  iconPosition: "inline" | "top"
   instructions: string
   defaultModel: string
   safeExecutionPreferences: Record<string, unknown>

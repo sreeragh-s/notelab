@@ -6,12 +6,14 @@ import { aiAgentProfile } from "../../../infrastructure/database/schema";
 
 export function definitionForProfile(
   profile: Pick<typeof aiAgentProfile.$inferSelect,
-    "defaultModel" | "description" | "icon" | "instructions" | "name">,
+    "cover" | "defaultModel" | "description" | "icon" | "iconPosition" | "instructions" | "name">,
 ): CustomAgentDefinition {
   return {
+    cover: profile.cover ?? null,
     defaultModel: profile.defaultModel,
     description: profile.description,
     icon: profile.icon ?? null,
+    iconPosition: profile.iconPosition === "top" ? "top" : "inline",
     instructions: profile.instructions,
     name: profile.name,
     safeExecutionPreferences: {},
@@ -26,9 +28,11 @@ export function hashAgentDefinition(definition: CustomAgentDefinition) {
 export function normalizeAgentDefinition(value: unknown): CustomAgentDefinition {
   const input = (value && typeof value === "object" ? value : {}) as Partial<CustomAgentDefinition>;
   return {
+    cover: typeof input.cover === "string" && input.cover ? input.cover.slice(0, 2_000_000) : null,
     defaultModel: typeof input.defaultModel === "string" && input.defaultModel ? input.defaultModel : "auto",
     description: typeof input.description === "string" ? input.description.slice(0, 500) : "",
     icon: input.icon ?? null,
+    iconPosition: input.iconPosition === "top" ? "top" : "inline",
     instructions: typeof input.instructions === "string" ? input.instructions.slice(0, 20_000) : "",
     name: typeof input.name === "string" && input.name.trim() ? input.name.trim().slice(0, 120) : "Untitled agent",
     safeExecutionPreferences: input.safeExecutionPreferences && typeof input.safeExecutionPreferences === "object"

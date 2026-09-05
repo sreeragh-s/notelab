@@ -60,6 +60,8 @@ export function useCreateAiAgentProfile() {
     instructions?: string
     defaultModel?: string
     icon?: unknown
+    cover?: string | null
+    iconPosition?: "inline" | "top"
   }, { agent: AiAgentProfileDetail }>(
     () => "/api/ai/agents",
     "POST",
@@ -67,7 +69,7 @@ export function useCreateAiAgentProfile() {
 }
 
 export function useUpdateAiAgentProfile(agentId: string | null) {
-  return useAgentMutation<Partial<Pick<AiAgentProfileDetail, "name" | "description" | "instructions" | "defaultModel">>, { agent: AiAgentProfileDetail }>(
+  return useAgentMutation<Partial<Pick<AiAgentProfileDetail, "name" | "description" | "instructions" | "defaultModel" | "icon" | "cover" | "iconPosition">>, { agent: AiAgentProfileDetail }>(
     () => `/api/ai/agents/${encodeURIComponent(agentId!)}`,
     "PATCH",
     agentId,

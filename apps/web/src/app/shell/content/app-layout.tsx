@@ -613,10 +613,11 @@ function AppLayoutContent({
               header={
                 embeddedMobileViewer || isMailPage ? undefined : (
                   <AppHeader
+                    agentId={agentId}
                     auxiliarySidePaneCloseLabel={agentId ? "Close Custom Agent settings" : "Close AI settings"}
                     auxiliarySidePaneOpen={showAuxiliaryWorkspaceSidePaneLayout}
                     discussionsOpen={discussionsSidebarOpen}
-                    isSettingsPage={isSettingsPage || isAiPage || Boolean(agentId)}
+                    isSettingsPage={isSettingsPage || isAiPage}
                     onToggleDiscussions={
                       discussionsEnabled ? toggleDiscussionsSidebar : undefined
                     }

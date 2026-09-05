@@ -17,6 +17,8 @@ export type AiAgentProfileSummary = {
   name: string
   description: string
   icon: unknown | null
+  cover?: string | null
+  iconPosition?: "inline" | "top"
   defaultModel: string
   role: AiAgentProfileRole
   status: "active" | "archived"

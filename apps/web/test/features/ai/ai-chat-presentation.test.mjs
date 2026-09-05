@@ -82,10 +82,15 @@ export function register({ readSource, assert, test }) {
 
   test("Custom Agents reuse the full-height page side-pane workspace", async () => {
     const agentPageSource = await readSource("/src/features/ai/pages/custom-agent.tsx")
+    const agentHeaderSource = await readSource("/src/features/ai/components/custom-agent-header-actions.tsx")
     const layoutSource = await readSource("/src/app/shell/content/app-layout.tsx")
 
     assert.match(agentPageSource, /<PageSidePaneLayout/)
-    assert.match(agentPageSource, /aria-label="Custom agent settings"/)
+    assert.match(agentPageSource, /<PageMetadata/)
+    assert.match(agentPageSource, /contentClassName="mx-auto max-w-\[900px\]"/)
+    assert.match(agentPageSource, /enableComments=\{false\}/)
+    assert.match(agentHeaderSource, /<AgentSharePopover agent=\{agent\.data\}/)
+    assert.match(agentHeaderSource, /Open Custom Agent settings/)
     assert.match(agentPageSource, /Build, run, and control this sandboxed Custom Agent/)
     assert.match(agentPageSource, /<AgentChat agentId=\{agentId\}/)
     assert.doesNotMatch(agentPageSource, /<TabsTrigger value="chat">/)

@@ -62,10 +62,12 @@ export async function applyAgentDefinition(input: {
       version: nextVersion,
     });
     await tx.update(aiAgentProfile).set({
+      cover: definition.cover,
       currentRevisionId: revisionId,
       defaultModel: definition.defaultModel,
       description: definition.description,
       icon: definition.icon,
+      iconPosition: definition.iconPosition,
       instructions: definition.instructions,
       name: definition.name,
       updatedAt: now,

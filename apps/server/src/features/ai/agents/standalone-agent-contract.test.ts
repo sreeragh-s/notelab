@@ -49,6 +49,23 @@ describe("standalone Custom Agent migration boundary", () => {
     expect(tools).not.toContain("canAccessDatabaseInWorkspace");
   });
 
+  it("lets shared users chat while keeping resource reads bound to the agent principal", async () => {
+    const conversation = await readFile(new URL("src/features/ai/agents/agent-conversation-service.ts", root), "utf8");
+    const access = await readFile(new URL("src/features/access/access.ts", root), "utf8");
+    expect(conversation).toContain('requireAgentProfileRole({ ...input, minimum: "user" })');
+    expect(access).toContain("Resolves access for the agent principal only");
+    expect(access).toContain('eq(pageAccess.targetType, "agent")');
+    expect(access).toContain("eq(pageAccess.targetId, agentId)");
+    expect(access).toContain("deliberately excludes");
+  });
+
+  it("persists page-style agent covers and icon placement", async () => {
+    const migration = await readFile(new URL("drizzle/0081_custom_agent_page_appearance.sql", root), "utf8");
+    expect(migration).toContain('ADD COLUMN "cover" text');
+    expect(migration).toContain('ADD COLUMN "icon_position" text NOT NULL DEFAULT \'inline\'');
+    expect(migration).toContain("CHECK (\"icon_position\" IN ('inline', 'top'))");
+  });
+
   it("bounds each queued run by its captured permissions and current revocations", async () => {
     const runs = await readFile(new URL("src/features/ai/agents/agent-run-service.ts", root), "utf8");
     expect(runs).toContain("readPermissionSnapshot(run.permissionSnapshot)");

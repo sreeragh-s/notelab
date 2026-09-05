@@ -24,6 +24,7 @@ import {
   compileAgentDefinition,
   definitionForProfile,
   hashAgentDefinition,
+  normalizeAgentDefinition,
 } from "./agent-definition";
 
 const ROLE_RANK: Record<AiAgentProfileRole, number> = {
@@ -94,9 +95,11 @@ export async function listAccessibleAgentProfiles(input: {
 }
 
 export async function createAgentProfile(input: {
+  cover?: string | null;
   defaultModel?: string;
   description?: string;
   icon?: unknown;
+  iconPosition?: "inline" | "top";
   instructions?: string;
   name: string;
   ownerUserId: string;
@@ -107,9 +110,11 @@ export async function createAgentProfile(input: {
   const revisionId = crypto.randomUUID();
   const conversationId = crypto.randomUUID();
   const values = {
+    cover: input.cover ?? null,
     defaultModel: input.defaultModel ?? "auto",
     description: input.description ?? "",
     icon: input.icon ?? null,
+    iconPosition: input.iconPosition ?? "inline",
     instructions: input.instructions ?? "",
     name: input.name,
   };
@@ -249,9 +254,11 @@ export async function getAgentProfileDetail(input: {
 }
 
 export async function updateAgentProfile(input: {
+  cover?: string | null;
   defaultModel?: string;
   description?: string;
   icon?: unknown;
+  iconPosition?: "inline" | "top";
   instructions?: string;
   name?: string;
   profileId: string;
@@ -272,13 +279,15 @@ export async function updateAgentProfile(input: {
       )).limit(1)
     : [];
   const current = currentRevision?.definition && typeof currentRevision.definition === "object"
-    ? currentRevision.definition as ReturnType<typeof definitionForProfile>
+    ? normalizeAgentDefinition(currentRevision.definition)
     : definitionForProfile(profile);
   const definition = {
     ...current,
+    ...(input.cover !== undefined ? { cover: input.cover } : {}),
     ...(input.defaultModel !== undefined ? { defaultModel: input.defaultModel } : {}),
     ...(input.description !== undefined ? { description: input.description } : {}),
     ...(input.icon !== undefined ? { icon: input.icon } : {}),
+    ...(input.iconPosition !== undefined ? { iconPosition: input.iconPosition } : {}),
     ...(input.instructions !== undefined ? { instructions: input.instructions } : {}),
     ...(input.name !== undefined ? { name: input.name } : {}),
   };
@@ -301,10 +310,12 @@ export async function updateAgentProfile(input: {
       version,
     });
     await tx.update(aiAgentProfile).set({
+      cover: definition.cover,
       currentRevisionId: revisionId,
       defaultModel: definition.defaultModel,
       description: definition.description,
       icon: definition.icon,
+      iconPosition: definition.iconPosition,
       instructions: definition.instructions,
       name: definition.name,
       updatedAt: now,
@@ -417,9 +428,11 @@ export async function duplicateAgentProfile(input: {
   )).limit(1);
   if (!profile) throw new AgentProfileError("agent_not_found", "Agent not found.", 404);
   return createAgentProfile({
+    cover: profile.cover,
     defaultModel: profile.defaultModel,
     description: profile.description,
     icon: profile.icon,
+    iconPosition: profile.iconPosition as "inline" | "top",
     instructions: profile.instructions,
     name: `${profile.name} copy`.slice(0, 120),
     ownerUserId: input.userId,
@@ -433,9 +446,11 @@ function serializeProfileSummary(
   lastVisitedAt: Date | null = null,
 ): AiAgentProfileSummary {
   return {
+    cover: profile.cover,
     defaultModel: profile.defaultModel,
     description: profile.description,
     icon: profile.icon ?? null,
+    iconPosition: profile.iconPosition === "top" ? "top" : "inline",
     id: profile.id,
     name: profile.name,
     ownerUserId: profile.ownerUserId,

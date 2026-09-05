@@ -1,3 +1,5 @@
+import { lazy, Suspense } from "react"
+
 import {
   getDatabaseId,
   MainPaneHeaderLeadingControl,
@@ -6,7 +8,14 @@ import {
 } from "@/features/pages/components"
 import { PageSidePaneHeaderCell, useOptionalPageLayoutSidebar } from "@/features/pages/context"
 
+const CustomAgentHeaderActions = lazy(() =>
+  import("@/features/ai/components/custom-agent-header-actions").then((module) => ({
+    default: module.CustomAgentHeaderActions,
+  })),
+)
+
 export function AppHeader({
+  agentId,
   auxiliarySidePaneCloseLabel = "Close AI settings",
   auxiliarySidePaneOpen = false,
   discussionsOpen,
@@ -22,6 +31,7 @@ export function AppHeader({
   sidePaneAnimatedOpen,
   sidePaneDatabaseId,
 }: {
+  agentId?: string | null
   auxiliarySidePaneCloseLabel?: string
   auxiliarySidePaneOpen?: boolean
   discussionsOpen: boolean
@@ -52,6 +62,11 @@ export function AppHeader({
     <>
       <PageSidePaneHeaderCell className="z-10" side="main" splitActive={splitActive}>
         <PagePaneHeader
+          actions={agentId ? (
+            <Suspense fallback={null}>
+              <CustomAgentHeaderActions agentId={agentId} />
+            </Suspense>
+          ) : undefined}
           className="min-w-0 flex-1"
           discussionsOpen={discussionsOpen}
           leadingControl={<MainPaneHeaderLeadingControl />}
@@ -59,7 +74,7 @@ export function AppHeader({
           onTogglePageSidebar={onTogglePageSidebar}
           pageSidebarOpen={pageSidebarOpen}
           pathname={pathname}
-          showActions={!isSettingsPage}
+          showActions={!isSettingsPage || Boolean(agentId)}
         />
       </PageSidePaneHeaderCell>
       {showSidePaneHeader ? (

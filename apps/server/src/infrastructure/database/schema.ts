@@ -2140,6 +2140,8 @@ export const aiAgentProfile = pgTable(
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     icon: jsonb("icon"),
+    cover: text("cover"),
+    iconPosition: text("icon_position").notNull().default("inline"),
     instructions: text("instructions").notNull().default(""),
     defaultModel: text("default_model").notNull().default("auto"),
     currentRevisionId: text("current_revision_id"),
@@ -2158,6 +2160,10 @@ export const aiAgentProfile = pgTable(
     check(
       "ai_agent_profile_status_check",
       sql`${table.status} in ('active', 'archived')`,
+    ),
+    check(
+      "ai_agent_profile_icon_position_check",
+      sql`${table.iconPosition} in ('inline', 'top')`,
     ),
     check("ai_agent_profile_version_check", sql`${table.version} > 0`),
   ],

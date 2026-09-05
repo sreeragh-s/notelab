@@ -48,9 +48,11 @@ import { executeApprovedMcpAction } from "../mcp/mcp-approval";
 import { finishPendingAgentAction } from "../actions/agent-approvals";
 
 const createSchema = z.object({
+  cover: z.string().max(2_000_000).nullable().optional(),
   defaultModel: z.string().trim().min(1).max(160).optional(),
   description: z.string().trim().max(500).optional(),
   icon: z.unknown().optional(),
+  iconPosition: z.enum(["inline", "top"]).optional(),
   instructions: z.string().max(20_000).optional(),
   name: z.string().trim().min(1).max(120),
 });

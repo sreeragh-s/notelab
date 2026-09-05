@@ -84,6 +84,7 @@ export function useRoutePageId(pathname: string) {
 }
 
 export function PagePaneHeader({
+  actions,
   className,
   discussionsOpen = false,
   leadingControl,
@@ -97,6 +98,7 @@ export function PagePaneHeader({
   showActions = true,
   showBreadcrumb = true,
 }: {
+  actions?: ReactNode | null;
   className?: string;
   discussionsOpen?: boolean;
   leadingControl?: ReactNode | null;
@@ -135,15 +137,17 @@ export function PagePaneHeader({
       </div>
       {showActions ? (
         <div className="ml-auto px-3" data-page-side-pane-avoid>
-          <NavActions
-            databaseId={databaseId}
-            meetingId={meetingId}
-            discussionsOpen={discussionsOpen}
-            onToggleDiscussions={onToggleDiscussions}
-            onTogglePageSidebar={onTogglePageSidebar}
-            pageSidebarOpen={pageSidebarOpen}
-            pageId={pageId}
-          />
+          {actions ?? (
+            <NavActions
+              databaseId={databaseId}
+              meetingId={meetingId}
+              discussionsOpen={discussionsOpen}
+              onToggleDiscussions={onToggleDiscussions}
+              onTogglePageSidebar={onTogglePageSidebar}
+              pageSidebarOpen={pageSidebarOpen}
+              pageId={pageId}
+            />
+          )}
         </div>
       ) : null}
     </header>
@@ -480,12 +484,17 @@ function AppBreadcrumbs({ pathname }: { pathname: string }) {
 
 function AgentBreadcrumb({ agentId }: { agentId: string }) {
   const { data: agent } = useAiAgentProfile(agentId);
+  const icon = typeof agent?.icon === "string" ? agent.icon : null;
   return (
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>
           <BreadcrumbPage className="gap-1.5">
-            <BotIcon aria-hidden="true" className="size-4 shrink-0" />
+            {icon ? (
+              <PageIconDisplay className="size-4 shrink-0" size="sm" value={icon} />
+            ) : (
+              <BotIcon aria-hidden="true" className="size-4 shrink-0" />
+            )}
             <span className="line-clamp-1">{agent?.name ?? "Custom Agent"}</span>
           </BreadcrumbPage>
         </BreadcrumbItem>

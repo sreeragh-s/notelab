@@ -78,11 +78,13 @@ type PageMetadataProps = {
   layoutPropertyId?: string
   layoutSection?: "heading" | "properties" | "discussions"
   onCoverChange?: (cover: string) => void
+  onDescriptionBlur?: () => void
   onDescriptionChange?: (description: string) => void
   onIconChange?: (icon: string) => void
   onIconPositionChange?: (position: PageIconPosition) => void
   onOpenPage?: (pageId: string) => void
   onTitleEnter?: () => void
+  onTitleBlur?: () => void
   onTitleChange?: (title: string) => void
   workspaceId?: string | null
   title?: string
@@ -166,11 +168,13 @@ export function PageMetadata({
   layoutPropertyId,
   layoutSection,
   onCoverChange,
+  onDescriptionBlur,
   onDescriptionChange,
   onIconChange,
   onIconPositionChange,
   onOpenPage,
   onTitleEnter,
+  onTitleBlur,
   onTitleChange,
   workspaceId,
   title: titleProp,
@@ -824,6 +828,7 @@ export function PageMetadata({
             <textarea
               aria-label={headingLabel ? `${headingLabel} title` : "Page title"}
             className="min-h-10 min-w-0 flex-1 resize-none overflow-hidden border-0 bg-transparent px-3 py-0 text-4xl font-semibold leading-tight tracking-normal whitespace-pre-wrap text-balance text-content-primary shadow-none outline-none placeholder:text-content-secondary focus-visible:ring-0 dark:bg-transparent"
+            onBlur={onTitleBlur}
             onChange={(event) => updateTitle(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
@@ -853,6 +858,7 @@ export function PageMetadata({
                   : "Page description"
               }
               className="min-h-6 min-w-0 flex-1 resize-none overflow-hidden border-0 bg-transparent px-3 py-0 text-base leading-relaxed text-content-secondary shadow-none outline-none placeholder:text-content-secondary focus-visible:ring-0 dark:bg-transparent"
+              onBlur={onDescriptionBlur}
               onChange={(event) => updateDescription(event.target.value)}
               placeholder={descriptionPlaceholder}
               readOnly={!editable}

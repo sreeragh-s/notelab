@@ -1,6 +1,8 @@
 import * as React from "react"
 import {
+  ChevronsUpDownIcon,
   ExternalLinkIcon,
+  LockIcon,
   PlusIcon,
   RefreshCw,
   Trash2Icon,
@@ -8,6 +10,8 @@ import {
 import { toast } from "sonner"
 
 import { useSession } from "@zilobase/features/auth"
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
+import { usePageAccessTargets } from "@zilobase/features/pages"
 import {
   type AiAgentProfileDetail,
   type McpApprovedServer,
@@ -35,6 +39,14 @@ import {
 
 import { Badge } from "@/shared/ui/badge"
 import { Button } from "@/shared/ui/button"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/shared/ui/command"
 import { Checkbox } from "@/shared/ui/checkbox"
 import { Input } from "@/shared/ui/input"
 import {
@@ -47,6 +59,7 @@ import {
 import { Switch } from "@/shared/ui/switch"
 import { Textarea } from "@/shared/ui/textarea"
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/app-tabs"
+import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover"
 
 type AgentTab = "instructions" | "tools" | "share" | "activity"
 
@@ -561,15 +574,73 @@ type McpToolPolicyInput = Pick<McpToolPolicy, "classification" | "enabled" | "ex
 
 type ServerSelection = { catalogId: string } | { approvedServerId: string }
 
-export function AgentShare({ agent }: { agent: AiAgentProfileDetail }) {
+export function AgentSharePopover({ agent }: { agent: AiAgentProfileDetail }) {
+  const [open, setOpen] = React.useState(false)
+
+  return (
+    <Popover onOpenChange={setOpen} open={open}>
+      <PopoverTrigger asChild>
+        <Button
+          className="h-7 gap-2 data-[state=open]:bg-action-neutral-hover"
+          size="sm"
+          variant="outline"
+        >
+          <LockIcon />
+          Share
+        </Button>
+      </PopoverTrigger>
+      {open ? (
+        <PopoverContent
+          align="end"
+          className="w-[min(36rem,calc(100vw-2rem))] p-4"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+        >
+          <div className="mb-4 grid gap-1.5">
+            <div className="font-semibold leading-none tracking-tight">Share agent</div>
+            <div className="text-sm text-content-secondary">
+              Members can chat with this agent using the agent's own explicitly granted access.
+            </div>
+          </div>
+          <AgentShare agent={agent} showLifecycle={false} />
+        </PopoverContent>
+      ) : null}
+    </Popover>
+  )
+}
+
+export function AgentShare({
+  agent,
+  showLifecycle = true,
+}: {
+  agent: AiAgentProfileDetail
+  showLifecycle?: boolean
+}) {
+  const workspaceId = useActiveWorkspaceId()
+  const targets = usePageAccessTargets(workspaceId)
   const replaceAccess = useReplaceAiAgentProfileAccess(agent.id)
   const transferOwnership = useTransferAiAgentProfile(agent.id)
   const archiveAgent = useArchiveAiAgentProfile(agent.id)
   const [principalId, setPrincipalId] = React.useState("")
   const [principalType, setPrincipalType] = React.useState<"user" | "team">("user")
+  const [targetPickerOpen, setTargetPickerOpen] = React.useState(false)
   const [role, setRole] = React.useState<"editor" | "user">("user")
   const [newOwnerUserId, setNewOwnerUserId] = React.useState("")
   const canEdit = agent.role === "owner" || agent.role === "editor"
+  const targetValue = principalId ? `${principalType}:${principalId}` : ""
+  const targetByKey = React.useMemo(() => {
+    const map = new Map<string, { detail?: string; label: string }>()
+    for (const member of targets.data?.members ?? []) {
+      map.set(`user:${member.id}`, {
+        detail: member.email,
+        label: member.name || member.email,
+      })
+    }
+    for (const team of targets.data?.teams ?? []) {
+      map.set(`team:${team.id}`, { detail: "Team", label: team.name })
+    }
+    return map
+  }, [targets.data?.members, targets.data?.teams])
+  const selectedTarget = targetValue ? targetByKey.get(targetValue) : null
 
   const save = async (grants: AiAgentProfileDetail["access"]) => {
     try {
@@ -594,11 +665,23 @@ export function AgentShare({ agent }: { agent: AiAgentProfileDetail }) {
         Only editors can change configuration; sensitive tool arguments and
         diagnostics remain editor-only.
       </p>
+      <div className="rounded-md bg-feedback-warning-background px-3 py-2 text-xs text-feedback-warning-text">
+        This agent uses its own resource permissions. People you share it with may receive information from granted pages or databases even when they cannot open those resources directly.
+      </div>
+      <div className="flex items-center gap-2 rounded border p-2 text-sm">
+        <Badge variant="outline">owner</Badge>
+        <span className="min-w-0 truncate">
+          {targetByKey.get(`user:${agent.ownerUserId}`)?.label ?? agent.ownerUserId}
+        </span>
+        <span className="ml-auto text-content-secondary">Full access</span>
+      </div>
       {agent.access.map((grant) => (
         <div className="flex items-center gap-2 rounded border p-2 text-sm" key={grant.id}>
           <Badge variant="outline">{grant.principalType}</Badge>
-          <span className="truncate">{grant.principalId}</span>
-          <span className="ml-auto">{grant.role}</span>
+          <span className="min-w-0 truncate">
+            {targetByKey.get(`${grant.principalType}:${grant.principalId}`)?.label ?? grant.principalId}
+          </span>
+          <span className="ml-auto text-content-secondary">{grant.role === "editor" ? "Can edit" : "Can use"}</span>
           {canEdit && (
             <Button
               aria-label="Remove access"
@@ -612,19 +695,74 @@ export function AgentShare({ agent }: { agent: AiAgentProfileDetail }) {
       ))}
       {canEdit && (
         <div className="flex flex-wrap gap-2">
-          <Select onValueChange={(value) => setPrincipalType(value as "user" | "team")} value={principalType}>
-            <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="user">User</SelectItem><SelectItem value="team">Team</SelectItem></SelectContent>
-          </Select>
-          <Input className="min-w-44 flex-1" onChange={(event) => setPrincipalId(event.target.value)} placeholder={`${principalType} ID`} value={principalId} />
+          <Popover onOpenChange={setTargetPickerOpen} open={targetPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button className="min-w-44 flex-1 justify-between" role="combobox" type="button" variant="outline">
+                <span className="min-w-0 truncate text-left">
+                  {selectedTarget ? `${selectedTarget.label}${selectedTarget.detail ? ` · ${selectedTarget.detail}` : ""}` : "Search members or teams"}
+                </span>
+                <ChevronsUpDownIcon className="opacity-60" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-[min(28rem,calc(100vw-3rem))] p-0">
+              <Command>
+                <CommandInput placeholder="Search by name or email..." />
+                <CommandList>
+                  <CommandEmpty>No members or teams found.</CommandEmpty>
+                  <CommandGroup heading="Members">
+                    {(targets.data?.members ?? []).filter((member) => member.id !== agent.ownerUserId).map((member) => (
+                      <CommandItem
+                        key={member.id}
+                        onSelect={() => {
+                          setPrincipalType("user")
+                          setPrincipalId(member.id)
+                          setTargetPickerOpen(false)
+                        }}
+                        value={`${member.name} ${member.email}`}
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate font-medium">{member.name || member.email}</div>
+                          <div className="truncate text-xs text-content-secondary">{member.email}</div>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                  {(targets.data?.teams.length ?? 0) > 0 ? (
+                    <CommandGroup heading="Teams">
+                      {targets.data?.teams.map((team) => (
+                        <CommandItem
+                          key={team.id}
+                          onSelect={() => {
+                            setPrincipalType("team")
+                            setPrincipalId(team.id)
+                            setTargetPickerOpen(false)
+                          }}
+                          value={`${team.name} team`}
+                        >
+                          {team.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  ) : null}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <Select onValueChange={(value) => setRole(value as "editor" | "user")} value={role}>
-            <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="user">User</SelectItem><SelectItem value="editor">Editor</SelectItem></SelectContent>
+            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="user">Can use</SelectItem><SelectItem value="editor">Can edit</SelectItem></SelectContent>
           </Select>
-          <Button disabled={!principalId.trim()} onClick={() => void save([...agent.access, { id: crypto.randomUUID(), principalId: principalId.trim(), principalType, role }])} type="button">Add</Button>
+          <Button
+            disabled={!principalId.trim() || replaceAccess.isPending}
+            onClick={() => {
+              const grants = agent.access.filter((item) => !(item.principalId === principalId.trim() && item.principalType === principalType))
+              void save([...grants, { id: crypto.randomUUID(), principalId: principalId.trim(), principalType, role }])
+            }}
+            type="button"
+          >Share</Button>
         </div>
       )}
-      {agent.role === "owner" && (
+      {showLifecycle && agent.role === "owner" && (
         <div className="mt-3 grid gap-2 border-t pt-3">
           <p className="text-sm font-medium">Ownership and lifecycle</p>
           <p className="text-xs text-content-secondary">
