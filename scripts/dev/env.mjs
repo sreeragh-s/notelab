@@ -160,6 +160,7 @@ export function profileEnvironment(profile, dependencies) {
     DATABASE_AUTOMATIONS_EXECUTION_DISABLED: "false",
     AUTOMATION_WEBHOOKS_ENABLED: "false",
     AUTOMATION_SLACK_ENABLED: "false",
+    MEETING_BLOCK_ENABLED: "true",
     MAIL_ENABLED: "false",
     EMAIL_FROM: "Zilobase <no-reply@zilobase.com>",
     AI_DEV_TOOLS_ENABLED: "true",

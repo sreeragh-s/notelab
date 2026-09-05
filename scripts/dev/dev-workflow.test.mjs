@@ -65,6 +65,14 @@ test("only the hosted Worker profile enables demo seeding", () => {
     profileEnvironment(localProfiles.worker, dependencies).ZILOBASE_DEMO_ENABLED,
     "true",
   );
+  assert.equal(
+    profileEnvironment(localProfiles.node, dependencies).MEETING_BLOCK_ENABLED,
+    "true",
+  );
+  assert.equal(
+    profileEnvironment(localProfiles.worker, dependencies).MEETING_BLOCK_ENABLED,
+    "true",
+  );
 });
 
 test("setup migrates the obsolete generated Node demo default", async () => {
