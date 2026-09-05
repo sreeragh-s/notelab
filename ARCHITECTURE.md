@@ -87,6 +87,12 @@ fails the architecture gate rather than inheriting a repository-wide exemption.
 Do not refresh that baseline to accommodate a change. Remove entries as legacy
 units are simplified.
 
+Health and audit commands first run the server test/coverage gate, then supply
+that fresh coverage to Fallow for measured CRAP scores. Failed tests or coverage
+thresholds stop the command before analysis; stale coverage is never reused.
+Uncovered production sources still receive no coverage credit. The complexity
+limits and exact-identity legacy baseline remain unchanged.
+
 ## Canonical Sources of Truth
 
 - Persisted sidebar contracts, defaults, normalization, and migrations live in

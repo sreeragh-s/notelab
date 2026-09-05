@@ -2,7 +2,7 @@
 
 ## Status
 
-**Not merge-ready.** This pass ran branch-wide automated checks and reviewed
+**Automated merge gates pass.** This pass ran branch-wide automated checks and reviewed
 selected security, runtime, and UI ownership paths. It is not a claim that every
 line or every application workflow has been verified. Neither repository has
 been merged to `main`, pushed, or deployed. Existing local encrypted environment
@@ -38,14 +38,11 @@ changes were left untouched and excluded from these commits.
 - Removed an unused direct MCP dependency and patched transitive `browserslist`
   and `fast-uri` advisories. The audit no longer reports high/critical issues.
 
-## Remaining merge blockers
+## Remaining release checks
 
-1. **New complexity findings remain.**
-   `quality:fallow:health` fails its identity baseline. Examples include MCP
-   approval execution, `processAgentRun`, database event dispatch,
-   materialization, and Custom Agent Settings. Split validation, persistence,
-   orchestration, and presentation at their existing domain boundaries; do not
-   regenerate the baseline to absorb the new findings.
+No known automated merge blocker remains. Production rollout still requires the
+live security, migration, and cross-member scenarios listed below. Passing these
+gates is not proof that every runtime workflow is defect-free.
 
 ## Blocker follow-up
 
@@ -61,8 +58,8 @@ changes were left untouched and excluded from these commits.
   departed members retaining profile access, failed MCP handshakes not closing
   their client, and concurrent profile edits reading a stale revision before
   acquiring the update lock.
-- Server coverage now passes the unchanged thresholds: statements 45.30%,
-  branches 40.98%, functions 47.44%, lines 46.94%. Added behavioral tests for
+- Server coverage now passes the unchanged thresholds: statements 45.38%,
+  branches 41.23%, functions 47.14%, lines 46.71%. Added behavioral tests for
   orchestration, encryption, approvals, membership, triggers, and MCP clients.
   These tests mock database/provider boundaries; they are not a substitute for
   real Postgres concurrency tests or authenticated end-to-end permission tests.
@@ -70,18 +67,28 @@ changes were left untouched and excluded from these commits.
   helpers. Import-job queries preserve their scoped query keys and now pass
   TanStack Query cancellation signals to the request.
 - No coverage threshold, source exclusion, or complexity baseline was relaxed.
-- Full `verify:core` now reaches the final Fallow audit after passing tests,
-  coverage, typechecks, and the web build/bundle budget. It still exits nonzero
-  on 46 complexity findings. `verify:architecture` likewise passes dead-code
-  and duplication checks, then fails its unchanged health baseline.
+- Split remaining orchestration, validation, materialization, OAuth, and settings
+  render paths at their domain boundaries. Settings state remains mounted across
+  tabs; shared page-pane and sharing components remain authoritative.
+- Health/audit now generate fresh server coverage before measuring CRAP scores,
+  rather than assuming tested functions have zero coverage. Three runner tests
+  verify coverage precedes analysis and failure prevents stale scoring. Structural
+  complexity thresholds and the identity baseline are unchanged.
+- Bounded streamed inbound agent webhook bodies before signature processing;
+  chunked oversized requests now fail with 413 instead of buffering indefinitely.
+- Fixed agent OAuth returns to use the standalone agent Tools settings route,
+  including failures; personal returns remain under Ask AI.
+- Full `verify:core` and `verify:architecture` pass. There are no unbaselined
+  health findings; inherited legacy debt remains visible in reports.
 
 ## Verification recorded
 
-- Follow-up server suite: 909 tests passed; the separate query regression suite
+- Follow-up server suite: 920 tests passed; the separate query regression suite
   passed 278 tests, followed by server typecheck/build.
 - Web typecheck and source-contract suite passed during the refactor.
-- Full core verification passes the web production build/bundle budget and
-  server coverage, then fails the final complexity audit.
+- Full core verification passes typechecks, web tests, production build/bundle
+  budget, server coverage, and the final changed-code audit.
+- Desktop verification passes formatting, Clippy, and all 42 Rust tests.
 - Dead-code/boundary gate: zero unresolved imports, cycles, unused exports,
   unused dependencies, or boundary violations after cleanup.
 - Duplication remained approximately 2.2%, below the 3% ceiling.
@@ -93,7 +100,7 @@ changes were left untouched and excluded from these commits.
 
 Not performed in this pass: production deployment, live negative SSRF/provider
 smokes, authenticated cross-member ACL end-to-end scenarios, a fresh production
-migration/self-host upgrade test, or desktop Rust verification. No secrets or
+migration/self-host upgrade test. No secrets or
 real user content should be used as test fixtures.
 
 ## Source ownership after cleanup
