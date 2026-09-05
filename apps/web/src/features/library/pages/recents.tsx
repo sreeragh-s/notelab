@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { ChevronDown, ChevronRight, Database, FileText, Globe2Icon, Layers3Icon, Loader2, LockIcon, Plus, UsersIcon } from "@/shared/components/icons";
+import { BotIcon, ChevronDown, ChevronRight, Database, FileText, Globe2Icon, Layers3Icon, Loader2, LockIcon, Plus, UsersIcon } from "@/shared/components/icons";
 import { toast } from "sonner";
 
 import { Button } from "@/shared/ui/button";
@@ -73,6 +73,7 @@ import { useConnectivity, useOfflineManifest } from "@/features/offline/index";
 import { PageIconDisplay } from "@/features/pages/index";
 import { getApiErrorMessage } from "@/features/desktop/network/api";
 import { useCreateTeamspace, useTeamspaces, type Teamspace, type TeamspaceAccessMode } from "@zilobase/features/teamspaces";
+import { useAiAgentProfiles, useCreateAiAgentProfile } from "@zilobase/features/ai-chat";
 
 type HomepageView = LibraryView;
 
@@ -87,12 +88,13 @@ type HomepageRow = {
   id: string;
   isFavorite: boolean;
   isShared: boolean;
-  itemKind: "database" | "meeting" | "page";
+  itemKind: "agent" | "database" | "meeting" | "page";
   teamspaceId: string | null;
   lastVisitedAt: string | null;
   metadata: Page["metadata"] | null;
   name: string;
   openDatabaseId: string | null;
+  openAgentId: string | null;
   openMeetingId: string | null;
   openPageId: string | null;
   parentRowId: string | null;
@@ -170,6 +172,7 @@ export default function RecentsPage({
     useWorkspaceMeetings(mode === "home" ? workspaceId : null);
   const { data: teamspaces = [], isLoading: teamspacesLoading } =
     useTeamspaces(mode === "home" ? workspaceId : null);
+  const { data: customAgents = [] } = useAiAgentProfiles({ enabled: mode === "home" });
   const {
     openDatabaseSidePane,
     renderedSidePaneDatabaseId,
@@ -223,6 +226,7 @@ export default function RecentsPage({
       const builtRows = buildHomepageRows(
         navigation ?? { databases: [], pages: [], placements: [] },
         meetingsPayload?.meetings ?? [],
+        customAgents,
         mode,
       );
       if (!offlineMode) return builtRows;
@@ -242,7 +246,7 @@ export default function RecentsPage({
           (row.openDatabaseId && databaseIds.has(row.openDatabaseId)),
       );
     },
-    [downloadedItems, meetingsPayload?.meetings, navigation, mode, offlineMode],
+    [customAgents, downloadedItems, meetingsPayload?.meetings, navigation, mode, offlineMode],
   );
   const pageTitle = mode === "trash" ? "Trash" : "Library";
 
@@ -356,7 +360,8 @@ export default function RecentsPage({
       getMergedNameColumnConfig(current, config as DatabaseNameColumnConfig),
     );
   };
-  const isCreating = createPageMutation.isPending || createDatabase.isPending;
+  const createAgent = useCreateAiAgentProfile();
+  const isCreating = createPageMutation.isPending || createDatabase.isPending || createAgent.isPending;
 
   const createPage = async () => {
     if (!workspaceId || createPageMutation.isPending) {
@@ -400,12 +405,25 @@ export default function RecentsPage({
     }
   };
 
+  const createCustomAgent = async () => {
+    try {
+      const payload = await createAgent.mutateAsync({ name: "Untitled agent" });
+      await navigate({ params: { agentId: payload.agent.id }, to: "/agents/$agentId" });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not create agent.");
+    }
+  };
+
   const openHomepagePage = (pageId: string) => {
     const row = rows.find(
       (candidate) => candidate.id === pageId || candidate.openPageId === pageId,
     );
 
     if (row) {
+      if (row.openAgentId) {
+        void navigate({ params: { agentId: row.openAgentId }, to: "/agents/$agentId" });
+        return;
+      }
       if (row.openDatabaseId) {
         openDatabaseSidePane(row.openDatabaseId);
         return;
@@ -609,6 +627,10 @@ export default function RecentsPage({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuItem onSelect={() => void createCustomAgent()}>
+                              <BotIcon />
+                              <span>Agent</span>
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onSelect={() => void createStandaloneDatabase()}
                             >
@@ -781,6 +803,7 @@ function TeamspacesLibraryTable({
 }
 
 function getHomepageRowType(row: HomepageRow) {
+  if (row.itemKind === "agent") return "Agent";
   if (row.itemKind === "database") return "Database";
   if (row.itemKind === "meeting") return "Meeting";
   return "Page";
@@ -983,6 +1006,7 @@ function buildHomepagePayload({
 function buildHomepageRows(
   navigation: PageNavigationPayload,
   meetings: MeetingListItem[],
+  agents: Array<{ id: string; lastVisitedAt?: string | null; name: string; ownerUserId: string; status: "active" | "archived"; updatedAt: string }>,
   mode: RecentsMode,
 ): HomepageRow[] {
   const { databases: databaseRecords, pages, placements } = navigation;
@@ -1038,6 +1062,7 @@ function buildHomepageRows(
           metadata: page.metadata ?? null,
           name: page.name || "Untitled",
           openDatabaseId: null,
+          openAgentId: null,
           openMeetingId: null,
           openPageId: page.id,
           parentRowId:
@@ -1082,6 +1107,7 @@ function buildHomepageRows(
           metadata: databaseEmoji ? { emoji: databaseEmoji } : null,
           name: database.name || "Untitled",
           openDatabaseId: database.id,
+          openAgentId: null,
           openMeetingId: null,
           openPageId: database.pageId,
           parentRowId:
@@ -1095,6 +1121,30 @@ function buildHomepageRows(
         };
       }),
     ...(mode === "home" ? buildMeetingRows(meetings, pagesById) : []),
+    ...(mode === "home" ? agents.filter((agent) => agent.status === "active").map((agent, index): HomepageRow => ({
+      createdAt: agent.updatedAt,
+      createdBy: "Workspace member",
+      deletedAt: "",
+      deletedBy: "",
+      iconKind: "page",
+      id: `agent:${agent.id}`,
+      isFavorite: false,
+      isShared: false,
+      itemKind: "agent",
+      lastVisitedAt: agent.lastVisitedAt ?? agent.updatedAt,
+      metadata: { emoji: "🤖" },
+      name: agent.name || "Untitled agent",
+      openAgentId: agent.id,
+      openDatabaseId: null,
+      openMeetingId: null,
+      openPageId: null,
+      parentRowId: null,
+      position: Number.MAX_SAFE_INTEGER - agents.length + index,
+      source: "",
+      sourcePage: null,
+      teamspaceId: null,
+      updatedAt: agent.updatedAt,
+    })) : []),
   ];
 }
 
@@ -1120,6 +1170,7 @@ function buildMeetingRows(
       metadata: { emoji: meeting.emoji ?? DEFAULT_MEETING_ITEM_ICON },
       name: meeting.title?.trim() || "Untitled meeting",
       openDatabaseId: null,
+      openAgentId: null,
       openMeetingId: meeting.id,
       openPageId: null,
       parentRowId: null,

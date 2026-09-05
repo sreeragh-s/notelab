@@ -6,6 +6,7 @@ import {
   ChevronsRightIcon,
   ChevronsUpDownIcon,
   CircleAlertIcon,
+  BotIcon,
   CloudCheckIcon,
   Globe2Icon,
   LinkIcon,
@@ -65,6 +66,7 @@ import {
 } from "@/shared/ui/select";
 import { useSession } from "@zilobase/features/auth";
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
+import { useAiAgentProfiles } from "@zilobase/features/ai-chat";
 import {
   useCreatePage,
   useDeletePage,
@@ -864,6 +866,7 @@ function ItemShareDropdownContent({
   const { data: databasePayload } = useDatabase(databaseId);
   const { data: databaseAccessPayload } = useDatabaseAccess(databaseId);
   const { data: targets } = usePageAccessTargets(workspaceId);
+  const { data: customAgents = [] } = useAiAgentProfiles();
   const { data: personTargets } = usePagePersonAccessTargets(pageId, {
     enabled: Boolean(pageId && !databaseId),
   });
@@ -930,8 +933,15 @@ function ItemShareDropdownContent({
       });
     }
 
+    for (const agent of customAgents) {
+      map.set(`agent:${agent.id}`, {
+        detail: "Custom Agent",
+        label: agent.name || "Untitled agent",
+      });
+    }
+
     return map;
-  }, [personTargets?.guests, targets?.members]);
+  }, [customAgents, personTargets?.guests, targets?.members]);
   const guestUserIds = React.useMemo(
     () => new Set((personTargets?.guests ?? []).map((guest) => guest.id)),
     [personTargets?.guests],
@@ -954,6 +964,7 @@ function ItemShareDropdownContent({
       ? "Request"
       : "Invite";
   const selectedTarget = targetValue ? targetByKey.get(targetValue) : null;
+  const selectedTargetIsAgent = targetValue.startsWith("agent:");
   const publicUrl =
     typeof window === "undefined"
       ? ""
@@ -1121,7 +1132,7 @@ function ItemShareDropdownContent({
                 <Command>
                   <CommandInput placeholder="Search by name or email..." />
                   <CommandList>
-                    <CommandEmpty>No members found.</CommandEmpty>
+                    <CommandEmpty>No members or agents found.</CommandEmpty>
                     <CommandGroup>
                       {shareableMembers.map((member) => {
                         const value: ShareTargetValue = `user:${member.id}`;
@@ -1149,6 +1160,31 @@ function ItemShareDropdownContent({
                         );
                       })}
                     </CommandGroup>
+                    {customAgents.length > 0 ? (
+                      <CommandGroup heading="Custom Agents">
+                        {customAgents.map((agent) => {
+                          const value: ShareTargetValue = `agent:${agent.id}`;
+                          return (
+                            <CommandItem
+                              data-checked={targetValue === value}
+                              key={agent.id}
+                              onSelect={() => {
+                                setTargetValue(value);
+                                if (nextAccessLevel === "full") setNextAccessLevel("edit");
+                                setTargetPickerOpen(false);
+                              }}
+                              value={`${agent.name} custom agent`}
+                            >
+                              <BotIcon />
+                              <div className="min-w-0">
+                                <div className="truncate font-medium">{agent.name || "Untitled agent"}</div>
+                                <div className="truncate text-xs text-content-secondary">Independent agent principal</div>
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    ) : null}
                   </CommandList>
                 </Command>
               </PopoverContent>
@@ -1169,7 +1205,7 @@ function ItemShareDropdownContent({
                   <SelectItem value="comment">Comment</SelectItem>
                 ) : null}
                 <SelectItem value="edit">Edit</SelectItem>
-                <SelectItem value="full">Full</SelectItem>
+                {!selectedTargetIsAgent ? <SelectItem value="full">Full</SelectItem> : null}
               </SelectContent>
             </Select>
             <Button
@@ -1186,6 +1222,12 @@ function ItemShareDropdownContent({
               Share
             </Button>
           </div>
+
+          {selectedTargetIsAgent ? (
+            <div className="rounded-md bg-feedback-warning-background px-3 py-2 text-xs text-feedback-warning-text">
+              Agent access is independent from human access. People who can use this agent may receive information from this resource even when they cannot open it directly.
+            </div>
+          ) : null}
 
           {!isDatabase && canManage && isWorkspaceMember ? (
             <div className="grid gap-2 rounded-md border p-3">

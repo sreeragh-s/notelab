@@ -387,6 +387,17 @@ export async function replacePageContent(input: {
   await replacePageContentInHocuspocus(hocuspocus, input);
 }
 
+export async function appendPageComment(input: {
+  author: { email: string | null; id: string; image: string | null; name: string | null };
+  body: string;
+  env: RuntimeEnv;
+  pageId: string;
+}) {
+  const adapter = getRuntimeAdapter();
+  if (adapter.applyPageCommentUpdate) return adapter.applyPageCommentUpdate(input);
+  return appendPageCommentInHocuspocus(getDefaultCollaborationHocuspocus(input.env), input);
+}
+
 export async function replaceMeetingSummary(input: {
   content: unknown;
   env: RuntimeEnv;
@@ -554,6 +565,58 @@ export async function replacePageContentInHocuspocus(
   }
 }
 
+export async function appendPageCommentInHocuspocus(
+  hocuspocus: Hocuspocus<CollaborationContext>,
+  input: {
+    author: { email: string | null; id: string; image: string | null; name: string | null };
+    body: string;
+    pageId: string;
+  },
+) {
+  const direct = await hocuspocus.openDirectConnection(
+    documentNameForPage(input.pageId),
+    {
+      exp: Date.now() + TICKET_TTL_MS,
+      pageId: input.pageId,
+      scope: "read-write",
+      userId: input.author.id,
+      workspaceId: "server",
+    },
+  );
+  const threadId = crypto.randomUUID();
+  const messageId = crypto.randomUUID();
+  const now = new Date().toISOString();
+  try {
+    await direct.transact((document) => {
+      const threads = document.getMap<Y.Map<unknown>>(COMMENT_THREADS_FIELD);
+      const thread = new Y.Map<unknown>();
+      const messages = new Y.Map<Y.Map<unknown>>();
+      const message = new Y.Map<unknown>();
+      message.set("id", messageId);
+      message.set("author", input.author);
+      message.set("body", input.body);
+      message.set("createdAt", now);
+      message.set("editedAt", null);
+      message.set("reactions", new Y.Map());
+      messages.set(messageId, message);
+      thread.set("id", threadId);
+      thread.set("kind", "page");
+      thread.set("quote", null);
+      thread.set("rootMessageId", messageId);
+      thread.set("createdBy", input.author);
+      thread.set("createdAt", now);
+      thread.set("updatedAt", now);
+      thread.set("resolvedAt", null);
+      thread.set("resolvedBy", null);
+      thread.set("messages", messages);
+      threads.set(threadId, thread);
+    });
+  } finally {
+    await direct.disconnect();
+  }
+  return { messageId, threadId };
+}
+
 async function loadDocument(documentName: string, env: RuntimeEnv) {
   const pageId = pageIdFromDocumentName(documentName);
   const meetingId = meetingIdFromDocumentName(documentName);
@@ -616,8 +679,13 @@ async function storeDocument(
     ProsemirrorTransformer.fromYdoc(document, FIELD_NAME),
   );
 
-  await withDatabase(env, () =>
-    db.transaction(async (tx) => {
+  const previousState = await withDatabase(env, async () => {
+    const [previous] = await db
+      .select({ state: pageCollaborationDocument.state })
+      .from(pageCollaborationDocument)
+      .where(eq(pageCollaborationDocument.pageId, pageId))
+      .limit(1);
+    await db.transaction(async (tx) => {
       const [existing] = await tx
         .select({ content: page.content })
         .from(page)
@@ -643,8 +711,22 @@ async function storeDocument(
           updatedAt: now,
         })
         .where(eq(page.id, pageId));
-    }),
-  );
+    });
+    return previous?.state ? new Uint8Array(previous.state) : null;
+  });
+  try {
+    const { dispatchPageCommentAgentTriggers } = await import("../ai/agents/agent-trigger-service");
+    await withDatabase(env, () => dispatchPageCommentAgentTriggers(env, {
+      nextState: new Uint8Array(state),
+      pageId,
+      previousState,
+    }));
+  } catch (error) {
+    console.error(JSON.stringify({
+      error: error instanceof Error ? error.name : "UnknownError",
+      event: "custom_agent_comment_trigger_dispatch_failed",
+    }));
+  }
 }
 
 async function getMeetingPageId(meetingId: string) {

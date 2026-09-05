@@ -11,6 +11,7 @@ describe("background task v1", () => {
   it("routes every kind to an isolated lane", () => {
     expect(backgroundTaskLane("automation.event_window")).toBe("fast");
     expect(backgroundTaskLane("automation.run")).toBe("automation");
+    expect(backgroundTaskLane("agent.run")).toBe("automation");
     expect(backgroundTaskLane("ai.job")).toBe("ai");
     expect(backgroundTaskLane("mail.index")).toBe("mail");
   });

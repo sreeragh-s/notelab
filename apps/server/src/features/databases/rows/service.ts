@@ -500,7 +500,21 @@ export async function createDatabaseRowService(input: {
         );
 
         return {
-          automationFacts: targetResult.automationFacts,
+          automationFacts: [
+            ...targetResult.automationFacts,
+            {
+              actorId: input.userId,
+              ...(input.automationRunId
+                ? { automationRunId: input.automationRunId }
+                : {}),
+              changedValues: [],
+              dataSourceId: sourceDataSourceId,
+              origin: input.origin ?? "user",
+              pageId: sourceRow.pageId,
+              rowRemoved: true,
+              rowId: sourceRowId,
+            },
+          ],
           mutations: [
             {
               changed: [...targetChanged],

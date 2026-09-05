@@ -86,14 +86,25 @@ import {
   summarizeMessagesForDebug,
 } from "../../model/chat-runtime-model";
 
+export type PendingInitialChatSubmission = {
+  body: Record<string, unknown>;
+  message: {
+    files: PromptInputMessage["files"];
+    text: string;
+  };
+  threadId: string;
+};
+
 type ChatbotProps = {
   databaseId?: string | null;
-  draftAgentDescription?: string | null;
-  draftAgentName?: string | null;
-  draftAgentProfileId?: string | null;
   isSidebar?: boolean;
   onDraftDirtyChange?: (dirty: boolean) => void;
+  onInitialSubmissionConsumed?: () => void;
+  onInitialSubmissionPrepared?: (
+    submission: PendingInitialChatSubmission,
+  ) => void;
   onThreadCreated?: (threadId: string) => void;
+  pendingInitialSubmission?: PendingInitialChatSubmission | null;
   threadId: string | null;
   pageId?: string | null;
 };
@@ -147,8 +158,8 @@ const Chatbot = (props: ChatbotProps) => {
     return (
       <ChatbotConversationController
         {...props}
-        initialAgentProfileId={props.draftAgentProfileId ?? null}
-        initialAgentProfileName={props.draftAgentName ?? null}
+        initialAgentProfileId={null}
+        initialAgentProfileName={null}
         initialMessages={emptyAgentChatMessages}
         initialFeedback={[]}
         key={initialMessagesKey}
@@ -182,12 +193,14 @@ const Chatbot = (props: ChatbotProps) => {
 
 const ChatbotConversationController = ({
   databaseId = null,
-  draftAgentDescription = null,
   initialFeedback,
   initialMessages,
   isSidebar = false,
   onDraftDirtyChange,
+  onInitialSubmissionConsumed,
+  onInitialSubmissionPrepared,
   onThreadCreated,
+  pendingInitialSubmission,
   threadId,
   pageId = null,
   initialAgentProfileId,
@@ -201,6 +214,7 @@ const ChatbotConversationController = ({
   const rootRef = useRef<HTMLDivElement>(null);
   const previousMessageCountRef = useRef(0);
   const threadCreationPromiseRef = useRef<Promise<string> | null>(null);
+  const consumedInitialSubmissionRef = useRef<string | null>(null);
   const [model, setModel] = useState<string>("auto");
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
   const [text, setText] = useState<string>("");
@@ -514,6 +528,29 @@ const ChatbotConversationController = ({
     userId,
     workspaceId,
   });
+
+  useEffect(() => {
+    if (
+      !pendingInitialSubmission ||
+      pendingInitialSubmission.threadId !== threadId ||
+      !isAgentReady ||
+      consumedInitialSubmissionRef.current === pendingInitialSubmission.threadId
+    ) {
+      return;
+    }
+
+    consumedInitialSubmissionRef.current = pendingInitialSubmission.threadId;
+    onInitialSubmissionConsumed?.();
+    void sendMessage(pendingInitialSubmission.message, {
+      body: pendingInitialSubmission.body,
+    });
+  }, [
+    isAgentReady,
+    onInitialSubmissionConsumed,
+    pendingInitialSubmission,
+    sendMessage,
+    threadId,
+  ]);
 
   useAiDevMessageTrace(messages, devTrace.record);
 
@@ -955,9 +992,7 @@ const ChatbotConversationController = ({
         }
 
         threadCreationPromiseRef.current = createThread
-          .mutateAsync({
-            agentProfileId: initialAgentProfileId,
-          })
+          .mutateAsync({})
           .then((response) => response.thread.id);
 
         try {
@@ -1032,6 +1067,22 @@ const ChatbotConversationController = ({
           has_attachments: uploadedFiles.length > 0,
           has_page_context: requestBody.contextRefs.length > 0,
         });
+
+        if (!threadId && onInitialSubmissionPrepared) {
+          void queryClient.invalidateQueries({
+            queryKey: aiChatThreadsQueryKey(workspaceId),
+          });
+          onInitialSubmissionPrepared({
+            body: requestBody,
+            message: {
+              files: uploadedFiles.map((file) => file.part),
+              text: content.trim() || "Review the attached file(s).",
+            },
+            threadId: targetThreadId,
+          });
+          return;
+        }
+
         await sendMessage(
           {
             files: uploadedFiles.map((file) => file.part),
@@ -1059,13 +1110,13 @@ const ChatbotConversationController = ({
       getEditorHandle,
       isComposerReady,
       liveDebugger.reset,
+      onInitialSubmissionPrepared,
       onThreadCreated,
       pageContext,
       queryClient,
       sendMessage,
       threadId,
       workspaceId,
-      initialAgentProfileId,
     ],
   );
 
@@ -1288,9 +1339,9 @@ const ChatbotConversationController = ({
               {getGreeting(session?.user?.name)}
             </h1>
             <p className="mt-1 text-sm text-content-secondary">
-              {draftAgentDescription?.trim() || (initialAgentProfileName
+              {initialAgentProfileName
                 ? `Chat privately with ${initialAgentProfileName}.`
-                : "Search, create, and work across your Zilobase workspace.")}
+                : "Search, create, and work across your Zilobase workspace."}
             </p>
           </div>
           <div className="flex max-w-2xl flex-wrap justify-center gap-2">

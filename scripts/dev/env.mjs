@@ -62,6 +62,7 @@ export async function ensureDevelopmentEnvironment(options = {}) {
     generatedEnvironmentFiles.worker,
     () => profileEnvironment(localProfiles.worker, dependencies),
   );
+  await migrateGeneratedEmailSender();
   await ensureGeneratedFile(generatedEnvironmentFiles.kubernetes, () => ({
     COMMUNITY_BETTER_AUTH_SECRET: secret(48),
     COMMUNITY_BOOTSTRAP_TOKEN: secret(48),
@@ -160,7 +161,7 @@ export function profileEnvironment(profile, dependencies) {
     AUTOMATION_WEBHOOKS_ENABLED: "false",
     AUTOMATION_SLACK_ENABLED: "false",
     MAIL_ENABLED: "false",
-    EMAIL_FROM: "Zilobase <hello@zilobase.local>",
+    EMAIL_FROM: "Zilobase <no-reply@zilobase.com>",
     AI_DEV_TOOLS_ENABLED: "true",
     AI_AGENT_DAILY_USAGE_LIMITS_ENABLED: "false",
     ZILOBASE_OPERATIONS_TOKEN: secret(32),
@@ -209,6 +210,19 @@ export async function migrateGeneratedNodeEnvironment(
   values.ZILOBASE_DEMO_ENABLED = "false";
   await writeFile(filename, serializeEnv(values), { mode: 0o600 });
   return true;
+}
+
+async function migrateGeneratedEmailSender() {
+  for (const filename of [
+    generatedEnvironmentFiles.node,
+    generatedEnvironmentFiles.worker,
+  ]) {
+    if (!(await exists(filename))) continue;
+    const values = await readSimpleEnv(filename);
+    if (values.EMAIL_FROM !== "Zilobase <hello@zilobase.local>") continue;
+    values.EMAIL_FROM = "Zilobase <no-reply@zilobase.com>";
+    await writeFile(filename, serializeEnv(values), { mode: 0o600 });
+  }
 }
 
 async function ensureGeneratedFile(filename, values, options = {}) {

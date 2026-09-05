@@ -1,12 +1,18 @@
 export {
+  canAgentSnapshotAccessDatabase,
+  canAgentSnapshotAccessPage,
   canAccessDatabaseInWorkspace,
   canAccessDatabaseRecord,
+  canAgentAccessDatabase,
+  canAgentAccessPage,
   canAccessPage,
   canAccessPageInWorkspace,
   getAccessiblePageIds,
   getEffectiveDatabaseAccessForRecord,
+  getEffectiveDatabaseAccessForAgent,
   getEffectiveDatabaseAccessInWorkspace,
   getEffectivePageAccessForUsers,
+  getEffectivePageAccessForAgent,
   getEffectivePageAccessInWorkspace,
   getEffectiveTeamspaceAccessInWorkspace,
   getMembership,
@@ -24,3 +30,4 @@ export {
   type AccessLevel,
   type DatabaseAccessRecord,
 } from "./access";
+export type { AgentPermissionSnapshotGrant } from "./access";

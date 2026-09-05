@@ -58,6 +58,12 @@ export type ServerRuntimeAdapter = {
     pageId: string;
     userId: string;
   }): Promise<void>;
+  applyPageCommentUpdate?(input: {
+    author: { email: string | null; id: string; image: string | null; name: string | null };
+    body: string;
+    env: RuntimeEnv;
+    pageId: string;
+  }): Promise<{ messageId: string; threadId: string }>;
   applyMeetingSummaryUpdate?(input: {
     content: unknown;
     env: RuntimeEnv;

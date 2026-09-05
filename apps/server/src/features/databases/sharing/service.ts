@@ -2,7 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 
 import { normalizeAccessLevel } from "../../access";
 import { db } from "../../../infrastructure/database";
-import { databaseAccess, member, team } from "../../../infrastructure/database/schema";
+import { aiAgentProfile, databaseAccess, member, team } from "../../../infrastructure/database/schema";
 import { activeMembershipCondition } from "../../memberships";
 import { requireDatabaseAccess } from "../access/database-access";
 import { ServiceMutationError } from "../../../shared/errors/service-mutation-error";
@@ -12,6 +12,7 @@ import {
   enqueueNavigationInvalidation,
   publishCommittedNavigationInvalidation,
 } from "../../workspaces/navigation-realtime/outbox";
+import { getAgentProfileRole } from "../../ai/agents/agent-profile-service";
 
 export async function listDatabaseAccessRulesService(input: {
   databaseId: string;
@@ -57,10 +58,11 @@ export async function upsertDatabaseAccessRuleService(input: {
   if (
     targetType !== "public" &&
     targetType !== "user" &&
-    targetType !== "team"
+    targetType !== "team" &&
+    targetType !== "agent"
   ) {
     throw new ServiceMutationError(
-      "targetType must be public, user, or team",
+      "targetType must be public, user, team, or agent",
       400,
     );
   }
@@ -74,6 +76,10 @@ export async function upsertDatabaseAccessRuleService(input: {
       "accessLevel must be view, edit, or full",
       400,
     );
+  }
+
+  if (targetType === "agent" && normalizedAccessLevel === "full") {
+    throw new ServiceMutationError("agent access must be view or edit", 400);
   }
 
   if (
@@ -93,6 +99,13 @@ export async function upsertDatabaseAccessRuleService(input: {
     }
   }
 
+  const agentRole = targetType === "agent"
+    ? await getAgentProfileRole({
+        profileId: targetId,
+        userId: input.userId,
+        workspaceId: existing.workspaceId,
+      })
+    : null;
   const [target] =
     targetType === "public"
       ? [{ id: "*" }]
@@ -108,7 +121,8 @@ export async function upsertDatabaseAccessRuleService(input: {
               ),
             )
             .limit(1)
-        : await db
+        : targetType === "team"
+          ? await db
             .select({ id: team.id })
             .from(team)
             .where(
@@ -117,7 +131,20 @@ export async function upsertDatabaseAccessRuleService(input: {
                 eq(team.id, targetId),
               ),
             )
-            .limit(1);
+            .limit(1)
+          : agentRole
+            ? await db
+                .select({ id: aiAgentProfile.id })
+                .from(aiAgentProfile)
+                .where(
+                  and(
+                    eq(aiAgentProfile.id, targetId),
+                    eq(aiAgentProfile.workspaceId, existing.workspaceId),
+                    eq(aiAgentProfile.status, "active"),
+                  ),
+                )
+                .limit(1)
+            : [];
 
   if (!target) {
     throw new ServiceMutationError("Target not found", 404);

@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronUp,
   ChevronsRight,
+  BotIcon,
   Layers3Icon,
   LockIcon,
   MailIcon,
@@ -34,6 +35,7 @@ import { SidebarTrigger, useSidebar } from "@/shared/ui/sidebar";
 import { libraryViewIcons, mailViewIcons } from "@/features/sidebar";
 import { libraryViewLabels, mailViewLabels } from "@/features/sidebar";
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
+import { useAiAgentProfile } from "@zilobase/features/ai-chat";
 import { useDatabase } from "@zilobase/features/databases";
 import { useMeeting } from "@zilobase/features/meetings";
 import { useTeamspaces } from "@zilobase/features/teamspaces";
@@ -342,6 +344,7 @@ function AppBreadcrumbs({ pathname }: { pathname: string }) {
   const pageId = getPageId(pathname);
   const databaseId = getDatabaseId(pathname);
   const meetingId = getMeetingId(pathname);
+  const agentId = getAgentId(pathname);
 
   if (pageId) {
     return <PageBreadcrumb pageId={pageId} />;
@@ -353,6 +356,10 @@ function AppBreadcrumbs({ pathname }: { pathname: string }) {
 
   if (meetingId) {
     return <MeetingBreadcrumb meetingId={meetingId} />;
+  }
+
+  if (agentId) {
+    return <AgentBreadcrumb agentId={agentId} />;
   }
 
   if (pathname.startsWith("/settings")) {
@@ -469,6 +476,27 @@ function AppBreadcrumbs({ pathname }: { pathname: string }) {
       </BreadcrumbList>
     </Breadcrumb>
   );
+}
+
+function AgentBreadcrumb({ agentId }: { agentId: string }) {
+  const { data: agent } = useAiAgentProfile(agentId);
+  return (
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbPage className="gap-1.5">
+            <BotIcon aria-hidden="true" className="size-4 shrink-0" />
+            <span className="line-clamp-1">{agent?.name ?? "Custom Agent"}</span>
+          </BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
+}
+
+function getAgentId(pathname: string) {
+  const match = pathname.match(/^\/agents\/([^/]+)$/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
 function PageBreadcrumb({ pageId }: { pageId: string }) {

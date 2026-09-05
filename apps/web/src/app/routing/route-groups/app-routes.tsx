@@ -12,6 +12,11 @@ export const appRoutes = [
   }),
   createRoute({
     getParentRoute: () => appRoute,
+    path: "/agents/$agentId",
+    component: lazyRouteComponent(() => import("@/features/ai/pages/custom-agent")),
+  }),
+  createRoute({
+    getParentRoute: () => appRoute,
     path: "/canvas",
     component: lazyRouteComponent(() => import("@/features/canvas/pages/canvas")),
   }),

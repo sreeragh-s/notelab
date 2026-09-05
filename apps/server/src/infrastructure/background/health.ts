@@ -35,6 +35,8 @@ export async function getBackgroundOperationalSnapshot(env: RuntimeEnv) {
       union all select 'fast', next_attempt_at from in_product_notification_outbox where status = 'pending'
       union all select 'automation', available_at from database_automation_run where status = 'queued'
       union all select 'automation', lease_expires_at from database_automation_run where status = 'running'
+      union all select 'automation', available_at from ai_agent_run where status = 'queued'
+      union all select 'automation', lease_expires_at from ai_agent_run where status = 'running'
       union all select 'ai', available_at from ai_job where status = 'queued'
       union all select 'ai', lease_expires_at from ai_job where status = 'running'
       union all select 'mail', next_attempt_at from mail_database_sync_outbox where status in ('pending', 'retry')
@@ -57,6 +59,7 @@ export async function getBackgroundOperationalSnapshot(env: RuntimeEnv) {
     with leases(expires_at) as (
       select lease_expires_at from database_automation_event_window where status = 'processing'
       union all select lease_expires_at from database_automation_run where status = 'running'
+      union all select lease_expires_at from ai_agent_run where status = 'running'
       union all select lease_expires_at from ai_job where status = 'running'
       union all select lease_expires_at from mail_database_sync_outbox where status = 'processing'
     )

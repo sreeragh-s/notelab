@@ -1,20 +1,19 @@
-# Custom Agents and MCP connectors
+# MCP connectors
 
-Custom Agents are shareable Ask AI profiles with scoped instructions and remote
-Model Context Protocol (MCP) tools. Personal Ask AI can also own private MCP
-connections scoped to one member and workspace. The feature is disabled by
-default and does not change existing threads, native page permissions, or native
-database permissions.
+Universal Ask AI owns private MCP connections scoped to one member and
+workspace. Standalone Custom Agents may own separate delegated connections.
+The two connector sets are never merged. The feature is disabled by default and
+does not change native page or database permissions.
 
 ## Product contract
 
 - Agent roles are `owner`, `editor`, and `user`. Only active workspace members
   can use an agent; guests are excluded.
-- A thread stores one nullable agent profile ID at creation. It cannot be changed
-  later and turns resolve the profile from the stored thread.
-- Conversations and staged external data belong to the invoking user. Editors
-  receive sanitized operational activity, never prompts, arguments, credentials,
-  raw responses, or another member's conversation.
+- New Ask AI threads are always personal. Older agent-bound Ask AI threads are
+  retained as private, read-only legacy history.
+- A Custom Agent run is bound to an immutable agent revision and an independent
+  agent-principal permission snapshot. Its shared builder/run timeline is not an
+  Ask AI thread.
 - Each connection belongs either to Personal Ask AI for one workspace member or
   to one custom agent. Personal connections are private and are never inherited
   by custom agents. Agent users invoke the agent connection's delegated
@@ -59,7 +58,7 @@ same-zone requests from bypassing the public front door.
 | OAuth mix-up or replay | PKCE S256, hashed single-use state, exact callback, issuer-bound registration, resource indicators, audience isolation |
 | Tool schema replacement | Immutable discovery snapshot and hash; live schema check before approved execution; changed tools quarantined |
 | Prompt injection | External content is untrusted data; dynamic tools are resolved before the model call and cannot modify policy or grant permissions |
-| Confused deputy | Stored thread profile, per-turn membership checks, delegated-credential disclosure, separate authenticator and invoking-user audit identity |
+| Confused deputy | Exact personal-thread or agent-run scope, per-operation membership checks, delegated-credential disclosure, separate authenticator and invoking-user audit identity |
 | Accidental/destructive writes | Local effect classification, always-ask default, workspace write kill switch, single-use encrypted approvals, no retry after transmission |
 | Ambiguous provider result | `outcome_unknown` is recorded when a write may have been accepted without a receipt |
 | Import duplication | Stable reserved database/property/row/page IDs, lease-aware resumable chunks, existing-row checks |
@@ -68,10 +67,9 @@ same-zone requests from bypassing the public front door.
 MCP annotations are hints only. Zilobase stores the effective `read`, `write`, or
 `unknown` classification, and an unknown tool or descriptor fails closed.
 
-The Ask AI workspace exposes Personal Ask AI and accessible custom agents in a
-context rail. New chats bind immutably to the selected context. History remains
-available from the header and connector/application catalogs appear only in the
-contextual Settings side panel.
+Personal connectors are configured in Universal Ask AI settings. Agent
+connectors are configured only in `/agents/:agentId` under Tools & Access.
+Connector catalogs do not appear as Ask AI landing-page suggestions.
 
 ## Configuration
 
@@ -88,6 +86,10 @@ AI_MCP_ENABLED=false
 AI_MCP_CUSTOM_SERVERS_ENABLED=false
 AI_MCP_EXTERNAL_WRITES_ENABLED=false
 AI_MCP_EXECUTION_DISABLED=false
+AI_CUSTOM_AGENTS_ENABLED=false
+AI_CUSTOM_AGENT_TRIGGERS_ENABLED=false
+AI_CUSTOM_AGENT_EXTERNAL_EVENTS_ENABLED=false
+AI_CUSTOM_AGENT_EXECUTION_DISABLED=false
 ```
 
 Set `MCP_CLIENT_METADATA_URL` to the public
@@ -112,8 +114,9 @@ a write before it can run.
 
 ## Operations and rollout
 
-Apply migrations `0078_mcp_connectors.sql` and
-`0079_scoped_mcp_connections.sql`, configure the encryption keyring, and
+Apply migrations `0078_mcp_connectors.sql`,
+`0079_scoped_mcp_connections.sql`, and
+`0080_standalone_custom_agents.sql`; configure the encryption keyring; and
 keep execution disabled while testing local fixtures. Roll out catalog reads,
 one-time imports, approved custom servers, then automatic writes. Figma stays
 visible but unavailable until Zilobase is approved as a supported remote MCP

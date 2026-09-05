@@ -2,6 +2,7 @@ import { eq, inArray, min, sql } from "drizzle-orm";
 
 import { AI_JOB_HANDLERS } from "../../features/ai/jobs/ai-job-handlers";
 import { runAiJobBatch } from "../../features/ai/jobs/ai-jobs";
+import { drainAgentRuns } from "../../features/ai/agents/agent-run-service";
 import { drainDatabaseAutomationEventWindows } from "../../features/databases/automations/evaluator";
 import { drainDatabaseAutomationRuns } from "../../features/databases/automations/run-engine";
 import { drainDatabaseRealtimeOutbox } from "../../features/databases/realtime/outbox";
@@ -13,6 +14,7 @@ import { type RuntimeEnv } from "../../shared/config/config";
 import { db, createDbClientForUrl, runWithDbEnv } from "../../infrastructure/database";
 import {
   aiJob,
+  aiAgentRun,
   databaseAutomationEventWindow,
   databaseAutomationRun,
   databaseRealtimeOutbox,
@@ -78,7 +80,10 @@ export function createNodeBackgroundCoordinator(env: RuntimeEnv) {
             drainInProductNotificationOutbox(env, { limit: concurrency * 8 }),
           ]);
         } else if (lane === "automation") {
-          await drainDatabaseAutomationRuns(env, { limit: concurrency, workerId: `${workerId}:automation` });
+          await Promise.allSettled([
+            drainDatabaseAutomationRuns(env, { limit: concurrency, workerId: `${workerId}:automation` }),
+            drainAgentRuns(env, { limit: concurrency, workerId: `${workerId}:agent` }),
+          ]);
         } else if (lane === "ai") {
           await runAiJobBatch({ env, handlers: AI_JOB_HANDLERS, limit: concurrency, workerId: `${workerId}:ai` });
         } else {
@@ -244,8 +249,13 @@ function laneConcurrency(env: RuntimeEnv, lane: BackgroundLane) {
 
 async function nextLaneDueAt(lane: BackgroundLane) {
   if (lane === "automation") {
-    return (await db.select({ value: min(databaseAutomationRun.availableAt) }).from(databaseAutomationRun)
-      .where(eq(databaseAutomationRun.status, "queued")))[0]?.value ?? null;
+    const [automation, agent] = await Promise.all([
+      db.select({ value: min(databaseAutomationRun.availableAt) }).from(databaseAutomationRun)
+        .where(eq(databaseAutomationRun.status, "queued")),
+      db.select({ value: min(aiAgentRun.availableAt) }).from(aiAgentRun)
+        .where(eq(aiAgentRun.status, "queued")),
+    ]);
+    return earliestDate(automation[0]?.value, agent[0]?.value);
   }
   if (lane === "ai") {
     return (await db.select({ value: min(aiJob.availableAt) }).from(aiJob)
@@ -265,4 +275,9 @@ async function nextLaneDueAt(lane: BackgroundLane) {
   ]);
   return values.flatMap((rows) => rows.map((row) => row.value)).filter((value): value is Date => Boolean(value))
     .sort((left, right) => left.getTime() - right.getTime())[0] ?? null;
+}
+
+function earliestDate(...values: Array<Date | null | undefined>) {
+  const present = values.filter((value): value is Date => value instanceof Date);
+  return present.length ? new Date(Math.min(...present.map((value) => value.getTime()))) : null;
 }

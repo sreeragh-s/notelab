@@ -114,6 +114,20 @@ export async function generateMeetingSummary(input: {
     })
     .where(and(eq(meeting.id, record.id), isNull(meeting.deletedAt)))
     .returning();
+  if (updated?.status === "completed") {
+    try {
+      const { dispatchMeetingCompletedAgentTriggers } = await import("../ai/agents/agent-trigger-service");
+      await dispatchMeetingCompletedAgentTriggers(input.env, {
+        meetingId: record.id,
+        occurrenceKey: updated.summaryGeneratedAt?.toISOString() ?? updated.updatedAt.toISOString(),
+      });
+    } catch (error) {
+      console.error(JSON.stringify({
+        error: error instanceof Error ? error.name : "UnknownError",
+        event: "custom_agent_meeting_trigger_dispatch_failed",
+      }));
+    }
+  }
   return { meeting: updated, summary };
 }
 

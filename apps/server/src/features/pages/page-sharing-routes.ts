@@ -4,13 +4,14 @@ import { getAuthenticatedUser as requireUser } from "../../shared/http/auth";
 import { canAccessDatabaseInWorkspace, canAccessPageInWorkspace, getEffectivePageAccessInWorkspace, getEffectivePageAccessForUsers, getMembership, hasAccess, normalizeAccessLevel } from "../access";
 import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
 import { db } from "../../infrastructure/database";
-import { favorite, itemVisit, member, team, user as userTable, page, pageAccess, workspaceGuest } from "../../infrastructure/database/schema";
+import { aiAgentProfile, favorite, itemVisit, member, team, user as userTable, page, pageAccess, workspaceGuest } from "../../infrastructure/database/schema";
 import type { AppBindings } from "../../shared/types";
 import { readJsonBody } from "../../shared/http/request";
 import { activeMembershipCondition } from "../memberships";
 import { getPageTeamspaceSecurityPolicy } from "../teamspaces";
 import { enqueueNavigationInvalidation, publishCommittedNavigationInvalidation } from "../workspaces/navigation-realtime/outbox";
 import { enforceActiveWorkspace, getPage } from "./page-route-support";
+import { getAgentProfileRole } from "../ai/agents/agent-profile-service";
 
 export const pageSharingRoutes = new Hono<AppBindings>();
 export const pageVisitRoutes = new Hono<AppBindings>();
@@ -38,8 +39,8 @@ pageVisitRoutes.post("/item-visits", async (c) => {
     return c.json({ error: "workspaceId is required" }, 400);
   }
 
-  if (itemKind !== "page" && itemKind !== "database") {
-    return c.json({ error: "itemKind must be page or database" }, 400);
+  if (itemKind !== "page" && itemKind !== "database" && itemKind !== "agent") {
+    return c.json({ error: "itemKind must be page, database, or agent" }, 400);
   }
 
   if (typeof itemId !== "string" || itemId.length === 0) {
@@ -57,7 +58,9 @@ pageVisitRoutes.post("/item-visits", async (c) => {
   }
 
   const canView =
-    itemKind === "page"
+    itemKind === "agent"
+      ? Boolean(await getAgentProfileRole({ profileId: itemId, userId: user.id, workspaceId }))
+      : itemKind === "page"
       ? await canAccessPageInWorkspace(itemId, workspaceId, user.id, "view")
       : await canAccessDatabaseInWorkspace(
           itemId,
@@ -361,9 +364,10 @@ pageSharingRoutes.put("/:id/access", async (c) => {
   if (
     targetType !== "public" &&
     targetType !== "user" &&
-    targetType !== "team"
+    targetType !== "team" &&
+    targetType !== "agent"
   ) {
-    return c.json({ error: "targetType must be public, user, or team" }, 400);
+    return c.json({ error: "targetType must be public, user, team, or agent" }, 400);
   }
 
   if (typeof targetId !== "string" || targetId.length === 0) {
@@ -375,6 +379,10 @@ pageSharingRoutes.put("/:id/access", async (c) => {
       { error: "accessLevel must be view, comment, edit, or full" },
       400,
     );
+  }
+
+  if (targetType === "agent" && normalizedAccessLevel === "full") {
+    return c.json({ error: "agent access must be view, comment, or edit" }, 400);
   }
 
   if (targetType === "public") {
@@ -398,6 +406,25 @@ pageSharingRoutes.put("/:id/access", async (c) => {
 
   if (targetType === "public") {
     target = { id: "*" };
+  } else if (targetType === "agent") {
+    const role = await getAgentProfileRole({
+      profileId: targetId,
+      userId: requestUser.id,
+      workspaceId: record.workspaceId,
+    });
+    if (role) {
+      [target] = await db
+        .select({ id: aiAgentProfile.id })
+        .from(aiAgentProfile)
+        .where(
+          and(
+            eq(aiAgentProfile.id, targetId),
+            eq(aiAgentProfile.workspaceId, record.workspaceId),
+            eq(aiAgentProfile.status, "active"),
+          ),
+        )
+        .limit(1);
+    }
   } else if (targetType === "team") {
     [target] = await db
       .select({ id: team.id })

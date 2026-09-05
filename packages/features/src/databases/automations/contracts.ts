@@ -123,6 +123,7 @@ export const databaseAutomationMutationFactSchema = z
     origin: databaseMutationOriginSchema,
     pageId: stableIdSchema,
     rowAdded: z.boolean().optional(),
+    rowRemoved: z.boolean().optional(),
     rowId: stableIdSchema,
   })
   .strict()

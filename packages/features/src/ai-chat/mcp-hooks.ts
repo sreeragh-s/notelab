@@ -13,6 +13,15 @@ import type {
   McpServerCatalogEntry,
   McpWorkspacePolicy,
 } from "./mcp-contract"
+import type {
+  CustomAgentConversationMessage,
+  CustomAgentLegacyConversation,
+  CustomAgentResourceAccess,
+  CustomAgentRevision,
+  CustomAgentRun,
+  CustomAgentRunEvent,
+  CustomAgentTrigger,
+} from "./custom-agent-contract"
 
 export const aiAgentProfilesQueryKey = (workspaceId: string | null | undefined) =>
   ["workspaces", workspaceId ?? "none", "ai-agent-profiles"] as const
@@ -95,6 +104,133 @@ export function useArchiveAiAgentProfile(agentId: string | null) {
     () => `/api/ai/agents/${encodeURIComponent(agentId!)}/archive`,
     "POST",
     agentId,
+  )
+}
+
+export function useCustomAgentConversation(agentId: string | null) {
+  return useCustomAgentQuery<{ messages: CustomAgentConversationMessage[] }>(agentId, "conversation", 1_500)
+}
+
+export function useCustomAgentLegacyConversations(agentId: string | null) {
+  return useCustomAgentQuery<{ conversations: CustomAgentLegacyConversation[] }>(agentId, "legacy-conversations")
+}
+
+export function useCustomAgentRevisions(agentId: string | null) {
+  return useCustomAgentQuery<{ revisions: CustomAgentRevision[] }>(agentId, "revisions")
+}
+
+export function useCustomAgentResources(agentId: string | null) {
+  return useCustomAgentQuery<{ resources: CustomAgentResourceAccess[] }>(agentId, "resources")
+}
+
+export function useCustomAgentTriggers(agentId: string | null) {
+  return useCustomAgentQuery<{ triggers: CustomAgentTrigger[] }>(agentId, "triggers")
+}
+
+export function useCustomAgentRuns(agentId: string | null) {
+  return useCustomAgentQuery<{ runs: CustomAgentRun[] }>(agentId, "runs", 2_000)
+}
+
+export function useStartCustomAgentRun(agentId: string | null) {
+  return useStandaloneAgentMutation<{ prompt?: string }, { run: CustomAgentRun }>(
+    agentId,
+    "runs",
+    "POST",
+  )
+}
+
+export function useCustomAgentRun(agentId: string | null, runId: string | null) {
+  const { apiFetch } = useZilobaseFeatures()
+  const workspaceId = useActiveWorkspaceId()
+  return useQuery({
+    enabled: Boolean(workspaceId && agentId && runId),
+    queryKey: [...aiAgentProfilesQueryKey(workspaceId), agentId, "runs", runId],
+    queryFn: ({ signal }) => apiFetch<{ run: CustomAgentRun; events: CustomAgentRunEvent[] }>(
+      `/api/ai/agents/${encodeURIComponent(agentId!)}/runs/${encodeURIComponent(runId!)}`,
+      workspaceRequestOptions(workspaceId, { signal }),
+    ),
+    refetchInterval: (query) => {
+      const status = query.state.data?.run.status
+      return status && ["queued", "running", "waiting_approval"].includes(status) ? 1_000 : false
+    },
+  })
+}
+
+export function useSubmitCustomAgentMessage(agentId: string | null) {
+  return useStandaloneAgentMutation<{
+    clientId?: string
+    message: string
+  }, {
+    intent: string
+    message: CustomAgentConversationMessage
+    revision: CustomAgentRevision | null
+    run: CustomAgentRun | null
+  }>(agentId, "conversation/messages", "POST")
+}
+
+export function useGrantCustomAgentResource(agentId: string | null) {
+  return useStandaloneAgentMutation<{
+    accessLevel: "view" | "comment" | "edit"
+    resourceId: string
+    resourceType: "page" | "database"
+  }, { resources: CustomAgentResourceAccess[] }>(agentId, "resources", "PUT")
+}
+
+export function useRemoveCustomAgentResource(agentId: string | null) {
+  return useStandaloneAgentMutation<{
+    resourceId: string
+    resourceType: "page" | "database"
+  }, { resources: CustomAgentResourceAccess[] }>(
+    agentId,
+    (input) => `resources/${encodeURIComponent(input.resourceId)}?resourceType=${encodeURIComponent(input.resourceType)}`,
+    "DELETE",
+  )
+}
+
+export function useCreateCustomAgentTrigger(agentId: string | null) {
+  return useStandaloneAgentMutation<{
+    config: Record<string, unknown>
+    kind: CustomAgentTrigger["kind"]
+    label: string
+    status?: CustomAgentTrigger["status"]
+  }, { triggers: CustomAgentTrigger[] }>(agentId, "triggers", "POST")
+}
+
+export function useUpdateCustomAgentTrigger(agentId: string | null) {
+  return useStandaloneAgentMutation<{
+    config: Record<string, unknown>
+    kind: CustomAgentTrigger["kind"]
+    label: string
+    status?: CustomAgentTrigger["status"]
+    triggerId: string
+  }, { triggers: CustomAgentTrigger[] }>(
+    agentId,
+    (input) => `triggers/${encodeURIComponent(input.triggerId)}`,
+    "PUT",
+  )
+}
+
+export function useRemoveCustomAgentTrigger(agentId: string | null) {
+  return useStandaloneAgentMutation<{ triggerId: string }, { triggers: CustomAgentTrigger[] }>(
+    agentId,
+    (input) => `triggers/${encodeURIComponent(input.triggerId)}`,
+    "DELETE",
+  )
+}
+
+export function useRotateCustomAgentWebhookSecret(agentId: string | null) {
+  return useStandaloneAgentMutation<{ triggerId: string }, { secret: string }>(
+    agentId,
+    (input) => `triggers/${encodeURIComponent(input.triggerId)}/rotate-secret`,
+    "POST",
+  )
+}
+
+export function useRevertCustomAgentRevision(agentId: string | null) {
+  return useStandaloneAgentMutation<{ revisionId: string }, { revision: CustomAgentRevision }>(
+    agentId,
+    (input) => `revisions/${encodeURIComponent(input.revisionId)}/revert`,
+    "POST",
   )
 }
 
@@ -249,6 +385,47 @@ function useAgentMutation<TInput extends object, TOutput>(
       if (agentId) void queryClient.invalidateQueries({
         queryKey: [...aiAgentProfilesQueryKey(workspaceId), agentId],
       })
+    },
+  })
+}
+
+function useCustomAgentQuery<TOutput>(agentId: string | null, suffix: string, refetchInterval?: number) {
+  const { apiFetch } = useZilobaseFeatures()
+  const workspaceId = useActiveWorkspaceId()
+  return useQuery({
+    enabled: Boolean(workspaceId && agentId),
+    queryKey: [...aiAgentProfilesQueryKey(workspaceId), agentId, suffix],
+    queryFn: ({ signal }) => apiFetch<TOutput>(
+      `/api/ai/agents/${encodeURIComponent(agentId!)}/${suffix}`,
+      workspaceRequestOptions(workspaceId, { signal }),
+    ),
+    refetchInterval,
+  })
+}
+
+function useStandaloneAgentMutation<TInput extends object, TOutput>(
+  agentId: string | null,
+  suffix: string | ((input: TInput) => string),
+  method: "POST" | "PUT" | "DELETE",
+) {
+  const { apiFetch } = useZilobaseFeatures()
+  const workspaceId = useActiveWorkspaceId()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: TInput) => {
+      const resolved = typeof suffix === "function" ? suffix(input) : suffix
+      return apiFetch<TOutput>(`/api/ai/agents/${encodeURIComponent(agentId!)}/${resolved}`, {
+        body: method === "DELETE" ? undefined : JSON.stringify(input),
+        headers: {
+          ...(method === "DELETE" ? {} : { "Content-Type": "application/json" }),
+          ...(workspaceId ? { "x-zilobase-workspace-id": workspaceId } : {}),
+        },
+        method,
+      })
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [...aiAgentProfilesQueryKey(workspaceId), agentId] })
+      void queryClient.invalidateQueries({ queryKey: aiAgentProfilesQueryKey(workspaceId) })
     },
   })
 }

@@ -59,6 +59,7 @@ import {
   defaultUserSettings,
   useUserSettings,
 } from "@zilobase/features/user-settings"
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
 import { LayoutEditorProvider } from "@/features/pages/layout/index"
 import { usePageEditorComments } from "@/features/comments/index"
 import { usePageCommentController } from "@/features/comments/index"
@@ -237,6 +238,8 @@ function AppLayoutContent({
   const isMailPage = pathname === "/mail"
   const pageId = useRoutePageId(pathname)
   const databaseId = getDatabaseId(pathname)
+  const agentId = pathname.match(/^\/agents\/([^/]+)$/)?.[1] ?? null
+  const activeWorkspaceId = useActiveWorkspaceId()
   const { data: databasePayload } = useDatabase(databaseId, {
     includeDeleted: true,
   })
@@ -420,11 +423,13 @@ function AppLayoutContent({
   }, [databaseId])
 
   useEffect(() => {
-    const itemKind = databaseId ? "database" : pageId ? "page" : null
-    const itemId = databaseId ?? pageId
+    const itemKind = databaseId ? "database" : pageId ? "page" : agentId ? "agent" : null
+    const itemId = databaseId ?? pageId ?? agentId
     const workspaceId = databaseId
       ? databasePayload?.database.workspaceId
-      : hostPage?.workspaceId
+      : pageId
+        ? hostPage?.workspaceId
+        : activeWorkspaceId
 
     if (!itemKind || !itemId || !workspaceId) {
       return
@@ -445,6 +450,8 @@ function AppLayoutContent({
   }, [
     databaseId,
     databasePayload?.database.workspaceId,
+    agentId,
+    activeWorkspaceId,
     hostPage?.workspaceId,
     recordItemVisit.mutate,
     pageId,

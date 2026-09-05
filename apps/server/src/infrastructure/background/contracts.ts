@@ -5,6 +5,7 @@ import type { RuntimeEnv } from "../../shared/config/config";
 export const BACKGROUND_TASK_KINDS = [
   "automation.event_window",
   "automation.run",
+  "agent.run",
   "ai.job",
   "mail.index",
   "mail.database_sync",
@@ -39,7 +40,7 @@ const traceContextStore = new AsyncLocalStorage<{
 }>();
 
 export function backgroundTaskLane(kind: BackgroundTaskKind): BackgroundLane {
-  if (kind === "automation.run") return "automation";
+  if (kind === "automation.run" || kind === "agent.run") return "automation";
   if (kind === "ai.job") return "ai";
   if (kind === "mail.index" || kind === "mail.database_sync") return "mail";
   return "fast";

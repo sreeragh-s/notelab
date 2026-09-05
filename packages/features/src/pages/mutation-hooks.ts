@@ -102,7 +102,7 @@ type SetPageFavoriteInput = {
 
 type RecordItemVisitInput = {
   itemId: string;
-  itemKind: "database" | "page";
+  itemKind: "agent" | "database" | "page";
   workspaceId: string;
 };
 
@@ -798,9 +798,19 @@ export function useRecordItemVisit() {
         body: JSON.stringify(input),
       }),
     onSuccess: (result, variables) => {
+      if (result.itemKind === "agent") {
+        void queryClient.invalidateQueries({
+          queryKey: ["workspaces", variables.workspaceId, "ai-agent-profiles"],
+        });
+        return;
+      }
       queryClient.setQueriesData<PageNavigationPayload | undefined>(
         { queryKey: pagesQueryKey(variables.workspaceId) },
-        (current) => applyItemVisitToNav(current, result),
+        (current) => applyItemVisitToNav(current, {
+          itemId: result.itemId,
+          itemKind: result.itemKind as "database" | "page",
+          lastVisitedAt: result.lastVisitedAt,
+        }),
       );
 
       if (result.itemKind === "page") {

@@ -30,6 +30,7 @@ import {
   useReplaceAiAgentProfileAccess,
   useTransferAiAgentProfile,
   useUpdateAiAgentProfile,
+  useWorkspaceAiModels,
 } from "@zilobase/features/ai-chat"
 
 import { Badge } from "@/shared/ui/badge"
@@ -89,8 +90,8 @@ export function CustomAgentsSection() {
       <div className="space-y-1">
         <h3 className="font-heading text-base font-medium">Custom Agents</h3>
         <p className="text-sm text-content-secondary">
-          Share focused AI profiles and connect approved external tools. Each
-          conversation remains private to the member who starts it.
+          Create standalone sandboxed agents with a shared builder and run
+          timeline, explicit resource access, and approved external tools.
         </p>
       </div>
 
@@ -146,10 +147,12 @@ export function AgentEditor({
   agentId,
   initialTab,
   plain = false,
+  showActivity = true,
 }: {
   agentId: string | null
   initialTab?: string | null
   plain?: boolean
+  showActivity?: boolean
 }) {
   const detailQuery = useAiAgentProfile(agentId)
   const [tab, setTab] = React.useState<AgentTab>(() => normalizeAgentTab(initialTab))
@@ -167,9 +170,9 @@ export function AgentEditor({
     { id: "instructions", label: "Instructions" },
     { id: "tools", label: "Tools & Access" },
     { id: "share", label: "Share" },
-    ...(detailQuery.data.role === "user"
-      ? []
-      : [{ id: "activity" as const, label: "Activity" }]),
+    ...(showActivity && detailQuery.data.role !== "user"
+      ? [{ id: "activity" as const, label: "Activity" }]
+      : []),
   ]
 
   return (
@@ -209,19 +212,22 @@ export function AgentEditor({
 
 function AgentInstructions({ agent }: { agent: AiAgentProfileDetail }) {
   const update = useUpdateAiAgentProfile(agent.id)
+  const modelsQuery = useWorkspaceAiModels()
   const [name, setName] = React.useState(agent.name)
   const [description, setDescription] = React.useState(agent.description)
   const [instructions, setInstructions] = React.useState(agent.instructions)
+  const [defaultModel, setDefaultModel] = React.useState(agent.defaultModel)
 
   React.useEffect(() => {
     setName(agent.name)
     setDescription(agent.description)
     setInstructions(agent.instructions)
+    setDefaultModel(agent.defaultModel)
   }, [agent])
 
   const save = async () => {
     try {
-      await update.mutateAsync({ description, instructions, name })
+      await update.mutateAsync({ defaultModel, description, instructions, name })
       toast.success("Agent saved.")
     } catch (error) {
       showError("Could not save agent", error)
@@ -247,6 +253,18 @@ function AgentInstructions({ agent }: { agent: AiAgentProfileDetail }) {
         placeholder="Instructions applied to every conversation with this agent"
         value={instructions}
       />
+      <label className="grid gap-1 text-sm">
+        <span className="font-medium">Default model</span>
+        <Select disabled={!canEdit} onValueChange={setDefaultModel} value={defaultModel}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="auto">Auto</SelectItem>
+            {modelsQuery.data?.models.map((model) => (
+              <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </label>
       {canEdit && (
         <Button className="w-fit" disabled={update.isPending} onClick={() => void save()} type="button">
           Save agent
@@ -279,15 +297,11 @@ function McpConnectionsPanel({
   const approvedServersQuery = useApprovedMcpServers()
   const connectionsQuery = useMcpConnections(scope)
   const { data: session } = useSession()
-  const [customHeaders, setCustomHeaders] = React.useState([
-    { name: "Authorization", value: "" },
-  ])
-  const [tokenProvider, setTokenProvider] = React.useState("catalog:github")
   const basePath = mcpScopeApiPath(scope)
   const createConnection = useMcpConnectionMutation<
     {
       approvedServerId?: string
-      authMethod: "oauth" | "headers"
+      authMethod: "oauth"
       catalogId?: string
     },
     { connection: McpConnectionSummary }
@@ -300,15 +314,6 @@ function McpConnectionsPanel({
     (input) => `${basePath}/connections/${input.connectionId}/oauth/start`,
     "POST",
   )
-  const submitHeaders = useMcpConnectionMutation<
-    { connectionId: string; headers: Array<{ name: string; value: string }> },
-    { connection: McpConnectionSummary }
-  >(
-    scope,
-    (input) => `${basePath}/connections/${input.connectionId}/headers`,
-    "PUT",
-  )
-
   const connectOauth = async (server: ServerSelection) => {
     try {
       const created = await createConnection.mutateAsync({ authMethod: "oauth", ...server })
@@ -316,25 +321,6 @@ function McpConnectionsPanel({
       window.location.assign(started.authorizationUrl)
     } catch (error) {
       showError("Could not start connection", error)
-    }
-  }
-
-  const connectToken = async () => {
-    const headers = customHeaders.filter((header) => header.name.trim() && header.value)
-    if (headers.length === 0) return
-    try {
-      const created = await createConnection.mutateAsync({
-        authMethod: "headers",
-        ...parseServerSelection(tokenProvider),
-      })
-      await submitHeaders.mutateAsync({
-        connectionId: created.connection.id,
-        headers,
-      })
-      setCustomHeaders([{ name: "Authorization", value: "" }])
-      toast.success("Connection authenticated. Review and enable its tools.")
-    } catch (error) {
-      showError("Could not connect", error)
     }
   }
 
@@ -350,34 +336,39 @@ function McpConnectionsPanel({
         <div className="hidden gap-3 md:grid">
           <h4 className="text-sm font-medium">Curated connections</h4>
           <div className="grid gap-2 sm:grid-cols-3">
-            {catalogQuery.data?.map((server) => (
-              <div className="grid content-between gap-3 rounded-md border p-3" key={server.id}>
-                <div>
-                  <div className="flex items-center gap-2 font-medium">
-                    <img alt="" className="size-6 rounded" src={server.icon} />
-                    {server.label}
+            {catalogQuery.data?.map((server) => {
+              const connected = connectionsQuery.data?.some(
+                (connection) => connection.catalogId === server.id,
+              ) ?? false
+              return (
+                <div className="grid content-between gap-3 rounded-md border p-3" key={server.id}>
+                  <div>
+                    <div className="flex items-center gap-2 font-medium">
+                      <img alt="" className="size-6 rounded" src={server.icon} />
+                      {server.label}
+                    </div>
+                    <p className="mt-1 text-xs text-content-secondary">
+                      {server.available ? "Remote MCP server" : server.availabilityReason}
+                    </p>
                   </div>
-                  <p className="mt-1 text-xs text-content-secondary">
-                    {server.available ? "Remote MCP server" : server.availabilityReason}
-                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      disabled={connected || !server.available || !server.authMethods.includes("oauth")}
+                      onClick={() => void connectOauth({ catalogId: server.id })}
+                      size="sm"
+                      type="button"
+                    >
+                      {connected ? "Connected" : "Connect"}
+                    </Button>
+                    <Button asChild size="icon" type="button" variant="ghost">
+                      <a aria-label={`${server.label} documentation`} href={server.documentationUrl} rel="noreferrer" target="_blank">
+                        <ExternalLinkIcon className="size-4" />
+                      </a>
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    disabled={!server.available || !server.authMethods.includes("oauth")}
-                    onClick={() => void connectOauth({ catalogId: server.id })}
-                    size="sm"
-                    type="button"
-                  >
-                    Connect
-                  </Button>
-                  <Button asChild size="icon" type="button" variant="ghost">
-                    <a aria-label={`${server.label} documentation`} href={server.documentationUrl} rel="noreferrer" target="_blank">
-                      <ExternalLinkIcon className="size-4" />
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {(approvedServersQuery.data?.length ?? 0) > 0 && (
@@ -394,53 +385,6 @@ function McpConnectionsPanel({
               ))}
             </div>
           )}
-
-          <div className="grid gap-2 rounded-md border p-3">
-            <p className="text-sm font-medium">Bearer or header authentication</p>
-            <div className="flex flex-wrap gap-2">
-              <Select onValueChange={setTokenProvider} value={tokenProvider}>
-                <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {catalogQuery.data?.filter((item) => item.available && item.authMethods.includes("headers")).map((item) => (
-                    <SelectItem key={item.id} value={`catalog:${item.id}`}>{item.label}</SelectItem>
-                  ))}
-                  {approvedServersQuery.data?.map((item) => (
-                    <SelectItem key={item.id} value={`approved:${item.id}`}>{item.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="grid min-w-64 flex-1 gap-2">
-                {customHeaders.map((header, index) => (
-                  <div className="flex gap-2" key={index}>
-                    <Input
-                      aria-label={`Header ${index + 1} name`}
-                      className="w-40"
-                      onChange={(event) => setCustomHeaders((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))}
-                      placeholder="Header name"
-                      value={header.name}
-                    />
-                    <Input
-                      aria-label={`Header ${index + 1} secret value`}
-                      className="min-w-40 flex-1"
-                      onChange={(event) => setCustomHeaders((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))}
-                      placeholder="Secret value (write-only)"
-                      type="password"
-                      value={header.value}
-                    />
-                    {customHeaders.length > 1 && (
-                      <Button aria-label="Remove header" onClick={() => setCustomHeaders((current) => current.filter((_, itemIndex) => itemIndex !== index))} size="icon" type="button" variant="ghost">
-                        <Trash2Icon className="size-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                {customHeaders.length < 5 && (
-                  <Button className="w-fit" onClick={() => setCustomHeaders((current) => [...current, { name: "", value: "" }])} size="sm" type="button" variant="ghost">Add header</Button>
-                )}
-              </div>
-              <Button disabled={!customHeaders.some((header) => header.name.trim() && header.value)} onClick={() => void connectToken()} type="button">Connect</Button>
-            </div>
-          </div>
         </div>
       )}
 
@@ -607,12 +551,6 @@ type McpToolPolicyInput = Pick<McpToolPolicy, "classification" | "enabled" | "ex
 
 type ServerSelection = { catalogId: string } | { approvedServerId: string }
 
-function parseServerSelection(value: string): ServerSelection {
-  const [kind, id] = value.split(":", 2)
-  if (!id) throw new Error("Choose an MCP server.")
-  return kind === "approved" ? { approvedServerId: id } : { catalogId: id }
-}
-
 function AgentShare({ agent }: { agent: AiAgentProfileDetail }) {
   const replaceAccess = useReplaceAiAgentProfileAccess(agent.id)
   const transferOwnership = useTransferAiAgentProfile(agent.id)
@@ -642,8 +580,9 @@ function AgentShare({ agent }: { agent: AiAgentProfileDetail }) {
   return (
     <div className="grid gap-3">
       <p className="text-sm text-content-secondary">
-        Shared members can start private conversations. Editors cannot inspect
-        other members’ prompts, answers, or returned external data.
+        Everyone with agent access can see its shared Chat and run summaries.
+        Only editors can change configuration; sensitive tool arguments and
+        diagnostics remain editor-only.
       </p>
       {agent.access.map((grant) => (
         <div className="flex items-center gap-2 rounded border p-2 text-sm" key={grant.id}>
@@ -699,7 +638,7 @@ function AgentShare({ agent }: { agent: AiAgentProfileDetail }) {
             <Button
               disabled={archiveAgent.isPending}
               onClick={() => {
-                if (window.confirm("Archive this agent? Existing threads will retain its identity but cannot start new connector calls.")) {
+                if (window.confirm("Archive this agent? Its shared history stays readable, but no new runs or connector calls can start.")) {
                   void archiveAgent.mutateAsync({})
                     .then(() => toast.success("Agent archived."))
                     .catch((error) => showError("Could not archive agent", error))

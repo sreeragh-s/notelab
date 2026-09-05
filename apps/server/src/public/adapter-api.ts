@@ -186,6 +186,7 @@ export {
   pageIdFromDocumentName,
   replacePageContent,
   replacePageContentInHocuspocus,
+  appendPageCommentInHocuspocus,
   replaceMeetingSummary,
   replaceMeetingSummaryInHocuspocus,
   verifyCollaborationTicket,

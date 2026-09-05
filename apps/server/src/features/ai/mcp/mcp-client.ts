@@ -95,12 +95,16 @@ export async function executeMcpTool(input: {
   env: RuntimeEnv;
   externalName: string;
   schemaHash: string;
-  threadId: string;
+  threadId?: string | null;
+  agentRunId?: string | null;
   toolInput: unknown;
   toolExecutionId?: string;
-  userId: string;
+  userId?: string | null;
   workspaceId: string;
 }): Promise<AgentToolResult> {
+  if (Boolean(input.threadId) === Boolean(input.agentRunId)) {
+    return failure("mcp_context_invalid", "Connector execution must belong to exactly one Ask AI thread or Custom Agent run.");
+  }
   if (!isMcpExecutionEnabled(input.env)) {
     return failure("mcp_execution_disabled", "External connector execution is temporarily disabled.");
   }
@@ -327,9 +331,10 @@ async function normalizeToolResult(
     connection: typeof aiMcpConnection.$inferSelect;
     connectionId: string;
     externalName: string;
-    threadId: string;
+    threadId?: string | null;
+    agentRunId?: string | null;
     toolExecutionId?: string;
-    userId: string;
+    userId?: string | null;
     workspaceId: string;
   },
 ): Promise<AgentToolResult> {
@@ -392,9 +397,10 @@ async function stageStructuredDataset(
     scope: McpScope;
     connectionId: string;
     externalName: string;
-    threadId: string;
+    threadId?: string | null;
+    agentRunId?: string | null;
     toolExecutionId?: string;
-    userId: string;
+    userId?: string | null;
     workspaceId: string;
   },
 ) {
@@ -429,11 +435,12 @@ async function stageStructuredDataset(
       rowCount: normalized.length,
       sample: normalized.slice(0, 20),
       schema: { columns },
-      threadId: input.threadId,
+      threadId: input.threadId ?? null,
+      agentRunId: input.agentRunId ?? null,
       toolExecutionId: input.toolExecutionId,
       truncated: sourceRows.length > normalized.length,
       updatedAt: now,
-      userId: input.userId,
+      userId: input.userId ?? null,
       workspaceId: input.workspaceId,
     });
     for (let offset = 0; offset < normalized.length; offset += 250) {

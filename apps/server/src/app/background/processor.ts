@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { AI_JOB_HANDLERS } from "../../features/ai/jobs/ai-job-handlers";
 import { runAiJobById } from "../../features/ai/jobs/ai-jobs";
+import { processAgentRun } from "../../features/ai/agents/agent-run-service";
 import { processDatabaseAutomationEventWindow } from "../../features/databases/automations/evaluator";
 import { processDatabaseAutomationRun } from "../../features/databases/automations/run-engine";
 import { drainDatabaseRealtimeOutbox } from "../../features/databases/realtime/outbox";
@@ -71,6 +72,8 @@ async function processBackgroundTaskInner(input: {
       return processDatabaseAutomationEventWindow(env, { windowId: task.resourceId, workerId });
     case "automation.run":
       return processDatabaseAutomationRun(env, { runId: task.resourceId, workerId });
+    case "agent.run":
+      return processAgentRun(env, { runId: task.resourceId, workerId });
     case "ai.job":
       return runAiJobById({ env, handlers: AI_JOB_HANDLERS, jobId: task.resourceId, workerId });
     case "mail.index":

@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react"
 import { useNavigate } from "@tanstack/react-router"
-import { DatabaseIcon } from "@/shared/components/icons"
+import { BotIcon, DatabaseIcon } from "@/shared/components/icons"
 
 import {
   Command,
@@ -24,6 +24,9 @@ import { useAppSearchResults } from "@zilobase/features/search"
 import type { AppSearchResult } from "@zilobase/features/search"
 import { DefaultPageIcon, PageIconDisplay } from "@/features/pages/index"
 import { useAppShortcut } from "@/shared/shortcuts"
+import { useAiAgentProfiles } from "@zilobase/features/ai-chat"
+
+type SearchResult = AppSearchResult | { emoji: null; id: string; path: string; title: string; type: "agent" }
 
 type AppSearchContextValue = {
   openSearch: () => void
@@ -42,6 +45,17 @@ export function AppSearchProvider({ children }: { children: ReactNode }) {
     debouncedQuery,
     open,
   )
+  const agents = useAiAgentProfiles({ enabled: open })
+  const combinedResults: SearchResult[] = useMemo(() => [
+    ...(agents.data ?? []).filter((agent) => !debouncedQuery || agent.name.toLowerCase().includes(debouncedQuery.toLowerCase())).map((agent) => ({
+      emoji: null,
+      id: agent.id,
+      path: "Agents",
+      title: agent.name,
+      type: "agent" as const,
+    })),
+    ...results,
+  ], [agents.data, debouncedQuery, results])
   const contextValue = useMemo(() => ({ openSearch: () => setOpen(true) }), [])
 
   useAppShortcut(
@@ -53,7 +67,7 @@ export function AppSearchProvider({ children }: { children: ReactNode }) {
     { allowInEditable: true }
   )
 
-  const openResult = (result: AppSearchResult) => {
+  const openResult = (result: SearchResult) => {
     setOpen(false)
 
     if (result.type === "database") {
@@ -62,6 +76,10 @@ export function AppSearchProvider({ children }: { children: ReactNode }) {
         params: { databaseId: result.id },
         search: { view: undefined },
       })
+      return
+    }
+    if (result.type === "agent") {
+      void navigate({ to: "/agents/$agentId", params: { agentId: result.id } })
       return
     }
 
@@ -89,15 +107,15 @@ export function AppSearchProvider({ children }: { children: ReactNode }) {
             value={query}
           />
           <CommandList className="max-h-[28rem]">
-            {isFetching && results.length === 0 ? (
+            {isFetching && combinedResults.length === 0 ? (
               <div className="py-6 text-center text-sm text-content-secondary">
                 Searching...
               </div>
-            ) : results.length === 0 ? (
+            ) : combinedResults.length === 0 ? (
               <CommandEmpty>No results found.</CommandEmpty>
             ) : (
               <CommandGroup heading="Results">
-                {results.map((result) => (
+                {combinedResults.map((result) => (
                   <CommandItem
                     key={`${result.type}:${result.id}`}
                     onSelect={() => openResult(result)}
@@ -111,7 +129,7 @@ export function AppSearchProvider({ children }: { children: ReactNode }) {
                       </div>
                     </div>
                     <CommandShortcut className="ml-3 shrink-0 rounded-sm bg-surface-muted px-1.5 py-0.5 text-[11px] font-medium uppercase leading-4 tracking-normal text-content-secondary">
-                      {result.type === "database" ? "Database" : "Page"}
+                      {result.type === "database" ? "Database" : result.type === "agent" ? "Agent" : "Page"}
                     </CommandShortcut>
                   </CommandItem>
                 ))}
@@ -148,12 +166,14 @@ function useDebouncedValue<T>(value: T, delay: number) {
   return debouncedValue
 }
 
-function ResultIcon({ result }: { result: AppSearchResult }) {
+function ResultIcon({ result }: { result: SearchResult }) {
   if (result.emoji) {
     return <PageIconDisplay size="sm" value={result.emoji} />
   }
 
-  return result.type === "database" ? (
+  return result.type === "agent" ? (
+    <BotIcon className="size-4 text-content-secondary" />
+  ) : result.type === "database" ? (
     <DatabaseIcon className="size-4 text-content-secondary" />
   ) : (
     <DefaultPageIcon className="text-content-secondary" />

@@ -270,6 +270,95 @@ export async function getEffectivePageAccessInWorkspace(
     : "none";
 }
 
+/**
+ * Resolves access for the agent principal only. This deliberately excludes
+ * workspace membership, creator/owner shortcuts, teamspace defaults, public
+ * grants, and the invoking user's permissions.
+ */
+export async function getEffectivePageAccessForAgent(
+  pageId: string,
+  workspaceId: string,
+  agentId: string,
+): Promise<AccessLevel> {
+  const [record, graph] = await Promise.all([
+    db.select({ id: page.id }).from(page).where(and(
+      eq(page.id, pageId),
+      eq(page.workspaceId, workspaceId),
+      isNull(page.deletedAt),
+    )).limit(1),
+    loadWorkspacePageGraph(workspaceId),
+  ]);
+  if (!record[0]) return "none";
+
+  const ancestorIds = graph.getAncestorIds(pageId);
+  if (ancestorIds.length === 0) return "none";
+  const rules = await db.select({ accessLevel: pageAccess.accessLevel })
+    .from(pageAccess)
+    .where(and(
+      eq(pageAccess.workspaceId, workspaceId),
+      inArray(pageAccess.pageId, ancestorIds),
+      eq(pageAccess.targetType, "agent"),
+      eq(pageAccess.targetId, agentId),
+    ));
+  return rules.reduce<AccessLevel>((best, rule) => {
+    const next = normalizeAccessLevel(rule.accessLevel) ?? "none";
+    return accessRank[next] > accessRank[best] ? next : best;
+  }, "none");
+}
+
+export async function canAgentAccessPage(
+  pageId: string,
+  workspaceId: string,
+  agentId: string,
+  required: Exclude<AccessLevel, "none">,
+) {
+  return hasAccess(
+    await getEffectivePageAccessForAgent(pageId, workspaceId, agentId),
+    required,
+  );
+}
+
+export type AgentPermissionSnapshotGrant = {
+  accessLevel: Exclude<AccessLevel, "none">;
+  resourceId: string;
+  resourceType: "page" | "database";
+};
+
+/** Resolves only the immutable resource roots captured when an agent run was
+ * queued. Callers must also check the live agent ACL so revocations win. */
+export async function getEffectivePageAccessForAgentSnapshot(
+  pageId: string,
+  workspaceId: string,
+  grants: AgentPermissionSnapshotGrant[],
+): Promise<AccessLevel> {
+  const [record, graph] = await Promise.all([
+    db.select({ id: page.id }).from(page).where(and(
+      eq(page.id, pageId),
+      eq(page.workspaceId, workspaceId),
+      isNull(page.deletedAt),
+    )).limit(1),
+    loadWorkspacePageGraph(workspaceId),
+  ]);
+  if (!record[0]) return "none";
+  const ancestorIds = new Set(graph.getAncestorIds(pageId));
+  return grants.reduce<AccessLevel>((best, grant) => {
+    if (grant.resourceType !== "page" || !ancestorIds.has(grant.resourceId)) return best;
+    return accessRank[grant.accessLevel] > accessRank[best] ? grant.accessLevel : best;
+  }, "none");
+}
+
+export async function canAgentSnapshotAccessPage(
+  pageId: string,
+  workspaceId: string,
+  grants: AgentPermissionSnapshotGrant[],
+  required: Exclude<AccessLevel, "none">,
+) {
+  return hasAccess(
+    await getEffectivePageAccessForAgentSnapshot(pageId, workspaceId, grants),
+    required,
+  );
+}
+
 async function isPagePublished(pageId: string) {
   const record = await getPageRecord(pageId);
 
@@ -363,6 +452,84 @@ export async function getEffectiveDatabaseAccessInWorkspace(
     databaseId,
     workspaceId,
     userId,
+  );
+}
+
+/** Standalone agents only receive explicit database grants. Inline databases
+ * inherit the explicit grant on their containing page. */
+export async function getEffectiveDatabaseAccessForAgent(
+  databaseId: string,
+  workspaceId: string,
+  agentId: string,
+): Promise<AccessLevel> {
+  const [record] = await db.select({ pageId: database.pageId })
+    .from(database)
+    .where(and(
+      eq(database.id, databaseId),
+      eq(database.workspaceId, workspaceId),
+      isNull(database.deletedAt),
+    )).limit(1);
+  if (!record) return "none";
+  if (record.pageId) {
+    return getEffectivePageAccessForAgent(record.pageId, workspaceId, agentId);
+  }
+  const rules = await db.select({ accessLevel: databaseAccess.accessLevel })
+    .from(databaseAccess)
+    .where(and(
+      eq(databaseAccess.workspaceId, workspaceId),
+      eq(databaseAccess.databaseId, databaseId),
+      eq(databaseAccess.targetType, "agent"),
+      eq(databaseAccess.targetId, agentId),
+    ));
+  return rules.reduce<AccessLevel>((best, rule) => {
+    const next = normalizeAccessLevel(rule.accessLevel) ?? "none";
+    return accessRank[next] > accessRank[best] ? next : best;
+  }, "none");
+}
+
+export async function canAgentAccessDatabase(
+  databaseId: string,
+  workspaceId: string,
+  agentId: string,
+  required: Exclude<AccessLevel, "none">,
+) {
+  return hasAccess(
+    await getEffectiveDatabaseAccessForAgent(databaseId, workspaceId, agentId),
+    required,
+  );
+}
+
+export async function getEffectiveDatabaseAccessForAgentSnapshot(
+  databaseId: string,
+  workspaceId: string,
+  grants: AgentPermissionSnapshotGrant[],
+): Promise<AccessLevel> {
+  const [record] = await db.select({ pageId: database.pageId })
+    .from(database)
+    .where(and(
+      eq(database.id, databaseId),
+      eq(database.workspaceId, workspaceId),
+      isNull(database.deletedAt),
+    )).limit(1);
+  if (!record) return "none";
+  if (record.pageId) {
+    return getEffectivePageAccessForAgentSnapshot(record.pageId, workspaceId, grants);
+  }
+  return grants.reduce<AccessLevel>((best, grant) => {
+    if (grant.resourceType !== "database" || grant.resourceId !== databaseId) return best;
+    return accessRank[grant.accessLevel] > accessRank[best] ? grant.accessLevel : best;
+  }, "none");
+}
+
+export async function canAgentSnapshotAccessDatabase(
+  databaseId: string,
+  workspaceId: string,
+  grants: AgentPermissionSnapshotGrant[],
+  required: Exclude<AccessLevel, "none">,
+) {
+  return hasAccess(
+    await getEffectiveDatabaseAccessForAgentSnapshot(databaseId, workspaceId, grants),
+    required,
   );
 }
 

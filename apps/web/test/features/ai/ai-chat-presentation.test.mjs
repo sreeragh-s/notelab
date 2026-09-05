@@ -60,17 +60,17 @@ export function register({ readSource, assert, test }) {
     assert.doesNotMatch(aiPageSource, /<main className="[^"]*overflow-hidden/)
   })
 
-  test("Ask AI uses the database toolbar and standard side-pane controls", async () => {
+  test("Universal Ask AI uses the standard side-pane controls without an agent rail", async () => {
     const workspaceSource = await readSource("/src/features/ai/components/agent-chat-workspace.tsx")
     const settingsSource = await readSource("/src/features/ai/components/ai-settings-panel.tsx")
     const agentSettingsSource = await readSource("/src/features/settings/pages/zilobase-ai/components/custom-agents-section.tsx")
     const headerSource = await readSource("/src/app/shell/content/app-header.tsx")
     const paneHeaderSource = await readSource("/src/features/pages/components/page-pane-header.tsx")
 
-    assert.match(workspaceSource, /\{isSidebar \? \(\s*<ChatHeader/)
-    assert.match(workspaceSource, /className="block shrink-0 px-3 py-2"/)
-    assert.match(workspaceSource, /className="w-max min-w-0 justify-start"/)
-    assert.match(workspaceSource, /aria-label="Ask AI settings"[\s\S]*?className="database-new-button shrink-0"/)
+    assert.match(workspaceSource, /\{isSidebar \? <ChatHeader/)
+    assert.match(workspaceSource, /aria-label="Ask AI settings"/)
+    assert.doesNotMatch(workspaceSource, /AgentRail|Add Agent|draftAgentProfileId=\{selectedAgentId\}/)
+    assert.doesNotMatch(workspaceSource, /draftAgentProfileId|draftAgentName|draftAgentDescription/)
     assert.match(headerSource, /<PageSidePaneCollapseButton[\s\S]*?label="Close AI settings"/)
     assert.match(paneHeaderSource, /export function PageSidePaneCollapseButton/)
     assert.match(paneHeaderSource, /<PageSidePaneCollapseButton onClick=\{onClose\} \/>/)

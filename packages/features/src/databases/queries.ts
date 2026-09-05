@@ -184,7 +184,7 @@ export type DatabaseAccessRule = {
   id: string
   workspaceId: string
   databaseId: string
-  targetType: "public" | "user" | "team"
+  targetType: "public" | "user" | "team" | "agent"
   targetId: string
   accessLevel: "view" | "edit" | "full"
   createdAt: string

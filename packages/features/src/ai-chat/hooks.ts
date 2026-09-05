@@ -65,7 +65,7 @@ export function useCreateAiChatThread() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (input?: { title?: string; agentProfileId?: string | null }) =>
+    mutationFn: (input?: { title?: string }) =>
       apiFetch<AiChatThreadResponse>("/api/ai/threads", {
         method: "POST",
         headers: {

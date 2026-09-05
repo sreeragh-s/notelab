@@ -22,6 +22,9 @@ export type AiAgentProfileSummary = {
   status: "active" | "archived"
   version: number
   ownerUserId: string
+  currentRevisionId?: string | null
+  executionDisabledReason?: string | null
+  lastVisitedAt?: string | null
   updatedAt: string
 }
 

@@ -3,6 +3,8 @@ import { and, asc, eq, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { cleanupExpiredAiAgentData } from "../../features/ai/actions/agent-operations";
 import { AI_JOB_HANDLERS } from "../../features/ai/jobs/ai-job-handlers";
 import { runAiJobBatch } from "../../features/ai/jobs/ai-jobs";
+import { enqueueDueAgentSchedules } from "../../features/ai/agents/agent-trigger-service";
+import { drainAgentRuns, expireAgentRunApprovals } from "../../features/ai/agents/agent-run-service";
 import { drainDatabaseAutomationEventWindows } from "../../features/databases/automations/evaluator";
 import { cleanupDatabaseAutomationHistory } from "../../features/databases/automations/operations";
 import { drainDatabaseAutomationRuns } from "../../features/databases/automations/run-engine";
@@ -23,6 +25,7 @@ import { backgroundMaintenanceTask } from "../../infrastructure/database/schema"
 
 export const BACKGROUND_MAINTENANCE_TASKS = {
   "ai.cleanup": 5 * 60_000,
+  "agent.schedules": 60_000,
   "automation.retention": 60 * 60_000,
   "automation.schedules": 60_000,
   "background.reconcile": 60_000,
@@ -135,10 +138,17 @@ type MaintenanceTaskHandler = (
 ) => Promise<number | void>;
 
 const MAINTENANCE_TASK_HANDLERS: Record<MaintenanceTaskKey, MaintenanceTaskHandler> = {
+  "agent.schedules": async (env) => {
+    await Promise.all([
+      enqueueDueAgentSchedules(env),
+      expireAgentRunApprovals(),
+    ]);
+  },
   "background.reconcile": async (env, workerId) => {
     await runIndependentMaintenanceOperations("background.reconcile", [
         drainDatabaseAutomationEventWindows(env, { limit: 50, workerId: `${workerId}:events` }),
         drainDatabaseAutomationRuns(env, { limit: 10, workerId: `${workerId}:runs` }),
+        drainAgentRuns(env, { limit: 10, workerId: `${workerId}:agents` }),
         runAiJobBatch({ env, handlers: AI_JOB_HANDLERS, limit: 5, workerId: `${workerId}:ai` }),
         drainDatabaseRealtimeOutbox(env, { limit: 100 }),
         drainNavigationRealtimeOutbox(env, { limit: 100 }),

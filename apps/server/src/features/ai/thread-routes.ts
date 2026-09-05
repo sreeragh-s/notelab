@@ -29,14 +29,12 @@ import {
 } from "./actions/agent-operations";
 import { getMembership, isPrivilegedOrgRole } from "../access";
 import type { AppBindings } from "../../shared/types";
-import { getAgentProfileRole } from "./agents/agent-profile-service";
 import { db } from "../../infrastructure/database";
 import { aiAgentProfile } from "../../infrastructure/database/schema";
 
 const createThreadSchema = z.object({
-  agentProfileId: z.string().uuid().nullable().optional(),
   title: z.string().trim().max(120).optional(),
-});
+}).strict();
 
 const renameThreadSchema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -144,10 +142,11 @@ aiThreadRoutes.get("/threads", async (c) => {
     auth.user.id,
     c.req.query("q"),
   );
-  const agentProfiles = await loadAgentProfileMetadata(threads.map((thread) => thread.agentProfileId));
+  const personalThreads = threads.filter((thread) => thread.agentProfileId === null);
+  const agentProfiles = await loadAgentProfileMetadata(personalThreads.map((thread) => thread.agentProfileId));
 
   return c.json({
-    threads: threads.map((thread) => serializeThread(
+    threads: personalThreads.map((thread) => serializeThread(
       thread,
       thread.agentProfileId ? agentProfiles.get(thread.agentProfileId) ?? null : null,
     )),
@@ -167,16 +166,8 @@ aiThreadRoutes.post("/threads", async (c) => {
     return body.response;
   }
 
-  if (body.data.agentProfileId && !(await getAgentProfileRole({
-    profileId: body.data.agentProfileId,
-    userId: auth.user.id,
-    workspaceId: auth.workspaceId,
-  }))) {
-    return c.json({ error: "Agent not found" }, 404);
-  }
-
   const thread = await createAiChatThread({
-    agentProfileId: body.data.agentProfileId,
+    agentProfileId: null,
     workspaceId: auth.workspaceId,
     title: body.data.title,
     userId: auth.user.id,

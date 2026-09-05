@@ -4,19 +4,27 @@ import type {
   AiAgentProfileSummary,
   McpConnectionSummary,
 } from "@zilobase/features/ai-chat/mcp-contract";
-import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { db } from "../../../infrastructure/database";
 import {
+  aiAgentConversation,
   aiAgentProfile,
   aiAgentProfileAccess,
+  aiAgentRevision,
   aiChatThread,
   aiMcpConnection,
+  itemVisit,
   member,
   team,
   teamMember,
 } from "../../../infrastructure/database/schema";
 import { activeMembershipCondition } from "../../memberships";
+import {
+  compileAgentDefinition,
+  definitionForProfile,
+  hashAgentDefinition,
+} from "./agent-definition";
 
 const ROLE_RANK: Record<AiAgentProfileRole, number> = {
   user: 1,
@@ -28,7 +36,7 @@ export class AgentProfileError extends Error {
   constructor(
     readonly code: string,
     message: string,
-    readonly status: 400 | 403 | 404 | 409 = 400,
+    readonly status: 400 | 403 | 404 | 409 | 503 = 400,
   ) {
     super(message);
     this.name = "AgentProfileError";
@@ -65,12 +73,24 @@ export async function listAccessibleAgentProfiles(input: {
     ))
     .orderBy(desc(aiAgentProfile.updatedAt), desc(aiAgentProfile.id));
 
+  const visits = profiles.length
+    ? await db.select({ itemId: itemVisit.itemId, lastVisitedAt: itemVisit.lastVisitedAt })
+        .from(itemVisit)
+        .where(and(
+          eq(itemVisit.userId, input.userId),
+          eq(itemVisit.workspaceId, input.workspaceId),
+          eq(itemVisit.itemKind, "agent"),
+          inArray(itemVisit.itemId, profiles.map((profile) => profile.id)),
+        ))
+    : [];
+  const visitedAtByAgentId = new Map(visits.map((visit) => [visit.itemId, visit.lastVisitedAt]));
+
   return Promise.all(profiles.map(async (profile) =>
     serializeProfileSummary(profile, await getAgentProfileRole({
       profileId: profile.id,
       userId: input.userId,
       workspaceId: input.workspaceId,
-    }) ?? "user")));
+    }) ?? "user", visitedAtByAgentId.get(profile.id) ?? null)));
 }
 
 export async function createAgentProfile(input: {
@@ -84,19 +104,48 @@ export async function createAgentProfile(input: {
 }) {
   const now = new Date();
   const id = crypto.randomUUID();
-  await db.insert(aiAgentProfile).values({
-    createdAt: now,
+  const revisionId = crypto.randomUUID();
+  const conversationId = crypto.randomUUID();
+  const values = {
     defaultModel: input.defaultModel ?? "auto",
     description: input.description ?? "",
-    icon: input.icon,
-    id,
+    icon: input.icon ?? null,
     instructions: input.instructions ?? "",
     name: input.name,
-    ownerUserId: input.ownerUserId,
-    status: "active",
-    updatedAt: now,
-    version: 1,
-    workspaceId: input.workspaceId,
+  };
+  const definition = definitionForProfile(values);
+  await db.transaction(async (tx) => {
+    await tx.insert(aiAgentProfile).values({
+      ...values,
+      createdAt: now,
+      currentRevisionId: null,
+      id,
+      ownerUserId: input.ownerUserId,
+      status: "active",
+      updatedAt: now,
+      version: 1,
+      workspaceId: input.workspaceId,
+    });
+    await tx.insert(aiAgentRevision).values({
+      compiledDefinition: compileAgentDefinition(definition),
+      createdAt: now,
+      createdByUserId: input.ownerUserId,
+      definition,
+      definitionHash: hashAgentDefinition(definition),
+      id: revisionId,
+      profileId: id,
+      version: 1,
+    });
+    await tx.update(aiAgentProfile).set({ currentRevisionId: revisionId })
+      .where(eq(aiAgentProfile.id, id));
+    await tx.insert(aiAgentConversation).values({
+      createdAt: now,
+      id: conversationId,
+      lastActivityAt: now,
+      profileId: id,
+      updatedAt: now,
+      visibility: "shared",
+    });
   });
   return getAgentProfileDetail({
     profileId: id,
@@ -210,20 +259,58 @@ export async function updateAgentProfile(input: {
   workspaceId: string;
 }) {
   await requireAgentProfileRole({ ...input, minimum: "editor" });
-  const now = new Date();
-  await db.update(aiAgentProfile).set({
+  const [profile] = await db.select().from(aiAgentProfile).where(and(
+    eq(aiAgentProfile.id, input.profileId),
+    eq(aiAgentProfile.workspaceId, input.workspaceId),
+    eq(aiAgentProfile.status, "active"),
+  )).limit(1);
+  if (!profile) throw new AgentProfileError("agent_not_found", "Agent not found.", 404);
+  const [currentRevision] = profile.currentRevisionId
+    ? await db.select({ definition: aiAgentRevision.definition }).from(aiAgentRevision).where(and(
+        eq(aiAgentRevision.id, profile.currentRevisionId),
+        eq(aiAgentRevision.profileId, profile.id),
+      )).limit(1)
+    : [];
+  const current = currentRevision?.definition && typeof currentRevision.definition === "object"
+    ? currentRevision.definition as ReturnType<typeof definitionForProfile>
+    : definitionForProfile(profile);
+  const definition = {
+    ...current,
     ...(input.defaultModel !== undefined ? { defaultModel: input.defaultModel } : {}),
     ...(input.description !== undefined ? { description: input.description } : {}),
     ...(input.icon !== undefined ? { icon: input.icon } : {}),
     ...(input.instructions !== undefined ? { instructions: input.instructions } : {}),
     ...(input.name !== undefined ? { name: input.name } : {}),
-    updatedAt: now,
-    version: sql`${aiAgentProfile.version} + 1`,
-  }).where(and(
-    eq(aiAgentProfile.id, input.profileId),
-    eq(aiAgentProfile.workspaceId, input.workspaceId),
-    eq(aiAgentProfile.status, "active"),
-  ));
+  };
+  const now = new Date();
+  const revisionId = crypto.randomUUID();
+  await db.transaction(async (tx) => {
+    const [locked] = await tx.select({ version: aiAgentProfile.version })
+      .from(aiAgentProfile).where(eq(aiAgentProfile.id, input.profileId))
+      .limit(1).for("update");
+    if (!locked) throw new AgentProfileError("agent_not_found", "Agent not found.", 404);
+    const version = locked.version + 1;
+    await tx.insert(aiAgentRevision).values({
+      compiledDefinition: compileAgentDefinition(definition),
+      createdAt: now,
+      createdByUserId: input.userId,
+      definition,
+      definitionHash: hashAgentDefinition(definition),
+      id: revisionId,
+      profileId: input.profileId,
+      version,
+    });
+    await tx.update(aiAgentProfile).set({
+      currentRevisionId: revisionId,
+      defaultModel: definition.defaultModel,
+      description: definition.description,
+      icon: definition.icon,
+      instructions: definition.instructions,
+      name: definition.name,
+      updatedAt: now,
+      version,
+    }).where(eq(aiAgentProfile.id, input.profileId));
+  });
   return getAgentProfileDetail(input);
 }
 
@@ -318,9 +405,32 @@ export async function archiveAgentProfile(input: {
   return { archived: true, hasExistingThreads: Boolean(activeThread) };
 }
 
+export async function duplicateAgentProfile(input: {
+  profileId: string;
+  userId: string;
+  workspaceId: string;
+}) {
+  await requireAgentProfileRole({ ...input, minimum: "user" });
+  const [profile] = await db.select().from(aiAgentProfile).where(and(
+    eq(aiAgentProfile.id, input.profileId),
+    eq(aiAgentProfile.workspaceId, input.workspaceId),
+  )).limit(1);
+  if (!profile) throw new AgentProfileError("agent_not_found", "Agent not found.", 404);
+  return createAgentProfile({
+    defaultModel: profile.defaultModel,
+    description: profile.description,
+    icon: profile.icon,
+    instructions: profile.instructions,
+    name: `${profile.name} copy`.slice(0, 120),
+    ownerUserId: input.userId,
+    workspaceId: input.workspaceId,
+  });
+}
+
 function serializeProfileSummary(
   profile: typeof aiAgentProfile.$inferSelect,
   role: AiAgentProfileRole,
+  lastVisitedAt: Date | null = null,
 ): AiAgentProfileSummary {
   return {
     defaultModel: profile.defaultModel,
@@ -329,6 +439,9 @@ function serializeProfileSummary(
     id: profile.id,
     name: profile.name,
     ownerUserId: profile.ownerUserId,
+    currentRevisionId: profile.currentRevisionId,
+    executionDisabledReason: profile.executionDisabledReason,
+    lastVisitedAt: lastVisitedAt?.toISOString() ?? null,
     role,
     status: profile.status as "active" | "archived",
     updatedAt: profile.updatedAt.toISOString(),
