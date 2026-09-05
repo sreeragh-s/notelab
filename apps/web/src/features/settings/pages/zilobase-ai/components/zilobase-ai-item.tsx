@@ -84,8 +84,8 @@ export function ZilobaseAiItem({
 
   return (
     <>
-      <div className="relative min-h-72 overflow-hidden bg-inherit">
-        <div className="absolute right-3 top-3 z-20 flex items-center gap-1 rounded-md bg-inherit p-0.5">
+      <div className="relative min-h-72 overflow-hidden bg-surface-canvas dark:bg-surface-navigation">
+        <div className="absolute right-3 top-3 z-[80] flex items-center gap-1 rounded-md bg-surface-canvas p-0.5 dark:bg-surface-navigation">
           {onExpandPage ? (
             <Button
               aria-label={`Expand ${page.name || modeLabels[mode]}`}
