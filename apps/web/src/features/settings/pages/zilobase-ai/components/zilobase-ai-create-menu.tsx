@@ -29,18 +29,18 @@ import {
 const modeConfig: Record<
   ZilobaseAiMode,
   {
-    buttonLabel: string;
+    addItemLabel: string;
     createItemLabel: string;
     newPageTitle: string;
   }
 > = {
   instruction: {
-    buttonLabel: "Create instruction",
+    addItemLabel: "Add instruction",
     createItemLabel: "Create instruction",
     newPageTitle: "My agent instruction",
   },
   skill: {
-    buttonLabel: "Create skill",
+    addItemLabel: "Add skill",
     createItemLabel: "Create skill",
     newPageTitle: "My agent skill",
   },
@@ -120,6 +120,9 @@ export function ZilobaseAiCreateMenu({
     );
   }, [normalizedQuery, pageOptions]);
   const isBusy = createPage.isPending || updatePage.isPending;
+  const buttonLabel = existingPageIds.length > 0
+    ? config.addItemLabel
+    : config.createItemLabel;
 
   React.useEffect(() => {
     if (!open) {
@@ -200,7 +203,7 @@ export function ZilobaseAiCreateMenu({
       <DropDrawerTrigger asChild>
         <Button disabled={!workspaceId || isBusy} type="button">
           {isBusy ? <Loader2Icon className="animate-spin" /> : <PlusIcon />}
-          {config.buttonLabel}
+          {buttonLabel}
         </Button>
       </DropDrawerTrigger>
       <DropDrawerContent align="end" className="w-80 overflow-hidden p-0">

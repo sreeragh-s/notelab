@@ -93,4 +93,14 @@ export function register({ readSource, assert, test }) {
     assert.match(layoutSource, /showAiWorkspaceSidePaneLayout \|\| showAgentWorkspaceSidePaneLayout/)
     assert.match(layoutSource, /auxiliarySidePaneCloseLabel=\{agentId \? "Close Custom Agent settings" : "Close AI settings"\}/)
   })
+
+  test("Instruction and skill menus distinguish creating from adding", async () => {
+    const menuSource = await readSource("/src/features/settings/pages/zilobase-ai/components/zilobase-ai-create-menu.tsx")
+
+    assert.match(menuSource, /addItemLabel: "Add instruction"/)
+    assert.match(menuSource, /createItemLabel: "Create instruction"/)
+    assert.match(menuSource, /addItemLabel: "Add skill"/)
+    assert.match(menuSource, /existingPageIds\.length > 0[\s\S]*\? config\.addItemLabel[\s\S]*: config\.createItemLabel/)
+    assert.match(menuSource, /<span>\{config\.createItemLabel\}<\/span>/)
+  })
 }
