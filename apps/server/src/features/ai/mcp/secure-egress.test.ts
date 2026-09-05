@@ -23,9 +23,22 @@ describe("MCP secure egress", () => {
   });
 
   it("rejects local and reserved literal destinations", () => {
-    for (const hostname of ["localhost", "service.internal", "127.0.0.1", "[::1]"]) {
+    for (const hostname of ["localhost", "localhost.", "intranet", "service.internal", "service.internal.", "127.0.0.1", "[::1]"]) {
       expect(() => normalizeMcpEndpoint(`https://${hostname}/mcp`)).toThrow(McpEgressError);
     }
+  });
+
+  it("releases unread redirect bodies even when rejecting the destination", async () => {
+    const cancel = vi.fn();
+    const fetchFn = createSecureMcpFetch({
+      approvedUrls: new Set(["https://mcp.example.com/start"]),
+      transport: async () => new Response(new ReadableStream({ cancel }), {
+        status: 302,
+        headers: { location: "https://unapproved.example.com/" },
+      }),
+    });
+    await expect(fetchFn("https://mcp.example.com/start")).rejects.toThrow(McpEgressError);
+    expect(cancel).toHaveBeenCalledOnce();
   });
 
   it("rejects reserved custom headers", () => {

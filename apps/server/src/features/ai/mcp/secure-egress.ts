@@ -88,6 +88,9 @@ export function createSecureMcpFetch(input: {
       if (response.status < 300 || response.status >= 400) {
         return boundMcpResponse(response);
       }
+      // Redirect bodies are never consumed by the SDK. Release the connection
+      // before validating/following the next hop, including rejected redirects.
+      await response.body?.cancel();
       const location = response.headers.get("location");
       if (!location || redirectCount === 3) {
         throw new McpEgressError("mcp_redirect_rejected", "MCP redirect was rejected.");
@@ -138,6 +141,7 @@ async function readBoundedRequestBody(request: Request) {
 function boundMcpResponse(response: Response) {
   const declared = Number(response.headers.get("content-length") ?? 0);
   if (declared > MCP_LIMITS.maxResponseBytes) {
+    void response.body?.cancel().catch(() => {});
     throw new McpEgressError("mcp_response_too_large", "MCP response exceeded 5 MiB.");
   }
   if (!response.body) return response;
@@ -160,6 +164,8 @@ function boundMcpResponse(response: Response) {
 }
 
 function isBlockedHostname(hostname: string) {
-  return hostname === "localhost" || hostname.endsWith(".localhost") ||
-    hostname.endsWith(".local") || hostname.endsWith(".internal");
+  const canonical = hostname.replace(/\.$/, "");
+  return !canonical.includes(".") && !canonical.includes(":") ||
+    canonical === "localhost" || canonical.endsWith(".localhost") ||
+    canonical.endsWith(".local") || canonical.endsWith(".internal");
 }
