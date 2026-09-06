@@ -6,6 +6,8 @@
 - [apps/server/src/features/workspaces/navigation-realtime](../../../apps/server/src/features/workspaces/navigation-realtime)
 - [packages/features/src/pages](../../../packages/features/src/pages)
 
+[Background task implementation](../../../apps/server/src/features/workspaces/navigation-realtime/background.ts) owns feature-specific drain/progress outcomes.
+
 ## Main flow
 
 Sidebar models derive visible sections and page/database navigation; actions change content or selection. Workspace navigation realtime propagates invalidations through an outbox and shared event/cache logic.

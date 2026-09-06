@@ -6,6 +6,8 @@
 - [apps/web/src/features/mail](../../../apps/web/src/features/mail)
 - [packages/features/src/mail](../../../packages/features/src/mail)
 
+[Background task implementation](../../../apps/server/src/features/mail/background.ts) owns feature-specific drain/progress outcomes.
+
 ## Main flow
 
 Provider callbacks connect Gmail accounts. Workspace routes expose connection, query, organization, sync, message and realtime operations. Sync/index modules build queryable local state; database synchronization uses its own outbox worker.

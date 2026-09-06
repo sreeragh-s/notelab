@@ -6,6 +6,8 @@
 - [apps/web/src/features/databases](../../../apps/web/src/features/databases)
 - [packages/features/src/databases](../../../packages/features/src/databases)
 
+[Background task implementation](../../../apps/server/src/features/databases/realtime/background.ts) owns feature-specific drain/progress outcomes.
+
 ## Main flow
 
 Database routes compose reads, rows, properties and data-source operations. The web database surface derives a view model and commands from shared payloads; feature mutations coordinate optimistic state and realtime invalidation.

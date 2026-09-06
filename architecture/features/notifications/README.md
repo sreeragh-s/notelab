@@ -6,6 +6,8 @@
 - [apps/web/src/features/notifications](../../../apps/web/src/features/notifications)
 - [packages/features/src/notifications](../../../packages/features/src/notifications)
 
+[Background task implementation](../../../apps/server/src/features/notifications/background.ts) owns feature-specific drain/progress outcomes.
+
 ## Main flow
 
 Notification operations list and mark in-product notifications and create automation notifications for eligible recipients. The outbox publishes through the runtime adapter; the notification center consumes shared queries.
