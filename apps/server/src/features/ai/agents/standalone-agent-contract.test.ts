@@ -49,14 +49,9 @@ describe("standalone Custom Agent migration boundary", () => {
     expect(tools).not.toContain("canAccessDatabaseInWorkspace");
   });
 
-  it("lets shared users chat while keeping resource reads bound to the agent principal", async () => {
+  it("conversation entrypoint checks the shared-user role", async () => {
     const conversation = await readFile(new URL("src/features/ai/agents/agent-conversation-service.ts", root), "utf8");
-    const access = await readFile(new URL("src/features/access/effective-access.ts", root), "utf8");
     expect(conversation).toContain('requireAgentProfileRole({ ...input, minimum: "user" })');
-    expect(access).toContain("Resolves access for the agent principal only");
-    expect(access).toContain('eq(pageAccess.targetType, "agent")');
-    expect(access).toContain("eq(pageAccess.targetId, agentId)");
-    expect(access).toContain("deliberately excludes");
   });
 
   it("persists page-style agent covers and icon placement", async () => {

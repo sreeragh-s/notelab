@@ -15,7 +15,6 @@ export {
   getEffectivePageAccessForAgent,
   getEffectivePageAccessInWorkspace,
   getEffectiveTeamspaceAccessInWorkspace,
-  getPageRecord,
   isDatabasePublishedInWorkspace,
   isPagePublishedInWorkspace,
   type DatabaseAccessRecord,
@@ -34,4 +33,5 @@ export {
   type AccessLevel,
 } from "./access-level";
 export { rejectActiveWorkspaceMismatch } from "./workspace-mismatch";
-export type { AgentPermissionSnapshotGrant } from "./effective-access";
+export type { AgentPermissionSnapshotGrant } from "./access-decisions";
+export { getPageRecord } from "./resource-access-records";

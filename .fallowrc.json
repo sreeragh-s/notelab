@@ -151,6 +151,13 @@
         "patterns": ["apps/server/src/public/**"]
       },
       {
+        "name": "server-access-model",
+        "patterns": [
+          "apps/server/src/features/access/access-level.ts",
+          "apps/server/src/features/access/access-decisions.ts"
+        ]
+      },
+      {
         "name": "server-features",
         "patterns": ["apps/server/src/features/**"]
       },
@@ -489,8 +496,13 @@
         ]
       },
       {
+        "from": "server-access-model",
+        "allow": ["server-access-model"]
+      },
+      {
         "from": "server-features",
         "allow": [
+          "server-access-model",
           "server-bindings",
           "server-features",
           "server-infrastructure",

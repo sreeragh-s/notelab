@@ -1,3 +1,5 @@
+import { getPageRecord, loadStandaloneDatabaseForPage, loadActivePageInWorkspace, loadActiveDatabaseContainer } from "./resource-access-records";
+import { strongestExplicitAccess, principalGrantTargets, snapshotRootAccess, teamspacePrincipalAccess, type AgentPermissionSnapshotGrant } from "./access-decisions";
 import {
   and,
   eq,
@@ -5,19 +7,7 @@ import {
   isNull,
 } from "drizzle-orm";
 import { db } from "../../infrastructure/database";
-import {
-  database,
-  databaseAccess,
-  databaseRow,
-  dataSource,
-  member,
-  page,
-  pageAccess,
-  teamMember,
-  teamspace,
-  teamspacePrincipal,
-  workspaceGuest,
-} from "../../infrastructure/database/schema";
+import { database, databaseAccess, member, page, pageAccess, teamMember, teamspace, teamspacePrincipal, workspaceGuest } from "../../infrastructure/database/schema";
 import { loadWorkspacePageGraph } from "../pages/graph";
 import { activeMembershipCondition } from "../memberships";
 import {
@@ -32,16 +22,6 @@ import {
   type AccessLevel,
 } from "./access-level";
 import { getMembership, getWorkspaceGuest } from "./principal-access";
-
-export async function getPageRecord(id: string) {
-  const [record] = await db
-    .select()
-    .from(page)
-    .where(and(eq(page.id, id), isNull(page.deletedAt)))
-    .limit(1);
-
-  return record ?? null;
-}
 
 async function getEffectivePageAccess(
   pageId: string,
@@ -116,12 +96,7 @@ export async function getEffectivePageAccessInWorkspace(
     return "full";
   }
 
-  const targetTypes = ["user"];
-  const targetIds = [userId, ...teamRows.map((row) => row.teamId)];
-
-  if (teamRows.length > 0) {
-    targetTypes.push("team");
-  }
+  const { targetTypes, targetIds } = principalGrantTargets(userId, teamRows.map((row) => row.teamId));
 
   const rules =
     ancestorIds.length > 0
@@ -138,11 +113,7 @@ export async function getEffectivePageAccessInWorkspace(
           )
       : [];
 
-  const pageLevel = rules.reduce<AccessLevel>((best, rule) => {
-    const next = normalizeAccessLevel(rule.accessLevel) ?? "none";
-
-    return accessRank[next] > accessRank[best] ? next : best;
-  }, "none");
+  const pageLevel = strongestExplicitAccess(rules);
 
   if (!isMember) {
     if (
@@ -168,21 +139,7 @@ export async function getEffectivePageAccessInWorkspace(
     return pageLevel;
   }
 
-  const [standaloneDatabaseRow] = await db
-    .select({ databaseId: dataSource.parentDatabaseId })
-    .from(databaseRow)
-    .innerJoin(dataSource, eq(dataSource.id, databaseRow.dataSourceId))
-    .innerJoin(database, eq(database.id, dataSource.parentDatabaseId))
-    .where(
-      and(
-        eq(databaseRow.pageId, pageId),
-        eq(database.workspaceId, workspaceId),
-        isNull(database.pageId),
-        isNull(database.deletedAt),
-        isNull(databaseRow.deletedAt),
-      ),
-    )
-    .limit(1);
+  const standaloneDatabaseRow = await loadStandaloneDatabaseForPage(pageId, workspaceId);
 
   return standaloneDatabaseRow
     ? resolveEffectiveDatabaseAccessInWorkspace(
@@ -208,14 +165,10 @@ export async function getEffectivePageAccessForAgent(
   agentId: string,
 ): Promise<AccessLevel> {
   const [record, graph] = await Promise.all([
-    db.select({ id: page.id }).from(page).where(and(
-      eq(page.id, pageId),
-      eq(page.workspaceId, workspaceId),
-      isNull(page.deletedAt),
-    )).limit(1),
+    loadActivePageInWorkspace(pageId, workspaceId),
     loadWorkspacePageGraph(workspaceId),
   ]);
-  if (!record[0]) return "none";
+  if (!record) return "none";
 
   const ancestorIds = graph.getAncestorIds(pageId);
   if (ancestorIds.length === 0) return "none";
@@ -227,10 +180,7 @@ export async function getEffectivePageAccessForAgent(
       eq(pageAccess.targetType, "agent"),
       eq(pageAccess.targetId, agentId),
     ));
-  return rules.reduce<AccessLevel>((best, rule) => {
-    const next = normalizeAccessLevel(rule.accessLevel) ?? "none";
-    return accessRank[next] > accessRank[best] ? next : best;
-  }, "none");
+  return strongestExplicitAccess(rules);
 }
 
 export async function canAgentAccessPage(
@@ -245,12 +195,6 @@ export async function canAgentAccessPage(
   );
 }
 
-export type AgentPermissionSnapshotGrant = {
-  accessLevel: Exclude<AccessLevel, "none">;
-  resourceId: string;
-  resourceType: "page" | "database";
-};
-
 /** Resolves only the immutable resource roots captured when an agent run was
  * queued. Callers must also check the live agent ACL so revocations win. */
 export async function getEffectivePageAccessForAgentSnapshot(
@@ -259,19 +203,12 @@ export async function getEffectivePageAccessForAgentSnapshot(
   grants: AgentPermissionSnapshotGrant[],
 ): Promise<AccessLevel> {
   const [record, graph] = await Promise.all([
-    db.select({ id: page.id }).from(page).where(and(
-      eq(page.id, pageId),
-      eq(page.workspaceId, workspaceId),
-      isNull(page.deletedAt),
-    )).limit(1),
+    loadActivePageInWorkspace(pageId, workspaceId),
     loadWorkspacePageGraph(workspaceId),
   ]);
-  if (!record[0]) return "none";
+  if (!record) return "none";
   const ancestorIds = new Set(graph.getAncestorIds(pageId));
-  return grants.reduce<AccessLevel>((best, grant) => {
-    if (grant.resourceType !== "page" || !ancestorIds.has(grant.resourceId)) return best;
-    return accessRank[grant.accessLevel] > accessRank[best] ? grant.accessLevel : best;
-  }, "none");
+  return snapshotRootAccess(grants, "page", ancestorIds);
 }
 
 export async function canAgentSnapshotAccessPage(
@@ -326,21 +263,7 @@ export async function isPagePublishedInWorkspace(
     }
   }
 
-  const [standaloneDatabaseRow] = await db
-    .select({ databaseId: dataSource.parentDatabaseId })
-    .from(databaseRow)
-    .innerJoin(dataSource, eq(dataSource.id, databaseRow.dataSourceId))
-    .innerJoin(database, eq(database.id, dataSource.parentDatabaseId))
-    .where(
-      and(
-        eq(databaseRow.pageId, pageId),
-        eq(database.workspaceId, workspaceId),
-        isNull(database.pageId),
-        isNull(database.deletedAt),
-        isNull(databaseRow.deletedAt),
-      ),
-    )
-    .limit(1);
+  const standaloneDatabaseRow = await loadStandaloneDatabaseForPage(pageId, workspaceId);
 
   return standaloneDatabaseRow
     ? isDatabasePublishedInWorkspace(
@@ -389,13 +312,7 @@ export async function getEffectiveDatabaseAccessForAgent(
   workspaceId: string,
   agentId: string,
 ): Promise<AccessLevel> {
-  const [record] = await db.select({ pageId: database.pageId })
-    .from(database)
-    .where(and(
-      eq(database.id, databaseId),
-      eq(database.workspaceId, workspaceId),
-      isNull(database.deletedAt),
-    )).limit(1);
+  const record = await loadActiveDatabaseContainer(databaseId, workspaceId);
   if (!record) return "none";
   if (record.pageId) {
     return getEffectivePageAccessForAgent(record.pageId, workspaceId, agentId);
@@ -408,10 +325,7 @@ export async function getEffectiveDatabaseAccessForAgent(
       eq(databaseAccess.targetType, "agent"),
       eq(databaseAccess.targetId, agentId),
     ));
-  return rules.reduce<AccessLevel>((best, rule) => {
-    const next = normalizeAccessLevel(rule.accessLevel) ?? "none";
-    return accessRank[next] > accessRank[best] ? next : best;
-  }, "none");
+  return strongestExplicitAccess(rules);
 }
 
 export async function canAgentAccessDatabase(
@@ -431,21 +345,12 @@ export async function getEffectiveDatabaseAccessForAgentSnapshot(
   workspaceId: string,
   grants: AgentPermissionSnapshotGrant[],
 ): Promise<AccessLevel> {
-  const [record] = await db.select({ pageId: database.pageId })
-    .from(database)
-    .where(and(
-      eq(database.id, databaseId),
-      eq(database.workspaceId, workspaceId),
-      isNull(database.deletedAt),
-    )).limit(1);
+  const record = await loadActiveDatabaseContainer(databaseId, workspaceId);
   if (!record) return "none";
   if (record.pageId) {
     return getEffectivePageAccessForAgentSnapshot(record.pageId, workspaceId, grants);
   }
-  return grants.reduce<AccessLevel>((best, grant) => {
-    if (grant.resourceType !== "database" || grant.resourceId !== databaseId) return best;
-    return accessRank[grant.accessLevel] > accessRank[best] ? grant.accessLevel : best;
-  }, "none");
+  return snapshotRootAccess(grants, "database", new Set([databaseId]));
 }
 
 export async function canAgentSnapshotAccessDatabase(
@@ -532,8 +437,7 @@ async function resolveEffectiveDatabaseAccessForRecord(
         .from(teamMember)
         .where(eq(teamMember.userId, userId))
     ).map((row) => row.teamId);
-  const targetTypes = ["user", ...(teamIds.length ? ["team"] : [])];
-  const targetIds = [userId, ...teamIds];
+  const { targetTypes, targetIds } = principalGrantTargets(userId, teamIds);
   const rules = await db
     .select({ accessLevel: databaseAccess.accessLevel })
     .from(databaseAccess)
@@ -545,10 +449,7 @@ async function resolveEffectiveDatabaseAccessForRecord(
       ),
     );
 
-  const explicitLevel = rules.reduce<AccessLevel>((best, rule) => {
-    const next = normalizeAccessLevel(rule.accessLevel) ?? "none";
-    return accessRank[next] > accessRank[best] ? next : best;
-  }, "none");
+  const explicitLevel = strongestExplicitAccess(rules);
 
   if (record.teamspaceId) {
     return maxAccess(
@@ -657,12 +558,7 @@ export async function getAccessiblePageIds(
           .where(eq(teamMember.userId, userId))
       : Promise.resolve([]),
   ]);
-  const targetTypes = ["user"];
-  const targetIds = [userId, ...teamRows.map((row) => row.teamId)];
-
-  if (teamRows.length > 0) {
-    targetTypes.push("team");
-  }
+  const { targetTypes, targetIds } = principalGrantTargets(userId, teamRows.map((row) => row.teamId));
 
   const rules =
     targetIds.length > 0
@@ -760,8 +656,7 @@ async function resolveTeamspaceAccess(
     .limit(1);
   if (!record || record.archivedAt) return "none";
 
-  const targetTypes = ["user", ...(teamIds.length ? ["team"] : [])];
-  const targetIds = [userId, ...teamIds];
+  const { targetTypes, targetIds } = principalGrantTargets(userId, teamIds);
   const principals = await db
     .select({
       accessLevelOverride: teamspacePrincipal.accessLevelOverride,
@@ -776,15 +671,7 @@ async function resolveTeamspaceAccess(
       ),
     );
 
-  return principals.reduce<AccessLevel>((best, principal) => {
-    const next =
-      principal.role === "owner"
-        ? "full"
-        : normalizeAccessLevel(principal.accessLevelOverride) ??
-          normalizeAccessLevel(record.memberAccessLevel) ??
-          "none";
-    return maxAccess(best, next);
-  }, "none");
+  return teamspacePrincipalAccess(record.memberAccessLevel, principals);
 }
 
 export async function getEffectivePageAccessForUsers(
