@@ -5,28 +5,27 @@ import type {
   PageItemPlacement,
 } from "@zilobase/features/pages"
 import type { MeetingListItem } from "@zilobase/features/meetings"
-import type { ReactNode } from "react"
 
-import type { SidebarNavItem } from "../components/sidebar-nav-list"
+import type { SidebarNavItem } from "./sidebar-nav-item"
 
-export type SidebarPageSections = {
-  privatePages: SidebarNavItem[]
-  teamspacePages: SidebarNavItem[]
-  teamspacePagesById: Record<string, SidebarNavItem[]>
+export type SidebarPageSections<Icon> = {
+  privatePages: SidebarNavItem<Icon>[]
+  teamspacePages: SidebarNavItem<Icon>[]
+  teamspacePagesById: Record<string, SidebarNavItem<Icon>[]>
 }
 
-export type SidebarNavigationIcons = {
-  getDatabaseIcon: (database: PageDatabase) => ReactNode
-  getDatabaseViewIcon: (view: PageDatabaseView) => ReactNode
-  getMeetingIcon?: (meeting: MeetingListItem) => ReactNode
-  getPageIcon: (page: Page) => ReactNode
+export type SidebarNavigationIcons<Icon> = {
+  getDatabaseIcon: (database: PageDatabase) => Icon
+  getDatabaseViewIcon: (view: PageDatabaseView) => Icon
+  getMeetingIcon?: (meeting: MeetingListItem) => Icon
+  getPageIcon: (page: Page) => Icon
 }
 
-export function buildSidebarNavigation(
+export function buildSidebarNavigation<Icon>(
   pages: Page[],
   databases: PageDatabase[],
   placements: PageItemPlacement[],
-  icons: SidebarNavigationIcons,
+  icons: SidebarNavigationIcons<Icon>,
   meetings: MeetingListItem[] = [],
 ) {
   const activePages = pages.filter(
@@ -83,10 +82,10 @@ export function buildSidebarNavigation(
   }
 }
 
-export function buildRecentItems(
+export function buildRecentItems<Icon>(
   pages: Page[],
   databases: PageDatabase[],
-  icons: SidebarNavigationIcons,
+  icons: SidebarNavigationIcons<Icon>,
 ) {
   return [
     ...pages
@@ -101,13 +100,13 @@ export function buildRecentItems(
   )
 }
 
-export function buildPageSections(
+export function buildPageSections<Icon>(
   pages: Page[],
   databases: PageDatabase[],
   placements: PageItemPlacement[],
-  icons: SidebarNavigationIcons,
+  icons: SidebarNavigationIcons<Icon>,
   meetings: MeetingListItem[] = [],
-): SidebarPageSections {
+): SidebarPageSections<Icon> {
   const orderedPages = [...pages].sort(
     (first, second) => getPageCreatedTime(first) - getPageCreatedTime(second),
   )
@@ -162,7 +161,7 @@ export function buildPageSections(
     databaseId: string,
     navNodeId: string,
     isLinked = false,
-  ): SidebarNavItem | null => {
+  ): SidebarNavItem<Icon> | null => {
     const node = databaseNodesById.get(databaseId)
 
     if (!node) {
@@ -208,7 +207,7 @@ export function buildPageSections(
     pageId: string,
     navNodeId: string,
     isLinked = false,
-  ): SidebarNavItem | null => {
+  ): SidebarNavItem<Icon> | null => {
     const node = pageNodesById.get(pageId)
 
     if (!node) {
@@ -309,7 +308,7 @@ export function buildPageSections(
   }
 }
 
-function getAllSectionItems(sections: SidebarPageSections) {
+function getAllSectionItems<Icon>(sections: SidebarPageSections<Icon>) {
   return [
     ...sections.privatePages,
     ...sections.teamspacePages,
@@ -317,11 +316,11 @@ function getAllSectionItems(sections: SidebarPageSections) {
   ]
 }
 
-function createMeetingNode(
+function createMeetingNode<Icon>(
   meeting: MeetingListItem,
   navNodeId: string,
-  icons: SidebarNavigationIcons,
-): SidebarNavItem {
+  icons: SidebarNavigationIcons<Icon>,
+): SidebarNavItem<Icon> {
   return {
     emoji: icons.getMeetingIcon?.(meeting) ?? null,
     id: `meeting:${meeting.id}`,
@@ -336,14 +335,14 @@ function createMeetingNode(
   }
 }
 
-export function buildFavoriteItems(items: SidebarNavItem[]) {
+export function buildFavoriteItems<Icon>(items: SidebarNavItem<Icon>[]) {
   return items.flatMap(collectFavoriteItems)
 }
 
-function createPageNode(
+function createPageNode<Icon>(
   page: Page,
-  icons: SidebarNavigationIcons,
-): SidebarNavItem {
+  icons: SidebarNavigationIcons<Icon>,
+): SidebarNavItem<Icon> {
   return {
     id: page.id,
     isFavorite: Boolean(page.isFavorite),
@@ -359,11 +358,11 @@ function createPageNode(
   }
 }
 
-function createDatabaseNode(
+function createDatabaseNode<Icon>(
   database: PageDatabase,
   page: Page | undefined,
-  icons: SidebarNavigationIcons,
-): SidebarNavItem {
+  icons: SidebarNavigationIcons<Icon>,
+): SidebarNavItem<Icon> {
   return {
     databaseId: database.id,
     id: `database:${database.id}`,
@@ -433,7 +432,7 @@ function groupPlacements(
   return grouped
 }
 
-function collectFavoriteItems(item: SidebarNavItem): SidebarNavItem[] {
+function collectFavoriteItems<Icon>(item: SidebarNavItem<Icon>): SidebarNavItem<Icon>[] {
   if (item.isDatabaseView) {
     return []
   }
@@ -447,7 +446,7 @@ function collectFavoriteItems(item: SidebarNavItem): SidebarNavItem[] {
     : nestedFavorites
 }
 
-function cloneFavoriteHierarchy(item: SidebarNavItem): SidebarNavItem {
+function cloneFavoriteHierarchy<Icon>(item: SidebarNavItem<Icon>): SidebarNavItem<Icon> {
   return {
     ...item,
     pages: item.pages
@@ -456,7 +455,7 @@ function cloneFavoriteHierarchy(item: SidebarNavItem): SidebarNavItem {
   }
 }
 
-function collectItemIds(item: SidebarNavItem, ids: Set<string>) {
+function collectItemIds<Icon>(item: SidebarNavItem<Icon>, ids: Set<string>) {
   ids.add(item.id)
   item.pages.forEach((child) => collectItemIds(child, ids))
 }

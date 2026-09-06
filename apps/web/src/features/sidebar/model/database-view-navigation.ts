@@ -17,3 +17,11 @@ export function getSidebarDatabaseViewSearchId({
     ? undefined
     : databaseViewId
 }
+
+/** Copy/open links use the owning database when present, otherwise the page. */
+export function getNavigationItemPath({ databaseId, pageId }: {
+  databaseId?: string | null;
+  pageId?: string | null;
+}) {
+  return databaseId ? `/d/${databaseId}` : `/p/${pageId}`;
+}

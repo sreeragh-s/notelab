@@ -2,13 +2,18 @@ import { readFile } from "node:fs/promises"
 const sidebarConfigPath = "/packages/features/src/user-settings/sidebar-config.ts"
 
 export function register({ readSource, assert, loadModule, test }) {
+  const readLibrarySource = async () => (await Promise.all([
+    readSource("/src/features/library/screens/recents.tsx"),
+    readSource("/src/features/library/components/teamspace-library-table.tsx"),
+    readSource("/src/features/library/components/create-library-teamspace-dialog.tsx"),
+  ])).join("\n")
   const readToolbarSource = async () =>
     (await Promise.all([
       readSource("/src/features/databases/views/components/database-view-toolbar.tsx"),
       readSource("/src/features/databases/views/components/database-view-toolbar-dialogs.tsx"),
     ])).join("\n")
   test("Library Teamspaces uses a dedicated teamspace directory", async () => {
-    const source = await readSource("/src/features/library/pages/recents.tsx")
+    const source = await readLibrarySource()
     assert.match(source, /activeViewId === "teamspaces"[\s\S]*<TeamspacesLibraryTable[\s\S]*rows=\{rows\}[\s\S]*teamspaces=\{teamspaces\}/)
     assert.match(source, /Name[\s\S]*Description[\s\S]*Type[\s\S]*Access[\s\S]*Members/)
     assert.match(source, /<Plus \/> New teamspace/)
@@ -23,7 +28,7 @@ export function register({ readSource, assert, loadModule, test }) {
   })
 
   test("Library keeps a full-page Library heading across tabs", async () => {
-    const source = await readSource("/src/features/library/pages/recents.tsx")
+    const source = await readLibrarySource()
     assert.match(source, /mode === "trash" \? "Trash" : "Library"/)
     assert.match(source, /<h1 className="min-h-10 py-0 text-4xl font-semibold/)
     assert.match(source, /showTitle: false/)
@@ -46,7 +51,7 @@ export function register({ readSource, assert, loadModule, test }) {
   })
 
   test("Library lists meetings and its sidebar shortcut opens that tab", async () => {
-    const librarySource = await readSource("/src/features/library/pages/recents.tsx")
+    const librarySource = await readLibrarySource()
     const sidebarSource = await readSource(
       "/src/features/sidebar/components/sidebar-shortcut-list.tsx",
     )
@@ -54,7 +59,7 @@ export function register({ readSource, assert, loadModule, test }) {
     const iconSource = await readSource("/src/features/sidebar/components/sidebar-layout-icons.tsx")
     const toolbarSource = await readToolbarSource()
 
-    assert.match(librarySource, /id: "meetings", label: libraryViewLabels\.meetings/)
+    assert.match(librarySource, /homepageViews = libraryViews\.map/)
     assert.match(librarySource, /useWorkspaceMeetings\(/)
     assert.match(librarySource, /fallbackIcon: view\.icon/)
     assert.match(toolbarSource, /view\.fallbackIcon\s*\?\?\s*getDatabaseViewTypePresentation\(view\.type\)\.Icon/)
@@ -70,10 +75,6 @@ export function register({ readSource, assert, loadModule, test }) {
     assert.match(iconSource, /recents: HistoryIcon/)
     assert.match(iconSource, /shared: UsersIcon/)
     assert.match(iconSource, /teamspaces: Layers3Icon/)
-    assert.match(
-      librarySource,
-      /case "meetings":[\s\S]*row\.itemKind === "meeting"/,
-    )
     assert.match(
       librarySource,
       /params: \{ meetingId: row\.openMeetingId \}[\s\S]*to: "\/m\/\$meetingId"/,

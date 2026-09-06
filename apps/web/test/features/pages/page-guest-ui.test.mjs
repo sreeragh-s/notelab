@@ -15,7 +15,7 @@ export function register({ readSource, assert, loadModule, test }) {
   test("page guest UI keeps invitation, management, and shell concerns separate", async () => {
     const [acceptance, shareMenu, teamSettings, pageShell, sharedHeader] = await Promise.all([
       readSource("/src/features/pages/screens/accept-page-invitation.tsx"),
-      readSource("/src/features/sidebar/components/nav-actions.tsx"),
+      Promise.all([readSource("/src/features/sidebar/components/item-share-dropdown.tsx"), readSource("/src/features/sidebar/commands/use-item-sharing.ts")]).then(parts => parts.join("\n")),
       readSource("/src/features/teamspaces/pages/team.tsx"),
       readSource("/src/features/pages/screens/page.tsx"),
       readSource("/src/features/pages/publication/shared-page-header.tsx"),

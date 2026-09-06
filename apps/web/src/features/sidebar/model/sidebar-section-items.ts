@@ -1,11 +1,11 @@
-import type { SidebarNavItem } from "../components/sidebar-nav-list"
+import type { SidebarNavItem } from "./sidebar-nav-item"
 import type {
   LegacySidebarConfig,
   SidebarSectionId,
 } from "@zilobase/features/user-settings"
 
-export function getConfiguredSidebarItems(
-  items: SidebarNavItem[],
+export function getConfiguredSidebarItems<Icon>(
+  items: SidebarNavItem<Icon>[],
   sectionId: SidebarSectionId,
   config: LegacySidebarConfig,
 ) {

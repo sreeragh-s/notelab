@@ -37,7 +37,7 @@ import { SidebarTasksSection } from "./components/sidebar-tasks-section"
 import {
   buildSidebarNavigation,
   type SidebarNavigationIcons,
-} from "./model/sidebar-navigation-model"
+} from "./model/sidebar-navigation-model.ts"
 import {
   getActiveDatabaseId,
   getActiveDatabaseViewId,
@@ -96,7 +96,7 @@ import { withoutMailFeatures } from "./model/sidebar-layout-model"
 import { WorkspaceMailNavigation } from "./components/workspace-mail-navigation"
 import { NotificationCenter } from "@/features/notifications"
 
-const sidebarNavigationIcons: SidebarNavigationIcons = {
+const sidebarNavigationIcons: SidebarNavigationIcons<React.ReactNode> = {
   getDatabaseIcon: (database: Parameters<typeof getDatabaseIconNode>[0]) =>
     getDatabaseIconNode(database) ?? <PageIconDisplay size="sm" value={DEFAULT_DATABASE_ITEM_ICON} />,
   getDatabaseViewIcon: (view) => <DatabaseViewIcon view={view} />,

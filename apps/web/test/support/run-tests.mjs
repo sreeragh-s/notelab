@@ -173,6 +173,12 @@ function aliasPlugin() {
           ),
         })
       )
+      build.onResolve(
+        { filter: /^@zilobase\/features\/(databases\/appearance|user-settings\/sidebar-config)$/ },
+        (args) => ({
+          path: join(workspaceDir, "packages/features/src", `${args.path.slice("@zilobase/features/".length)}.ts`),
+        }),
+      )
       build.onResolve({ filter: /^@\// }, async (args) => ({
         path: await resolveAliasPath(join(srcDir, args.path.slice(2))),
       }))

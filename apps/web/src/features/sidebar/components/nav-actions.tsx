@@ -1,27 +1,7 @@
-import * as React from "react";
-import { useNavigate } from "@tanstack/react-router";
-import {
-  CheckIcon,
-  ChevronsLeftIcon,
-  ChevronsRightIcon,
-  ChevronsUpDownIcon,
-  CircleAlertIcon,
-  BotIcon,
-  CloudCheckIcon,
-  Globe2Icon,
-  LinkIcon,
-  LoaderCircleIcon,
-  LockIcon,
-  MoreHorizontalIcon,
-  MessageSquareTextIcon,
-  MailPlusIcon,
-  Share2Icon,
-  SparklesIcon,
-  StarIcon,
-  Trash2Icon,
-  WifiOffIcon,
-} from "@/shared/components/icons";
-import { toast } from "sonner";
+import { useNavigationItemActions } from "../commands/use-navigation-item-actions";
+import { ItemShareDropdown } from "./item-share-dropdown";
+
+import { CheckIcon, ChevronsLeftIcon, ChevronsRightIcon, CircleAlertIcon, CloudCheckIcon, LoaderCircleIcon, LockIcon, MoreHorizontalIcon, MessageSquareTextIcon, SparklesIcon, StarIcon, WifiOffIcon } from "@/shared/components/icons";
 
 import { Button } from "@/shared/ui/button";
 import {
@@ -34,15 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/shared/ui/command";
-import { Input } from "@/shared/ui/input";
+
 import {
   DropDrawer,
   DropDrawerContent,
@@ -52,78 +24,20 @@ import {
   DropDrawerSubTrigger,
   DropDrawerTrigger,
 } from "@/shared/ui/dropdrawer";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/shared/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/ui/select";
-import { useSession } from "@zilobase/features/auth/react";
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
-import { useAiAgentProfiles } from "@zilobase/features/ai-chat/react";
-import {
-  useCreatePage,
-  useDeletePage,
-  useDeletePageAccess,
-  useSetPageFavorite,
-  useSetPagePublished,
-  useUpdatePage,
-  useUpsertPageAccess,
-  usePage,
-  usePageAccess,
-  usePageAccessLevel,
-  usePageAccessTargets,
-  usePageNavigation,
-  usePagePersonAccessTargets,
-  usePageGuestInvitations,
-  usePageGuestRequests,
-  useInvitePageGuest,
-  useCancelPageGuestInvitation,
-  useRevokePageGuest,
-} from "@zilobase/features/pages/react";
-import { useWorkspaceGuestPolicy } from "@zilobase/features/workspaces/react";
-import { isDatabaseLocked } from "@zilobase/features/databases";
-import {
-  useDatabase,
-  useDatabaseAccess,
-  useDeleteDatabaseAccess,
-  useDeleteDatabase,
-  useSetDatabaseFavorite,
-  useSetDatabasePublished,
-  useUpdateDatabase,
-  useUpsertDatabaseAccess,
-} from "@zilobase/features/databases/react";
-import { useUpdateUserSettings, useUserSettings } from "@zilobase/features/user-settings/react";
+
 import { useIsMobile } from "@/shared/hooks/use-mobile";
 import { cn } from "@/shared/lib/utils";
 import { usePageCommentsSnapshot } from "@/features/comments/index";
 import { Switch } from "@/shared/ui/switch";
-import {
-  useLayoutEditor,
-} from "@/features/pages/layout";
+
 import { OfflineAvailabilityAction } from "@/features/offline/index";
 import {
   useConnectivity,
   useOfflineManifest,
   useOfflineSessionLocked,
 } from "@/features/offline/index";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/app-tabs";
-import {
-  getPrimaryPageParentId,
-  zilobaseAiModeLabels,
-  resolvePageFullWidth,
-  type AccessLevel,
-  type AccessTargetType,
-  type ZilobaseAiMode,
-  type PageAccessRule,
-  type PageMetadata,
-} from "@zilobase/features/pages";
+
+import { zilobaseAiModeLabels, type ZilobaseAiMode } from "@zilobase/features/pages";
 
 const zilobaseAiModes: ZilobaseAiMode[] = ["instruction", "skill"];
 
@@ -134,15 +48,6 @@ const moreActions = [
   "Move to Trash",
   "Version History",
 ];
-
-const accessLabels: Record<AccessLevel, string> = {
-  comment: "Comment access",
-  edit: "Edit access",
-  full: "Full access",
-  view: "View access",
-};
-
-type ShareTargetValue = `${AccessTargetType}:${string}`;
 
 export function NavActions({
   databaseId,
@@ -161,321 +66,23 @@ export function NavActions({
   pageId?: string | null;
   meetingId?: string | null;
 }) {
-  const navigate = useNavigate();
-  const { openLayoutEditor } = useLayoutEditor();
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [trashConfirmOpen, setTrashConfirmOpen] = React.useState(false);
-  const { data: databasePayload } = useDatabase(databaseId, {
-    includeDeleted: true,
-  });
-  const workspaceId = useActiveWorkspaceId();
-  const actionPageId = pageId ?? databasePayload?.database.pageId;
-  const { data: page } = usePage(actionPageId, {
-    refetchOnMount: false,
-  });
-  const { data: navigation } = usePageNavigation(workspaceId);
-  const pages = navigation?.pages ?? [];
-  const createPage = useCreatePage();
-  const deletePage = useDeletePage();
-  const deleteDatabase = useDeleteDatabase();
-  const updateDatabase = useUpdateDatabase();
-  const updatePage = useUpdatePage();
-  const setFavorite = useSetPageFavorite();
-  const setDatabaseFavorite = useSetDatabaseFavorite();
-  const { data: userSettings } = useUserSettings();
-  const updateUserSettings = useUpdateUserSettings();
-  const isMobile = useIsMobile();
-  const manifest = useOfflineManifest();
-  const connectivity = useConnectivity();
-  const offlineSessionLocked = useOfflineSessionLocked();
-  const listPage = pages.find((item) => item.id === actionPageId);
-  const isDatabasePage = Boolean(databaseId);
-  const isMeetingPage = Boolean(meetingId);
-  const hasPageActions = Boolean(actionPageId || databaseId);
-  const comments = usePageCommentsSnapshot(pageId);
-  const openDiscussionCount = comments.threads.filter((thread) => !thread.resolvedAt).length;
-  const pageMetadata = (page?.metadata ?? {}) as PageMetadata;
-  const { data: pageAccessLevel } = usePageAccessLevel(actionPageId, {
-    refetchOnMount: false,
-  });
-  const effectiveFullWidth = resolvePageFullWidth(
-    page,
-    userSettings?.pageFullWidth,
-  );
-  const fullWidthUpdatePending =
-    updateUserSettings.isPending || updatePage.isPending;
-  const isFavorite = isDatabasePage
-    ? Boolean(databasePayload?.database.isFavorite)
-    : Boolean(page?.isFavorite ?? listPage?.isFavorite);
-  const displayName =
-    (isDatabasePage ? databasePayload?.database.name : page?.name)?.trim() ||
-    "Untitled";
-  const isDeleting = deletePage.isPending || deleteDatabase.isPending;
-  const lockLabel = isMeetingPage
-    ? "Lock meeting"
-    : isDatabasePage
-      ? "Lock database"
-      : "Lock page";
-  const locked = isMeetingPage
-    ? pageMetadata.meetingLocked === true
-    : isDatabasePage
-      ? isDatabaseLocked(databasePayload?.database)
-      : pageMetadata.locked === true;
-  const canToggleLock = isDatabasePage
-    ? databasePayload?.database.accessLevel === "edit" ||
-      databasePayload?.database.accessLevel === "full" ||
-      pageAccessLevel === "edit" ||
-      pageAccessLevel === "full"
-    : pageAccessLevel === "edit" || pageAccessLevel === "full";
-  const lockUpdatePending = isDatabasePage
-    ? updateDatabase.isPending
-    : updatePage.isPending;
-  const toggleLock = () => {
-    if (lockUpdatePending || !canToggleLock) {
-      return;
-    }
+  const { item, favorite, lock, layout, aiMode, moreMenu, trash } = useNavigationItemActions({databaseId, pageId, meetingId});
 
-    const onError = (error: unknown) => {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : `Could not update ${lockLabel.toLowerCase()}.`,
-      );
-    };
-
-    if (isDatabasePage) {
-      if (!databaseId || !databasePayload) {
-        return;
-      }
-
-      updateDatabase.mutate(
-        {
-          databaseId,
-          config: {
-            ...((databasePayload.database.config ?? {}) as Record<string, unknown>),
-            locked: !locked,
-          },
-        },
-        { onError },
-      );
-      return;
-    }
-
-    if (!page) {
-      return;
-    }
-
-    updatePage.mutate(
-      {
-        id: page.id,
-        metadata: {
-          ...pageMetadata,
-          ...(isMeetingPage
-            ? { meetingLocked: !locked }
-            : { locked: !locked }),
-        },
-      },
-      { onError },
-    );
-  };
-  const toggleFavorite = () => {
-    if (databaseId) {
-      if (setDatabaseFavorite.isPending) {
-        return;
-      }
-
-      setDatabaseFavorite.mutate(
-        { databaseId, isFavorite: !isFavorite },
-        {
-          onError: (error) => {
-            toast.error(
-              error instanceof Error
-                ? error.message
-                : "Could not update favorite.",
-            );
-          },
-        },
-      );
-      return;
-    }
-
-    if (!pageId || setFavorite.isPending) {
-      return;
-    }
-
-    setFavorite.mutate(
-      { isFavorite: !isFavorite, pageId },
-      {
-        onError: (error) => {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Could not update favorite.",
-          );
-        },
-      },
-    );
-  };
-  const copyLink = async () => {
-    if (!pageId && !databaseId) {
-      return;
-    }
-
-    await navigator.clipboard.writeText(
-      databaseId
-        ? `${window.location.origin}/d/${databaseId}`
-        : `${window.location.origin}/p/${pageId}`,
-    );
-    setIsOpen(false);
-    toast.success(`${databaseId ? "Database" : "Page"} link copied.`);
-  };
-  const duplicatePage = async () => {
-    if (!page || createPage.isPending) {
-      return;
-    }
-
-    const metadata = (page.metadata ?? {}) as PageMetadata;
-    try {
-      const duplicate = await createPage.mutateAsync({
-        content: clonePageContent(page.content ?? null),
-        emoji: metadata.emoji ?? undefined,
-        metadata,
-        name: getDuplicatePageName(page.name),
-        workspaceId: page.workspaceId,
-        parentItemId: pageId
-          ? (getPrimaryPageParentId(navigation?.placements ?? [], pageId) ??
-            undefined)
-          : undefined,
-      });
-
-      setIsOpen(false);
-      toast.success("Page duplicated.");
-      await navigate({
-        to: "/p/$pageId",
-        params: { pageId: duplicate.id },
-      });
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Could not duplicate page.",
-      );
-    }
-  };
-  const moveToTrash = () => {
-    if (isDatabasePage) {
-      if (!databaseId || deleteDatabase.isPending) {
-        return;
-      }
-
-      deleteDatabase.mutate(databaseId, {
-        onSuccess: () => {
-          setTrashConfirmOpen(false);
-          setIsOpen(false);
-          toast.success("Moved to trash.");
-          void navigate({ to: "/" });
-        },
-        onError: (error) => {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Could not delete database.",
-          );
-        },
-      });
-      return;
-    }
-
-    if (!actionPageId || deletePage.isPending) {
-      return;
-    }
-
-    deletePage.mutate(actionPageId, {
-      onSuccess: () => {
-        setTrashConfirmOpen(false);
-        setIsOpen(false);
-        toast.success("Moved to trash.");
-        void navigate({ to: "/" });
-      },
-      onError: (error) => {
-        toast.error(
-          error instanceof Error ? error.message : "Could not delete page.",
-        );
-      },
-    });
-  };
-  const runMoreAction = (label: string) => {
-    if (label === "Customize layout") {
-      setIsOpen(false);
-      openLayoutEditor({ databaseId, pageId });
-      return;
-    }
-    if (label === "Copy Link") {
-      void copyLink();
-      return;
-    }
-
-    if (label === "Duplicate") {
-      void duplicatePage();
-      return;
-    }
-
-    if (label === "Move to Trash") {
-      setTrashConfirmOpen(true);
-    }
-  };
-  const togglePageFullWidth = () => {
-    if (isDatabasePage || fullWidthUpdatePending) {
-      return;
-    }
-
-    updateUserSettings.mutate(
-      { pageFullWidth: !userSettings?.pageFullWidth },
-      {
-        onError: (error) => {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Could not update full width setting.",
-          );
-        },
-      },
-    );
-  };
-  const zilobaseAiMode = pageMetadata.zilobaseai ?? null;
-
-  const setZilobaseAiMode = (mode: ZilobaseAiMode) => {
-    if (!page || updatePage.isPending) {
-      return;
-    }
-
-    updatePage.mutate(
-      {
-        id: page.id,
-        metadata: {
-          ...pageMetadata,
-          zilobaseai: zilobaseAiMode === mode ? null : mode,
-        },
-      },
-      {
-        onError: (error) => {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Could not update Zilobase AI setting.",
-          );
-        },
-      },
-    );
-  };
-
+const isMobile = useIsMobile();
+const manifest = useOfflineManifest();
+const connectivity = useConnectivity();
+const offlineSessionLocked = useOfflineSessionLocked();
+const comments = usePageCommentsSnapshot(pageId);
+const openDiscussionCount = comments.threads.filter((thread) => !thread.resolvedAt).length;
   const discussionsActionLabel = discussionsOpen
     ? "Close discussions"
     : "Open discussions";
-  const offlineItem = isDatabasePage
+  const offlineItem = item.isDatabase
     ? manifest.items.find(
         (item) => item.kind === "database" && item.id === databaseId,
       )
     : manifest.items.find(
-        (item) => item.kind === "page" && item.id === actionPageId,
+        (item) => item.kind === "page" && item.id === item.pageId,
       );
 
   return (
@@ -499,7 +106,7 @@ export function NavActions({
       <div className="hidden text-sm font-medium text-content-secondary md:inline-block">
         Edited recently
       </div>
-      {hasPageActions ? (
+      {item.hasActions ? (
         <>
           {pageId && onToggleDiscussions ? (
             <Button
@@ -543,31 +150,27 @@ export function NavActions({
               )}
             </Button>
           ) : null}
-          {actionPageId || databaseId ? (
+          {item.pageId || databaseId ? (
             <ItemShareDropdown
-              databaseId={actionPageId ? undefined : databaseId}
-              pageId={actionPageId}
+              databaseId={item.pageId ? undefined : databaseId}
+              pageId={item.pageId}
             />
           ) : null}
           <Button
             aria-label={
-              isFavorite ? "Remove from favorites" : "Add to favorites"
+              favorite.active ? "Remove from favorites" : "Add to favorites"
             }
-            className={cn("h-7 w-7", isFavorite && "text-feedback-favorite")}
-            disabled={
-              databaseId
-                ? !databasePayload || setDatabaseFavorite.isPending
-                : !pageId || setFavorite.isPending
-            }
-            onClick={toggleFavorite}
+            className={cn("h-7 w-7", favorite.active && "text-feedback-favorite")}
+            disabled={favorite.disabled}
+            onClick={favorite.toggle}
             size="icon"
-            title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+            title={favorite.active ? "Remove from favorites" : "Add to favorites"}
             type="button"
             variant="ghost"
           >
-            <StarIcon className={isFavorite ? "fill-current" : undefined} />
+            <StarIcon className={favorite.active ? "fill-current" : undefined} />
           </Button>
-          <DropDrawer open={isOpen} onOpenChange={setIsOpen}>
+          <DropDrawer open={moreMenu.open} onOpenChange={moreMenu.setOpen}>
             <DropDrawerTrigger asChild>
               <Button
                 variant="ghost"
@@ -583,38 +186,38 @@ export function NavActions({
             >
               <OfflineAvailabilityAction
                 databaseId={databaseId}
-                name={displayName}
-                pageId={actionPageId}
-                workspaceId={workspaceId}
+                name={item.displayName}
+                pageId={item.pageId}
+                workspaceId={item.workspaceId}
               />
               <DropDrawerItem
-                disabled={!canToggleLock || lockUpdatePending}
+                disabled={!lock.canToggle || lock.pending}
                 onSelect={(event) => {
                   event.preventDefault();
-                  toggleLock();
+                  lock.toggle();
                 }}
               >
                 <LockIcon />
-                <span>{lockLabel}</span>
+                <span>{lock.label}</span>
                 <Switch
-                  checked={locked}
+                  checked={lock.active}
                   className="ml-auto pointer-events-none"
                   size="sm"
                   tabIndex={-1}
                 />
               </DropDrawerItem>
-              {!isDatabasePage && !isMobile ? (
+              {!item.isDatabase && !isMobile ? (
                 <>
                   <DropDrawerItem
-                    disabled={fullWidthUpdatePending}
+                    disabled={layout.pending}
                     onSelect={(event) => {
                       event.preventDefault();
-                      togglePageFullWidth();
+                      layout.toggle();
                     }}
                   >
                     <span>Full Width</span>
                     <Switch
-                      checked={effectiveFullWidth}
+                      checked={layout.fullWidth}
                       className="ml-auto pointer-events-none"
                       size="sm"
                       tabIndex={-1}
@@ -622,11 +225,11 @@ export function NavActions({
                   </DropDrawerItem>
                 </>
               ) : null}
-              {!isDatabasePage ? (
+              {!item.isDatabase ? (
                 <ZilobaseAiSubmenu
-                  disabled={!page || updatePage.isPending}
-                  mode={zilobaseAiMode}
-                  onSelect={setZilobaseAiMode}
+                  disabled={aiMode.disabled}
+                  mode={aiMode.value}
+                  onSelect={aiMode.set}
                 />
               ) : null}
               {moreActions.map((label) => (
@@ -637,14 +240,8 @@ export function NavActions({
                       : undefined
                   }
                   key={label}
-                  disabled={
-                    (label === "Copy Link" && !pageId && !databaseId) ||
-                    (label === "Duplicate" &&
-                      (isDatabasePage || !page || createPage.isPending)) ||
-                    (label === "Move to Trash" &&
-                      ((!actionPageId && !databaseId) || isDeleting))
-                  }
-                  onSelect={() => runMoreAction(label)}
+                  disabled={moreMenu.isDisabled(label)}
+                  onSelect={() => moreMenu.run(label)}
                 >
                   <span>{label}</span>
                 </DropDrawerItem>
@@ -652,25 +249,25 @@ export function NavActions({
             </DropDrawerContent>
           </DropDrawer>
           <AlertDialog
-            open={trashConfirmOpen}
-            onOpenChange={setTrashConfirmOpen}
+            open={trash.open}
+            onOpenChange={trash.setOpen}
           >
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Move to trash?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {isDatabasePage
-                    ? `${displayName} and its row pages will be moved to trash.`
-                    : `${displayName} and its subpages will be moved to trash. Linked pages elsewhere will not be deleted.`}
+                  {item.isDatabase
+                    ? `${item.displayName} and its row pages will be moved to trash.`
+                    : `${item.displayName} and its subpages will be moved to trash. Linked pages elsewhere will not be deleted.`}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel disabled={isDeleting}>
+                <AlertDialogCancel disabled={trash.pending}>
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction
-                  disabled={isDeleting}
-                  onClick={moveToTrash}
+                  disabled={trash.pending}
+                  onClick={trash.confirm}
                   variant="destructive"
                 >
                   Delete
@@ -785,737 +382,5 @@ function ZilobaseAiSubmenu({
         ))}
       </DropDrawerSubContent>
     </DropDrawerSub>
-  );
-}
-
-function getDuplicatePageName(name: string) {
-  const trimmedName = name.trim() || "Untitled";
-
-  return `${trimmedName} copy`;
-}
-
-function clonePageContent(content: unknown) {
-  const cloned = typeof structuredClone === "function"
-    ? structuredClone(content)
-    : JSON.parse(JSON.stringify(content)) as unknown;
-
-  return stripCommentMarks(cloned);
-}
-
-function stripCommentMarks(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(stripCommentMarks);
-  if (!value || typeof value !== "object") return value;
-
-  const record = value as Record<string, unknown>;
-  return Object.fromEntries(
-    Object.entries(record).map(([key, child]) => [
-      key,
-      key === "marks" && Array.isArray(child)
-        ? child.filter(
-            (mark) =>
-              !mark ||
-              typeof mark !== "object" ||
-              (mark as { type?: unknown }).type !== "comment",
-          ).map(stripCommentMarks)
-        : stripCommentMarks(child),
-    ]),
-  );
-}
-
-function ItemShareDropdown({
-  databaseId,
-  pageId,
-}: {
-  databaseId?: string | null;
-  pageId?: string | null;
-}) {
-  const [open, setOpen] = React.useState(false);
-
-  return (
-    <Popover onOpenChange={setOpen} open={open}>
-      <PopoverTrigger asChild>
-        <Button
-          className="h-7 gap-2 data-[state=open]:bg-action-neutral-hover"
-          size="sm"
-          variant="outline"
-        >
-          <LockIcon />
-          Share
-        </Button>
-      </PopoverTrigger>
-      {open ? (
-        <ItemShareDropdownContent databaseId={databaseId} pageId={pageId} />
-      ) : null}
-    </Popover>
-  );
-}
-
-function ItemShareDropdownContent({
-  databaseId,
-  pageId,
-}: {
-  databaseId?: string | null;
-  pageId?: string | null;
-}) {
-  const workspaceId = useActiveWorkspaceId();
-  const { data: session } = useSession();
-  const { data: page } = usePage(pageId);
-  const { data: accessLevel } = usePageAccessLevel(pageId);
-  const { data: accessPayload } = usePageAccess(pageId);
-  const { data: databasePayload } = useDatabase(databaseId);
-  const { data: databaseAccessPayload } = useDatabaseAccess(databaseId);
-  const { data: targets } = usePageAccessTargets(workspaceId);
-  const { data: customAgents = [] } = useAiAgentProfiles();
-  const { data: personTargets } = usePagePersonAccessTargets(pageId, {
-    enabled: Boolean(pageId && !databaseId),
-  });
-  const { data: guestInvitations } = usePageGuestInvitations(
-    databaseId ? null : pageId,
-  );
-  const { data: guestRequests } = usePageGuestRequests(
-    databaseId ? null : pageId,
-  );
-  const { data: guestPolicy } = useWorkspaceGuestPolicy(workspaceId, {
-    enabled: Boolean(
-      pageId &&
-        !databaseId &&
-        targets?.members.some((member) => member.id === session?.user?.id),
-    ),
-  });
-  const upsertAccess = useUpsertPageAccess();
-  const upsertDatabaseAccess = useUpsertDatabaseAccess();
-  const deleteAccess = useDeletePageAccess();
-  const deleteDatabaseAccess = useDeleteDatabaseAccess();
-  const setPublished = useSetPagePublished();
-  const setDatabasePublished = useSetDatabasePublished();
-  const inviteGuest = useInvitePageGuest();
-  const cancelGuestInvitation = useCancelPageGuestInvitation();
-  const revokeGuest = useRevokePageGuest();
-  const [targetValue, setTargetValue] = React.useState<ShareTargetValue | "">(
-    "",
-  );
-  const [targetPickerOpen, setTargetPickerOpen] = React.useState(false);
-  const [nextAccessLevel, setNextAccessLevel] =
-    React.useState<AccessLevel>("view");
-  const [guestEmail, setGuestEmail] = React.useState("");
-  const [guestAccessLevel, setGuestAccessLevel] =
-    React.useState<AccessLevel>("view");
-  const isDatabase = Boolean(databaseId);
-  const effectiveAccessLevel = isDatabase
-    ? databasePayload?.database.accessLevel
-    : accessLevel;
-  const canManage = effectiveAccessLevel === "full";
-  const isWorkspaceMember = Boolean(
-    targets?.members.some((member) => member.id === session?.user?.id),
-  );
-  const shareableMembers = React.useMemo(
-    () =>
-      (targets?.members ?? []).filter(
-        (member) => member.id !== session?.user?.id,
-      ),
-    [session?.user?.id, targets?.members],
-  );
-  const targetByKey = React.useMemo(() => {
-    return new Map<string, { label: string; detail?: string }>([
-      ...(targets?.members ?? []).map((member): [string, { label: string; detail: string }] => [`user:${member.id}`, {
-        detail: member.email,
-        label: member.name || member.email,
-      }]),
-      ...(personTargets?.guests ?? []).map((guest): [string, { label: string; detail: string }] => [`user:${guest.id}`, {
-        detail: `${guest.email} · Guest`,
-        label: guest.name || guest.email,
-      }]),
-      ...customAgents.map((agent): [string, { label: string; detail: string }] => [`agent:${agent.id}`, {
-        detail: "Custom Agent",
-        label: agent.name || "Untitled agent",
-      }]),
-    ]);
-  }, [customAgents, personTargets?.guests, targets?.members]);
-  const guestUserIds = React.useMemo(
-    () => new Set((personTargets?.guests ?? []).map((guest) => guest.id)),
-    [personTargets?.guests],
-  );
-  const rules = isDatabase
-    ? (databaseAccessPayload?.access ?? [])
-    : (accessPayload?.access ?? []);
-  const isPublished = rules.some(
-    (rule) => rule.targetType === "public" && rule.targetId === "*",
-  );
-  const sharingRules = rules.filter((rule) => rule.targetType !== "public");
-  const pendingGuestInvitations = (guestInvitations ?? []).filter(
-    (invitation) => invitation.status === "pending",
-  );
-  const pendingGuestRequests = (guestRequests ?? []).filter(
-    (request) => request.status === "pending",
-  );
-  const guestActionLabel =
-    guestPolicy?.mode === "request" && !guestPolicy.canApprove
-      ? "Request"
-      : "Invite";
-  const selectedTarget = targetValue ? targetByKey.get(targetValue) : null;
-  const selectedTargetIsAgent = targetValue.startsWith("agent:");
-  const publicUrl =
-    typeof window === "undefined"
-      ? ""
-      : isDatabase
-        ? `${window.location.origin}/d/${databaseId}`
-        : `${window.location.origin}/p/${pageId}`;
-
-  const shareItem = () => {
-    if (!targetValue || (!page && !databaseId)) {
-      return;
-    }
-
-    const [targetType, targetId] = targetValue.split(":") as [
-      AccessTargetType,
-      string,
-    ];
-
-    const options = {
-      onSuccess: () => {
-        setTargetValue("");
-        toast.success(`${isDatabase ? "Database" : "Page"} access updated.`);
-      },
-      onError: (error: Error) => {
-        toast.error(error.message || "Could not share.");
-      },
-    };
-
-    if (isDatabase) {
-      upsertDatabaseAccess.mutate(
-        {
-          accessLevel:
-            nextAccessLevel === "comment" ? "view" : nextAccessLevel,
-          targetId,
-          targetType,
-          databaseId: databaseId as string,
-        },
-        options,
-      );
-      return;
-    }
-
-    upsertAccess.mutate(
-      {
-        accessLevel: nextAccessLevel,
-        targetId,
-        targetType,
-        pageId: page?.id as string,
-      },
-      options,
-    );
-  };
-
-  const copyLink = async () => {
-    await navigator.clipboard.writeText(publicUrl || window.location.href);
-    toast.success("Page link copied.");
-  };
-
-  const invitePageGuest = () => {
-    const email = guestEmail.trim().toLowerCase();
-
-    if (
-      !pageId ||
-      !email ||
-      !canManage ||
-      !isWorkspaceMember ||
-      inviteGuest.isPending
-    ) return;
-    inviteGuest.mutate(
-      { accessLevel: guestAccessLevel, email, pageId },
-      {
-        onError: (error) =>
-          toast.error(
-            error instanceof Error ? error.message : "Could not invite guest.",
-          ),
-        onSuccess: (result) => {
-          setGuestEmail("");
-          toast.success(
-            result.request
-              ? "Guest invitation sent for owner approval."
-              : "Page guest invitation sent.",
-          );
-        },
-      },
-    );
-  };
-
-  const togglePublished = (checked: boolean) => {
-    const publishingPending = isDatabase
-      ? setDatabasePublished.isPending
-      : setPublished.isPending;
-    if ((!page && !databaseId) || !canManage || publishingPending) {
-      return;
-    }
-
-    const options = {
-      onSuccess: () => {
-        toast.success(checked ? "Page published." : "Page unpublished.");
-      },
-      onError: (error: Error) => {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Could not update publishing.",
-        );
-      },
-    };
-
-    if (isDatabase) {
-      setDatabasePublished.mutate(
-        { isPublished: checked, databaseId: databaseId as string },
-        options,
-      );
-      return;
-    }
-
-    setPublished.mutate(
-      { isPublished: checked, pageId: page?.id as string },
-      options,
-    );
-  };
-
-  return (
-    <PopoverContent
-      align="end"
-      className="w-[min(36rem,calc(100vw-2rem))] p-4"
-      onOpenAutoFocus={(event) => event.preventDefault()}
-    >
-      <div className="mb-4 grid gap-1.5">
-        <div className="font-semibold leading-none tracking-tight">
-          Share {isDatabase ? "database" : "page"}
-        </div>
-        <div className="text-sm text-content-secondary">
-          Access applies to this{" "}
-          {isDatabase ? "database" : "page and nested pages"}.
-        </div>
-      </div>
-
-      <Tabs defaultValue="share">
-        <TabsList>
-          <TabsTrigger value="share">Share</TabsTrigger>
-          <TabsTrigger value="publish">Publishing</TabsTrigger>
-        </TabsList>
-
-        <TabsContent className="grid gap-4 pt-2" value="share">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Popover open={targetPickerOpen} onOpenChange={setTargetPickerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  className="min-w-0 flex-1 justify-between"
-                  disabled={!canManage}
-                  role="combobox"
-                  type="button"
-                  variant="outline"
-                >
-                  <span className="min-w-0 truncate text-left">
-                    {selectedTarget?.detail ?? "Search members"}
-                  </span>
-                  <ChevronsUpDownIcon className="opacity-60" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                align="start"
-                className="w-[min(28rem,calc(100vw-3rem))] p-0"
-              >
-                <Command>
-                  <CommandInput placeholder="Search by name or email..." />
-                  <CommandList>
-                    <CommandEmpty>No members or agents found.</CommandEmpty>
-                    <CommandGroup>
-                      {shareableMembers.map((member) => {
-                        const value: ShareTargetValue = `user:${member.id}`;
-                        const label = member.name || member.email;
-
-                        return (
-                          <CommandItem
-                            data-checked={targetValue === value}
-                            key={member.id}
-                            onSelect={() => {
-                              setTargetValue(value);
-                              setTargetPickerOpen(false);
-                            }}
-                            value={`${member.email} ${member.name}`}
-                          >
-                            <div className="min-w-0">
-                              <div className="truncate font-medium">
-                                {label}
-                              </div>
-                              <div className="truncate text-xs text-content-secondary">
-                                {member.email}
-                              </div>
-                            </div>
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                    {customAgents.length > 0 ? (
-                      <CommandGroup heading="Custom Agents">
-                        {customAgents.map((agent) => {
-                          const value: ShareTargetValue = `agent:${agent.id}`;
-                          return (
-                            <CommandItem
-                              data-checked={targetValue === value}
-                              key={agent.id}
-                              onSelect={() => {
-                                setTargetValue(value);
-                                if (nextAccessLevel === "full") setNextAccessLevel("edit");
-                                setTargetPickerOpen(false);
-                              }}
-                              value={`${agent.name} custom agent`}
-                            >
-                              <BotIcon />
-                              <div className="min-w-0">
-                                <div className="truncate font-medium">{agent.name || "Untitled agent"}</div>
-                                <div className="truncate text-xs text-content-secondary">Independent agent principal</div>
-                              </div>
-                            </CommandItem>
-                          );
-                        })}
-                      </CommandGroup>
-                    ) : null}
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            <Select
-              disabled={!canManage}
-              onValueChange={(value) =>
-                setNextAccessLevel(value as AccessLevel)
-              }
-              value={nextAccessLevel}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="view">View</SelectItem>
-                {!isDatabase ? (
-                  <SelectItem value="comment">Comment</SelectItem>
-                ) : null}
-                <SelectItem value="edit">Edit</SelectItem>
-                {!selectedTargetIsAgent ? <SelectItem value="full">Full</SelectItem> : null}
-              </SelectContent>
-            </Select>
-            <Button
-              disabled={
-                !canManage ||
-                !targetValue ||
-                upsertAccess.isPending ||
-                upsertDatabaseAccess.isPending
-              }
-              onClick={shareItem}
-              type="button"
-            >
-              <Share2Icon />
-              Share
-            </Button>
-          </div>
-
-          {selectedTargetIsAgent ? (
-            <div className="rounded-md bg-feedback-warning-background px-3 py-2 text-xs text-feedback-warning-text">
-              Agent access is independent from human access. People who can use this agent may receive information from this resource even when they cannot open it directly.
-            </div>
-          ) : null}
-
-          {!isDatabase && canManage && isWorkspaceMember ? (
-            <div className="grid gap-2 rounded-md border p-3">
-              <div>
-                <div className="text-sm font-medium">Invite a page guest</div>
-                <div className="text-xs text-content-secondary">
-                  Guests can access this page and its nested pages, but not the
-                  workspace.
-                </div>
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input
-                  aria-label="Guest email"
-                  className="min-w-0 flex-1"
-                  onChange={(event) => setGuestEmail(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      invitePageGuest();
-                    }
-                  }}
-                  placeholder="guest@example.com"
-                  type="email"
-                  value={guestEmail}
-                />
-                <Select
-                  onValueChange={(value) =>
-                    setGuestAccessLevel(value as AccessLevel)
-                  }
-                  value={guestAccessLevel}
-                >
-                  <SelectTrigger className="sm:w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="view">View</SelectItem>
-                    <SelectItem value="comment">Comment</SelectItem>
-                    <SelectItem value="edit">Edit</SelectItem>
-                    <SelectItem value="full">Full</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button
-                  disabled={!guestEmail.trim() || inviteGuest.isPending}
-                  onClick={invitePageGuest}
-                  type="button"
-                >
-                  <MailPlusIcon />
-                  {guestActionLabel}
-                </Button>
-              </div>
-              {pendingGuestInvitations.length > 0 ? (
-                <div className="grid gap-1 border-t pt-2">
-                  <div className="text-xs font-medium text-content-secondary">
-                    Pending guest invitations
-                  </div>
-                  {pendingGuestInvitations.map((invitation) => (
-                    <div
-                      className="flex items-center gap-2 text-sm"
-                      key={invitation.id}
-                    >
-                      <span className="min-w-0 flex-1 truncate">
-                        {invitation.email}
-                      </span>
-                      <span className="text-xs text-content-secondary">
-                        {invitation.accessLevel}
-                      </span>
-                      <Button
-                        aria-label={`Cancel invitation for ${invitation.email}`}
-                        disabled={cancelGuestInvitation.isPending}
-                        onClick={() =>
-                          cancelGuestInvitation.mutate(
-                            { invitationId: invitation.id, pageId: pageId as string },
-                            {
-                              onError: (error) =>
-                                toast.error(
-                                  error instanceof Error
-                                    ? error.message
-                                    : "Could not cancel invitation.",
-                                ),
-                            },
-                          )
-                        }
-                        size="icon-sm"
-                        type="button"
-                        variant="ghost"
-                      >
-                        <Trash2Icon />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              {pendingGuestRequests.length > 0 ? (
-                <div className="grid gap-1 border-t pt-2">
-                  <div className="text-xs font-medium text-content-secondary">
-                    Pending owner approval
-                  </div>
-                  {pendingGuestRequests.map((request) => (
-                    <div className="flex items-center gap-2 text-sm" key={request.id}>
-                      <span className="min-w-0 flex-1 truncate">{request.email}</span>
-                      <span className="text-xs text-content-secondary">
-                        {request.accessLevel}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          <div className="grid gap-2">
-            <AccessRow
-              detail={session?.user?.email}
-              label={session?.user?.name || "You"}
-              level={effectiveAccessLevel ?? "view"}
-              suffix="You"
-            />
-            {sharingRules.map((rule) => (
-              <RuleRow
-                canManage={canManage}
-                deleteRule={() =>
-                  isDatabase
-                    ? deleteDatabaseAccess.mutate(
-                        { ruleId: rule.id, databaseId: databaseId as string },
-                        {
-                          onError: (error) => {
-                            toast.error(
-                              error instanceof Error
-                                ? error.message
-                                : "Could not remove access.",
-                            );
-                          },
-                        },
-                      )
-                    : guestUserIds.has(rule.targetId)
-                      ? revokeGuest.mutate(
-                          {
-                            pageId: pageId as string,
-                            userId: rule.targetId,
-                          },
-                          {
-                            onError: (error) => {
-                              toast.error(
-                                error instanceof Error
-                                  ? error.message
-                                  : "Could not remove guest access.",
-                              );
-                            },
-                          },
-                        )
-                      : deleteAccess.mutate(
-                        { ruleId: rule.id, pageId: pageId as string },
-                        {
-                          onError: (error) => {
-                            toast.error(
-                              error instanceof Error
-                                ? error.message
-                                : "Could not remove access.",
-                            );
-                          },
-                        },
-                      )
-                }
-                key={rule.id}
-                rule={rule}
-                target={targetByKey.get(`${rule.targetType}:${rule.targetId}`)}
-              />
-            ))}
-          </div>
-
-          {!canManage ? (
-            <div className="rounded-md bg-surface-muted px-3 py-2 text-xs text-content-secondary">
-              You need full access to manage sharing for this{" "}
-              {isDatabase ? "database" : "page"}.
-            </div>
-          ) : null}
-
-          <div className="flex items-center gap-2">
-            <Input readOnly value={publicUrl} />
-            <Button onClick={copyLink} type="button" variant="outline">
-              <LinkIcon />
-              Copy link
-            </Button>
-          </div>
-        </TabsContent>
-
-        <TabsContent className="grid gap-4 pt-2" value="publish">
-          <div className="flex items-start gap-3 rounded-md border px-3 py-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-surface-muted">
-              <Globe2Icon className="size-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium">Publish to web</div>
-              <div className="text-xs text-content-secondary">
-                Anyone with the link can view this{" "}
-                {isDatabase ? "database" : "page and nested pages"}. Published
-                content is read-only.
-              </div>
-            </div>
-            <Switch
-              checked={isPublished}
-              disabled={
-                !canManage ||
-                setPublished.isPending ||
-                setDatabasePublished.isPending
-              }
-              onCheckedChange={togglePublished}
-            />
-          </div>
-
-          {!canManage ? (
-            <div className="rounded-md bg-surface-muted px-3 py-2 text-xs text-content-secondary">
-              You need full access to manage publishing for this{" "}
-              {isDatabase ? "database" : "page"}.
-            </div>
-          ) : null}
-
-          <div className="flex items-center gap-2">
-            <Input readOnly value={publicUrl} />
-            <Button
-              disabled={!isPublished}
-              onClick={copyLink}
-              type="button"
-              variant="outline"
-            >
-              <LinkIcon />
-              Copy link
-            </Button>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </PopoverContent>
-  );
-}
-
-function RuleRow({
-  canManage,
-  deleteRule,
-  rule,
-  target,
-}: {
-  canManage: boolean;
-  deleteRule: () => void;
-  rule: Pick<PageAccessRule, "accessLevel" | "targetId" | "targetType">;
-  target?: { detail?: string; label: string };
-}) {
-  return (
-    <div className="flex min-h-11 items-center gap-3 rounded-md border px-3 py-2">
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">
-          {target?.label ?? "Unknown target"}
-        </div>
-        <div className="truncate text-xs text-content-secondary">
-          {target?.detail ?? rule.targetType}
-        </div>
-      </div>
-      <span className="text-xs text-content-secondary">
-        {accessLabels[rule.accessLevel]}
-      </span>
-      {canManage ? (
-        <Button
-          aria-label="Remove access"
-          onClick={deleteRule}
-          size="icon-sm"
-          type="button"
-          variant="ghost"
-        >
-          <Trash2Icon />
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
-function AccessRow({
-  detail,
-  label,
-  level,
-  suffix,
-}: {
-  detail?: string;
-  label: string;
-  level: AccessLevel;
-  suffix?: string;
-}) {
-  return (
-    <div className="flex min-h-11 items-center gap-3 rounded-md border px-3 py-2">
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">
-          {label}{" "}
-          {suffix ? (
-            <span className="text-content-secondary">({suffix})</span>
-          ) : null}
-        </div>
-        <div className="truncate text-xs text-content-secondary">{detail}</div>
-      </div>
-      <span className="text-xs text-content-secondary">
-        {accessLabels[level]}
-      </span>
-    </div>
   );
 }

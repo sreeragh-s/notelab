@@ -1,3 +1,4 @@
+import type { SidebarNavItem as NavigationItem } from "../model/sidebar-nav-item";
 "use client"
 
 import {
@@ -29,30 +30,10 @@ import {
   SidebarNavItemAction,
 } from "@/shared/ui/sidebar-nav-item-action"
 import { cn } from "@/shared/lib/utils"
-import { type ZilobaseAiMode } from "@zilobase/features/pages"
 import { useOfflineManifest } from "@/features/offline/index"
 
-export type SidebarNavItem = {
-  databaseId?: string | null
-  databaseViewId?: string | null
-  emoji: ReactNode
-  id: string
-  isDatabase?: boolean
-  isDatabaseView?: boolean
-  isFavorite?: boolean
-  isLinked?: boolean
-  isMeeting?: boolean
-  isShared: boolean
-  lastVisitedAt?: string | null
-  meetingId?: string | null
-  name: string
-  navNodeId?: string
-  pageId: string | null
-  pages: SidebarNavItem[]
-  teamspaceId?: string | null
-  updatedAt?: string
-  zilobaseai?: ZilobaseAiMode | null
-}
+export type SidebarNavItem = NavigationItem<ReactNode>
+
 
 type LinkProps = Partial<
   Omit<ComponentProps<typeof Link>, "params" | "title" | "to">

@@ -1,3 +1,4 @@
+import { getNavigationItemPath } from "../model/database-view-navigation";
 import { useState, type DragEvent } from "react"
 import { useLocation, useNavigate } from "@tanstack/react-router"
 import { useDeleteDatabase } from "@zilobase/features/databases/react";
@@ -584,10 +585,10 @@ function PageItemMenu({ item }: { item: SidebarNavItem }) {
   const { data: teamspaces = [] } = useTeamspaces(workspaceId)
   const activePageId = getActivePageId(location.pathname)
   const activeDatabaseId = getActiveDatabaseId(location.pathname)
-  const linkPath =
-    (item.isDatabase || item.isDatabaseView) && item.databaseId
-      ? `/d/${item.databaseId}`
-      : `/p/${item.pageId}`
+  const linkPath = getNavigationItemPath({
+    databaseId: item.isDatabase || item.isDatabaseView ? item.databaseId : null,
+    pageId: item.pageId,
+  })
   const displayName = item.name.trim() || "Untitled"
   const isDeleting = deletePage.isPending || deleteDatabase.isPending
 

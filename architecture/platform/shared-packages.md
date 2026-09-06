@@ -23,3 +23,5 @@ Server mail code imports the published contracts, organization and predicate mod
 Web TypeScript and Vite resolve shared feature subpaths through the package export map. They no longer assume every subpath names a directory with index.ts; explicit contract and React entrypoints resolve consistently in typechecking and production builds.
 
 See [page-context and editor utility ownership](page-context-and-editor-utilities.md) for conversion invariants, structural content, splitter behavior and comment anchors.
+
+The `@zilobase/features/databases/appearance` entrypoint provides pure stored-config decisions for database lock state, emoji and cover. The existing database and query exports still expose those names for compatibility; navigation/library models can consume appearance without React bindings.

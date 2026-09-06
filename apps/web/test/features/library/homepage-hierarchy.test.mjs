@@ -50,7 +50,7 @@ export function register({ readSource, assert, loadModule, test }) {
 
   test("synthetic homepage databases do not request realtime tickets", async () => {
     const [homepage, context] = await Promise.all([
-      readSource("/src/features/library/pages/recents.tsx"),
+      readSource("/src/features/library/screens/recents.tsx"),
       readSource("/src/features/databases/views/state/database-view-context.tsx"),
     ])
 

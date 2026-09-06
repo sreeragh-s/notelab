@@ -24,7 +24,7 @@ export const appRoutes = [
     getParentRoute: () => appRoute,
     path: "/recents",
     validateSearch: validateLibrarySearch,
-    component: lazyRouteComponent(() => import("@/features/library/pages/recents")),
+    component: lazyRouteComponent(() => import("@/features/library/screens/recents")),
   }),
   ...(isFeatureEnabled("mail")
     ? [createRoute({
@@ -42,6 +42,6 @@ export const appRoutes = [
   createRoute({
     getParentRoute: () => appRoute,
     path: "/trash",
-    component: lazyRouteComponent(() => import("@/features/library/pages/trash")),
+    component: lazyRouteComponent(() => import("@/features/library/screens/trash")),
   }),
 ];

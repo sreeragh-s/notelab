@@ -99,6 +99,10 @@
       "types": "./src/databases/formula/syntax.ts",
       "default": "./src/databases/formula/syntax.ts"
     },
+    "./databases/appearance": {
+      "types": "./src/databases/appearance.ts",
+      "default": "./src/databases/appearance.ts"
+    },
     "./databases/queries": {
       "types": "./src/databases/queries.ts",
       "default": "./src/databases/queries.ts"
