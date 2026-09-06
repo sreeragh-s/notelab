@@ -12,7 +12,7 @@ import {
 import { useTitleDraft } from "@/features/pages/hooks/index"
 import { PageMetadata as PageMetadataHeader } from "@/features/databases"
 import { MeetingView } from "@/packages/editor/extensions/meeting"
-import { PageEditorPane } from "@/features/pages/screens/index"
+import { PageEditorPane } from "@/features/pages/pane/page-editor-pane";
 import { useMeeting, useUpdateMeeting } from "@zilobase/features/meetings/react";
 import {
   getPageCover,

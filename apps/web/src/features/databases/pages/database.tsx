@@ -36,11 +36,8 @@ import {
 import { PageMetadata as PageMetadataView } from "../components/page-metadata"
 import { DatabaseView } from "../views/view/database-view"
 import { toast } from "sonner"
-import {
-  PublicPaneTopbar,
-  PublicPageBreadcrumb,
-  PageEditorPane,
-} from "@/features/pages/screens/index"
+import { PublicPaneTopbar, PublicPageBreadcrumb } from "@/features/pages/publication/shared-page-header";
+import { PageEditorPane } from "@/features/pages/pane/page-editor-pane";
 import { useDatabaseViewNavigation } from "../hooks/use-database-view-navigation"
 import type { OpenPageOptions } from "@/features/pages"
 import { useTitleDraft } from "@/features/pages/hooks/index"

@@ -38,7 +38,7 @@ import {
 import {
   useOpenEmbeddedPage,
 } from "@/features/pages/pane/use-open-embedded-page";
-import { PageEditorPane } from "@/features/pages/screens/index";
+import { PageEditorPane } from "@/features/pages/pane/page-editor-pane";
 import {
   DatabasePageLink,
   DatabaseTableView,

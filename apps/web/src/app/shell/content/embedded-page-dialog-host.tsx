@@ -4,7 +4,7 @@ import {
 import {
   useOpenEmbeddedPage,
 } from "@/features/pages/pane/use-open-embedded-page";
-import { PageEditorPane } from "@/features/pages/screens/page"
+import { PageEditorPane } from "@/features/pages/pane/page-editor-pane";
 import { usePage } from "@zilobase/features/pages/react";
 
 export function EmbeddedPageDialogHost({
