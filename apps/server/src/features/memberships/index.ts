@@ -2,7 +2,7 @@ export {
   MembershipService,
   type GrantMembershipInput,
   type GrantMembershipResult,
-} from "./service";
+} from "./membership-grants";
 export {
   MAX_TEMPORARY_ACCESS_MS,
   TemporaryMembershipValidationError,

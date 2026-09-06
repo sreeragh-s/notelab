@@ -8,7 +8,7 @@
 
 ## Main flow
 
-Teamspace management owns organization of workspace content; policy, security and integrity modules resolve visibility and membership constraints. Web screens present team access and settings using shared queries.
+[Teamspace membership](../../../apps/server/src/features/teamspaces/teamspace-membership.ts) owns default membership and principal removal through the existing TeamspaceService interface. Teamspace management owns organization of workspace content; policy, security and integrity modules resolve visibility and membership constraints. Web screens present team access and settings using shared queries.
 
 ## Authorization and persistence
 

@@ -4,7 +4,7 @@ import { test } from "vitest";
 import type { Database } from "../../infrastructure/database";
 import { teamspace, teamspacePrincipal } from "../../infrastructure/database/schema";
 import type { ZilobaseEditionExtension } from "../../shared/types";
-import { TeamspaceService } from "./service";
+import { TeamspaceService } from "./teamspace-membership";
 
 test("first default membership creates a General teamspace and owner", async () => {
   const events: string[] = [];

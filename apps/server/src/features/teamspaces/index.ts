@@ -15,4 +15,4 @@ export {
   removeUserTeamspacePrincipals,
   type EnsureDefaultTeamspaceMembershipInput,
   type EnsureDefaultTeamspaceMembershipResult,
-} from "./service";
+} from "./teamspace-membership";

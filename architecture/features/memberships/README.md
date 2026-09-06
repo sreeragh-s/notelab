@@ -6,7 +6,7 @@
 
 ## Main flow
 
-MembershipService owns membership changes and edition integration. The temporary-membership module supplies active membership conditions and expiry behavior reused by access and guest workflows.
+[Membership grants](../../../apps/server/src/features/memberships/membership-grants.ts) implements the existing MembershipService interface, including transactional creation, concurrent-grant recovery, edition integration and default teamspace membership. The temporary-membership module supplies active membership conditions and expiry behavior reused by access and guest workflows.
 
 ## Authorization and persistence
 
@@ -18,6 +18,6 @@ Grants, revocations and expiry affect downstream access. Keep edition callbacks 
 
 ## Verification and change points
 
-Start with [the existing tests or model](../../../apps/server/src/features/memberships/service.test.ts) and the adjacent tests in the owning modules. Exercise observable outcomes through the owning interface; a source assertion alone does not establish runtime behavior. Run the affected workspace scripts described in [testing and quality](../../setup/testing-and-quality.md).
+Start with [the existing tests or model](../../../apps/server/src/features/memberships/membership-grants.test.ts) and the adjacent tests in the owning modules. Exercise observable outcomes through the owning interface; a source assertion alone does not establish runtime behavior. Run the affected workspace scripts described in [testing and quality](../../setup/testing-and-quality.md).
 
 Update this guide when ownership, interfaces, authorization, persistence or cross-module flows change. [Architecture index](../../README.md).

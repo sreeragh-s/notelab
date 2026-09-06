@@ -15,19 +15,23 @@ export {
   getEffectivePageAccessForAgent,
   getEffectivePageAccessInWorkspace,
   getEffectiveTeamspaceAccessInWorkspace,
-  getMembership,
   getPageRecord,
+  isDatabasePublishedInWorkspace,
+  isPagePublishedInWorkspace,
+  type DatabaseAccessRecord,
+} from "./effective-access";
+export {
+  getMembership,
   getWorkspaceMemberships,
   getWorkspacePrincipalKind,
   getWorkspaceRealtimeAccessExpiration,
-  hasAccess,
-  isDatabasePublishedInWorkspace,
-  isPagePublishedInWorkspace,
   isPrivilegedOrgRole,
   isWorkspaceMember,
+} from "./principal-access";
+export {
+  hasAccess,
   normalizeAccessLevel,
-  rejectActiveWorkspaceMismatch,
   type AccessLevel,
-  type DatabaseAccessRecord,
-} from "./access";
-export type { AgentPermissionSnapshotGrant } from "./access";
+} from "./access-level";
+export { rejectActiveWorkspaceMismatch } from "./workspace-mismatch";
+export type { AgentPermissionSnapshotGrant } from "./effective-access";

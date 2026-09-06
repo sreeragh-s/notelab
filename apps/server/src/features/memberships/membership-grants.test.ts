@@ -4,7 +4,7 @@ import { test } from "vitest";
 import type { Database } from "../../infrastructure/database";
 import { member, teamspace, teamspacePrincipal } from "../../infrastructure/database/schema";
 import type { ZilobaseEditionExtension } from "../../shared/types";
-import { MembershipService } from "./service";
+import { MembershipService } from "./membership-grants";
 
 test("membership grants run edition policy and audit inside the transaction", async () => {
   const events: string[] = [];

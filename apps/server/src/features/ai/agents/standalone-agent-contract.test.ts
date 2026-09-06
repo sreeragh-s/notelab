@@ -51,7 +51,7 @@ describe("standalone Custom Agent migration boundary", () => {
 
   it("lets shared users chat while keeping resource reads bound to the agent principal", async () => {
     const conversation = await readFile(new URL("src/features/ai/agents/agent-conversation-service.ts", root), "utf8");
-    const access = await readFile(new URL("src/features/access/access.ts", root), "utf8");
+    const access = await readFile(new URL("src/features/access/effective-access.ts", root), "utf8");
     expect(conversation).toContain('requireAgentProfileRole({ ...input, minimum: "user" })');
     expect(access).toContain("Resolves access for the agent principal only");
     expect(access).toContain('eq(pageAccess.targetType, "agent")');
