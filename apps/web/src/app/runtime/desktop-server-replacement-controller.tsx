@@ -1,3 +1,4 @@
+import { createDesktopServerReplacementDependencies } from "./desktop-server-replacement";
 import * as React from "react";
 import { DownloadIcon, RefreshCwIcon, Trash2Icon } from "@/shared/components/icons";
 import { toast } from "sonner";
@@ -18,25 +19,24 @@ import { getApiErrorMessage } from "@/platform/network/api";
 import {
   describeDesktopError,
   recordDesktopDiagnostic,
-} from "../../../platform/diagnostics/desktop-diagnostics";
+} from "../../platform/diagnostics/desktop-diagnostics";
 import {
   discardDesktopServerCandidate,
   desktopServersReferToSameInstance,
   getSelectedDesktopServer,
   prepareDesktopServerCandidate,
   type PreparedDesktopServer,
-} from "../../../platform/server/desktop-server";
+} from "../../platform/server/desktop-server";
 import {
-  createDesktopServerReplacementDependencies,
   subscribeDesktopServerReplacement,
   type DesktopServerReplacementRequest,
-} from "../server/desktop-server-replacement";
+} from "../../features/desktop/server/desktop-server-replacement";
 import {
   assertPreparedServerMatchesRequest,
   executeDesktopServerReplacement,
-} from "../server/desktop-server-replacement-core";
-import { executeDesktopServerSwitch } from "../server/desktop-server-switch";
-import { cancelDesktopBrowserSignIn } from "../auth/browser-authorization";
+} from "../../features/desktop/server/desktop-server-replacement-core";
+import { executeDesktopServerSwitch } from "../../features/desktop/server/desktop-server-switch";
+import { cancelDesktopBrowserSignIn } from "../../features/desktop/auth/browser-authorization";
 import {
   downloadRecoveryArchive,
   syncDirtyOfflinePages,

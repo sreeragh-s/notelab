@@ -420,7 +420,7 @@
       },
       {
         "from": "web-offline",
-        "allow": ["web-desktop", "web-platform", "web-offline", "web-shared"]
+        "allow": ["web-platform", "web-offline", "web-shared"]
       },
       {
         "from": "web-root",

@@ -14,7 +14,7 @@ import { desktopNetworkFetch } from "@/platform/network/index"
 import {
   describeDesktopError,
   recordDesktopDiagnostic,
-} from "@/features/desktop/diagnostics/index"
+} from "@/platform/diagnostics/desktop-diagnostics"
 import { setDesktopAuthOwner } from "@/platform/auth/desktop-auth-token"
 import { syncDirtyOfflinePages } from "../documents/offline-recovery"
 import {

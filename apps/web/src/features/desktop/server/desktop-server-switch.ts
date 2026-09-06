@@ -1,13 +1,4 @@
-import { forgetDesktopAuthCredentials } from "../../../platform/auth/desktop-auth-token"
-import { beginDesktopServerNetworkShutdown } from "../../../platform/network/desktop-network"
-import {
-  commitDesktopServerCandidate,
-  resolveDesktopServerSwitchPath,
-  switchDesktopServerProfile,
-  type DesktopServer,
-} from "../../../platform/server/desktop-server"
-import { destroyDesktopOfflineConnections } from "@/features/offline/index"
-import { queryClient } from "@/app/query-client"
+import type { DesktopServer } from "@/platform/server/desktop-server"
 
 export type DesktopServerSwitchRequest = {
   candidateId?: string
@@ -39,32 +30,15 @@ function notifyDesktopServerSwitch(
   switchListener?.(progress)
 }
 
-export async function executeDesktopServerSwitch(
-  request: DesktopServerSwitchRequest,
-) {
-  notifyDesktopServerSwitch({
-    server: request.server,
-  })
+type SwitchExecutor = (request: DesktopServerSwitchRequest) => Promise<string>
+let switchExecutor: SwitchExecutor | null = null
 
-  beginDesktopServerNetworkShutdown()
-  destroyDesktopOfflineConnections()
-  await queryClient.cancelQueries()
+export function installDesktopServerSwitch(executor: SwitchExecutor) {
+  switchExecutor = executor
+}
 
-  if (request.candidateId) {
-    await commitDesktopServerCandidate(request.candidateId)
-  } else {
-    await switchDesktopServerProfile({
-      apiOrigin: request.server.apiOrigin,
-      instanceId: request.server.instanceId,
-      path: request.path,
-      workspaceId: request.workspaceId,
-    })
-  }
-
-  forgetDesktopAuthCredentials()
-  const path = resolveDesktopServerSwitchPath(request)
-  if (typeof window !== "undefined") {
-    window.location.replace(path)
-  }
-  return path
+export async function executeDesktopServerSwitch(request: DesktopServerSwitchRequest) {
+  if (!switchExecutor) throw new Error("Desktop server switching is not configured.")
+  notifyDesktopServerSwitch({ server: request.server })
+  return switchExecutor(request)
 }

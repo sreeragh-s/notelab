@@ -71,4 +71,19 @@ export function register({ assert, loadModule, test }) {
     )
     assert.equal(workspaceId, "workspace-9")
   })
+  test("switch requests notify progress before the installed session operation and propagate failures", async () => {
+    const { installDesktopServerSwitch, executeDesktopServerSwitch, subscribeDesktopServerSwitch } = await loadModule("/src/features/desktop/server/desktop-server-switch.ts")
+    const events = []
+    const request = { server: { instanceId: "target" }, path: "/recents" }
+    const unsubscribe = subscribeDesktopServerSwitch((progress) => events.push(["progress", progress.server]))
+    installDesktopServerSwitch(async (value) => { events.push(["switch", value]); return value.path })
+    try {
+      assert.equal(await executeDesktopServerSwitch(request), "/recents")
+      assert.deepEqual(events, [["progress", request.server], ["switch", request]])
+      const failure = new Error("candidate rejected")
+      installDesktopServerSwitch(async () => { throw failure })
+      await assert.rejects(executeDesktopServerSwitch(request), (error) => error === failure)
+    } finally { unsubscribe() }
+  })
+
 }

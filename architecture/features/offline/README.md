@@ -6,7 +6,7 @@
 
 ## Main flow
 
-Offline providers coordinate connectivity and local document availability. Document modules manage persistence, recovery and protected structure. Current implementation imports desktop authentication, origin and transport internals.
+Offline providers coordinate connectivity and local document availability. Document modules manage persistence, recovery and protected structure. Authentication, origins, transport and diagnostics come from the platform interface. App session composition supplies mail-cache preparation before namespace deletion; offline owns its document/manifest lifecycle.
 
 ## Authorization and persistence
 

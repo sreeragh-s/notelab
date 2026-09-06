@@ -1,4 +1,4 @@
-import { isDesktopApp } from "@/features/desktop/index"
+import { isDesktopApp } from "@/platform/environment"
 import {
   desktopPersistKey,
   resolveRuntimeApiOrigin,
@@ -11,7 +11,12 @@ import type {
 import type { Query } from "@tanstack/react-query"
 import { del, get, set } from "idb-keyval"
 import { getDesktopAuthOwner, getDesktopAuthToken } from "@/platform/auth/desktop-auth-token"
-import { prepareMailDatabasesForDeletion } from "@/features/mail/cache/mail-database"
+let prepareStorageForDeletion: (prefix: string) => Promise<void> = async () => undefined
+
+/** Composition supplies cleanup for other caches sharing the offline namespace. */
+export function configureOfflineStorageCleanup(prepare: (prefix: string) => Promise<void>) {
+  prepareStorageForDeletion = prepare
+}
 
 export const OFFLINE_SCHEMA_VERSION = 1
 export const OFFLINE_CACHE_BUSTER = `zilobase-offline-v${OFFLINE_SCHEMA_VERSION}`
@@ -524,7 +529,7 @@ function deleteIndexedDatabaseStrict(name: string) {
 }
 
 async function deleteIndexedDatabasesForPrefix(prefix: string) {
-  await prepareMailDatabasesForDeletion(prefix)
+  await prepareStorageForDeletion(prefix)
   if (typeof indexedDB.databases !== "function") return
   const databases = await indexedDB.databases()
   const names = databases.flatMap((database) =>

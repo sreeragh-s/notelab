@@ -1,4 +1,5 @@
 import React from "react";
+import { configureApplicationSessions } from "./runtime/configure-sessions";
 import { configureApplicationRequests } from "./runtime/configure-requests";
 import ReactDOM from "react-dom/client";
 import App from "./app";
@@ -22,6 +23,7 @@ import { captureProductException } from "@/shared/lib/posthog";
 import "../shared/styles/global.css";
 import "./styles.css";
 
+configureApplicationSessions();
 configureApplicationRequests();
 installDesktopDiagnostics();
 void bootstrap();

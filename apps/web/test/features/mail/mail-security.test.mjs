@@ -28,7 +28,7 @@ export function register({ assert, loadModule, readSource, readWorkspace, test }
     assert.match(workspaceSettings, /method: "DELETE"/)
     assert.match(workspaceSettings, /destroyMailDatabase/)
     assert.match(offlineStore, /clearAllOfflineData[^]*deleteIndexedDatabasesForPrefix/)
-    assert.match(offlineStore, /prepareMailDatabasesForDeletion/)
+    assert.match(await readSource("/src/app/runtime/configure-sessions.ts"), /configureOfflineStorageCleanup\(prepareMailDatabasesForDeletion\)/)
     assert.match(mailDatabase, /BroadcastChannel/)
     assert.doesNotMatch(mailController, /closeMailDatabase/)
     assert.match(mailController, /cleanup only cancels this React consumer/)

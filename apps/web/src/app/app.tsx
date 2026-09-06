@@ -1,8 +1,8 @@
+import { DesktopServerReplacementController } from "./runtime/desktop-server-replacement-controller"
 import { RouterProvider } from "@tanstack/react-router"
 
 import {
   DesktopDeepLinkHandler,
-  DesktopServerReplacementController,
   DesktopServerSwitchOverlay,
   DesktopWindowTitlebar,
   isLinuxDesktopApp,
