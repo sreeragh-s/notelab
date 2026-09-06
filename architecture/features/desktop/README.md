@@ -7,7 +7,7 @@
 
 ## Main flow
 
-Web desktop modules coordinate connection selection, native authentication, network transport, tabs, persistence, window behavior and diagnostics. The Tauri host supplies native commands and device integrations.
+Web desktop modules coordinate connection selection, native authentication, network transport, tabs, persistence, window behavior and diagnostics. The Tauri host supplies native commands and device integrations. [Native lifecycle](native-lifecycle.md) explains app composition, server contracts/profile state, configuration/discovery, authentication and diagnostics together.
 
 ## Authorization and persistence
 

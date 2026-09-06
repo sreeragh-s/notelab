@@ -11,16 +11,25 @@ use std::{
 
 use reqwest::{header::CONTENT_TYPE, redirect::Policy, StatusCode};
 use semver::Version;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tauri::{AppHandle, Manager};
 use tempfile::NamedTempFile;
 use url::Url;
 
 mod config;
+mod contracts;
 mod discovery;
+mod profile_state;
 
 use config::*;
+pub(crate) use contracts::{
+    DesktopServer, DesktopServerProfileList, DesktopServerProfileView,
+    DesktopServerWorkspaceSnapshot,
+};
+use contracts::{DesktopServerConfig, DiscoveryDocument, LegacyDesktopServerConfig};
 use discovery::*;
+pub(crate) use profile_state::is_cloud_server;
+use profile_state::*;
 
 const CONFIG_FILE_NAME: &str = "desktop-server.json";
 const DEV_CONFIG_FILE_NAME: &str = "desktop-server.dev.json";
@@ -36,90 +45,6 @@ const CLOUD_WEB_ORIGIN: &str = "https://app.zilobase.com";
 const CLOUD_API_ORIGIN: &str = "https://api.zilobase.com";
 const DEV_INSTANCE_ID: &str = "zilobase-dev";
 const DEFAULT_DEV_API_ORIGIN: &str = "http://localhost:3000";
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct DesktopServer {
-    pub instance_id: String,
-    pub display_name: String,
-    pub issuer: String,
-    pub web_origin: String,
-    pub api_origin: String,
-    pub protocol_version: u8,
-    pub server_version: String,
-    pub minimum_desktop_version: String,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct DiscoveryDocument {
-    #[serde(flatten)]
-    server: DesktopServer,
-    desktop_authorization: DesktopAuthorizationEndpoints,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct DesktopAuthorizationEndpoints {
-    authorization_endpoint: String,
-    token_endpoint: String,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct DesktopServerWorkspaceSnapshot {
-    pub id: String,
-    pub name: String,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct DesktopServerProfile {
-    server: DesktopServer,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    last_active_workspace_id: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    last_path: Option<String>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    workspaces: Vec<DesktopServerWorkspaceSnapshot>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    last_used_at: Option<String>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct DesktopServerConfig {
-    version: u8,
-    active_instance_id: String,
-    profiles: Vec<DesktopServerProfile>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct LegacyDesktopServerConfig {
-    #[allow(dead_code)]
-    version: u8,
-    server: DesktopServer,
-}
-
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct DesktopServerProfileView {
-    pub server: DesktopServer,
-    pub last_active_workspace_id: Option<String>,
-    pub last_path: Option<String>,
-    pub workspaces: Vec<DesktopServerWorkspaceSnapshot>,
-    pub last_used_at: Option<String>,
-    pub has_credentials: bool,
-    pub active: bool,
-}
-
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct DesktopServerProfileList {
-    pub active_instance_id: String,
-    pub profiles: Vec<DesktopServerProfileView>,
-}
 
 #[derive(Clone, Debug)]
 struct DesktopServerCandidate {
@@ -304,10 +229,6 @@ pub(crate) fn load_or_initialize_desktop_server(
     load_or_initialize_from_directory(&directory)
 }
 
-pub(crate) fn is_cloud_server(server: &DesktopServer) -> bool {
-    server.api_origin == CLOUD_API_ORIGIN && server.issuer == CLOUD_API_ORIGIN
-}
-
 pub(crate) fn is_development_server(server: &DesktopServer) -> bool {
     if !cfg!(debug_assertions) {
         return false;
@@ -347,16 +268,17 @@ impl DesktopServerCandidateState {
 
 #[cfg(test)]
 mod tests {
+    use super::contracts::DesktopAuthorizationEndpoints;
     use super::{
         cloud_server, commit_candidate_to_directory, config_file_name, config_path, default_server,
         development_server, find_profile_index, is_development_server, load_or_initialize_config,
         load_or_initialize_from_directory, parse_config, parse_server_origin,
         remove_profile_from_directory, save_to_directory, servers_refer_to_same_instance,
-        validate_discovery_document, verify_desktop_server, write_config,
-        DesktopAuthorizationEndpoints, DesktopServerCandidate, DesktopServerCandidateState,
-        DesktopServerWorkspaceSnapshot, DiscoveryDocument, DEV_CONFIG_FILE_NAME,
-        SERVER_CANDIDATE_TTL,
+        validate_discovery_document, verify_desktop_server, write_config, DesktopServerCandidate,
+        DesktopServerCandidateState, DesktopServerWorkspaceSnapshot, DiscoveryDocument,
+        DEV_CONFIG_FILE_NAME, SERVER_CANDIDATE_TTL,
     };
+    use super::{sanitize_optional_path, sanitize_workspace_snapshots};
     use std::time::Instant;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -771,5 +693,38 @@ mod tests {
             #[cfg(not(debug_assertions))]
             assert_eq!(verified, cloud_server(), "{value}");
         }
+    }
+    #[test]
+    fn profile_snapshots_drop_invalid_duplicates_and_external_paths() {
+        let workspaces = vec![
+            DesktopServerWorkspaceSnapshot {
+                id: " one ".into(),
+                name: " First ".into(),
+            },
+            DesktopServerWorkspaceSnapshot {
+                id: "one".into(),
+                name: "Duplicate".into(),
+            },
+            DesktopServerWorkspaceSnapshot {
+                id: "".into(),
+                name: "Invalid".into(),
+            },
+        ];
+        assert_eq!(
+            sanitize_workspace_snapshots(workspaces),
+            vec![DesktopServerWorkspaceSnapshot {
+                id: "one".into(),
+                name: "First".into()
+            }]
+        );
+        assert_eq!(sanitize_optional_path(Some("//example.test".into())), None);
+        assert_eq!(
+            sanitize_optional_path(Some("https://example.test".into())),
+            None
+        );
+        assert_eq!(
+            sanitize_optional_path(Some("/recents?view=tasks".into())),
+            Some("/recents?view=tasks".into())
+        );
     }
 }
