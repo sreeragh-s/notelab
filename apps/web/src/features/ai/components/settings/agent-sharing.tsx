@@ -3,13 +3,10 @@ import { ChevronsUpDownIcon, Trash2Icon } from "@/shared/components/icons";
 import * as React from "react";
 import { toast } from "sonner";
 
-import {
-  type AiAgentProfileDetail,
-  useArchiveAiAgentProfile,
-  useTransferAiAgentProfile,
-} from "@zilobase/features/ai-chat";
-import { usePageAccessTargets } from "@zilobase/features/pages";
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
+import { type AiAgentProfileDetail } from "@zilobase/features/ai-chat";
+import { useArchiveAiAgentProfile, useTransferAiAgentProfile } from "@zilobase/features/ai-chat/react";
+import { usePageAccessTargets } from "@zilobase/features/pages/react";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
 
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";

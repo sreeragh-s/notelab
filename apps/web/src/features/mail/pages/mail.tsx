@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate, useSearch } from "@tanstack/react-router"
 import { useLiveQuery } from "dexie-react-hooks"
-import { useSession } from "@zilobase/features/auth"
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
+import { useSession } from "@zilobase/features/auth/react";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
 import {
   mailConnectionQueryOptions,
   mailApiBasePath,

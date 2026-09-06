@@ -2,16 +2,18 @@ import { McpConnectionsPanel } from "./mcp-connections";
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useZilobaseFeatures } from "@zilobase/features";
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
+import {
+  mcpScopeApiPath,
+  type AgentSettingsDefinition,
+  type McpConnectionScopeRef,
+} from "@zilobase/features/ai-chat";
 import {
   useAiAgentProfile,
   useMcpCatalog,
   useMcpConnections,
   useApprovedMcpServers,
-  mcpScopeApiPath,
-  type AgentSettingsDefinition,
-  type McpConnectionScopeRef,
-} from "@zilobase/features/ai-chat";
+} from "@zilobase/features/ai-chat/react";
 import {
   mailApiBasePath,
   mailConnectionQueryOptions,

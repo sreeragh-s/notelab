@@ -23,11 +23,8 @@ import {
 import { Spinner } from "@/shared/ui/spinner"
 import { getApiErrorMessage } from "@/platform/network/api"
 import { readSingleInvitationId } from "@/features/workspaces"
-import { useSession } from "@zilobase/features/auth"
-import {
-  useAcceptPageGuestInvitation,
-  usePageGuestInvitation,
-} from "@zilobase/features/pages"
+import { useSession } from "@zilobase/features/auth/react";
+import { useAcceptPageGuestInvitation, usePageGuestInvitation } from "@zilobase/features/pages/react";
 import posthog from "@/shared/lib/posthog"
 
 export default function AcceptPageInvitationPage() {

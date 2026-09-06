@@ -67,10 +67,10 @@ import {
   useCreateApiKey,
   useDeleteApiKey,
   useUpdateApiKey,
-} from "@zilobase/features/api-keys"
+} from "@zilobase/features/api-keys/react";
 import type { ApiKeyRecord, CreatedApiKeyRecord } from "@zilobase/features/api-keys"
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
-import { useWorkspaces } from "@zilobase/features/workspaces"
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
+import { useWorkspaces } from "@zilobase/features/workspaces/react";
 import { getApiErrorMessage } from "@/platform/network/api"
 
 const expirationOptions = [

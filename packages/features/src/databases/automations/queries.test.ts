@@ -6,7 +6,7 @@ import {
   databaseAutomationKeys,
   databaseAutomationListQueryOptions,
 } from "./queries"
-import type { ApiFetcher } from "../../shared/context"
+import type { ApiFetcher } from "../../shared/api-fetcher"
 
 test("automation query keys are isolated from database payload caches", () => {
   assert.deepEqual(databaseAutomationKeys.list("database-1", "source-1"), [

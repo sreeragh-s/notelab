@@ -4,11 +4,8 @@ import type {
   MailViewCreateInput,
   MailViewTemplateId,
   MailViewUpdateInput,
-} from "@zilobase/features/mail"
-import {
-  createMailViewFromTemplate,
-  normalizeMailViewConfig,
-} from "@zilobase/features/mail"
+} from "@zilobase/features/mail/organization";
+import { createMailViewFromTemplate, normalizeMailViewConfig } from "@zilobase/features/mail/organization";
 
 import { db } from "../../infrastructure/database"
 import { mailView } from "../../infrastructure/database/schema"

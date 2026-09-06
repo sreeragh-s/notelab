@@ -6,11 +6,8 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react"
 import { toast } from "sonner"
-import {
-  useMoveDatabaseRow,
-  useReorderDatabaseRows,
-} from "@zilobase/features/databases"
-import { useUpdatePage } from "@zilobase/features/pages"
+import { useMoveDatabaseRow, useReorderDatabaseRows } from "@zilobase/features/databases/react";
+import { useUpdatePage } from "@zilobase/features/pages/react";
 
 import { serializePropertyValue } from "../../../core/database-property-values"
 import { getDatabaseGroupMoveValue } from "../../../interactions/database-group-values"

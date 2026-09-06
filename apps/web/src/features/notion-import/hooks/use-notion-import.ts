@@ -6,10 +6,7 @@ import {
   importNotionZipFile,
   NotionImportError,
 } from "@/features/notion-import/lib/notion-import"
-import {
-  useCreatePage,
-  useUpdatePage,
-} from "@zilobase/features/pages"
+import { useCreatePage, useUpdatePage } from "@zilobase/features/pages/react";
 import posthog from "@/shared/lib/posthog"
 
 export function useNotionImport({

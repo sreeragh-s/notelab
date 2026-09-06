@@ -6,8 +6,8 @@ import type {
   useUpdateDatabaseProperty,
   useUpdateDatabasePropertyValue,
   useUpdateDatabaseView,
-} from "@zilobase/features/databases"
-import type { useUpdatePage } from "@zilobase/features/pages"
+} from "@zilobase/features/databases/react";
+import type { useUpdatePage } from "@zilobase/features/pages/react";
 
 export type DatabaseRowMutations = {
   addRow: ReturnType<typeof useAddDatabaseRow>

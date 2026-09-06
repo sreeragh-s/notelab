@@ -7,8 +7,13 @@ import {
   type MailPersistedView,
   type MailPropertyDefinition,
 } from "@zilobase/features/mail"
-import { useAddDatabaseProperty, useCreateDatabase, useCreateDatabaseDataSource, useDatabase } from "@zilobase/features/databases"
-import { usePageNavigation } from "@zilobase/features/pages"
+import {
+  useAddDatabaseProperty,
+  useCreateDatabase,
+  useCreateDatabaseDataSource,
+  useDatabase,
+} from "@zilobase/features/databases/react";
+import { usePageNavigation } from "@zilobase/features/pages/react";
 import { useQuery } from "@tanstack/react-query"
 import { toast } from "sonner"
 

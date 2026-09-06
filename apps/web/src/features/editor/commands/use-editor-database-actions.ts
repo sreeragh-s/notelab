@@ -1,5 +1,5 @@
 import { useCallback } from "react"
-import { useAddDatabaseRow, useCreateDatabase } from "@zilobase/features/databases"
+import { useAddDatabaseRow, useCreateDatabase } from "@zilobase/features/databases/react";
 import { toast } from "sonner"
 import { dropPageOnDatabase } from "../drag-drop/database-page-drag"
 

@@ -64,30 +64,25 @@ import {
 } from "@/features/desktop/server/index"
 import { DEFAULT_DATABASE_ITEM_ICON, DEFAULT_MEETING_ITEM_ICON } from "@/features/pages/index"
 import { getDatabaseIconNode, getPageIconNode, PageIconDisplay } from "@/features/pages/index"
-import { useSession } from "@zilobase/features/auth"
+import { useSession } from "@zilobase/features/auth/react";
 import {
   useAddDatabaseRow,
   useCreateDatabase,
   useSetDatabaseFavorite,
-} from "@zilobase/features/databases"
-import { useWorkspaceMeetings } from "@zilobase/features/meetings"
-import {
-  useCreatePage,
-  usePageNavigation,
-  useSetPageFavorite,
-} from "@zilobase/features/pages"
-import { useTeamspaces, useTeamspaceSettings } from "@zilobase/features/teamspaces"
+} from "@zilobase/features/databases/react";
+import { useWorkspaceMeetings } from "@zilobase/features/meetings/react";
+import { useCreatePage, usePageNavigation, useSetPageFavorite } from "@zilobase/features/pages/react";
+import { useTeamspaces, useTeamspaceSettings } from "@zilobase/features/teamspaces/react";
 import {
   defaultUserSettings,
   isStaticSidebarTabId,
   normalizeSidebarConfig,
   resolveSidebarWorkspaceLayout,
-  useUpdateUserSettings,
-  useUserSettings,
   withSidebarWorkspaceLayout,
   type SidebarSection,
-} from "@zilobase/features/user-settings"
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
+} from "@zilobase/features/user-settings";
+import { useUpdateUserSettings, useUserSettings } from "@zilobase/features/user-settings/react";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
 import {
   createSectionPresentationConfig,
   readActiveSidebarTab,

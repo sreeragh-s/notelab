@@ -19,9 +19,11 @@ import {
   DEFAULT_MEETING_ITEM_ICON,
   DEFAULT_PAGE_ITEM_ICON,
 } from "@/features/pages/icons/item-icons"
-import { getDatabaseEmoji, useDatabase } from "@zilobase/features/databases"
-import { useMeeting } from "@zilobase/features/meetings"
-import { getPageEmoji, usePage } from "@zilobase/features/pages"
+import { getDatabaseEmoji } from "@zilobase/features/databases";
+import { useDatabase } from "@zilobase/features/databases/react";
+import { useMeeting } from "@zilobase/features/meetings/react";
+import { getPageEmoji } from "@zilobase/features/pages";
+import { usePage } from "@zilobase/features/pages/react";
 
 export function DocumentFavicon() {
   const location = useRouterState({ select: (state) => state.location })

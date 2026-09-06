@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 
-import type { ApiFetcher } from "../shared/context"
+import type { ApiFetcher } from "../shared/api-fetcher"
 import { workspaceRequestOptions } from "../workspaces/queries"
 
 export type WorkspaceAiChatModel = {

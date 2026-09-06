@@ -1,9 +1,7 @@
 import "./agent-interface.css";
 import type { ReactNode } from "react";
-import {
-  defaultUserSettings,
-  useUserSettings,
-} from "@zilobase/features/user-settings";
+import { defaultUserSettings } from "@zilobase/features/user-settings";
+import { useUserSettings } from "@zilobase/features/user-settings/react";
 export function AgentChatLayout({
   children,
   sidebar = false,

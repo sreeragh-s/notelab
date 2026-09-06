@@ -7,7 +7,8 @@ import {
   type DragEvent as ReactDragEvent,
 } from "react"
 
-import { useSession } from "@zilobase/features/auth"
+import { useSession } from "@zilobase/features/auth/react";
+import { isDatabaseLocked } from "@zilobase/features/databases";
 import {
   useAddDatabaseView,
   useAddDatabaseProperty,
@@ -16,7 +17,6 @@ import {
   useCreateDatabaseDataSource,
   useDatabase,
   useDeleteDatabaseView,
-  isDatabaseLocked,
   useLinkDatabaseDataSource,
   useReplaceDatabaseViewDataSource,
   useUnlinkDatabaseDataSource,
@@ -24,7 +24,7 @@ import {
   useUpdateDatabaseView,
   useUpdateDatabaseProperty,
   useUpdateDatabasePropertyValue,
-} from "@zilobase/features/databases"
+} from "@zilobase/features/databases/react";
 import { toast } from "sonner"
 import {
   createSampleRowContent,
@@ -32,11 +32,7 @@ import {
 } from "../../setup/view/database-setup-card"
 import { getDatabaseSetupTemplate } from "../../setup/model/database-setup-templates"
 import { serializePropertyValue } from "../../core/database-property-values"
-import {
-  usePage,
-  usePagePersonAccessTargets,
-  useUpdatePage,
-} from "@zilobase/features/pages"
+import { usePage, usePagePersonAccessTargets, useUpdatePage } from "@zilobase/features/pages/react";
 import {
   getDatabasePageDragPayload,
   hasDatabasePageDragPayload,

@@ -5,7 +5,7 @@ import {
   useArchiveAiChatThread,
   useDeleteAiChatThread,
   useSetAiChatThreadPinned,
-} from "@zilobase/features/ai-chat";
+} from "@zilobase/features/ai-chat/react";
 import { useCallback } from "react";
 import { toast } from "sonner";
 

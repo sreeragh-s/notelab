@@ -19,17 +19,14 @@ import {
   getDatabaseIconPosition,
   isDatabaseLocked,
 } from "@zilobase/features/databases"
-import {
-  usePage,
-  usePageAccessLevel,
-  type PageIconPosition,
-} from "@zilobase/features/pages"
+import { type PageIconPosition } from "@zilobase/features/pages";
+import { usePage, usePageAccessLevel } from "@zilobase/features/pages/react";
 import {
   useDatabase,
   useRestoreDatabase,
   useUpdateDatabase,
   useUpdateDataSource,
-} from "@zilobase/features/databases"
+} from "@zilobase/features/databases/react";
 import { EmbeddedPageDialog } from "@/features/pages/components/index"
 import { useOpenEmbeddedPage } from "@/features/pages/hooks/index"
 import { PageMetadata as PageMetadataView } from "../components/page-metadata"

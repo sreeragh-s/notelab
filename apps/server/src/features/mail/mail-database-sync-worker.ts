@@ -1,5 +1,7 @@
 import { and, asc, eq, inArray, isNull, lt, lte, max, or, sql } from "drizzle-orm"
-import { evaluateMailFilterExpression, normalizeMailViewConfig, type MailAddress, type MailFilterRecord } from "@zilobase/features/mail"
+import { evaluateMailFilterExpression, type MailFilterRecord } from "@zilobase/features/mail/predicate";
+import { normalizeMailViewConfig } from "@zilobase/features/mail/organization";
+import { type MailAddress } from "@zilobase/features/mail/contracts";
 
 import { requireDatabaseEditAccess } from "../databases/access/database-access"
 import { requireDataSourceEditAccess } from "../databases/access/data-source-access"

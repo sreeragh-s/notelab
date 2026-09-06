@@ -1,26 +1,26 @@
 import { SettingsDraftActions } from "../components/settings/settings-draft-actions";
-import { useSession } from "@zilobase/features/auth";
+import { useSession } from "@zilobase/features/auth/react";
 import { PageMetadata } from "@/features/databases";
-import {
-  defaultUserSettings,
-  useUserSettings,
-} from "@zilobase/features/user-settings";
+import { defaultUserSettings } from "@zilobase/features/user-settings";
+import { useUserSettings } from "@zilobase/features/user-settings/react";
 import { getApiRequestHeaders, toApiUrl } from "@/platform/network/api";
 import { desktopNetworkFetch } from "@/platform/network";
 import * as React from "react";
 import { useParams, useRouter, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useZilobaseFeatures } from "@zilobase/features";
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
+import {
+  type CustomAgentConversationMessage,
+  type AgentSettingsEvent,
+  type AgentSettingsTab,
+} from "@zilobase/features/ai-chat";
 import {
   useAiAgentProfile,
   useCustomAgentLegacyConversations,
   useStartCustomAgentRun,
   useWorkspaceAiModels,
-  type CustomAgentConversationMessage,
-  type AgentSettingsEvent,
-  type AgentSettingsTab,
-} from "@zilobase/features/ai-chat";
+} from "@zilobase/features/ai-chat/react";
 import { PageSidePaneLayout } from "@/features/pages/context";
 import { AgentSharePopover } from "../components/settings/agent-sharing";
 import { AgentSettingsPage } from "../components/settings/agent-settings-page";

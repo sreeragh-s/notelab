@@ -1,5 +1,5 @@
 import { useCallback, useState, type DragEvent } from "react"
-import { useReorderDatabaseRows } from "@zilobase/features/databases"
+import { useReorderDatabaseRows } from "@zilobase/features/databases/react";
 
 import type { SortableDatabaseItem } from "../../../interactions/database-item-utils"
 import {

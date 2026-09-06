@@ -21,6 +21,7 @@ import {
   Volume2,
   X,
 } from "@/shared/components/icons"
+import { meetingKeys, type MeetingLifecycleAction } from "@zilobase/features/meetings";
 import {
   useMeeting,
   useGenerateMeetingSummary,
@@ -28,17 +29,10 @@ import {
   useMeetingRecorder,
   useRecordMeetingConsent,
   useUpdateMeeting,
-  meetingKeys,
-  type MeetingLifecycleAction,
-} from "@zilobase/features/meetings"
-import { useSession } from "@zilobase/features/auth"
-import {
-  getPageEmoji,
-  isMeetingLocked,
-  usePage,
-  useUpdatePage,
-  type PageMetadata,
-} from "@zilobase/features/pages"
+} from "@zilobase/features/meetings/react";
+import { useSession } from "@zilobase/features/auth/react";
+import { getPageEmoji, isMeetingLocked, type PageMetadata } from "@zilobase/features/pages";
+import { usePage, useUpdatePage } from "@zilobase/features/pages/react";
 import { toast } from "sonner"
 
 import { Button } from "@/shared/ui/button"

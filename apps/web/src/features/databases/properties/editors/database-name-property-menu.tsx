@@ -33,7 +33,7 @@ import {
   PopoverTrigger,
 } from "@/shared/ui/popover";
 import { Switch } from "@/shared/ui/switch";
-import { useUpdateDatabase } from "@zilobase/features/databases";
+import { useUpdateDatabase } from "@zilobase/features/databases/react";
 
 import {
   getDatabaseSorts,

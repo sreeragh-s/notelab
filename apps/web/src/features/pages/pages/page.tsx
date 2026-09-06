@@ -32,11 +32,8 @@ import {
   type PageIconPosition,
   type PageMetadata,
 } from "@zilobase/features/pages";
-import { useDeleteDatabase } from "@zilobase/features/databases";
-import {
-  useDeleteMeeting,
-  useWorkspaceMeetings,
-} from "@zilobase/features/meetings";
+import { useDeleteDatabase } from "@zilobase/features/databases/react";
+import { useDeleteMeeting, useWorkspaceMeetings } from "@zilobase/features/meetings/react";
 import {
   useUpdatePage,
   useRestorePage,
@@ -48,7 +45,7 @@ import {
   usePageDatabaseIds,
   usePageNavigation,
   useResolvedPageLayout,
-} from "@zilobase/features/pages";
+} from "@zilobase/features/pages/react";
 import {
   extractDatabaseIds,
   insertDatabaseBlockInContent,
@@ -56,8 +53,8 @@ import {
 } from "@zilobase/page-context";
 import { EmbeddedPageDialog } from "../components/embedded-page-dialog";
 import { useOpenEmbeddedPage } from "../hooks/use-open-embedded-page";
-import { useSession } from "@zilobase/features/auth";
-import { useUserSettings } from "@zilobase/features/user-settings";
+import { useSession } from "@zilobase/features/auth/react";
+import { useUserSettings } from "@zilobase/features/user-settings/react";
 import { usePageEditorRegistry } from "@/features/editor/runtime/page-editor-registry";
 import { createPageEditorHandle } from "@/features/ai/cache/index";
 import { Editor, type PageEditPreviewControls } from "@/packages/editor";

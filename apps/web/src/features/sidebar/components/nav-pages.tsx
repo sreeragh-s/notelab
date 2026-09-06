@@ -1,18 +1,18 @@
 import { useState, type DragEvent } from "react"
 import { useLocation, useNavigate } from "@tanstack/react-router"
-import { useDeleteDatabase } from "@zilobase/features/databases"
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
+import { useDeleteDatabase } from "@zilobase/features/databases/react";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
 import {
   useDeletePage,
   useConvertPageToTeamspace,
   useMovePageToTeamspace,
-} from "@zilobase/features/pages"
+} from "@zilobase/features/pages/react";
+import { type Teamspace } from "@zilobase/features/teamspaces";
 import {
   useSetTeamspaceMembership,
   useTeamspaceLifecycle,
   useTeamspaces,
-  type Teamspace,
-} from "@zilobase/features/teamspaces"
+} from "@zilobase/features/teamspaces/react";
 import {
   ArchiveIcon,
   ArrowUpRightIcon,

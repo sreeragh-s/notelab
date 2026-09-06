@@ -32,7 +32,7 @@ import {
   useDeleteAccount,
   useSession,
   useSetPassword,
-} from "@zilobase/features/auth"
+} from "@zilobase/features/auth/react";
 
 import { SettingsHeader } from "../components/settings-header"
 

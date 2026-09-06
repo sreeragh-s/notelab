@@ -1,4 +1,4 @@
-import type { MailAddress, MailComposeRequest } from "@zilobase/features/mail"
+import type { MailAddress, MailComposeRequest } from "@zilobase/features/mail/contracts";
 import { createMimeMessage, Mailbox } from "mimetext/browser"
 
 export const MAX_MAIL_ATTACHMENT_BYTES = 20 * 1024 * 1024

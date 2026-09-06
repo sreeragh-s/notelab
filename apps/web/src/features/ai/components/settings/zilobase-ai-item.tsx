@@ -19,12 +19,12 @@ import { Button } from "@/shared/ui/button"
 import { useZilobaseFeatures } from "@zilobase/features"
 import {
   pageQueryKey,
-  useUpdatePage,
   type Page,
   type PageMetadata,
   type ZilobaseAiMode,
   type ZilobaseAiPageSummary,
-} from "@zilobase/features/pages"
+} from "@zilobase/features/pages";
+import { useUpdatePage } from "@zilobase/features/pages/react";
 
 const modeLabels: Record<ZilobaseAiMode, string> = {
   instruction: "instruction",

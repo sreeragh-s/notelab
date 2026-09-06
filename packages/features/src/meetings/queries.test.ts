@@ -6,7 +6,7 @@ import {
   meetingQueryOptions,
   workspaceMeetingsQueryOptions,
 } from "./queries"
-import type { ApiFetcher } from "../shared/context"
+import type { ApiFetcher } from "../shared/api-fetcher"
 
 test("meeting query keys are hierarchical and scoped by meeting", () => {
   assert.deepEqual(meetingKeys.list("workspace-1"), [

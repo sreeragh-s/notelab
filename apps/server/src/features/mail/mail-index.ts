@@ -1,5 +1,6 @@
 import { and, asc, count, eq, isNull, lt, ne, or, sql } from "drizzle-orm"
-import type { MailAddress, MailIndexProgress } from "@zilobase/features/mail"
+import type { MailAddress } from "@zilobase/features/mail/contracts";
+import type { MailIndexProgress } from "@zilobase/features/mail/organization";
 
 import { db } from "../../infrastructure/database"
 import {

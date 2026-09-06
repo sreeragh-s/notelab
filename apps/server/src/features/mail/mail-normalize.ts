@@ -4,7 +4,7 @@ import type {
   MailLabelRecord,
   MailMessageRecord,
   MailThreadSummary,
-} from "@zilobase/features/mail"
+} from "@zilobase/features/mail/contracts";
 
 import type { GmailLabel, GmailMessage, GmailPart, GmailThread } from "./gmail-gateway"
 

@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query"
 import { invoke } from "@tauri-apps/api/core"
 import { Trash2Icon, UploadIcon } from "@/shared/components/icons"
 import { toast } from "sonner"
-import { useSession } from "@zilobase/features/auth"
+import { useSession } from "@zilobase/features/auth/react";
 import {
   mailApiBasePath,
   mailConnectionQueryOptions,
@@ -42,12 +42,8 @@ import {
   mailDatabaseName,
 } from "@/features/mail/cache/mail-database"
 import { useNotionImport } from "@/features/notion-import/index"
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
-import {
-  useWorkspaces,
-  useDeleteWorkspace,
-  useUpdateWorkspace,
-} from "@zilobase/features/workspaces"
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
+import { useWorkspaces, useDeleteWorkspace, useUpdateWorkspace } from "@zilobase/features/workspaces/react";
 
 export default function WorkspaceSettingsPage() {
   const activeWorkspaceId = useActiveWorkspaceId()

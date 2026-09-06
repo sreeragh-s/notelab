@@ -20,7 +20,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/shared/ui/popover";
-import { getPageEmoji, usePages, type Page } from "@zilobase/features/pages";
+import { getPageEmoji, type Page } from "@zilobase/features/pages";
+import { usePages } from "@zilobase/features/pages/react";
 import { useZilobaseFeatures } from "@zilobase/features";
 import {
   databaseRootQueryKey,

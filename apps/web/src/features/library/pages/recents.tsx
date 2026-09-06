@@ -1,10 +1,29 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { BotIcon, ChevronDown, ChevronRight, Database, FileText, Globe2Icon, Layers3Icon, Loader2, LockIcon, Plus, UsersIcon } from "@/shared/components/icons";
+import {
+  BotIcon,
+  ChevronDown,
+  ChevronRight,
+  Database,
+  FileText,
+  Globe2Icon,
+  Layers3Icon,
+  Loader2,
+  LockIcon,
+  Plus,
+  UsersIcon,
+} from "@/shared/components/icons";
 import { toast } from "sonner";
 
 import { Button } from "@/shared/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
@@ -38,23 +57,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
+import { getDatabaseEmoji } from "@zilobase/features/databases";
+import { useCreateDatabase } from "@zilobase/features/databases/react";
+import { type MeetingListItem } from "@zilobase/features/meetings";
+import { useWorkspaceMeetings } from "@zilobase/features/meetings/react";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
 import {
-  getDatabaseEmoji,
-  useCreateDatabase,
-} from "@zilobase/features/databases";
-import {
-  useWorkspaceMeetings,
-  type MeetingListItem,
-} from "@zilobase/features/meetings";
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
-import {
-  useCreatePage,
-  usePageNavigation,
   type Page,
   type PageDatabase,
   type PageItemPlacement,
   type PageNavigationPayload,
 } from "@zilobase/features/pages";
+import { useCreatePage, usePageNavigation } from "@zilobase/features/pages/react";
 import type {
   DatabasePayload,
   DatabaseProperty,
@@ -65,15 +79,15 @@ import {
   defaultUserSettings,
   libraryViewIds,
   normalizeSidebarConfig,
-  useUpdateUserSettings,
-  useUserSettings,
   type LibraryView,
 } from "@zilobase/features/user-settings";
+import { useUpdateUserSettings, useUserSettings } from "@zilobase/features/user-settings/react";
 import { useConnectivity, useOfflineManifest } from "@/features/offline/index";
 import { PageIconDisplay } from "@/features/pages/index";
 import { getApiErrorMessage } from "@/platform/network/api";
-import { useCreateTeamspace, useTeamspaces, type Teamspace, type TeamspaceAccessMode } from "@zilobase/features/teamspaces";
-import { useAiAgentProfiles, useCreateAiAgentProfile } from "@zilobase/features/ai-chat";
+import { type Teamspace, type TeamspaceAccessMode } from "@zilobase/features/teamspaces";
+import { useCreateTeamspace, useTeamspaces } from "@zilobase/features/teamspaces/react";
+import { useAiAgentProfiles, useCreateAiAgentProfile } from "@zilobase/features/ai-chat/react";
 
 type HomepageView = LibraryView;
 

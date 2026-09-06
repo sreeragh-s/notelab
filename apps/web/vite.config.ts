@@ -13,9 +13,6 @@ const srcDir = fileURLToPath(new URL("./src", import.meta.url));
 const editorDir = fileURLToPath(
   new URL("./src/features/editor", import.meta.url),
 );
-const featuresDir = fileURLToPath(
-  new URL("../../packages/features/src", import.meta.url),
-);
 const pageContextDir = fileURLToPath(
   new URL("../../packages/page-context/src", import.meta.url),
 );
@@ -128,27 +125,6 @@ export default defineConfig(async () => ({
       },
       { find: "@/packages/editor", replacement: editorDir },
       { find: "@", replacement: srcDir },
-      {
-        find: "@zilobase/features/databases/property-types",
-        replacement: `${featuresDir}/databases/property-types.ts`,
-      },
-      {
-        find: "@zilobase/features/databases/filter",
-        replacement: `${featuresDir}/databases/filter.ts`,
-      },
-      {
-        find: "@zilobase/features/ai-chat/conversation-adapter",
-        replacement: `${featuresDir}/ai-chat/conversation-adapter.ts`,
-      },
-      {
-        find: "@zilobase/features/mail/react",
-        replacement: `${featuresDir}/mail/react.ts`,
-      },
-      {
-        find: /^@zilobase\/features\/(.+)$/,
-        replacement: `${featuresDir}/$1/index.ts`,
-      },
-      { find: /^@zilobase\/features$/, replacement: `${featuresDir}/index.ts` },
       {
         find: "@zilobase/page-context",
         replacement: `${pageContextDir}/index.ts`,

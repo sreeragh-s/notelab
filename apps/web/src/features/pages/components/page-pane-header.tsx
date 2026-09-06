@@ -34,28 +34,23 @@ import { Separator } from "@/shared/ui/separator";
 import { SidebarTrigger } from "@/shared/ui/sidebar";
 import { libraryViewIcons, mailViewIcons } from "@/features/sidebar";
 import { libraryViewLabels, mailViewLabels } from "@/features/sidebar";
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
-import { useAiAgentProfile } from "@zilobase/features/ai-chat";
-import { useDatabase } from "@zilobase/features/databases";
-import { useMeeting } from "@zilobase/features/meetings";
-import { useTeamspaces } from "@zilobase/features/teamspaces";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
+import { useAiAgentProfile } from "@zilobase/features/ai-chat/react";
+import { useDatabase } from "@zilobase/features/databases/react";
+import { useMeeting } from "@zilobase/features/meetings/react";
+import { useTeamspaces } from "@zilobase/features/teamspaces/react";
 import {
   defaultUserSettings,
   libraryViewIds,
   mailViewIds,
-  useUpdateUserSettings,
-  useUserSettings,
   type LibraryView,
   type MailView,
 } from "@zilobase/features/user-settings";
+import { useUpdateUserSettings, useUserSettings } from "@zilobase/features/user-settings/react";
 import { getDatabaseIconNode, getPageIconNode, PageIconDisplay } from "../icons/page-icon";
 import { DEFAULT_DATABASE_ITEM_ICON, DEFAULT_MEETING_ITEM_ICON } from "../icons/item-icons";
-import {
-  resolveEmbeddedItemsOpenAs,
-  usePage,
-  usePageNavigation,
-  type EmbeddedItemsOpenAs,
-} from "@zilobase/features/pages";
+import { resolveEmbeddedItemsOpenAs, type EmbeddedItemsOpenAs } from "@zilobase/features/pages";
+import { usePage, usePageNavigation } from "@zilobase/features/pages/react";
 import { EmbeddedItemPresentationDropdown } from "./embedded-item-presentation-dropdown";
 import {
   buildCanonicalBreadcrumbTrail,

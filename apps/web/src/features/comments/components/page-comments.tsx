@@ -70,10 +70,8 @@ import {
   type CommentMentionMember,
 } from "@/features/comments/components/page-comment-mentions"
 import { useOptionalPageEditorComments } from "./page-editor-comments"
-import { useSession } from "@zilobase/features/auth"
-import {
-  usePagePersonAccessTargets,
-} from "@zilobase/features/pages"
+import { useSession } from "@zilobase/features/auth/react";
+import { usePagePersonAccessTargets } from "@zilobase/features/pages/react";
 import { usePageCommentController, usePageCommentsSnapshot } from "../context/page-comments-registry"
 import type { CommentAuthorSnapshot, CommentMessageSnapshot } from "../model/yjs-comments"
 import { toast } from "sonner"

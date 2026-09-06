@@ -22,7 +22,7 @@ import {
   getTaskDatabaseSchema,
 } from "@/features/tasks/model/tasks-model"
 import { useZilobaseFeatures } from "@zilobase/features"
-import { useSession } from "@zilobase/features/auth"
+import { useSession } from "@zilobase/features/auth/react";
 import {
   databaseQueryOptions,
   type DatabasePayload,

@@ -1,50 +1,17 @@
+import type { AiAgentPreference, AiChatThreadsResponse, AiChatThreadMessagesResponse } from "./contracts";
+export type {
+  AiChatThread,
+  AiChatFeedback,
+  AiAgentPreference,
+  AiChatThreadsResponse,
+  AiChatThreadResponse,
+  AiChatThreadMessagesResponse,
+} from "./contracts";
 import { queryOptions } from "@tanstack/react-query"
-import type { UIMessage } from "ai"
 
-import type { ApiFetcher } from "../shared/context"
+
+import type { ApiFetcher } from "../shared/api-fetcher"
 import { workspaceRequestOptions } from "../workspaces/queries"
-
-export type AiChatThread = {
-  id: string
-  agentProfileId: string | null
-  agentProfile: {
-    icon: unknown | null
-    id: string
-    name: string
-    status: "active" | "archived"
-  } | null
-  title: string
-  pinned: boolean
-  pinnedAt: string | null
-  createdAt: string
-  updatedAt: string
-  lastActivityAt: string
-}
-
-export type AiChatFeedback = {
-  messageId: string
-  rating: -1 | 1
-  reason: string | null
-}
-
-export type AiAgentPreference = {
-  instructions: string
-  responseStyle: "concise" | "balanced" | "detailed"
-}
-
-export type AiChatThreadsResponse = {
-  threads: AiChatThread[]
-}
-
-export type AiChatThreadResponse = {
-  thread: AiChatThread
-}
-
-export type AiChatThreadMessagesResponse = {
-  feedback: AiChatFeedback[]
-  messages: UIMessage[]
-  thread: AiChatThread
-}
 
 export const aiChatThreadsQueryKey = (
   workspaceId: string | null | undefined,

@@ -25,10 +25,7 @@ import { getApiErrorMessage } from "@/platform/network/api"
 import { getInvitationAuthSearch, signInWithGoogle } from "../lib/google-auth"
 import { cn } from "@/shared/lib/utils"
 import { useAuthFlowStore } from "../state/auth-flow-store"
-import {
-  useRequestEmailVerificationOtp,
-  useSignUp,
-} from "@zilobase/features/auth"
+import { useRequestEmailVerificationOtp, useSignUp } from "@zilobase/features/auth/react";
 
 export function SignupForm({
   className,

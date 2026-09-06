@@ -4,12 +4,8 @@ import {
 import * as React from "react"
 import { toast } from "sonner"
 
-import {
-  type McpApprovedServer,
-  type McpWorkspacePolicy,
-  useMcpPolicyMutation,
-  useMcpWorkspacePolicy
-} from "@zilobase/features/ai-chat"
+import { type McpApprovedServer, type McpWorkspacePolicy } from "@zilobase/features/ai-chat";
+import { useMcpPolicyMutation, useMcpWorkspacePolicy } from "@zilobase/features/ai-chat/react";
 
 import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"

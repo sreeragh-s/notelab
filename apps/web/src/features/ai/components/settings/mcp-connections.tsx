@@ -13,13 +13,15 @@ import {
   type McpConnectionSummary,
   mcpScopeApiPath,
   type McpToolPolicy,
+} from "@zilobase/features/ai-chat";
+import {
   useApprovedMcpServers,
   useMcpActivity,
   useMcpCatalog,
   useMcpConnectionMutation,
   useMcpConnections,
-} from "@zilobase/features/ai-chat";
-import { useSession } from "@zilobase/features/auth";
+} from "@zilobase/features/ai-chat/react";
+import { useSession } from "@zilobase/features/auth/react";
 
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";

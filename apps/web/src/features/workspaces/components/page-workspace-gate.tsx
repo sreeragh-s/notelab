@@ -16,13 +16,13 @@ import {
 import { Button } from "@/shared/ui/button"
 import { getApiErrorMessage } from "@/platform/network/api"
 import { useZilobaseFeatures } from "@zilobase/features"
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
 import {
   parseActiveWorkspaceMismatchError,
   pageQueryKey,
   pageQueryOptions,
 } from "@zilobase/features/pages"
-import { useWorkspaces, useSetActiveWorkspace } from "@zilobase/features/workspaces"
+import { useWorkspaces, useSetActiveWorkspace } from "@zilobase/features/workspaces/react";
 
 type PageWorkspaceGateProps = {
   children: React.ReactNode

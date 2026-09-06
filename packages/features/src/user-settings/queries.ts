@@ -1,19 +1,11 @@
+import type { UserSettings } from "./contracts";
+export type { UserSettings } from "./contracts";
 import { queryOptions } from "@tanstack/react-query"
 
-import type { ApiFetcher } from "../shared/context"
+import type { ApiFetcher } from "../shared/api-fetcher"
 
-import type { EmbeddedItemsOpenAs } from "../pages/queries"
-import {
-  defaultSidebarConfig,
-  normalizeSidebarConfig,
-  type SidebarConfig,
-} from "./sidebar-config"
 
-export type UserSettings = {
-  embeddedItemsOpenAs: EmbeddedItemsOpenAs
-  pageFullWidth: boolean
-  sidebarConfig: SidebarConfig
-}
+import { defaultSidebarConfig, normalizeSidebarConfig } from "./sidebar-config";
 
 export const defaultUserSettings: UserSettings = {
   embeddedItemsOpenAs: "sidepanel",

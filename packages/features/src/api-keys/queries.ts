@@ -1,28 +1,8 @@
+import type { ApiKeysResponse } from "./contracts";
+export type { ApiKeyRecord, ApiKeysResponse, CreatedApiKeyRecord } from "./contracts";
 import { queryOptions } from "@tanstack/react-query"
 
-import type { ApiFetcher } from "../shared/context"
-
-export type ApiKeyRecord = {
-  createdAt: string
-  enabled: boolean
-  expiresAt: string | null
-  id: string
-  lastRequest: string | null
-  name: string
-  workspaceId: string | null
-  prefix: string | null
-  requestCount: number
-  start: string | null
-  updatedAt: string
-}
-
-export type ApiKeysResponse = {
-  keys: ApiKeyRecord[]
-}
-
-export type CreatedApiKeyRecord = ApiKeyRecord & {
-  key: string
-}
+import type { ApiFetcher } from "../shared/api-fetcher"
 
 export const apiKeysQueryKey = (
   workspaceId: string | null | undefined,

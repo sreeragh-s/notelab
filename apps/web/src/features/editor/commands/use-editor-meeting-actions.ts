@@ -1,5 +1,5 @@
 import { useCallback } from "react"
-import { useCreateMeeting } from "@zilobase/features/meetings"
+import { useCreateMeeting } from "@zilobase/features/meetings/react";
 
 export function useEditorMeetingActions(
   workspaceId?: string | null,

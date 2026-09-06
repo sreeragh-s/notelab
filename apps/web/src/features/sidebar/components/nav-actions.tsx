@@ -64,9 +64,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
-import { useSession } from "@zilobase/features/auth";
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
-import { useAiAgentProfiles } from "@zilobase/features/ai-chat";
+import { useSession } from "@zilobase/features/auth/react";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
+import { useAiAgentProfiles } from "@zilobase/features/ai-chat/react";
 import {
   useCreatePage,
   useDeletePage,
@@ -86,8 +86,9 @@ import {
   useInvitePageGuest,
   useCancelPageGuestInvitation,
   useRevokePageGuest,
-} from "@zilobase/features/pages";
-import { useWorkspaceGuestPolicy } from "@zilobase/features/workspaces";
+} from "@zilobase/features/pages/react";
+import { useWorkspaceGuestPolicy } from "@zilobase/features/workspaces/react";
+import { isDatabaseLocked } from "@zilobase/features/databases";
 import {
   useDatabase,
   useDatabaseAccess,
@@ -95,14 +96,10 @@ import {
   useDeleteDatabase,
   useSetDatabaseFavorite,
   useSetDatabasePublished,
-  isDatabaseLocked,
   useUpdateDatabase,
   useUpsertDatabaseAccess,
-} from "@zilobase/features/databases";
-import {
-  useUpdateUserSettings,
-  useUserSettings,
-} from "@zilobase/features/user-settings";
+} from "@zilobase/features/databases/react";
+import { useUpdateUserSettings, useUserSettings } from "@zilobase/features/user-settings/react";
 import { useIsMobile } from "@/shared/hooks/use-mobile";
 import { cn } from "@/shared/lib/utils";
 import { usePageCommentsSnapshot } from "@/features/comments/index";

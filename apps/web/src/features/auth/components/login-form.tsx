@@ -22,10 +22,7 @@ import { Input } from "@/shared/ui/input"
 import { getApiErrorMessage } from "@/platform/network/api"
 import { getAuthReturnPath, signInWithGoogle } from "../lib/google-auth"
 import { cn } from "@/shared/lib/utils"
-import {
-  useRequestSignInOtp,
-  useSignInWithPassword,
-} from "@zilobase/features/auth"
+import { useRequestSignInOtp, useSignInWithPassword } from "@zilobase/features/auth/react";
 import { useAuthFlowStore } from "../state/auth-flow-store"
 import { editionWebModule } from "@zilobase/edition-web"
 import posthog from "@/shared/lib/posthog"

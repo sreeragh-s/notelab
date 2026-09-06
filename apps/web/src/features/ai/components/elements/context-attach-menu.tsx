@@ -19,23 +19,21 @@ import {
   PromptInputCommandList,
 } from "./prompt-input";
 import { PageIconDisplay, PageIcon } from "@/features/pages/index";
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
 import type { AppSearchResult } from "@zilobase/features/search";
 import {
   getPrimaryPageParentId,
-  usePageNavigation,
   type Page,
   type PageDatabase,
   type PageItemPlacement,
 } from "@zilobase/features/pages";
+import { usePageNavigation } from "@zilobase/features/pages/react";
 import type {
   ContextAttachment,
   ContextSourceRef,
 } from "@zilobase/page-context";
-import {
-  useWorkspaceAccessTargets,
-  type WorkspaceMember,
-} from "@zilobase/features/workspaces";
+import { type WorkspaceMember } from "@zilobase/features/workspaces";
+import { useWorkspaceAccessTargets } from "@zilobase/features/workspaces/react";
 
 const MAX_VISIBLE_PER_GROUP = 3;
 

@@ -66,7 +66,7 @@ import {
   useDuplicateDatabaseProperty,
   useUpdateDatabase,
   useUpdateDatabaseProperty,
-} from "@zilobase/features/databases";
+} from "@zilobase/features/databases/react";
 import { Separator } from "@/shared/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/app-tabs";
 import { Textarea } from "@/shared/ui/textarea";

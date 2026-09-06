@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
-import { useDatabase } from "@zilobase/features/databases";
+import { useDatabase } from "@zilobase/features/databases/react";
 
 import type { DatabasePropertyConfig } from "../../../views/model/database-view-config";
 import {

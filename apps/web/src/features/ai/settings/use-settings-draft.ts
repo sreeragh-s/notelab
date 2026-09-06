@@ -1,9 +1,13 @@
 import * as React from "react";
-import { hasAgentConfigurationChanges, changedSettingsFields, settingsFieldTab } from "@zilobase/features/ai-chat";
+import {
+  hasAgentConfigurationChanges,
+  changedSettingsFields,
+  settingsFieldTab,
+} from "@zilobase/features/ai-chat";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useZilobaseFeatures } from "@zilobase/features";
-import { useSession } from "@zilobase/features/auth";
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
+import { useSession } from "@zilobase/features/auth/react";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
 import type {
   AgentSettingsDefinition,
   AgentSettingsState,

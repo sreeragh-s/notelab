@@ -1,16 +1,8 @@
+import type { AppSearchResult, AppSearchResultType } from "./contracts";
+export type { AppSearchResult, AppSearchResultType } from "./contracts";
 import { queryOptions } from "@tanstack/react-query"
 
-import type { ApiFetcher } from "../shared/context"
-
-export type AppSearchResult = {
-  emoji: string | null
-  id: string
-  path: string
-  title: string
-  type: "database" | "page"
-}
-
-export type AppSearchResultType = AppSearchResult["type"]
+import type { ApiFetcher } from "../shared/api-fetcher"
 
 export const appSearchQueryKey = (
   workspaceId: string | null | undefined,

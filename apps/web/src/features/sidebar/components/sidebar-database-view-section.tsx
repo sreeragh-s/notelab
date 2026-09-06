@@ -20,7 +20,8 @@ import {
 import { getDatabaseViewModel } from "@/features/databases"
 import { useSidebarSectionOpen } from "../model/sidebar-section-open-state"
 import type { SidebarSection } from "@zilobase/features/user-settings"
-import { isDatabaseLocked, useAddDatabaseRow, useDatabase } from "@zilobase/features/databases"
+import { isDatabaseLocked } from "@zilobase/features/databases";
+import { useAddDatabaseRow, useDatabase } from "@zilobase/features/databases/react";
 
 export function SidebarDatabaseViewSection({
   activePageId,

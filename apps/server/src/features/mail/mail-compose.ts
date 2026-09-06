@@ -4,7 +4,7 @@ import type {
   MailDraftResponse,
   MailMessageRecord,
   MailSendResponse,
-} from "@zilobase/features/mail"
+} from "@zilobase/features/mail/contracts";
 
 import { db } from "../../infrastructure/database"
 import { gmailSendOperation } from "../../infrastructure/database/schema"

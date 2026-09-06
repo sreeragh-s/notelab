@@ -53,7 +53,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/shared/ui/app-tabs"
-import { useSession } from "@zilobase/features/auth"
+import { useSession } from "@zilobase/features/auth/react";
 import {
   useActiveWorkspaceId,
   useInviteWorkspaceMember,
@@ -68,7 +68,7 @@ import {
   useWorkspaceGuestPolicy,
   useWorkspaceGuestRequests,
   useWorkspaceInvitations,
-} from "@zilobase/features/workspaces"
+} from "@zilobase/features/workspaces/react";
 import type {
   GuestInviteMode,
   InvitableWorkspaceRole,

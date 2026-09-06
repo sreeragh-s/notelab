@@ -1,9 +1,14 @@
 import * as React from "react";
-import { usePageNavigation } from "@zilobase/features/pages";
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
+import { usePageNavigation } from "@zilobase/features/pages/react";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
 import { Button } from "@/shared/ui/button";
 import { ChevronDownIcon } from "@/shared/components/icons";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 
 export function SavedInstructionPicker({ disabled, onSelect }: {
   disabled: boolean;

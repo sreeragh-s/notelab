@@ -11,17 +11,17 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import "../agent-interface.css";
-import { useSession } from "@zilobase/features/auth";
-import { usePageNavigation } from "@zilobase/features/pages";
+import { useSession } from "@zilobase/features/auth/react";
+import { usePageNavigation } from "@zilobase/features/pages/react";
 import {
   useCustomAgentRuns,
   useCustomAgentTriggers,
   useRotateCustomAgentWebhookSecret,
-} from "@zilobase/features/ai-chat";
+} from "@zilobase/features/ai-chat/react";
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useZilobaseFeatures } from "@zilobase/features";
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
 import {
   settingsDefinitionSchema,
   type AiAgentProfileDetail,

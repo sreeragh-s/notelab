@@ -1,3 +1,5 @@
+import type { MailScope } from "./query-contracts";
+export type { MailScope } from "./query-contracts";
 import {
   infiniteQueryOptions,
   queryOptions,
@@ -18,11 +20,6 @@ import type {
   MailViewQueryResponse,
   MailViewsBootstrap,
 } from "./organization"
-
-export type MailScope = {
-  bindingId: string | null | undefined
-  workspaceId: string | null | undefined
-}
 
 export const mailKeys = {
   all: ["mail"] as const,

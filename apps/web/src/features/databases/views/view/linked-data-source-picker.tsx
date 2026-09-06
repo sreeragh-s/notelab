@@ -18,8 +18,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/shared/ui/popover"
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
-import { usePageNavigation } from "@zilobase/features/pages"
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
+import { usePageNavigation } from "@zilobase/features/pages/react";
 import type { PageLayoutLinkedTab } from "@zilobase/features/pages"
 import { Input } from "@/shared/ui/input"
 

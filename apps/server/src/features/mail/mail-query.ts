@@ -1,22 +1,20 @@
 import { and, desc, eq, inArray, lt, or } from "drizzle-orm"
+import { evaluateMailFilterExpression, type MailFilterRecord } from "@zilobase/features/mail/predicate";
 import {
-  evaluateMailFilterExpression,
   mailSystemFolderIds,
   normalizeMailFilterExpression,
   normalizeMailViewConfig,
-  type MailAddress,
   type MailFilterExpression,
-  type MailFilterRecord,
   type MailGroupConfig,
   type MailIndexedThread,
   type MailQueryGroup,
   type MailSystemFolderId,
   type MailThreadPropertyValue,
-  type MailThreadSummary,
   type MailViewQueryResponse,
   type MailViewConfig,
   type MailViewGroupsResponse,
-} from "@zilobase/features/mail"
+} from "@zilobase/features/mail/organization";
+import { type MailAddress, type MailThreadSummary } from "@zilobase/features/mail/contracts";
 
 import { db } from "../../infrastructure/database"
 import {

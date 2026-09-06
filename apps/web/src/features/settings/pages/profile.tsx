@@ -45,13 +45,8 @@ import { queryClient } from "@/app/query-client"
 import { useAppStore } from "@/features/desktop/state/app-store"
 import { useOfflineManifest } from "@/features/offline/index"
 import posthog from "@/shared/lib/posthog"
-import {
-  sessionQueryKey,
-  type SessionResponse,
-  useSession,
-  useSignOut,
-  useUpdateUserProfile,
-} from "@zilobase/features/auth"
+import { sessionQueryKey, type SessionResponse } from "@zilobase/features/auth";
+import { useSession, useSignOut, useUpdateUserProfile } from "@zilobase/features/auth/react";
 
 export default function ProfileSettingsPage() {
   const navigate = useNavigate()

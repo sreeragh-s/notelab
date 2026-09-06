@@ -46,20 +46,13 @@ import {
   useSidebar,
 } from "@/shared/ui/sidebar"
 import { isEmbeddedMobileViewer } from "@/features/pages/model/embedded-view"
-import {
-  getDatabaseEmoji,
-  useDatabase,
-} from "@zilobase/features/databases"
-import {
-  getPageEmoji,
-  usePage,
-  useRecordItemVisit,
-} from "@zilobase/features/pages"
-import {
-  defaultUserSettings,
-  useUserSettings,
-} from "@zilobase/features/user-settings"
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
+import { getDatabaseEmoji } from "@zilobase/features/databases";
+import { useDatabase } from "@zilobase/features/databases/react";
+import { getPageEmoji } from "@zilobase/features/pages";
+import { usePage, useRecordItemVisit } from "@zilobase/features/pages/react";
+import { defaultUserSettings } from "@zilobase/features/user-settings";
+import { useUserSettings } from "@zilobase/features/user-settings/react";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
 import { LayoutEditorProvider } from "@/features/pages/layout/index"
 import { usePageEditorComments } from "@/features/comments/index"
 import { usePageCommentController } from "@/features/comments/index"

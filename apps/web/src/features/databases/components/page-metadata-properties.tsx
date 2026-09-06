@@ -1,6 +1,6 @@
 import type { CSSProperties, Dispatch, SetStateAction } from "react"
 import type { PageLayoutConfig } from "@zilobase/features/pages"
-import { usePageProperties } from "@zilobase/features/pages"
+import { usePageProperties } from "@zilobase/features/pages/react";
 
 import { Checkbox } from "@/shared/ui/checkbox"
 

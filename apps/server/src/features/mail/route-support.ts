@@ -1,6 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import { type Context } from "hono";
-import { type MailActionRequest, type MailBatchModifyRequest, type MailLabelWriteRequest, type MailModifyRequest, type MailView } from "@zilobase/features/mail";
+import {
+  type MailActionRequest,
+  type MailBatchModifyRequest,
+  type MailLabelWriteRequest,
+  type MailModifyRequest,
+  type MailView,
+} from "@zilobase/features/mail/contracts";
 import { db } from "../../infrastructure/database";
 import { gmailAccount, gmailWorkspaceConnection, member } from "../../infrastructure/database/schema";
 import type { AppBindings } from "../../shared/types";

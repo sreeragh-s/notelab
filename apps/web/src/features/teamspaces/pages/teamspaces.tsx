@@ -34,7 +34,8 @@ import { Switch } from "@/shared/ui/switch"
 import { getApiErrorMessage } from "@/platform/network/api"
 import { PageIconDisplay } from "@/features/pages/index"
 import { filterTeamspaces } from "../model/teamspace-filters"
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
+import { type Teamspace, type TeamspaceAccessMode } from "@zilobase/features/teamspaces";
 import {
   useAddTeamspacePrincipal,
   useAcceptTeamspaceInvite,
@@ -51,10 +52,8 @@ import {
   useUpdateTeamspaceSettings,
   useUpdateTeamspaceDefaults,
   useUpdateTeamspaceInviteLink,
-  type Teamspace,
-  type TeamspaceAccessMode,
-} from "@zilobase/features/teamspaces"
-import { useWorkspaceAccessTargets } from "@zilobase/features/workspaces"
+} from "@zilobase/features/teamspaces/react";
+import { useWorkspaceAccessTargets } from "@zilobase/features/workspaces/react";
 
 type TeamspaceSettingsTab = "general" | "members" | "permissions" | "security"
 

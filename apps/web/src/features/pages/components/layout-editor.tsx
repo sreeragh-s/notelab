@@ -20,28 +20,24 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu"
 import { Editor } from "@/packages/editor"
-import {
-  useDatabase,
-  useDatabaseIdForRowPage,
-} from "@zilobase/features/databases"
+import { useDatabase, useDatabaseIdForRowPage } from "@zilobase/features/databases/react";
 import {
   getPageCover,
   getPageEmoji,
   getPageIconPosition,
   resolvePageFullWidth,
+  type PageLayoutConfig,
+  type PageLayoutScope,
+} from "@zilobase/features/pages";
+import {
   usePage,
   usePageNavigation,
   useResolvedPageLayout,
   useResetPageLayout,
   useSavePageLayout,
-  type PageLayoutConfig,
-  type PageLayoutScope,
-} from "@zilobase/features/pages"
-import {
-  defaultUserSettings,
-  useUpdateUserSettings,
-  useUserSettings,
-} from "@zilobase/features/user-settings"
+} from "@zilobase/features/pages/react";
+import { defaultUserSettings } from "@zilobase/features/user-settings";
+import { useUpdateUserSettings, useUserSettings } from "@zilobase/features/user-settings/react";
 
 type LayoutEditorTarget = {
   databaseId?: string | null

@@ -12,11 +12,8 @@ import {
 import { toast } from "sonner"
 
 import { useOptionalPageSidePane } from "@/features/pages/context/index"
-import {
-  getPageEmoji,
-  useUpdatePage,
-  type PageMetadata,
-} from "@zilobase/features/pages"
+import { getPageEmoji, type PageMetadata } from "@zilobase/features/pages";
+import { useUpdatePage } from "@zilobase/features/pages/react";
 import { DefaultPageIcon, PageIconDisplay } from "@/features/pages/index"
 import {
   Popover,

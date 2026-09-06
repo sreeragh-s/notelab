@@ -8,7 +8,7 @@ import {
   LockIcon,
 } from "@/shared/components/icons"
 import type { ComponentType } from "react"
-import { useSession } from "@zilobase/features/auth"
+import { useSession } from "@zilobase/features/auth/react";
 
 import {
   Avatar,

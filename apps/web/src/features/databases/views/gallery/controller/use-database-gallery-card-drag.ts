@@ -5,7 +5,7 @@ import {
   type DragEvent,
   type PointerEvent,
 } from "react"
-import { useReorderDatabaseRows } from "@zilobase/features/databases"
+import { useReorderDatabaseRows } from "@zilobase/features/databases/react";
 
 import type { SortableDatabaseItem } from "../../../interactions/database-item-utils"
 import {

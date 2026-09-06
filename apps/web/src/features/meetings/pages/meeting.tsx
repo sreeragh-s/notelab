@@ -11,21 +11,19 @@ import { useTitleDraft } from "@/features/pages/hooks/index"
 import { PageMetadata as PageMetadataHeader } from "@/features/databases"
 import { MeetingView } from "@/packages/editor/extensions/meeting"
 import { PageEditorPane } from "@/features/pages/pages/index"
-import { useMeeting, useUpdateMeeting } from "@zilobase/features/meetings"
+import { useMeeting, useUpdateMeeting } from "@zilobase/features/meetings/react";
 import {
   getPageCover,
   getPageEmoji,
   getPageIconPosition,
   isMeetingLocked,
   resolvePageFullWidth,
-  usePage,
-  usePageAccessLevel,
-  useUpdatePage,
   type PageIconPosition,
   type PageMetadata,
-} from "@zilobase/features/pages"
-import { useUserSettings } from "@zilobase/features/user-settings"
-import { useSession } from "@zilobase/features/auth"
+} from "@zilobase/features/pages";
+import { usePage, usePageAccessLevel, useUpdatePage } from "@zilobase/features/pages/react";
+import { useUserSettings } from "@zilobase/features/user-settings/react";
+import { useSession } from "@zilobase/features/auth/react";
 import { LoaderCircle } from "@/shared/components/icons"
 import type { OpenPageOptions } from "@/features/pages"
 

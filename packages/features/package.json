@@ -162,6 +162,106 @@
       "types": "./src/pages/queries.ts",
       "default": "./src/pages/queries.ts"
     },
-    "./ai-chat/settings-contract": "./src/ai-chat/settings-contract.ts"
+    "./ai-chat/settings-contract": "./src/ai-chat/settings-contract.ts",
+    "./ai-chat/contracts": {
+      "types": "./src/ai-chat/contracts.ts",
+      "default": "./src/ai-chat/contracts.ts"
+    },
+    "./api-keys/contracts": {
+      "types": "./src/api-keys/contracts.ts",
+      "default": "./src/api-keys/contracts.ts"
+    },
+    "./auth/contracts": {
+      "types": "./src/auth/contracts.ts",
+      "default": "./src/auth/contracts.ts"
+    },
+    "./databases/contracts": {
+      "types": "./src/databases/contracts.ts",
+      "default": "./src/databases/contracts.ts"
+    },
+    "./mail/query-contracts": {
+      "types": "./src/mail/query-contracts.ts",
+      "default": "./src/mail/query-contracts.ts"
+    },
+    "./meetings/contracts": {
+      "types": "./src/meetings/contracts.ts",
+      "default": "./src/meetings/contracts.ts"
+    },
+    "./pages/contracts": {
+      "types": "./src/pages/contracts.ts",
+      "default": "./src/pages/contracts.ts"
+    },
+    "./search/contracts": {
+      "types": "./src/search/contracts.ts",
+      "default": "./src/search/contracts.ts"
+    },
+    "./teamspaces/contracts": {
+      "types": "./src/teamspaces/contracts.ts",
+      "default": "./src/teamspaces/contracts.ts"
+    },
+    "./user-settings/contracts": {
+      "types": "./src/user-settings/contracts.ts",
+      "default": "./src/user-settings/contracts.ts"
+    },
+    "./workspaces/contracts": {
+      "types": "./src/workspaces/contracts.ts",
+      "default": "./src/workspaces/contracts.ts"
+    },
+    "./mail/contracts": {
+      "types": "./src/mail/contracts.ts",
+      "default": "./src/mail/contracts.ts"
+    },
+    "./mail/organization": {
+      "types": "./src/mail/organization.ts",
+      "default": "./src/mail/organization.ts"
+    },
+    "./mail/predicate": {
+      "types": "./src/mail/predicate.ts",
+      "default": "./src/mail/predicate.ts"
+    },
+    "./ai-chat/react": {
+      "types": "./src/ai-chat/react.ts",
+      "default": "./src/ai-chat/react.ts"
+    },
+    "./api-keys/react": {
+      "types": "./src/api-keys/react.ts",
+      "default": "./src/api-keys/react.ts"
+    },
+    "./auth/react": {
+      "types": "./src/auth/react.ts",
+      "default": "./src/auth/react.ts"
+    },
+    "./databases/react": {
+      "types": "./src/databases/react.ts",
+      "default": "./src/databases/react.ts"
+    },
+    "./meetings/react": {
+      "types": "./src/meetings/react.ts",
+      "default": "./src/meetings/react.ts"
+    },
+    "./notifications/react": {
+      "types": "./src/notifications/react.ts",
+      "default": "./src/notifications/react.ts"
+    },
+    "./pages/react": {
+      "types": "./src/pages/react.ts",
+      "default": "./src/pages/react.ts"
+    },
+    "./search/react": {
+      "types": "./src/search/react.ts",
+      "default": "./src/search/react.ts"
+    },
+    "./teamspaces/react": {
+      "types": "./src/teamspaces/react.ts",
+      "default": "./src/teamspaces/react.ts"
+    },
+    "./user-settings/react": {
+      "types": "./src/user-settings/react.ts",
+      "default": "./src/user-settings/react.ts"
+    },
+    "./workspaces/react": {
+      "types": "./src/workspaces/react.ts",
+      "default": "./src/workspaces/react.ts"
+    }
   }
 }

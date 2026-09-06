@@ -13,7 +13,7 @@ Command definitions remain in [package scripts](../../package.json); consult the
 
 ## Architecture checks
 
-`test:architecture` checks local architecture/contributor links and published package entry conditions, names and value/type export kinds using TypeScript resolution. The baseline deliberately ignores implementation paths so moves and explicit re-exports remain compatible. Additive exports are allowed; existing entries cannot disappear. The checker does not prove parameter/type compatibility or runtime semantics: workspace typechecks and behavioral tests remain required. Baseline recapture refuses to overwrite an existing file.
+`test:architecture` checks local architecture/contributor links and published package entry conditions, names and value/type export kinds using TypeScript resolution. The baseline deliberately ignores implementation paths so moves and explicit re-exports remain compatible. Additive exports are allowed; existing entries cannot disappear. The checker does not prove parameter/type compatibility or runtime semantics: workspace typechecks and behavioral tests remain required. Baseline recapture refuses to overwrite an existing file. This replaces the former exact package-export-key test: additive contract/React entrypoints are allowed while removals remain checked. Shared-package tests also enforce that published contracts have no runtime React/application dependency.
 
 The initial verification at b96f5c3d passed workspace typechecks, web tests, package tests, server quality checks (976 server tests plus 278 query regressions), and the changed-file Fallow audit. Coverage was produced by the server quality script; an audit of changed files is not a claim that every existing function satisfies the final target structure.
 

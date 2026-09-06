@@ -19,12 +19,12 @@ import {
   CommandList,
   CommandShortcut,
 } from "@/shared/ui/command"
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
-import { useAppSearchResults } from "@zilobase/features/search"
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
+import { useAppSearchResults } from "@zilobase/features/search/react";
 import type { AppSearchResult } from "@zilobase/features/search"
 import { DefaultPageIcon, PageIconDisplay } from "@/features/pages/index"
 import { useAppShortcut } from "@/shared/shortcuts"
-import { useAiAgentProfiles } from "@zilobase/features/ai-chat"
+import { useAiAgentProfiles } from "@zilobase/features/ai-chat/react";
 
 type SearchResult = AppSearchResult | { emoji: null; id: string; path: string; title: string; type: "agent" }
 

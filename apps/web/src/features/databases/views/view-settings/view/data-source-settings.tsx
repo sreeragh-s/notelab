@@ -21,8 +21,9 @@ import {
   DropDrawerSubTrigger,
 } from "@/shared/ui/dropdrawer";
 import { Input } from "@/shared/ui/input";
-import { useDatabase } from "@zilobase/features/databases";
-import { usePageNavigation, type PageDatabase } from "@zilobase/features/pages";
+import { useDatabase } from "@zilobase/features/databases/react";
+import { type PageDatabase } from "@zilobase/features/pages";
+import { usePageNavigation } from "@zilobase/features/pages/react";
 import { DEFAULT_DATABASE_ITEM_ICON } from "@/features/pages/index";
 import { getDatabaseIconNode, PageIconDisplay } from "@/features/pages/index";
 

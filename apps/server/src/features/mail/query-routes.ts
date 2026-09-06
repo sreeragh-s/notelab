@@ -1,5 +1,6 @@
 import { Hono } from "hono";
-import { normalizeMailFilterExpression, type MailSyncRequest } from "@zilobase/features/mail";
+import { normalizeMailFilterExpression } from "@zilobase/features/mail/organization";
+import { type MailSyncRequest } from "@zilobase/features/mail/contracts";
 import type { AppBindings } from "../../shared/types";
 import { readJsonBody } from "../../shared/http/request";
 import { GmailApiError } from "./gmail-gateway";
@@ -9,7 +10,16 @@ import { advanceMailIndex, getMailIndexProgress } from "./mail-index";
 import { MailQueryError, queryIndexedMail, queryIndexedMailGroups } from "./mail-query";
 import { inspectOrExecuteUnsubscribe, MailUnsubscribeError } from "./safe-unsubscribe";
 import { drainMailDatabaseSyncOutbox } from "./mail-database-sync-worker";
-import { requireOwnedConnection, requireWorkspaceMailBinding, runMailOperation, safeGmailId, optionalCursor, optionalQuery, optionalIdList, isMailView } from "./route-support";
+import {
+  requireOwnedConnection,
+  requireWorkspaceMailBinding,
+  runMailOperation,
+  safeGmailId,
+  optionalCursor,
+  optionalQuery,
+  optionalIdList,
+  isMailView,
+} from "./route-support";
 
 export const mailQueryRoutes = new Hono<AppBindings>();
 export const mailSyncRoutes = new Hono<AppBindings>();

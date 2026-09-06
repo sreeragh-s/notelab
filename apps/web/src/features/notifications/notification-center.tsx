@@ -2,7 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   useInProductNotifications,
   useMarkInProductNotificationRead,
-} from "@zilobase/features/notifications";
+} from "@zilobase/features/notifications/react";
 import { Bell, Check, Loader2 } from "@/shared/components/icons";
 import { Button } from "@/shared/ui/button";
 import {

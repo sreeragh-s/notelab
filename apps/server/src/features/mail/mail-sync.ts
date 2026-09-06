@@ -1,4 +1,4 @@
-import type { MailSyncRequest, MailSyncResponse, MailView } from "@zilobase/features/mail"
+import type { MailSyncRequest, MailSyncResponse, MailView } from "@zilobase/features/mail/contracts";
 
 import { GmailApiError, type GmailGateway, type GmailHistory } from "./gmail-gateway"
 import { normalizeGmailLabels, normalizeGmailThread } from "./mail-normalize"

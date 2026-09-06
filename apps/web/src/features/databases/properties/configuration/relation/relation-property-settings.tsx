@@ -38,8 +38,8 @@ import {
   useDatabase,
   useUpdateDatabaseProperty,
   useUpdateDatabasePropertyValue,
-} from "@zilobase/features/databases";
-import { usePageNavigation } from "@zilobase/features/pages";
+} from "@zilobase/features/databases/react";
+import { usePageNavigation } from "@zilobase/features/pages/react";
 
 import {
   DatabaseSearchableMenuItems,

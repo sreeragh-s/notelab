@@ -13,3 +13,11 @@ Package export maps are published interfaces. Server callers should use contract
 ## Verification
 
 See [tests or test configuration](../../packages/page-context/package.json) and [testing and quality](../setup/testing-and-quality.md). [Architecture index](../README.md).
+
+## Contracts and React bindings
+
+Feature queries re-export their data contracts for compatibility, while canonical declarations live in each feature's contracts module (query-contracts where a separate schema contract already exists). The package exposes explicit feature/react entrypoints for hooks, and web callers use those entrypoints. Legacy mixed exports remain available to external consumers.
+
+Server mail code imports the published contracts, organization and predicate modules directly, so pure mail operations do not load React Query through the legacy mail entrypoint. Authentication client declarations live in shared/auth-client; the React provider re-exports their type. Query keys, query options, polling and invalidation behavior are unchanged.
+
+Web TypeScript and Vite resolve shared feature subpaths through the package export map. They no longer assume every subpath names a directory with index.ts; explicit contract and React entrypoints resolve consistently in typechecking and production builds.

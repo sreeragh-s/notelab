@@ -19,10 +19,7 @@ import {
   Plus,
 } from "@/shared/components/icons"
 import { toast } from "sonner"
-import {
-  useMoveDatabaseRow,
-  useReorderDatabaseRows,
-} from "@zilobase/features/databases"
+import { useMoveDatabaseRow, useReorderDatabaseRows } from "@zilobase/features/databases/react";
 import {
   AlertDialog,
   AlertDialogAction,

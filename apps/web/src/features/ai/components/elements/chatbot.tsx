@@ -39,24 +39,23 @@ import {
   type AiChatFeedback,
   type AiChatThreadMessagesResponse,
   type PageEditSnapshotPart,
+} from "@zilobase/features/ai-chat";
+import {
   useCreateAiChatThread,
   useSubmitAiChatFeedback,
   useWorkspaceAiModels,
-} from "@zilobase/features/ai-chat";
+} from "@zilobase/features/ai-chat/react";
 import { Button } from "@/shared/ui/button";
 import { useAgentConversation } from "@zilobase/ai-conversation-adapter";
 import {
   useAiDevMessageTrace,
   useAiDevTrace,
 } from "../../debug/use-ai-dev-trace";
-import { useSession } from "@zilobase/features/auth";
+import { useSession } from "@zilobase/features/auth/react";
 import { useZilobaseFeatures } from "@zilobase/features";
-import { useDatabase } from "@zilobase/features/databases";
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
-import {
-  usePageAccessLevel,
-  usePageNavigation,
-} from "@zilobase/features/pages";
+import { useDatabase } from "@zilobase/features/databases/react";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
+import { usePageAccessLevel, usePageNavigation } from "@zilobase/features/pages/react";
 import { useQuery } from "@tanstack/react-query";
 import {
   getApiRequestHeaders,

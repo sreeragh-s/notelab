@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router"
-import { useAiAgentProfiles, useCreateAiAgentProfile } from "@zilobase/features/ai-chat"
+import { useAiAgentProfiles, useCreateAiAgentProfile } from "@zilobase/features/ai-chat/react";
 import { toast } from "sonner"
 
 import { BotIcon, ChevronRightIcon, PlusIcon } from "@/shared/components/icons"

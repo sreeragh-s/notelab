@@ -1,13 +1,46 @@
 import { Hono } from "hono";
-import { mailSystemFolderIds, mailViewTemplateIds, type MailViewConfig, type MailViewTemplateId } from "@zilobase/features/mail";
+import {
+  mailSystemFolderIds,
+  mailViewTemplateIds,
+  type MailViewConfig,
+  type MailViewTemplateId,
+} from "@zilobase/features/mail/organization";
 import type { AppBindings } from "../../shared/types";
 import { readJsonBody } from "../../shared/http/request";
-import { createMailView, deleteMailView, duplicateMailView, listMailViews, reorderMailViews, updateMailView } from "./mail-views";
+import {
+  createMailView,
+  deleteMailView,
+  duplicateMailView,
+  listMailViews,
+  reorderMailViews,
+  updateMailView,
+} from "./mail-views";
 import { getMailIndexProgress } from "./mail-index";
-import { createMailProperty, deleteMailProperty, listMailProperties, listMailThreadPropertyValues, setMailThreadPropertyValue, updateMailProperty } from "./mail-properties";
-import { advanceMailReminders, cancelMailReminder, listMailReminders, MailReminderError, scheduleMailReminder } from "./mail-reminders";
+import {
+  createMailProperty,
+  deleteMailProperty,
+  listMailProperties,
+  listMailThreadPropertyValues,
+  setMailThreadPropertyValue,
+  updateMailProperty,
+} from "./mail-properties";
+import {
+  advanceMailReminders,
+  cancelMailReminder,
+  listMailReminders,
+  MailReminderError,
+  scheduleMailReminder,
+} from "./mail-reminders";
 import { getMailDatabaseSyncViewStatus, MailDatabaseSyncPausedError } from "./mail-database-sync-worker";
-import { requireWorkspaceMailBinding, optionalMailViewName, optionalMailViewIcon, mailViewError, mailPropertyError, runMailOperation, safeGmailId } from "./route-support";
+import {
+  requireWorkspaceMailBinding,
+  optionalMailViewName,
+  optionalMailViewIcon,
+  mailViewError,
+  mailPropertyError,
+  runMailOperation,
+  safeGmailId,
+} from "./route-support";
 
 export const mailViewStatusRoutes = new Hono<AppBindings>();
 export const mailOrganizationRoutes = new Hono<AppBindings>();

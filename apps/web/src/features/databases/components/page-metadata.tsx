@@ -21,16 +21,14 @@ import {
 } from "@/shared/ui/popover"
 
 import { usePageEditorComments } from "@/features/comments/index"
-import { useSession } from "@zilobase/features/auth"
-import {
-  useDatabaseRealtime,
-  type DatabasePresenceCollaborator,
-} from "@zilobase/features/databases"
+import { useSession } from "@zilobase/features/auth/react";
+import { type DatabasePresenceCollaborator } from "@zilobase/features/databases";
+import { useDatabaseRealtime } from "@zilobase/features/databases/react";
 import {
   useUpdatePagePropertyValue,
   usePagePersonAccessTargets,
   usePageProperties,
-} from "@zilobase/features/pages"
+} from "@zilobase/features/pages/react";
 import { usePageCommentsSnapshot } from "@/features/comments/index"
 import type {
   PageIconPosition,

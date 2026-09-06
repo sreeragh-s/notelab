@@ -19,7 +19,7 @@ import { getApiRequestHeaders, toApiUrl } from "@/platform/network/api"
 import { desktopNetworkFetch } from "@/platform/network/index"
 import { cn } from "@/shared/lib/utils"
 import type { SelectionAiDiffPreview } from "@/packages/editor/core/types"
-import { useZilobaseAiPages } from "@zilobase/features/pages"
+import { useZilobaseAiPages } from "@zilobase/features/pages/react";
 
 type SelectionAiMenuProps = {
   editor: Editor

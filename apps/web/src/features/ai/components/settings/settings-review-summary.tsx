@@ -1,6 +1,11 @@
-import { usePageAccessTargets, usePageNavigation } from "@zilobase/features/pages";
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
-import { settingsFieldTab, type AgentSettingsReview, type AgentSettingsTab, type AgentSettingsDefinition } from "@zilobase/features/ai-chat";
+import { usePageAccessTargets, usePageNavigation } from "@zilobase/features/pages/react";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
+import {
+  settingsFieldTab,
+  type AgentSettingsReview,
+  type AgentSettingsTab,
+  type AgentSettingsDefinition,
+} from "@zilobase/features/ai-chat";
 
 const labels: Partial<Record<keyof AgentSettingsDefinition, string>> = {
   name: "Agent title", description: "Agent description", icon: "Agent icon", cover: "Agent cover",

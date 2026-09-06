@@ -16,13 +16,11 @@ import { buildPagePath, PageIcon } from "@/features/pages/index";
 import { useZilobaseFeatures } from "@zilobase/features";
 import {
   pageQueryKey,
-  useCreatePage,
-  usePageNavigation,
-  useUpdatePage,
   type Page,
   type PageItemPlacement,
   type ZilobaseAiMode,
 } from "@zilobase/features/pages";
+import { useCreatePage, usePageNavigation, useUpdatePage } from "@zilobase/features/pages/react";
 
 const modeConfig: Record<
   ZilobaseAiMode,

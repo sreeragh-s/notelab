@@ -7,10 +7,7 @@ import {
   type RefObject,
 } from "react"
 import { toast } from "sonner"
-import {
-  useMoveDatabaseRow,
-  useReorderDatabaseRows,
-} from "@zilobase/features/databases"
+import { useMoveDatabaseRow, useReorderDatabaseRows } from "@zilobase/features/databases/react";
 
 import type { SortableDatabaseItem } from "../../../interactions/database-item-utils"
 import {

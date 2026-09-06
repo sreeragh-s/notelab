@@ -14,7 +14,7 @@ import {
 import { Input } from "@/shared/ui/input"
 import { getApiErrorMessage } from "@/platform/network/api"
 import { cn } from "@/shared/lib/utils"
-import { useCreateWorkspace } from "@zilobase/features/workspaces"
+import { useCreateWorkspace } from "@zilobase/features/workspaces/react";
 import posthog from "@/shared/lib/posthog"
 
 export function OnboardingForm({

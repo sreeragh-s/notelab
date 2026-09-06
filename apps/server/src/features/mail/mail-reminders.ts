@@ -1,5 +1,5 @@
 import { and, eq, lte, sql } from "drizzle-orm"
-import type { MailReminder } from "@zilobase/features/mail"
+import type { MailReminder } from "@zilobase/features/mail/organization";
 
 import { db } from "../../infrastructure/database"
 import { gmailAccount, mailReminder } from "../../infrastructure/database/schema"

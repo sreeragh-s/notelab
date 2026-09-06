@@ -15,11 +15,9 @@ import type {
   DatabaseRow,
   DatabaseView,
 } from "@zilobase/features/databases"
-import {
-  useDatabaseRealtime,
-  type DatabasePresenceCollaborator,
-} from "@zilobase/features/databases"
-import { useSession } from "@zilobase/features/auth"
+import { type DatabasePresenceCollaborator } from "@zilobase/features/databases";
+import { useDatabaseRealtime } from "@zilobase/features/databases/react";
+import { useSession } from "@zilobase/features/auth/react";
 
 import type { DatabasePropertyValue } from "../../core/database-property-values"
 import type {

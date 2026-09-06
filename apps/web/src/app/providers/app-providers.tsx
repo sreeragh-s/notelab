@@ -18,9 +18,9 @@ import {
 } from "@/shared/providers/theme-family-provider"
 import { AppIconProvider } from "@/shared/components/app-icon-provider"
 import { DemoExperience } from "@/features/demo"
-import { useNavigationRealtime } from "@zilobase/features/pages"
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
-import { useSession } from "@zilobase/features/auth"
+import { useNavigationRealtime } from "@zilobase/features/pages/react";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
+import { useSession } from "@zilobase/features/auth/react";
 
 import posthog from "@/shared/lib/posthog"
 

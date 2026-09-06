@@ -7,7 +7,7 @@ import {
   type MailPropertyOption,
   type MailPropertyWriteInput,
   type MailThreadPropertyValue,
-} from "@zilobase/features/mail"
+} from "@zilobase/features/mail/organization";
 
 import { db } from "../../infrastructure/database"
 import { mailProperty, mailThreadIndex, mailThreadPropertyValue, member, user } from "../../infrastructure/database/schema"

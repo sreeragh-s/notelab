@@ -29,13 +29,13 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/field"
 import { Input } from "@/shared/ui/input"
 import { useNavigate } from "@tanstack/react-router"
-import { useSession } from "@zilobase/features/auth"
+import { useSession } from "@zilobase/features/auth/react";
 import {
   useCreateWorkspace,
   useActiveWorkspaceId,
   useWorkspaces,
   useSetActiveWorkspace,
-} from "@zilobase/features/workspaces"
+} from "@zilobase/features/workspaces/react";
 import { getApiErrorMessage } from "@/platform/network/api"
 import { DesktopConnectServerDialog } from "@/features/desktop/components/index"
 import {

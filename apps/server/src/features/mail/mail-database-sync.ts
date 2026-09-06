@@ -5,7 +5,7 @@ import {
   type MailCustomPropertyType,
   type MailDatabaseSyncConfig,
   type MailViewConfig,
-} from "@zilobase/features/mail"
+} from "@zilobase/features/mail/organization";
 
 import { requireDatabaseEditAccess } from "../databases/access/database-access"
 import { requireDataSourceEditAccess } from "../databases/access/data-source-access"

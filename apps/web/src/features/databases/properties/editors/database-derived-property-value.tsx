@@ -1,13 +1,15 @@
 import { useState } from "react"
 import { Check } from "@/shared/components/icons"
 import {
-  useDatabase,
-  useUpdateDatabaseProperty,
-  useUpdateDatabasePropertyValue,
   type DatabasePayload,
   type DatabaseProperty,
   type DatabaseRow as FeatureDatabaseRow,
-} from "@zilobase/features/databases"
+} from "@zilobase/features/databases";
+import {
+  useDatabase,
+  useUpdateDatabaseProperty,
+  useUpdateDatabasePropertyValue,
+} from "@zilobase/features/databases/react";
 import { getPageEmoji, type PageMetadata } from "@zilobase/features/pages"
 import { DefaultPageIcon, PageIconDisplay } from "@/features/pages/index"
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover"

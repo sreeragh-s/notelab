@@ -50,28 +50,29 @@ import { TaskDatabaseListAdapter } from "../components/task-database-list-adapte
 import { getDatabaseEmoji } from "@zilobase/features/databases"
 import {
   databaseQueryOptions,
-  useAddDatabaseRow,
-  useApplyDatabaseTemplate,
-  useCreateDatabase,
-  useUpdateDatabasePropertyValue,
   type DatabasePayload,
   type DatabaseProperty,
   type DatabaseView,
   type PagePropertyValue,
-} from "@zilobase/features/databases"
+} from "@zilobase/features/databases";
+import {
+  useAddDatabaseRow,
+  useApplyDatabaseTemplate,
+  useCreateDatabase,
+  useUpdateDatabasePropertyValue,
+} from "@zilobase/features/databases/react";
 import { useZilobaseFeatures } from "@zilobase/features"
-import { useSession } from "@zilobase/features/auth"
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
-import { usePageNavigation } from "@zilobase/features/pages"
+import { useSession } from "@zilobase/features/auth/react";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
+import { usePageNavigation } from "@zilobase/features/pages/react";
 import {
   defaultUserSettings,
   normalizeSidebarConfig,
   resolveSidebarWorkspaceLayout,
   withSidebarWorkspaceLayout,
-  useUpdateUserSettings,
-  useUserSettings,
-} from "@zilobase/features/user-settings"
-import { useWorkspaceAccessTargets } from "@zilobase/features/workspaces"
+} from "@zilobase/features/user-settings";
+import { useUpdateUserSettings, useUserSettings } from "@zilobase/features/user-settings/react";
+import { useWorkspaceAccessTargets } from "@zilobase/features/workspaces/react";
 import {
   buildTaskRows,
   filterMyTaskRows,
