@@ -160,3 +160,30 @@ export function getRowDragTitle({
   if (isFiltered) return "Drag page. Hidden rows keep their relative order."
   return "Drag page"
 }
+
+export function getTableColumnKeys({
+  canEditStructure,
+  columnIds,
+  pendingInsert,
+}: {
+  canEditStructure: boolean
+  columnIds: string[]
+  pendingInsert: PendingInsertProperty | null
+}) {
+  const dataColumnKeys = columnIds.flatMap((columnId) => {
+    if (!pendingInsert || columnId !== pendingInsert.sourceColumnKey) {
+      return [columnId]
+    }
+
+    const insertKey = getInsertPropertyColumnKey(columnId, pendingInsert.side)
+
+    return pendingInsert.side === "left"
+      ? [insertKey, columnId]
+      : [columnId, insertKey]
+  })
+
+  return [
+    ...dataColumnKeys,
+    ...(canEditStructure ? [ADD_PROPERTY_COLUMN_ID] : []),
+  ]
+}

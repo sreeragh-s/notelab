@@ -24,6 +24,7 @@ Row/property changes can update realtime outboxes, automations and page navigati
 
 - [Database mutation and realtime flow](realtime.md)
 - [Database views and properties](views-and-properties.md)
+- [Table interactions and rendering](table-interactions.md)
 
 ## Client mutation ownership
 

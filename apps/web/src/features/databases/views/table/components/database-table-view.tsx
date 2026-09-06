@@ -1,6 +1,9 @@
+import { useTableRowLayout } from "../controller/use-table-row-layout"
+import { useTableColumns } from "../controller/use-table-columns"
+import { useTableSelection } from "../controller/use-table-selection"
+import { createCellEditHistoryAction } from "../../../interactions/cell-edit-history"
 import {
   Fragment,
-  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -9,7 +12,7 @@ import {
   type CSSProperties,
   type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
-} from "react"
+} from "react";
 import { createPortal } from "react-dom"
 import { Reorder } from "framer-motion"
 import {
@@ -43,7 +46,7 @@ import {
 
 import { AddDatabasePropertyMenu } from "../../../properties/editors/add-database-property-menu"
 import { DatabaseCellContent } from "../../components/database-cell-content"
-import { databaseColumnMinWidth } from "../../model/column-dimensions";
+
 import {
   setDatabasePageDragPayload,
 } from "../../../interactions/database-page-drop"
@@ -57,16 +60,12 @@ import { DatabasePropertyValue } from "../../../properties/editors/database-prop
 import {
   getDatabasePropertyType,
 } from "../../../properties/property-catalog"
-import {
-  serializePropertyValue,
-  type DatabasePropertyValue as DatabasePropertyValueType,
-} from "../../../properties/property-values"
+import { serializePropertyValue } from "../../../properties/property-values";
 import {
   getDatabasePropertyIcon,
-  getDatabasePropertyOrder,
   getNameColumnWrapContent,
   getPropertyWrapContent,
-} from "../../model/database-view-config"
+} from "../../model/database-view-config";
 import {
   useDatabaseActionsContext,
   useDatabaseDataContext,
@@ -87,11 +86,9 @@ import { getDatabaseGroupMoveValue } from "../../../interactions/database-group-
 import { getDatabaseTableGroupSections } from "../../../interactions/database-table-group-sections"
 import {
   getDatabaseCellFillRowIds,
-  getRedoableDatabaseCellFillChanges,
-  getUndoableDatabaseCellFillChanges,
   isDatabasePropertyFillable,
   type DatabaseCellFillHistoryChange,
-} from "../../../interactions/database-cell-fill"
+} from "../../../interactions/database-cell-fill";
 import { getDatabaseRowDropTarget } from "../../../interactions/database-table-layout"
 import {
   claimDatabaseRowDropOwner,
@@ -108,43 +105,32 @@ import { useDatabaseRowDragOverlay } from "../../../interactions/use-database-ro
 import {
   canCreateRowInKanbanGroup,
   canUpdateKanbanGroupProperty,
-  type DatabasePropertyListItem,
-} from "../../kanban/model/database-kanban-config"
-import { getSharedDatabaseSelectionValue } from "../model/database-table-selection"
+} from "../../kanban/model/database-kanban-config";
+
 import {
   ADD_PROPERTY_COLUMN_ID,
   DATABASE_NAME_COLUMN_ID,
   DATABASE_SUB_ITEM_DRAG_INDENT,
-  areColumnOrdersEqual,
-  getColumnIdsWithInsertedProperty,
-  getColumnWidth,
   getHeaderEditingKey,
   getInsertPropertyColumnKey,
-  getMergedColumnIds,
-  getPropertyKeyFromHeaderEditingKey,
   getRowDragTitle,
   getRowTitle,
   requireDatabaseId,
   type CellFillDrag,
   type GroupRowDropTarget,
   type GroupSection,
-  type PendingFormulaSetup,
-  type PendingInsertProperty,
-  type PendingPropertyInsertOrder,
   type PendingSortedRowReorder,
-  type RowLayout,
   type RowMove,
   type TableRow,
   type TableRowDropTarget,
-} from "../model/database-table-model"
+} from "../model/database-table-model";
 import {
   DatabaseTable,
   DatabaseVirtualizedTable,
   getConditionalColorClassName,
-  getTableColumnKeys,
   getTableMinWidthStyle,
   useSyncedHorizontalScroll,
-} from "./database-table-shell"
+} from "./database-table-shell";
 import {
   CreateDatabaseRowButton,
   DatabaseActiveTableCell,
@@ -155,29 +141,6 @@ import {
   DatabaseRowDragControls,
   DatabaseRowDropLine,
 } from "./database-table-drag-controls"
-function areRowLayoutsEqual(left: RowLayout, right: RowLayout) {
-  const leftCenterKeys = Object.keys(left.centers)
-  const rightCenterKeys = Object.keys(right.centers)
-
-  if (leftCenterKeys.length !== rightCenterKeys.length) {
-    return false
-  }
-
-  for (const key of leftCenterKeys) {
-    if (
-      left.centers[key] !== right.centers[key] ||
-      left.heights[key] !== right.heights[key]
-    ) {
-      return false
-    }
-  }
-
-  if (left.dropTops.length !== right.dropTops.length) {
-    return false
-  }
-
-  return left.dropTops.every((top, index) => top === right.dropTops[index])
-}
 
 export function DatabaseTableView() {
   const sidePane = useOptionalPageSidePane()
@@ -234,21 +197,37 @@ export function DatabaseTableView() {
   const reorderRows = useReorderDatabaseRows()
   const undoHistory = useUndoHistory()
   const loadedDatabaseId = requireDatabaseId(databaseId)
+
   const canEditStructure = editable && (canAddDatabaseProperties ?? true)
+
   const canUseHeaderMenus = headerMenusEnabled ?? editable
   const nameColumnWrapContent = getNameColumnWrapContent(databaseConfig)
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({})
+
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null)
   const [draggedRowId, setDraggedRowId] = useState<string | null>(null)
   const [isExternalRowDragActive, setIsExternalRowDragActive] = useState(false)
-  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(
-    () => new Set()
-  )
+
   const [selectedCellKey, setSelectedCellKey] = useState<string | null>(null)
   const [cellFillDrag, setCellFillDrag] = useState<CellFillDrag | null>(null)
   const cellFillDragRef = useRef<CellFillDrag | null>(null)
   const propertyValuesByKeyRef = useRef(propertyValuesByKey)
   propertyValuesByKeyRef.current = propertyValuesByKey
+  const {
+    selectedRowIds,
+    setSelectedRowIds,
+    selectedRows,
+    getSelectionValue,
+    copySelectedRowLinks,
+    saveSelectedPropertyValue,
+    toggleSelectedRow,
+  } = useTableSelection({
+    rows,
+    propertyValuesByKey,
+    propertyValuesByKeyRef,
+    savePropertyValue,
+    undoHistory,
+  })
+
   const finishRowDragRef = useRef<() => void>(() => {})
   const rowDragOverlay = useDatabaseRowDragOverlay(finishRowDragRef)
   const [rowDropTarget, setRowDropTarget] =
@@ -260,27 +239,10 @@ export function DatabaseTableView() {
   const groupRowDropTargetRef = useRef<GroupRowDropTarget | null>(null)
   const isExternalRowDragActiveRef = useRef(false)
   const rowDropOwner = useMemo(() => ({}), [])
-  const [pendingInsertProperty, setPendingInsertProperty] =
-    useState<PendingInsertProperty | null>(null)
-  const [pendingPropertyInsertOrder, setPendingPropertyInsertOrder] =
-    useState<PendingPropertyInsertOrder | null>(null)
-  const [pendingFormulaSetup, setPendingFormulaSetup] =
-    useState<PendingFormulaSetup | null>(null)
-  const [formulaSetupPropertyId, setFormulaSetupPropertyId] = useState<
-    string | null
-  >(null)
+
   const [pendingSortedRowReorder, setPendingSortedRowReorder] =
     useState<PendingSortedRowReorder | null>(null)
-  const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null)
-  const [dragColumnOrder, setDragColumnOrder] = useState<string[] | null>(null)
-  const dragColumnOrderRef = useRef<string[] | null>(null)
-  const [pendingColumnOrder, setPendingColumnOrder] = useState<string[] | null>(
-    null
-  )
-  const suppressPropertyHeaderClickRef = useRef(false)
-  const [editingPropertyKey, setEditingPropertyKey] = useState<string | null>(
-    null
-  )
+
   const [collapsedGroups, setCollapsedGroups] = useState<
     Record<string, boolean>
   >({})
@@ -293,15 +255,7 @@ export function DatabaseTableView() {
   const stickyHeaderScrollRef = useRef<HTMLDivElement | null>(null)
   const tableScrollRef = useRef<HTMLDivElement | null>(null)
   const tableWrapRef = useRef<HTMLDivElement | null>(null)
-  const [rowLayout, setRowLayout] = useState<RowLayout>({
-    centers: {},
-    dropTops: [],
-    heights: {},
-  })
-  const rowLayoutRef = useRef(rowLayout)
-  rowLayoutRef.current = rowLayout
-  const activeEditingPropertyKey =
-    getPropertyKeyFromHeaderEditingKey(editingPropertyKey)
+
   const isTableSorted = activeDatabaseSorts.length > 0
   const isTableFiltered = activeDatabaseFilters.length > 0
   const isTableGrouped = Boolean(groupProperty)
@@ -310,6 +264,43 @@ export function DatabaseTableView() {
     subItemsSettings.display === "nested" &&
     !isTableGrouped
   const renderedProperties = visibleProperties
+  const {
+    columnWidths,
+    pendingInsertProperty,
+    formulaSetupPropertyId,
+    setFormulaSetupPropertyId,
+    draggedColumnId,
+    suppressPropertyHeaderClickRef,
+    editingPropertyKey,
+    propertiesById,
+    renderedColumnIds,
+    selectionProperties,
+    headerColumnIds,
+    canReorderColumns,
+    pendingInsertPropertyKey,
+    columnKeys,
+    tableMinWidth,
+    getInlineTableContentWidth,
+    startColumnResize,
+    handleEditingPropertyOpenChange,
+    openInsertPropertyMenu,
+    clearPendingInsertProperty,
+    addDatabasePropertyAndMaybeOpenFormula,
+    addInsertedDatabaseProperty,
+    startColumnHeaderReorder,
+    queueColumnHeaderOrder,
+    finishColumnHeaderReorder,
+  } = useTableColumns({
+    editable,
+    canEditStructure,
+    databaseConfig,
+    renderedProperties,
+    properties,
+    tableWrapRef,
+    saveDatabasePropertyOrder,
+    addDatabaseProperty,
+  })
+
   const tableMeasurementKey = useMemo(
     () =>
       [
@@ -322,119 +313,21 @@ export function DatabaseTableView() {
       ].join("|"),
     [nameColumnWrapContent, renderedProperties]
   )
-  const propertiesById = useMemo(
-    () =>
-      new Map(renderedProperties.map((property) => [property.id, property])),
-    [renderedProperties]
-  )
-  const baseColumnIds = useMemo(
-    () => [
-      DATABASE_NAME_COLUMN_ID,
-      ...renderedProperties.map((property) => property.id),
-    ],
-    [renderedProperties]
-  )
-  const savedColumnIds = useMemo(() => {
-    const configuredColumnOrder = getDatabasePropertyOrder(databaseConfig)
 
-    return configuredColumnOrder.includes(DATABASE_NAME_COLUMN_ID)
-      ? getMergedColumnIds(baseColumnIds, configuredColumnOrder)
-      : baseColumnIds
-  }, [baseColumnIds, databaseConfig])
-  const renderedColumnIds = useMemo(
-    () =>
-      pendingColumnOrder
-        ? getMergedColumnIds(baseColumnIds, pendingColumnOrder)
-        : savedColumnIds,
-    [baseColumnIds, pendingColumnOrder, savedColumnIds]
-  )
-  const selectionProperties = useMemo(
-    () =>
-      renderedColumnIds.flatMap((columnId) => {
-        const property = propertiesById.get(columnId)
-
-        return property ? [property] : []
-      }),
-    [propertiesById, renderedColumnIds]
-  )
-  const headerColumnIds = useMemo(
-    () =>
-      dragColumnOrder
-        ? getMergedColumnIds(renderedColumnIds, dragColumnOrder)
-        : renderedColumnIds,
-    [dragColumnOrder, renderedColumnIds]
-  )
-  useEffect(() => {
-    if (
-      pendingColumnOrder &&
-      areColumnOrdersEqual(pendingColumnOrder, savedColumnIds)
-    ) {
-      setPendingColumnOrder(null)
-    }
-  }, [pendingColumnOrder, savedColumnIds])
-  useEffect(() => {
-    if (!pendingPropertyInsertOrder) {
-      return
-    }
-
-    const existingPropertyIds = new Set(
-      pendingPropertyInsertOrder.existingPropertyIds
-    )
-    const insertedProperty = renderedProperties.find(
-      (property) => !existingPropertyIds.has(property.id)
-    )
-
-    if (!insertedProperty) {
-      return
-    }
-
-    const nextColumnIds = getColumnIdsWithInsertedProperty(
-      pendingPropertyInsertOrder,
-      insertedProperty.id,
-      renderedColumnIds
-    )
-
-    setPendingPropertyInsertOrder(null)
-    setPendingColumnOrder(nextColumnIds)
-    saveDatabasePropertyOrder(nextColumnIds)
-  }, [
-    pendingPropertyInsertOrder,
-    renderedColumnIds,
-    renderedProperties,
-    saveDatabasePropertyOrder,
-  ])
   const personOptionsById = useMemo(
     () => new Map(personOptions.map((option) => [option.id, option.name])),
     [personOptions]
   )
-  const activeInsertProperty = pendingInsertProperty
+
   const canReorderRows = editable
-  const canReorderColumns = editable && renderedColumnIds.length > 1
+
   const rowDragTitle = getRowDragTitle({
     canReorder: canReorderRows,
     isFiltered: isTableFiltered,
     isGrouped: isTableGrouped,
     isSorted: isTableSorted,
   })
-  const pendingInsertPropertyKey = activeInsertProperty
-    ? getInsertPropertyColumnKey(
-        activeInsertProperty.sourceColumnKey,
-        activeInsertProperty.side
-      )
-    : null
-  const columnKeys = getTableColumnKeys({
-    canEditStructure,
-    columnIds: renderedColumnIds,
-    pendingInsert: activeInsertProperty,
-  })
-  const tableMinWidth = columnKeys.reduce(
-    (width, key) => width + getColumnWidth(columnWidths, key),
-    0
-  )
-  const getInlineTableContentWidth = useCallback(
-    () => tableMinWidth,
-    [tableMinWidth]
-  )
+
   const {
     isInlineScrollEnabled: isInlineTableScrollEnabled,
     style: tableWrapStyle,
@@ -452,6 +345,16 @@ export function DatabaseTableView() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+  })
+  const {
+    rowLayout,
+    rowLayoutRef,
+    getRowLayoutElement,
+    measureRows,
+  } = useTableRowLayout({
+    tableWrapRef,
+    tableScrollRef,
+    isInlineTableScrollEnabled,
   })
   const groupedSections = useMemo<GroupSection[]>(() => {
     if (!isTableGrouped) {
@@ -475,152 +378,7 @@ export function DatabaseTableView() {
     () => new Map(rows.map((row) => [row.id, row])),
     [rows]
   )
-  const selectedRows = useMemo(
-    () => rows.filter((row) => selectedRowIds.has(row.id)),
-    [rows, selectedRowIds]
-  )
-  const getSelectionValue = useCallback(
-    (property: DatabasePropertyListItem) => {
-      const pageProperty = property.property
-      const values = selectedRows.map(
-        (row) => propertyValuesByKey[`${row.pageId}:${pageProperty.id}`] ?? ""
-      )
 
-      return getSharedDatabaseSelectionValue(values, (left, right) =>
-        areSerializedPropertyValuesEqual(pageProperty.type, left, right)
-      )
-    },
-    [propertyValuesByKey, selectedRows]
-  )
-  const copySelectedRowLinks = useCallback(() => {
-    const links = selectedRows.map(
-      (row) => `${window.location.origin}/p/${row.pageId}`
-    )
-
-    void navigator.clipboard
-      .writeText(links.join("\n"))
-      .then(() =>
-        toast.success(
-          `Copied ${links.length} selected page ${links.length === 1 ? "link" : "links"}`
-        )
-      )
-      .catch(() => toast.error("Couldn't copy selected page links"))
-  }, [selectedRows])
-  const saveSelectedPropertyValue = useCallback(
-    (
-      property: DatabasePropertyListItem,
-      nextValue: DatabasePropertyValueType
-    ) => {
-      const pageProperty = property.property
-      const historyChanges: DatabaseCellFillHistoryChange[] = []
-
-      undoHistory.runWithoutRecording(() => {
-        for (const row of selectedRows) {
-          const currentValue =
-            propertyValuesByKeyRef.current[
-              `${row.pageId}:${pageProperty.id}`
-            ] ?? ""
-
-          if (
-            areSerializedPropertyValuesEqual(
-              pageProperty.type,
-              currentValue,
-              nextValue
-            )
-          ) {
-            continue
-          }
-
-          const savedValue = Array.isArray(nextValue)
-            ? [...nextValue]
-            : nextValue
-
-          historyChanges.push({
-            nextValue: savedValue,
-            pageId: row.pageId,
-            previousValue: Array.isArray(currentValue)
-              ? [...currentValue]
-              : currentValue,
-            propertyId: pageProperty.id,
-            propertyType: pageProperty.type,
-            rowId: row.id,
-          })
-
-          savePropertyValue(
-            row.id,
-            pageProperty.id,
-            pageProperty.type,
-            currentValue,
-            savedValue
-          )
-        }
-      })
-
-      if (historyChanges.length === 0) {
-        return
-      }
-
-      let appliedChanges = historyChanges
-      let undoneChanges: DatabaseCellFillHistoryChange[] = []
-
-      undoHistory.pushAction({
-        label: `Update ${pageProperty.name} for selected rows`,
-        redo: () => {
-          const redoableChanges = getRedoableDatabaseCellFillChanges(
-            undoneChanges,
-            propertyValuesByKeyRef.current
-          )
-
-          for (const change of redoableChanges) {
-            const currentValue =
-              propertyValuesByKeyRef.current[
-                `${change.pageId}:${change.propertyId}`
-              ] ?? ""
-
-            savePropertyValue(
-              change.rowId,
-              change.propertyId,
-              change.propertyType,
-              currentValue,
-              change.nextValue
-            )
-          }
-
-          appliedChanges = redoableChanges
-          undoneChanges = []
-          return redoableChanges.length > 0
-        },
-        undo: () => {
-          const undoableChanges = getUndoableDatabaseCellFillChanges(
-            appliedChanges,
-            propertyValuesByKeyRef.current
-          )
-
-          undoHistory.runWithoutRecording(() => {
-            for (const change of undoableChanges) {
-              const currentValue =
-                propertyValuesByKeyRef.current[
-                  `${change.pageId}:${change.propertyId}`
-                ] ?? ""
-
-              savePropertyValue(
-                change.rowId,
-                change.propertyId,
-                change.propertyType,
-                currentValue,
-                change.previousValue
-              )
-            }
-          })
-
-          appliedChanges = []
-          undoneChanges = undoableChanges
-          return undoableChanges.length > 0
-        },
-      })
-    },
-    [savePropertyValue, selectedRows, undoHistory]
-  )
   const nestedVisibleRows = useMemo(() => {
     if (!isSubItemsNested || collapsedSubItemRowIds.size === 0) {
       return sortedRows
@@ -718,79 +476,7 @@ export function DatabaseTableView() {
 
     return sectionsByRowId
   }, [groupedSections])
-  const getRowElements = useCallback(() => {
-    return Array.from(
-      tableWrapRef.current?.querySelectorAll<HTMLTableRowElement>(
-        ".database-table tbody tr[data-database-row-id]"
-      ) ?? []
-    )
-  }, [])
-  const getRowLayoutElement = useCallback(() => {
-    const wrapperElement = tableWrapRef.current
 
-    if (!isInlineTableScrollEnabled) {
-      return wrapperElement
-    }
-
-    return (
-      tableScrollRef.current?.querySelector<HTMLElement>(
-        ".database-table-scroll-content"
-      ) ?? wrapperElement
-    )
-  }, [isInlineTableScrollEnabled])
-  const measureRows = useCallback(() => {
-    const layoutElement = getRowLayoutElement()
-
-    if (!layoutElement) {
-      const emptyLayout = { centers: {}, dropTops: [], heights: {} }
-      rowLayoutRef.current = emptyLayout
-      return emptyLayout
-    }
-
-    const layoutRect = layoutElement.getBoundingClientRect()
-    const rowElements = getRowElements()
-    const centers: Record<string, number> = {}
-    const dropTops: number[] = []
-    const heights: Record<string, number> = {}
-
-    rowElements.forEach((rowElement, index) => {
-      const rect = rowElement.getBoundingClientRect()
-      const top = rect.top - layoutRect.top
-      const height = rect.height
-      const rowId = rowElement.dataset.databaseRowId
-
-      if (rowId) {
-        centers[rowId] = top + height / 2
-        heights[rowId] = height
-      }
-
-      dropTops[index] = top
-
-      if (index === rowElements.length - 1) {
-        dropTops[index + 1] = top + height
-      }
-    })
-
-    if (rowElements.length === 0) {
-      const footerElement = layoutElement.querySelector<HTMLElement>(
-        "[data-database-row-drop-footer]"
-      )
-
-      if (footerElement) {
-        dropTops[0] =
-          footerElement.getBoundingClientRect().top - layoutRect.top
-      }
-    }
-
-    const nextLayout = { centers, dropTops, heights }
-    rowLayoutRef.current = nextLayout
-
-    setRowLayout((currentLayout) =>
-      areRowLayoutsEqual(currentLayout, nextLayout) ? currentLayout : nextLayout
-    )
-
-    return nextLayout
-  }, [getRowElements, getRowLayoutElement])
   const getSubItemDropParentRowId = (
     targetIndex: number,
     preferPreviousRowAsParent = false
@@ -1192,17 +878,6 @@ export function DatabaseTableView() {
     propertyValuesByKey,
     sortedRows,
   ])
-  useEffect(() => {
-    if (
-      activeEditingPropertyKey &&
-      activeEditingPropertyKey !== "name" &&
-      !renderedProperties.some(
-        (property) => property.id === activeEditingPropertyKey
-      )
-    ) {
-      setEditingPropertyKey(null)
-    }
-  }, [activeEditingPropertyKey, renderedProperties])
 
   useEffect(() => {
     if (!selectedCellKey) {
@@ -1240,53 +915,6 @@ export function DatabaseTableView() {
         true
       )
   }, [])
-
-  useEffect(() => {
-    if (!pendingFormulaSetup) {
-      return
-    }
-
-    const existingPropertyIds = new Set(pendingFormulaSetup.existingPropertyIds)
-    const formulaProperty = properties.find(
-      (property) =>
-        !existingPropertyIds.has(property.id) &&
-        property.property.type === "formula"
-    )
-
-    if (!formulaProperty) {
-      return
-    }
-
-    setFormulaSetupPropertyId(formulaProperty.id)
-    setPendingFormulaSetup(null)
-  }, [pendingFormulaSetup, properties])
-
-  useEffect(() => {
-    if (
-      pendingInsertProperty &&
-      pendingInsertProperty.sourceColumnKey !== "name" &&
-      !renderedProperties.some(
-        (property) => property.id === pendingInsertProperty.sourceColumnKey
-      )
-    ) {
-      setPendingInsertProperty(null)
-    }
-  }, [pendingInsertProperty, renderedProperties])
-
-  useEffect(() => {
-    window.addEventListener("resize", measureRows)
-    const resizeObserver = new ResizeObserver(() => measureRows())
-    const wrapperElement = tableWrapRef.current
-
-    if (wrapperElement) {
-      resizeObserver.observe(wrapperElement)
-    }
-
-    return () => {
-      resizeObserver.disconnect()
-      window.removeEventListener("resize", measureRows)
-    }
-  }, [measureRows])
 
   useEffect(() => {
     if (!draggedRowId && !isExternalRowDragActive) {
@@ -1468,64 +1096,13 @@ export function DatabaseTableView() {
       })
 
       if (historyChanges.length > 0) {
-        let appliedChanges = historyChanges
-        let undoneChanges: DatabaseCellFillHistoryChange[] = []
-
-        undoHistory.pushAction({
+        undoHistory.pushAction(createCellEditHistoryAction({
           label: "Fill database cells",
-          redo: () => {
-            const redoableChanges = getRedoableDatabaseCellFillChanges(
-              undoneChanges,
-              propertyValuesByKeyRef.current
-            )
-
-            for (const change of redoableChanges) {
-              const currentValue =
-                propertyValuesByKeyRef.current[
-                  `${change.pageId}:${change.propertyId}`
-                ] ?? ""
-
-              savePropertyValue(
-                change.rowId,
-                change.propertyId,
-                change.propertyType,
-                currentValue,
-                change.nextValue
-              )
-            }
-
-            appliedChanges = redoableChanges
-            undoneChanges = []
-            return redoableChanges.length > 0
-          },
-          undo: () => {
-            const undoableChanges = getUndoableDatabaseCellFillChanges(
-              appliedChanges,
-              propertyValuesByKeyRef.current
-            )
-
-            undoHistory.runWithoutRecording(() => {
-              for (const change of undoableChanges) {
-                const currentValue =
-                  propertyValuesByKeyRef.current[
-                    `${change.pageId}:${change.propertyId}`
-                  ] ?? ""
-
-                savePropertyValue(
-                  change.rowId,
-                  change.propertyId,
-                  change.propertyType,
-                  currentValue,
-                  change.previousValue
-                )
-              }
-            })
-
-            appliedChanges = []
-            undoneChanges = undoableChanges
-            return undoableChanges.length > 0
-          },
-        })
+          changes: historyChanges,
+          readValues: () => propertyValuesByKeyRef.current,
+          savePropertyValue,
+          runWithoutRecording: undoHistory.runWithoutRecording,
+        }))
       }
 
       clearCellFillDrag()
@@ -1565,184 +1142,6 @@ export function DatabaseTableView() {
     draggedRowId,
     visibleRows,
   ])
-  const startColumnResize = (
-    columnKey: string,
-    event: React.PointerEvent<HTMLSpanElement>
-  ) => {
-    if (!editable) {
-      return
-    }
-
-    event.preventDefault()
-    event.stopPropagation()
-
-    const startX = event.clientX
-    const startWidth = getColumnWidth(columnWidths, columnKey)
-    let nextWidth = startWidth
-    let animationFrame: number | null = null
-
-    const applyWidth = () => {
-      animationFrame = null
-      const wrapper = tableWrapRef.current
-
-      wrapper
-        ?.querySelectorAll<HTMLTableColElement>("col[data-column-id]")
-        .forEach((column) => {
-          if (column.dataset.columnId === columnKey) {
-            column.style.width = `${nextWidth}px`
-          }
-        })
-
-      wrapper
-        ?.querySelectorAll<HTMLElement>(".database-table")
-        .forEach((table) => {
-          table.style.setProperty(
-            "--database-table-min-width",
-            `${tableMinWidth + nextWidth - startWidth}px`
-          )
-        })
-    }
-
-    const handlePointerMove = (moveEvent: globalThis.PointerEvent) => {
-      nextWidth = Math.max(
-        databaseColumnMinWidth,
-        startWidth + moveEvent.clientX - startX
-      )
-
-      if (animationFrame === null) {
-        animationFrame = requestAnimationFrame(applyWidth)
-      }
-    }
-
-    const removeListeners = () => {
-      if (animationFrame !== null) {
-        cancelAnimationFrame(animationFrame)
-        applyWidth()
-      }
-
-      setColumnWidths((widths) => ({ ...widths, [columnKey]: nextWidth }))
-      document.body.classList.remove("database-resize-cursor")
-      window.removeEventListener("pointermove", handlePointerMove)
-      window.removeEventListener("pointerup", removeListeners)
-      window.removeEventListener("pointercancel", removeListeners)
-    }
-
-    document.body.classList.add("database-resize-cursor")
-    window.addEventListener("pointermove", handlePointerMove)
-    window.addEventListener("pointerup", removeListeners)
-    window.addEventListener("pointercancel", removeListeners)
-  }
-
-  const handleEditingPropertyOpenChange = (
-    headerScope: string,
-    propertyKey: string,
-    nextOpen: boolean
-  ) => {
-    const scopedPropertyKey = getHeaderEditingKey(headerScope, propertyKey)
-
-    setEditingPropertyKey((currentKey: string | null) =>
-      nextOpen
-        ? scopedPropertyKey
-        : currentKey === scopedPropertyKey
-          ? null
-          : currentKey
-    )
-  }
-
-  const openInsertPropertyMenu = (
-    sourceColumnKey: string,
-    sourcePosition: number,
-    side: "left" | "right"
-  ) => {
-    setPendingInsertProperty({
-      position: sourcePosition + (side === "right" ? 1 : 0),
-      side,
-      sourceColumnKey,
-    })
-  }
-
-  const clearPendingInsertProperty = (insertKey: string) => {
-    setPendingInsertProperty((current) => {
-      const currentKey = current
-        ? getInsertPropertyColumnKey(current.sourceColumnKey, current.side)
-        : null
-
-      return currentKey === insertKey ? null : current
-    })
-  }
-
-  const addDatabasePropertyAndMaybeOpenFormula = (
-    type = "text",
-    label = "Property",
-    position?: number
-  ) => {
-    if (type === "formula") {
-      setPendingFormulaSetup({
-        existingPropertyIds: properties.map((property) => property.id),
-      })
-    }
-
-    addDatabaseProperty(type, label, position)
-  }
-
-  const addInsertedDatabaseProperty = (
-    type: string,
-    label: string,
-    position: number,
-    insertKey: string
-  ) => {
-    if (pendingInsertProperty) {
-      setPendingPropertyInsertOrder({
-        columnIds: headerColumnIds,
-        existingPropertyIds: renderedProperties.map((property) => property.id),
-        side: pendingInsertProperty.side,
-        sourceColumnKey: pendingInsertProperty.sourceColumnKey,
-      })
-    }
-
-    addDatabasePropertyAndMaybeOpenFormula(type, label, position)
-    clearPendingInsertProperty(insertKey)
-  }
-
-  const startColumnHeaderReorder = (columnId: string) => {
-    if (!canReorderColumns) {
-      return
-    }
-
-    setEditingPropertyKey(null)
-    suppressPropertyHeaderClickRef.current = true
-    setDraggedColumnId(columnId)
-    dragColumnOrderRef.current = headerColumnIds
-  }
-
-  const queueColumnHeaderOrder = (columnIds: string[]) => {
-    if (!canReorderColumns) {
-      return
-    }
-
-    if (areColumnOrdersEqual(dragColumnOrder, columnIds)) {
-      return
-    }
-
-    dragColumnOrderRef.current = columnIds
-    setDragColumnOrder(columnIds)
-  }
-
-  const finishColumnHeaderReorder = () => {
-    const columnIds = dragColumnOrderRef.current
-
-    if (columnIds && !areColumnOrdersEqual(columnIds, renderedColumnIds)) {
-      setPendingColumnOrder(columnIds)
-      saveDatabasePropertyOrder(columnIds)
-    }
-
-    dragColumnOrderRef.current = null
-    setDraggedColumnId(null)
-    setDragColumnOrder(null)
-    window.setTimeout(() => {
-      suppressPropertyHeaderClickRef.current = false
-    }, 0)
-  }
 
   const toggleGroupCollapsed = (groupId: string) => {
     setCollapsedGroups((current) => ({
@@ -1753,20 +1152,6 @@ export function DatabaseTableView() {
 
   const togglePropertyGrouping = (propertyId: string, isGrouped: boolean) => {
     setViewGroupProperty(isGrouped ? null : propertyId)
-  }
-
-  const toggleSelectedRow = (rowId: string, checked: boolean) => {
-    setSelectedRowIds((current) => {
-      const next = new Set(current)
-
-      if (checked) {
-        next.add(rowId)
-      } else {
-        next.delete(rowId)
-      }
-
-      return next
-    })
   }
 
   const startCellFill = (

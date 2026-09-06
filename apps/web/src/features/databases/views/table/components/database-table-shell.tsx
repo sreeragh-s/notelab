@@ -17,40 +17,7 @@ import { getColorToken } from "@/shared/lib/color-tokens"
 import { getDatabaseHorizontalScrollSync } from "../../../interactions/database-wheel-scroll"
 import { isVerticalScrollContainer, shouldRenderVirtualizedDatabaseRows } from "../../controller/database-view-scroll"
 import { useActiveDatabaseCellKey } from "../../state/database-cell-state"
-import {
-  ADD_PROPERTY_COLUMN_ID,
-  getColumnWidth,
-  getInsertPropertyColumnKey,
-  type PendingInsertProperty,
-  type TableRow,
-} from "../model/database-table-model"
-
-export function getTableColumnKeys({
-  canEditStructure,
-  columnIds,
-  pendingInsert,
-}: {
-  canEditStructure: boolean
-  columnIds: string[]
-  pendingInsert: PendingInsertProperty | null
-}) {
-  const dataColumnKeys = columnIds.flatMap((columnId) => {
-    if (!pendingInsert || columnId !== pendingInsert.sourceColumnKey) {
-      return [columnId]
-    }
-
-    const insertKey = getInsertPropertyColumnKey(columnId, pendingInsert.side)
-
-    return pendingInsert.side === "left"
-      ? [insertKey, columnId]
-      : [columnId, insertKey]
-  })
-
-  return [
-    ...dataColumnKeys,
-    ...(canEditStructure ? [ADD_PROPERTY_COLUMN_ID] : []),
-  ]
-}
+import { ADD_PROPERTY_COLUMN_ID, getColumnWidth, type TableRow } from "../model/database-table-model";
 
 export function getConditionalColorClassName(color?: string) {
   return color ? getColorToken(color).backgroundClass : undefined
