@@ -1,3 +1,4 @@
+export { defaultStatusOption, defaultStatusOptions, getDefaultDatabasePropertyConfig, isReadOnlyPropertyType, isSelectLikePropertyType } from "./model/property-defaults"
 import {
   ArrowUpRight,
   AtSign,
@@ -21,35 +22,8 @@ import {
   Users,
   type Icon,
 } from "@/shared/components/icons"
-import {
-  isReadOnlyPropertyType as isCanonicalReadOnlyPropertyType,
-  isSelectLikePropertyType as isCanonicalSelectLikePropertyType,
-  type DatabasePropertyType as DatabasePropertyTypeId,
-} from "@zilobase/features/databases/property-types"
+import { type DatabasePropertyType as DatabasePropertyTypeId } from "@zilobase/features/databases/property-types";
 import { cyclingColorTokens } from "@/shared/lib/color-tokens"
-
-export const defaultStatusOption = {
-  color: "gray",
-  group: "To-do",
-  id: "not-started",
-  name: "Not started",
-}
-
-export const defaultStatusOptions = [
-  defaultStatusOption,
-  {
-    color: "blue",
-    group: "In progress",
-    id: "in-progress",
-    name: "In progress",
-  },
-  {
-    color: "green",
-    group: "Complete",
-    id: "done",
-    name: "Done",
-  },
-]
 
 export type DatabasePropertyFilterKind =
   | "checkbox"
@@ -250,33 +224,10 @@ export function getDatabasePropertyCellKind(
   return getDatabasePropertyType(type).cellKind ?? "input"
 }
 
-export function getDefaultDatabasePropertyConfig(type: string) {
-  if (type === "status") {
-    return {
-      defaultOptionId: defaultStatusOption.id,
-      options: defaultStatusOptions,
-    }
-  }
-
-  if (type === "formula") {
-    return { formula: "" }
-  }
-
-  return undefined
-}
-
 export function hasDatabasePropertyTypeEditSettings(type: string) {
   return getDatabasePropertyType(type).hasEditSettings === true
 }
 
 export function isDateLikePropertyType(type: string) {
   return getDatabasePropertyFilterKind(type) === "date"
-}
-
-export function isReadOnlyPropertyType(type: string) {
-  return isCanonicalReadOnlyPropertyType(type)
-}
-
-export function isSelectLikePropertyType(type: string) {
-  return isCanonicalSelectLikePropertyType(type)
 }

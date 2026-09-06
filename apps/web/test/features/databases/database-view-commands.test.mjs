@@ -14,6 +14,8 @@ export function register({ assert, loadModule, test }) {
       "status",
     );
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -79,6 +81,8 @@ export function register({ assert, loadModule, test }) {
     const updatePage = createMutation();
     const nameProperty = createProperty("name", "name", "Name", "text");
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -131,6 +135,8 @@ export function register({ assert, loadModule, test }) {
     const showSortPillValues = [];
     const sortPickerOpenValues = [];
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [{ column: "name", direction: "ascending" }],
       activeView: {
@@ -191,6 +197,8 @@ export function register({ assert, loadModule, test }) {
       ),
     ];
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -261,6 +269,8 @@ export function register({ assert, loadModule, test }) {
       ),
     ];
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [
         {
           id: "filter-name",
@@ -322,6 +332,8 @@ export function register({ assert, loadModule, test }) {
     );
     const updateDatabaseView = createMutation();
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [
         {
           id: "filter-a",
@@ -411,6 +423,8 @@ export function register({ assert, loadModule, test }) {
       }),
     ];
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -455,6 +469,8 @@ export function register({ assert, loadModule, test }) {
       createProperty("database-property-c", "property-c", "C", "text"),
     ];
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -534,6 +550,8 @@ export function register({ assert, loadModule, test }) {
       createProperty("database-property-2", "property-2", "Owner", "text"),
     ];
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -590,6 +608,8 @@ export function register({ assert, loadModule, test }) {
     );
     const updateValue = createMutation();
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: null,
@@ -647,6 +667,8 @@ export function register({ assert, loadModule, test }) {
       relationConfig,
     );
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: null,
@@ -700,6 +722,8 @@ export function register({ assert, loadModule, test }) {
       relationConfig,
     );
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: null,
@@ -752,6 +776,8 @@ export function register({ assert, loadModule, test }) {
     );
     const updateDatabaseView = createMutation();
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -822,6 +848,8 @@ export function register({ assert, loadModule, test }) {
     );
     const properties = [statusProperty, ownerProperty, notesProperty];
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -883,6 +911,8 @@ export function register({ assert, loadModule, test }) {
     );
     const updateDatabaseView = createMutation();
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -966,6 +996,8 @@ export function register({ assert, loadModule, test }) {
     const addDatabaseView = createMutation();
     const addProperty = createMutation();
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: null,
@@ -1034,6 +1066,8 @@ export function register({ assert, loadModule, test }) {
       ),
     ];
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: null,
@@ -1076,6 +1110,8 @@ export function register({ assert, loadModule, test }) {
       "created_time",
     );
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -1125,6 +1161,8 @@ export function register({ assert, loadModule, test }) {
       ),
     ];
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -1186,6 +1224,8 @@ export function register({ assert, loadModule, test }) {
     );
     const properties = [statusProperty, notesProperty];
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -1248,6 +1288,8 @@ export function register({ assert, loadModule, test }) {
       "status",
     );
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: null,
@@ -1305,6 +1347,8 @@ export function register({ assert, loadModule, test }) {
       "status",
     );
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -1386,6 +1430,8 @@ export function register({ assert, loadModule, test }) {
     const addDatabaseView = createMutation();
     const addProperty = createMutation();
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: null,
@@ -1460,6 +1506,8 @@ export function register({ assert, loadModule, test }) {
     );
     const updateDatabaseView = createMutation();
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -1512,6 +1560,8 @@ export function register({ assert, loadModule, test }) {
     const updateDatabase = createMutation();
     const updateDatabaseView = createMutation();
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -1572,6 +1622,8 @@ export function register({ assert, loadModule, test }) {
     const addDatabaseView = createMutation();
     const activeViewIds = [];
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: null,
@@ -1619,6 +1671,8 @@ export function register({ assert, loadModule, test }) {
     const addDatabaseView = createMutation();
     const addProperty = createMutation();
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: null,
@@ -1655,6 +1709,8 @@ export function register({ assert, loadModule, test }) {
     );
     const addDatabaseView = createMutation();
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: null,
@@ -1706,6 +1762,8 @@ export function register({ assert, loadModule, test }) {
     const updateDatabaseView = createMutation();
     let latestViewConfig;
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -1782,6 +1840,8 @@ export function register({ assert, loadModule, test }) {
     const updateDatabaseView = createMutation();
     let latestViewConfig;
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {
@@ -1858,6 +1918,8 @@ export function register({ assert, loadModule, test }) {
     const addDatabaseView = createMutation();
     const activeViewIds = [];
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: null,
@@ -1907,6 +1969,8 @@ export function register({ assert, loadModule, test }) {
     const addRow = createMutation();
     const updateDatabaseView = createMutation();
     const commands = getDatabaseViewCommands({
+      notify: { error: () => {}, success: () => {} },
+      copyViewLink: async () => {},
       activeDatabaseFilters: [],
       activeDatabaseSorts: [],
       activeView: {

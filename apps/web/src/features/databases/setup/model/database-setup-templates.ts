@@ -1,9 +1,6 @@
 import type { ColorTokenId } from "@/shared/lib/color-tokens"
 
-import {
-  defaultStatusOption,
-  defaultStatusOptions,
-} from "../../properties/property-catalog"
+import { defaultStatusOption, defaultStatusOptions } from "../../properties/model/property-defaults";
 
 export type DatabaseSetupTemplateId =
   | "tasks-tracker"

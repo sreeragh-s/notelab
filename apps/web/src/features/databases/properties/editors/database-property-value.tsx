@@ -5,10 +5,7 @@ import {
   type DatabaseProperty,
 } from "@zilobase/features/databases"
 
-import {
-  defaultStatusOption,
-  defaultStatusOptions,
-} from "../property-catalog"
+import { defaultStatusOption, defaultStatusOptions } from "../model/property-defaults";
 import { DatabasePropertyButton } from "./database-property-button"
 import { DatabasePropertyDate } from "./database-property-date"
 import { DatabasePropertyFiles } from "./database-property-files"

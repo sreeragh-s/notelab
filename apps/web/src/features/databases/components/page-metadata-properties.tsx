@@ -11,7 +11,8 @@ import { DatabasePropertyInput } from "../properties/editors/database-property-i
 import { DatabasePropertySelect } from "../properties/editors/database-property-select"
 import { DatabaseRelationPropertyValue } from "../properties/editors/database-property-value"
 import { formatDatabaseDateValue } from "../properties/model/database-date-config"
-import { defaultStatusOptions, getDatabasePropertyType } from "../properties/property-catalog"
+import { defaultStatusOptions } from "../properties/model/property-defaults";
+import { getDatabasePropertyType } from "../properties/property-catalog";
 import { getPersonLimit } from "../views/model/database-view-config"
 import type { DatabasePresenceCollaborator } from "@zilobase/features/databases"
 import type { DatabasePropertyValue } from "../properties/property-values"

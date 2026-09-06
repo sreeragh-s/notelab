@@ -26,7 +26,7 @@ import {
 } from "@/features/databases/setup/components/database-setup-card"
 import { getDatabaseSetupTemplate } from "@/features/databases/setup/model/database-setup-templates"
 import { DatabaseViewSkeleton } from "@/features/databases/views/components/database-view-skeleton"
-import { getDatabaseViewModel } from "@/features/databases/views/model/database-view-model"
+import { getDatabaseViewModel } from "@/features/databases/views/components/database-view-model"
 import {
   getDatabaseFilterOperatorsForType,
   getMergedDatabaseConfig,

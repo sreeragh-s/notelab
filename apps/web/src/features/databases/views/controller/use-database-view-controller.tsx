@@ -43,7 +43,7 @@ import type {
   DatabaseViewProviderValue,
 } from "../state/database-view-context"
 import { getDatabaseViewCommands } from "../../commands/database-view-commands"
-import { getDatabaseViewModel } from "../model/database-view-model"
+import { getDatabaseViewModel } from "../components/database-view-model"
 import {
   readLatestViewConfig,
   writeLatestViewConfig,
@@ -743,6 +743,8 @@ export function useDatabaseViewController({
   }
 
   const commands = getDatabaseViewCommands({
+    notify: toast,
+    copyViewLink: (id) => typeof window === "undefined" ? undefined : navigator.clipboard.writeText(`${window.location.origin}/d/${id}`),
     activeDatabaseFilters,
     activeDatabaseSorts,
     activeView,

@@ -1,4 +1,4 @@
-import { isReadOnlyPropertyType } from "../property-catalog"
+import { isReadOnlyPropertyType } from "./property-defaults";
 
 export type ReadOnlyTimePropertySource = {
   createdAt: string

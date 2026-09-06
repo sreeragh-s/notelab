@@ -1,9 +1,6 @@
 import type { ReactNode } from "react"
+import type { DatabaseFieldOption } from "./model/field-option"
 
-export type DatabaseSearchableMenuOption = {
-  color?: string
+export type DatabaseSearchableMenuOption = Omit<DatabaseFieldOption, "fieldIcon"> & {
   icon?: ReactNode
-  label: string
-  searchText?: string
-  value: string
 }

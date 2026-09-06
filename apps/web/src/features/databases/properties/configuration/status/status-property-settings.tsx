@@ -7,10 +7,8 @@ import {
   DropDrawerSeparator,
 } from "@/shared/ui/dropdrawer";
 
-import {
-  defaultStatusOptions,
-  getNextDatabaseOptionColor,
-} from "../../property-catalog";
+import { defaultStatusOptions } from "../../model/property-defaults";
+import { getNextDatabaseOptionColor } from "../../property-catalog";
 import type {
   DatabasePropertyConfig,
   DatabaseSelectOption,

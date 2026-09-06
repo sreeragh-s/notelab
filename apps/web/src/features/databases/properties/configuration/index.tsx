@@ -7,11 +7,8 @@ import {
   DropDrawerSubTrigger,
 } from "@/shared/ui/dropdrawer";
 
-import {
-  hasDatabasePropertyTypeEditSettings,
-  isDateLikePropertyType,
-  isSelectLikePropertyType,
-} from "../property-catalog";
+import { isSelectLikePropertyType } from "../model/property-defaults";
+import { hasDatabasePropertyTypeEditSettings, isDateLikePropertyType } from "../property-catalog";
 import {
   getNumberPropertyConfig,
   NumberPropertySettings,

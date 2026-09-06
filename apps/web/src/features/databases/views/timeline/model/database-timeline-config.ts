@@ -5,7 +5,7 @@ import type { GanttFeature, GanttStatus } from "../gantt"
 import { getPaletteColor } from "@/shared/lib/color-tokens"
 import { parseLocalDateMatch } from "../../../properties/model/database-date-value"
 
-import { defaultStatusOptions } from "../../../properties/property-catalog"
+import { defaultStatusOptions } from "../../../properties/model/property-defaults";
 import {
   getSelectOptions,
   type DatabasePropertyListItem,

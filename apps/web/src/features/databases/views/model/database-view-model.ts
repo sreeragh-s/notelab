@@ -7,6 +7,7 @@ import type {
 
 import {
   getConfiguredGroupProperty,
+  type DatabasePropertyListItem,
   getGroupOptions,
   getKanbanGroupProperty,
   getKanbanOptions,
@@ -17,7 +18,6 @@ import {
   getTimelineDateProperty,
 } from "../timeline/model/database-timeline-config"
 import { getDatabaseChartSettings } from "../chart/model/database-chart-config"
-import { getDatabasePropertyType } from "../../properties/property-catalog"
 import { getPropertyValue, type DatabasePropertyValue } from "../../properties/property-values"
 import {
   getDatabaseFilterOperatorLabel,
@@ -40,10 +40,9 @@ import {
   type DatabaseConditionalColorConfig,
 } from "./database-view-config"
 import { getDatabaseSubItemsView } from "./database-sub-items"
-import type { DatabaseSearchableMenuOption } from "../menu-option-contracts";
+import type { DatabaseFieldOption } from "./field-option"
 import type { DatabaseActiveFilter } from "./filter-sort-contracts";
 import type { DatabaseActiveSort } from "./filter-sort-contracts";
-import { NameColumnGlyph } from "../../interactions/name-column-glyph"
 import {
   getFilteredDatabaseItems,
   getSortedDatabaseItems,
@@ -58,9 +57,8 @@ type PagePersonAccessTargets = {
   }>
 }
 
-export type DatabaseViewModel = ReturnType<typeof getDatabaseViewModel>
 
-export function getDatabaseViewModel({
+export function deriveDatabaseViewModel({
   accessTargets,
   activeViewId,
   currentUserId,
@@ -71,31 +69,26 @@ export function getDatabaseViewModel({
   currentUserId?: string
   payload: DatabasePayload | null | undefined
 }) {
-  const propertyValues = payload?.values ?? []
-  const properties = payload?.properties ?? []
-  const items = payload?.rows ?? []
+  const { propertyValues, properties, items, databaseConfig, activeView } =
+    resolveViewSource(payload, activeViewId)
   const personOptions = getPersonOptions(accessTargets, currentUserId)
   const personOptionsById = new Map(
     personOptions.map((personOption) => [personOption.id, personOption.name])
   )
-  const titlePropertyLabel = getNameColumnLabel(payload?.database.config)
-  const showPageIconInTitle = getNameColumnShowPageIcon(payload?.database.config)
-  const activeView =
-    payload?.views.find((view) => view.id === activeViewId) ??
-    payload?.views[0] ??
-    null
+  const titlePropertyLabel = getNameColumnLabel(databaseConfig)
+  const showPageIconInTitle = getNameColumnShowPageIcon(databaseConfig)
   const nameGroupProperty = {
     id: "name",
     position: -1,
     property: {
-      config: payload?.database.config,
+      config: databaseConfig,
       id: "name",
       name: titlePropertyLabel,
       type: "text",
     },
   }
   const sortFieldOptions = getSortFieldOptions(titlePropertyLabel, properties)
-  const activeViewConfig = activeView?.config ?? payload?.database.config
+  const activeViewConfig = activeView?.config ?? databaseConfig
   const isKanbanView = activeView?.type === "kanban"
   const isTimelineView = activeView?.type === "timeline"
   const chartSettings = getDatabaseChartSettings(activeViewConfig)
@@ -117,19 +110,11 @@ export function getDatabaseViewModel({
     ),
     activeViewConfig
   )
-  const titlePropertyVisible = true
   const showPropertyTitles = getShowPropertyTitles(activeViewConfig)
   const databaseSorts = getDatabaseSorts(activeViewConfig)
   const databaseFilters = getDatabaseFilters(activeViewConfig)
   const databaseConditionalColors = getDatabaseConditionalColors(activeViewConfig)
-  const groupProperty =
-    activeViewConfig &&
-    typeof activeViewConfig === "object" &&
-    !Array.isArray(activeViewConfig) &&
-    "groupPropertyId" in activeViewConfig &&
-    (activeViewConfig as { groupPropertyId?: unknown }).groupPropertyId === "name"
-      ? nameGroupProperty
-      : getConfiguredGroupProperty(properties, activeViewConfig)
+  const groupProperty = resolveGroupProperty(properties, activeViewConfig, nameGroupProperty)
   const groupOptions = getGroupOptions(groupProperty)
   const kanbanGroupProperty = isKanbanView
     ? groupProperty
@@ -246,8 +231,37 @@ export function getDatabaseViewModel({
     titlePropertyLabel,
     visibleProperties,
     visiblePropertyCount:
-      visibleProperties.length + (titlePropertyVisible ? 1 : 0),
+      visibleProperties.length + 1,
   }
+}
+
+function resolveViewSource(payload: DatabasePayload | null | undefined, activeViewId: string | null) {
+  const activeView = resolveActiveView(payload?.views, activeViewId)
+  return {
+    propertyValues: payload?.values ?? [],
+    properties: payload?.properties ?? [],
+    items: payload?.rows ?? [],
+    databaseConfig: payload?.database.config,
+    activeView,
+  }
+}
+
+function resolveActiveView(views: DatabasePayload["views"] | undefined, activeViewId: string | null) {
+  return views?.find(view => view.id === activeViewId) ?? views?.[0] ?? null
+}
+
+function resolveGroupProperty(
+  properties: DatabaseProperty[], activeViewConfig: unknown,
+  nameGroupProperty: DatabasePropertyListItem,
+) {
+  return activeViewConfig &&
+    typeof activeViewConfig === "object" &&
+    !Array.isArray(activeViewConfig) &&
+    "groupPropertyId" in activeViewConfig &&
+    (activeViewConfig as { groupPropertyId?: unknown }).groupPropertyId === "name"
+      ? nameGroupProperty
+      : getConfiguredGroupProperty(properties, activeViewConfig)
+
 }
 
 function getOrderedDatabaseProperties(
@@ -284,18 +298,16 @@ function getPersonOptions(
 function getSortFieldOptions(
   titlePropertyLabel: string,
   properties: DatabaseProperty[]
-): DatabaseSearchableMenuOption[] {
+): DatabaseFieldOption[] {
   return [
     {
-      icon: <NameColumnGlyph />,
+      fieldIcon: { kind: "name" },
       label: titlePropertyLabel,
       value: "name",
     },
     ...properties.map((property) => {
-      const PropertyIcon = getDatabasePropertyType(property.property.type).icon
-
       return {
-        icon: <PropertyIcon />,
+        fieldIcon: { kind: "property" as const, propertyType: property.property.type },
         label: property.property.name,
         value: property.id,
       }
@@ -326,7 +338,7 @@ function getActiveVisibilityConfig({
 
 function getActiveDatabaseSorts(
   databaseSorts: ReturnType<typeof getDatabaseSorts>,
-  sortFieldOptions: DatabaseSearchableMenuOption[]
+  sortFieldOptions: DatabaseFieldOption[]
 ): DatabaseActiveSort[] {
   return databaseSorts.flatMap((sort) => {
     const option = sortFieldOptions.find(
@@ -346,7 +358,7 @@ function getActiveDatabaseSorts(
 
 function getActiveDatabaseFilters(
   databaseFilters: DatabaseFilterItemConfig[],
-  filterFieldOptions: DatabaseSearchableMenuOption[],
+  filterFieldOptions: DatabaseFieldOption[],
   properties: DatabaseProperty[]
 ): DatabaseActiveFilter[] {
   return databaseFilters.flatMap((filter) => {
@@ -382,7 +394,7 @@ function getActiveDatabaseFilters(
 
 function getActiveDatabaseConditionalColors(
   conditionalColors: DatabaseConditionalColorConfig[],
-  filterFieldOptions: DatabaseSearchableMenuOption[],
+  filterFieldOptions: DatabaseFieldOption[],
   properties: DatabaseProperty[]
 ) {
   return conditionalColors.flatMap((setting) => {
@@ -428,7 +440,7 @@ function getFilterValueOptionsByField({
   properties: DatabaseProperty[]
   propertyValuesByKey: Record<string, DatabasePropertyValue>
 }) {
-  const optionsByField: Record<string, DatabaseSearchableMenuOption[]> = {}
+  const optionsByField: Record<string, DatabaseFieldOption[]> = {}
 
   for (const property of properties) {
     const type = property.property.type
@@ -519,7 +531,7 @@ function getFilterChoiceOptions(config: unknown, values: string[]) {
   }))
 }
 
-function getUniqueFilterOptions(values: string[]): DatabaseSearchableMenuOption[] {
+function getUniqueFilterOptions(values: string[]): DatabaseFieldOption[] {
   return Array.from(
     new Set(values.map((value) => value.trim()).filter(Boolean))
   )

@@ -590,7 +590,7 @@
     "apps/web/src/features/databases/views/model/database-sub-items.ts",
     "apps/web/src/features/databases/commands/database-view-commands.ts",
     "apps/web/src/features/databases/views/model/database-view-config.ts",
-    "apps/web/src/features/databases/views/model/database-view-model.tsx",
+    "apps/web/src/features/databases/views/model/database-view-model.ts",
     "apps/web/src/features/databases/views/controller/database-view-scroll.ts",
     "apps/web/src/features/databases/views/form/model/database-form-header-config.ts",
     "apps/web/src/features/databases/views/form/model/database-form-question-config.ts",

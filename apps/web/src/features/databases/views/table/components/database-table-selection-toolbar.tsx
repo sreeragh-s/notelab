@@ -21,12 +21,8 @@ import {
 } from "@/shared/ui/dropdrawer"
 import { DatabasePropertyDate } from "../../../properties/editors/database-property-date"
 import { DatabasePropertySelect } from "../../../properties/editors/database-property-select"
-import {
-  defaultStatusOption,
-  defaultStatusOptions,
-  getDatabasePropertyCellKind,
-  getDatabasePropertyType,
-} from "../../../properties/property-catalog"
+import { defaultStatusOption, defaultStatusOptions } from "../../../properties/model/property-defaults";
+import { getDatabasePropertyCellKind, getDatabasePropertyType } from "../../../properties/property-catalog";
 import type { DatabasePropertyValue as DatabasePropertyValueType } from "../../../properties/property-values"
 import { getPersonLimit } from "../../model/database-view-config"
 import type { DatabasePropertyListItem } from "../../kanban/model/database-kanban-config"

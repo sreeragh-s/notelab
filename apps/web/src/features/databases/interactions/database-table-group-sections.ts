@@ -1,4 +1,4 @@
-import { defaultStatusOptions } from "../properties/property-catalog"
+import { defaultStatusOptions } from "../properties/model/property-defaults";
 import { getRawDatabaseGroupValue } from "./database-group-values"
 import type { DatabasePropertyListItem } from "../views/kanban/model/database-kanban-config"
 

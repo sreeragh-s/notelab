@@ -1,5 +1,5 @@
 import type { DatabaseProperty } from "@zilobase/features/databases"
-import { defaultStatusOptions } from "../../../properties/property-catalog"
+import { defaultStatusOptions } from "../../../properties/model/property-defaults";
 import { getPersonLimit } from "../../model/database-view-config"
 import { getRelationLimit } from "../../../properties/relations/model/database-relation-sync"
 

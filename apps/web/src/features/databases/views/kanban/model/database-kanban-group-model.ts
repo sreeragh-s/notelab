@@ -1,4 +1,4 @@
-import { defaultStatusOption } from "../../../properties/property-catalog"
+import { defaultStatusOption } from "../../../properties/model/property-defaults";
 import {
   toStringArray,
   type DatabasePropertyValue as DatabaseCellValue,

@@ -3,9 +3,7 @@ import type {
   DatabaseRow,
 } from "@zilobase/features/databases"
 
-import {
-  isSelectLikePropertyType,
-} from "../properties/property-catalog"
+import { isSelectLikePropertyType } from "../properties/model/property-defaults";
 import { serializePropertyValue } from "../properties/property-values"
 import {
   canUpdateKanbanGroupProperty,

@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
-import { toast } from "sonner";
+import { getConvertedViewConfig, removeDatabaseGroupProperty } from "../views/model/view-type-transition";
 
 import type {
   DatabasePayload,
@@ -8,7 +8,7 @@ import type {
   DatabaseView,
 } from "@zilobase/features/databases";
 
-import { defaultStatusOption } from "../properties/property-catalog";
+import { defaultStatusOption } from "../properties/model/property-defaults";
 import {
   getKanbanGroupPropertyId,
   type DatabasePropertyListItem,
@@ -18,10 +18,7 @@ import {
   ganttMoveToDateValue,
   getTimelineDateProperty,
 } from "../views/timeline/model/database-timeline-config";
-import {
-  getDefaultDatabasePropertyConfig,
-  isSelectLikePropertyType,
-} from "../properties/property-catalog";
+import { getDefaultDatabasePropertyConfig, isSelectLikePropertyType } from "../properties/model/property-defaults";
 import {
   serializePropertyValue,
   type DatabasePropertyValue,
@@ -93,6 +90,8 @@ export function getDatabaseViewCommands({
   kanbanGroupProperty,
   timelineDateProperty = null,
   mutations,
+  notify,
+  copyViewLink,
   payload,
   properties,
   setActiveViewId,
@@ -115,6 +114,8 @@ export function getDatabaseViewCommands({
   kanbanGroupProperty: DatabasePropertyListItem | null;
   timelineDateProperty: DatabasePropertyListItem | null;
   mutations: DatabaseMutations;
+  notify: { error: (message: string) => void; success: (message: string) => void };
+  copyViewLink: (databaseId: string) => Promise<void> | undefined;
   payload: DatabasePayload | null | undefined;
   properties: DatabaseProperty[];
   setActiveViewId: Dispatch<SetStateAction<string | null>>;
@@ -146,13 +147,14 @@ export function getDatabaseViewCommands({
     updateProperty,
     updateValue,
   } = mutations;
-  const { ensureTimelineDatePropertyId } = getDatabaseViewCommandsContext({
+  const ensureTimelineDatePropertyId = createTimelineDateResolver({
     addProperty,
     databaseId,
     editable,
     payload,
     properties,
     timelineDateProperty,
+    notify,
   });
 
   const addRowWithValues = createAddDatabaseRowMutation({
@@ -388,12 +390,12 @@ export function getDatabaseViewCommands({
       }
 
       if (dragPayload.pageId === payload?.database.pageId) {
-        toast.error("You can't nest a page inside itself.");
+        notify.error("You can't nest a page inside itself.");
         return;
       }
 
       if (items.some((row) => row.pageId === dragPayload.pageId)) {
-        toast.error("This page is already in this database.");
+        notify.error("This page is already in this database.");
         return;
       }
 
@@ -402,7 +404,7 @@ export function getDatabaseViewCommands({
       );
 
       if (isCrossDatabaseMove && !dragPayload.rowId) {
-        toast.error("Couldn't identify the source row to move.");
+        notify.error("Couldn't identify the source row to move.");
         return;
       }
 
@@ -443,7 +445,7 @@ export function getDatabaseViewCommands({
         },
         {
           onError: () => {
-            toast.error("Couldn't move this row to the database.");
+            notify.error("Couldn't move this row to the database.");
           },
           onSuccess: (nextPayload) => {
             const addedItem = findAddedDatabaseRow(
@@ -457,7 +459,7 @@ export function getDatabaseViewCommands({
                 { id: dragPayload.pageId, name: groupSetup.pageTitle },
                 {
                   onError: () =>
-                    toast.error(
+                    notify.error(
                       "Moved the row, but couldn't update its group.",
                     ),
                 },
@@ -507,7 +509,7 @@ export function getDatabaseViewCommands({
             setActiveViewId(addedView?.id ?? null);
           },
           onError: () => {
-            toast.error("Couldn't add chart view");
+            notify.error("Couldn't add chart view");
           },
         },
       );
@@ -537,7 +539,7 @@ export function getDatabaseViewCommands({
             setActiveViewId(addedView?.id ?? null);
           },
           onError: () => {
-            toast.error("Couldn't add gallery view");
+            notify.error("Couldn't add gallery view");
           },
         },
       );
@@ -568,7 +570,7 @@ export function getDatabaseViewCommands({
             setActiveViewId(addedView?.id ?? null);
           },
           onError: () => {
-            toast.error("Couldn't add form view");
+            notify.error("Couldn't add form view");
           },
         },
       );
@@ -617,7 +619,7 @@ export function getDatabaseViewCommands({
               onViewAdded?.(nextPayload);
             },
             onError: () => {
-              toast.error("Couldn't add kanban view");
+              notify.error("Couldn't add kanban view");
             },
           },
         );
@@ -661,7 +663,7 @@ export function getDatabaseViewCommands({
             setActiveViewId(addedView?.id ?? null);
           },
           onError: () => {
-            toast.error("Couldn't add list view");
+            notify.error("Couldn't add list view");
           },
         },
       );
@@ -727,7 +729,7 @@ export function getDatabaseViewCommands({
               setActiveViewId(addedView?.id ?? null);
             },
             onError: () => {
-              toast.error("Couldn't add timeline view");
+              notify.error("Couldn't add timeline view");
             },
           },
         );
@@ -758,7 +760,7 @@ export function getDatabaseViewCommands({
             setActiveViewId(addedView?.id ?? null);
           },
           onError: () => {
-            toast.error("Couldn't add table view");
+            notify.error("Couldn't add table view");
           },
         },
       );
@@ -770,17 +772,16 @@ export function getDatabaseViewCommands({
       saveDatabaseFilters([]);
     },
     copyDatabaseViewLink: () => {
-      if (!databaseId || typeof window === "undefined") {
+      if (!databaseId) {
         return;
       }
 
-      void navigator.clipboard
-        .writeText(`${window.location.origin}/d/${databaseId}`)
-        .then(() => {
-          toast.success("Copied link to view");
+      void copyViewLink(databaseId)
+        ?.then(() => {
+          notify.success("Copied link to view");
         })
         .catch(() => {
-          toast.error("Couldn't copy link to view");
+          notify.error("Couldn't copy link to view");
         });
     },
     setViewGroupProperty: (groupPropertyId: string | null) => {
@@ -1030,56 +1031,10 @@ export function getDatabaseViewCommands({
       const currentConfig =
         getLatestViewConfig?.(databaseId, activeView.id, activeView.config) ??
         activeView.config;
-      let nextConfig = currentConfig;
-
-      if (type === "kanban") {
-        const groupPropertyId =
-          kanbanGroupProperty?.property.id ??
-          (properties.length === 0 ? "name" : null);
-
-        nextConfig = getMergedDatabaseConfig(currentConfig, {
-          groupPropertyId: groupPropertyId ?? undefined,
-          hiddenPropertyIds: hasViewHiddenPropertyIds(currentConfig)
-            ? [
-                ...new Set([
-                  ...getViewHiddenPropertyIds(currentConfig),
-                  ...properties
-                    .filter(
-                      (property) => property.property.id === groupPropertyId,
-                    )
-                    .map((property) => property.id),
-                ]),
-              ]
-            : getDefaultKanbanHiddenPropertyIds(properties, groupPropertyId),
-        });
-      } else if (type === "table" && activeView.type === "kanban") {
-        const previousGroupPropertyId =
-          getKanbanGroupPropertyId(currentConfig) ??
-          kanbanGroupProperty?.property.id ??
-          null;
-        const previousGroupProperty = properties.find(
-          (property) => property.property.id === previousGroupPropertyId,
-        );
-        const hiddenPropertyIds = new Set(
-          hasViewHiddenPropertyIds(currentConfig)
-            ? getViewHiddenPropertyIds(currentConfig)
-            : getDefaultKanbanHiddenPropertyIds(
-                properties,
-                previousGroupPropertyId,
-              ),
-        );
-
-        if (previousGroupProperty) {
-          hiddenPropertyIds.delete(previousGroupProperty.id);
-        }
-
-        nextConfig = getMergedDatabaseConfig(
-          removeDatabaseGroupProperty(currentConfig),
-          {
-            hiddenPropertyIds: [...hiddenPropertyIds],
-          },
-        );
-      }
+      const nextConfig = getConvertedViewConfig({
+        currentConfig, type, previousType: activeView.type,
+        kanbanGroupProperty, properties,
+      });
 
       setLatestViewConfig?.(databaseId, activeView.id, nextConfig);
 
@@ -1386,20 +1341,14 @@ export function getDatabaseViewCommands({
   };
 }
 
-function removeDatabaseGroupProperty(config: unknown) {
-  const nextConfig = getMergedDatabaseConfig(config, {});
-
-  delete nextConfig.groupPropertyId;
-  return nextConfig;
-}
-
-function getDatabaseViewCommandsContext({
+function createTimelineDateResolver({
   addProperty,
   databaseId,
   editable,
   payload,
   properties,
   timelineDateProperty,
+  notify,
 }: {
   addProperty: DatabaseMutations["addProperty"];
   databaseId: string | null | undefined;
@@ -1407,51 +1356,48 @@ function getDatabaseViewCommandsContext({
   payload: DatabasePayload | null | undefined;
   properties: DatabaseProperty[];
   timelineDateProperty: DatabasePropertyListItem | null;
+  notify: { error: (message: string) => void };
 }) {
-  return {
-    ensureTimelineDatePropertyId: (
-      onResolved: (datePropertyId: string) => void,
-    ) => {
-      const currentProperties = payload?.properties ?? properties;
-      const existingDateProperty =
-        timelineDateProperty ??
-        getTimelineDateProperty(currentProperties, null);
+  return (onResolved: (datePropertyId: string) => void) => {
+    const currentProperties = payload?.properties ?? properties;
+    const existingDateProperty =
+      timelineDateProperty ??
+      getTimelineDateProperty(currentProperties, null);
 
-      if (existingDateProperty) {
-        onResolved(existingDateProperty.property.id);
-        return;
-      }
+    if (existingDateProperty) {
+      onResolved(existingDateProperty.property.id);
+      return;
+    }
 
-      if (!editable || !databaseId || addProperty.isPending) {
-        return;
-      }
+    if (!editable || !databaseId || addProperty.isPending) {
+      return;
+    }
 
-      addProperty.mutate(
-        {
-          databaseId,
-          name: "Date",
-          type: "date",
+    addProperty.mutate(
+      {
+        databaseId,
+        name: "Date",
+        type: "date",
+      },
+      {
+        onSuccess: (nextPayload) => {
+          const createdDateProperty =
+            nextPayload.properties.find(
+              (property) => property.property.type === "date",
+            ) ?? nextPayload.properties.at(-1);
+
+          if (!createdDateProperty) {
+            notify.error("Couldn't add date property");
+            return;
+          }
+
+          onResolved(createdDateProperty.property.id);
         },
-        {
-          onSuccess: (nextPayload) => {
-            const createdDateProperty =
-              nextPayload.properties.find(
-                (property) => property.property.type === "date",
-              ) ?? nextPayload.properties.at(-1);
-
-            if (!createdDateProperty) {
-              toast.error("Couldn't add date property");
-              return;
-            }
-
-            onResolved(createdDateProperty.property.id);
-          },
-          onError: () => {
-            toast.error("Couldn't add date property");
-          },
+        onError: () => {
+          notify.error("Couldn't add date property");
         },
-      );
-    },
+      },
+    );
   };
 }
 

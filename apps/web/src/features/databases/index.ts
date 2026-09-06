@@ -11,7 +11,7 @@ export {
   setDatabasePageDragPayload,
 } from "./interactions/database-page-drop"
 export { DatabasePageLink } from "./interactions/database-page-link"
-export { getDatabaseViewModel } from "./views/model/database-view-model"
+export { getDatabaseViewModel } from "./views/components/database-view-model"
 export { DatabaseViewIcon } from "./components/database-view-icon"
 export { PageMetadata } from "./components/page-metadata"
 export type { PageMetadataHandle } from "./components/page-metadata"
