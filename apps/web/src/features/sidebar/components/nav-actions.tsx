@@ -104,7 +104,9 @@ import { useIsMobile } from "@/shared/hooks/use-mobile";
 import { cn } from "@/shared/lib/utils";
 import { usePageCommentsSnapshot } from "@/features/comments/index";
 import { Switch } from "@/shared/ui/switch";
-import { useLayoutEditor } from "@/features/pages/layout/index";
+import {
+  useLayoutEditor,
+} from "@/features/pages/layout";
 import { OfflineAvailabilityAction } from "@/features/offline/index";
 import {
   useConnectivity,

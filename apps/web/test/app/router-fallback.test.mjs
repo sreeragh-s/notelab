@@ -49,7 +49,7 @@ export function register({ readSource, assert, test }) {
         "route-groups/content-routes.tsx",
       ].map((path) => readSource(`/src/app/routing/${path}`)))
     ).join("\n")
-    const pageSource = await readSource("/src/features/pages/pages/page.tsx")
+    const pageSource = await readSource("/src/features/pages/screens/page.tsx")
     const databaseSource = await readSource("/src/features/databases/pages/database.tsx")
     const meetingSource = await readSource("/src/features/meetings/pages/meeting.tsx")
 

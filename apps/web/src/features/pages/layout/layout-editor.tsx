@@ -11,7 +11,7 @@ import { Check, ChevronDown, SidebarSimpleIcon, X } from "@/shared/components/ic
 import { toast } from "sonner"
 
 import { LayoutEditorSettings } from "./layout-editor-settings"
-import { LayoutApplyDialog } from "@/features/pages/components/layout-apply-dialog"
+import { LayoutApplyDialog } from "@/features/pages/layout/layout-apply-dialog"
 import { Button } from "@/shared/ui/button"
 import {
   DropdownMenu,

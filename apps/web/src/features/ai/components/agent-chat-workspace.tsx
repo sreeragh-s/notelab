@@ -23,7 +23,9 @@ import {
   XIcon,
 } from "@/shared/components/icons";
 import { Button } from "@/shared/ui/button";
-import { PageSidePaneLayout } from "@/features/pages/context";
+import {
+  PageSidePaneLayout,
+} from "@/features/pages/pane/page-side-pane";
 
 import { useAiChatThreadState } from "../conversation/use-ai-chat-thread-state";
 import type { ChatPresentationMode } from "./chat-sidebar";

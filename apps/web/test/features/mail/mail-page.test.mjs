@@ -55,7 +55,7 @@ export function register({ assert, loadModule, readSource, test }) {
   test("Mail navigation is connected to sidebar shortcuts and breadcrumbs", async () => {
     const [shortcutSource, headerSource] = await Promise.all([
       readSource("/src/features/sidebar/components/sidebar-shortcut-list.tsx"),
-      readSource("/src/features/pages/components/page-pane-header.tsx"),
+      readSource("/src/features/pages/pane/page-pane-header.tsx"),
     ])
 
     assert.match(shortcutSource, /target\.type === "mail"[\s\S]*to: "\/mail"/)
@@ -77,8 +77,8 @@ export function register({ assert, loadModule, readSource, test }) {
     const [appLayoutSource, mailSource, paneSource, presentationSource] = await Promise.all([
       readSource("/src/app/shell/content/app-layout.tsx"),
       readMailFeatureSource(readSource),
-      readSource("/src/features/pages/context/page-side-pane.tsx"),
-      readSource("/src/features/pages/components/embedded-item-presentation-dropdown.tsx"),
+      readSource("/src/features/pages/pane/page-side-pane.tsx"),
+      readSource("/src/features/pages/pane/embedded-item-presentation-dropdown.tsx"),
     ])
 
     assert.match(mailSource, /<PageSidePaneShell[\s\S]*<PageSidePaneLayout/)

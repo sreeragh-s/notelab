@@ -1,1 +1,1 @@
-export { LayoutEditorProvider, useLayoutEditor } from "../components/layout-editor";
+export { LayoutEditorProvider, useLayoutEditor } from "./layout-editor";

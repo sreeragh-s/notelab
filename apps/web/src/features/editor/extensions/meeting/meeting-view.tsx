@@ -63,7 +63,9 @@ import {
 import { IconEmojiPicker } from "@/shared/ui/icon-emoji-picker"
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover"
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/app-tabs"
-import { useOpenEmbeddedPage } from "@/features/pages/hooks/index"
+import {
+  useOpenEmbeddedPage,
+} from "@/features/pages/pane/use-open-embedded-page";
 import { DefaultPageIcon, PageIconDisplay } from "@/features/pages/index"
 import { cn } from "@/shared/lib/utils"
 import type { OpenPageOptions } from "@/features/pages"

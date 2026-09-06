@@ -45,7 +45,7 @@ export function register({ readSource, assert, test }) {
     const chatbotSource = await readChatbotSource(readSource)
     const layoutSource = await readSource("/src/app/shell/content/app-layout.tsx")
     const headerSource = await readSource("/src/app/shell/content/app-header.tsx")
-    const sidePaneSource = await readSource("/src/features/pages/context/page-side-pane.tsx")
+    const sidePaneSource = await readSource("/src/features/pages/pane/page-side-pane.tsx")
 
     assert.match(layoutSource, /chatSidebarOpen \|\| isAiPage \|\| Boolean\(agentId\) \|\| isMailPage \? null/)
     assert.match(sidePaneSource, /data-page-scroll-viewport/)
@@ -65,7 +65,7 @@ export function register({ readSource, assert, test }) {
     const settingsSource = await readSource("/src/features/ai/components/ai-settings-panel.tsx")
     const agentSettingsSource = await readSource("/src/features/ai/components/settings/agent-settings-page.tsx")
     const headerSource = await readSource("/src/app/shell/content/app-header.tsx")
-    const paneHeaderSource = await readSource("/src/features/pages/components/page-pane-header.tsx")
+    const paneHeaderSource = await readSource("/src/features/pages/pane/page-pane-header.tsx")
 
     assert.match(workspaceSource, /\{isSidebar\s*\?\s*\(?\s*<ChatHeader/)
     assert.match(workspaceSource, /aria-label="Ask AI settings"/)

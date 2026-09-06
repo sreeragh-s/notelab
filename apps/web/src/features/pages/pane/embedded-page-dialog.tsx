@@ -10,10 +10,10 @@ import { Button } from "@/shared/ui/button"
 import {
   PageScrollViewport,
   usePageSidePane,
-} from "../context/page-side-pane"
+} from "./page-side-pane"
 import { PageWorkspaceGate } from "@/features/workspaces"
 import { PagePaneHeader } from "./page-pane-header"
-import { useOptionalPageLayoutSidebar } from "../context/page-layout-sidebar"
+import { useOptionalPageLayoutSidebar } from "../layout/page-layout-sidebar"
 import type { OpenPageOptions } from "@/features/pages"
 
 export function EmbeddedPageDialog({

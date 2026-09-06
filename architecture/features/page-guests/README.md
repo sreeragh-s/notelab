@@ -3,7 +3,7 @@
 ## Owning modules and interface
 
 - [apps/server/src/features/page-guests](../../../apps/server/src/features/page-guests)
-- [apps/web/src/features/pages/invitations](../../../apps/web/src/features/pages/invitations)
+- [Invitation acceptance screen](../../../apps/web/src/features/pages/screens/accept-page-invitation.tsx)
 
 ## Main flow
 

@@ -4,7 +4,9 @@ import type { AgentCitation } from "@zilobase/features/ai-chat";
 import { useNavigate } from "@tanstack/react-router";
 
 import { toApiUrl } from "@/platform/network/api";
-import { useOptionalPageSidePane } from "@/features/pages/context/index";
+import {
+  useOptionalPageSidePane,
+} from "@/features/pages/pane/page-side-pane";
 import {
   DatabaseIcon,
   ExternalLinkIcon,

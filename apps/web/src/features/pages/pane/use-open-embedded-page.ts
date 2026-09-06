@@ -1,7 +1,7 @@
 import { useCallback } from "react"
 
-import { usePageSidePane } from "../context/page-side-pane"
-import type { OpenPageSidePaneOptions } from "../context/page-side-pane"
+import { usePageSidePane } from "./page-side-pane"
+import type { OpenPageSidePaneOptions } from "./page-side-pane"
 import { useZilobaseFeatures } from "@zilobase/features"
 import {
   defaultUserSettings,

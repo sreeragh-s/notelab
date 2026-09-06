@@ -30,7 +30,7 @@ import {
   type AgentSettingsVersion,
   type AgentSettingsDefinition,
 } from "@zilobase/features/ai-chat";
-import { PageEditorPane } from "@/features/pages/pages/page";
+import { PageEditorPane } from "@/features/pages/screens/page";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/app-tabs";

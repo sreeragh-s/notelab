@@ -46,12 +46,12 @@ import { Dialog, DialogContent, DialogTitle } from "@/shared/ui/dialog"
 import {
   MainPaneHeaderLeadingControl,
   PagePaneHeader,
-} from "@/features/pages/components"
+} from "@/features/pages/pane/page-pane-header";
 import {
   PageSidePaneHeaderCell,
   PageSidePaneLayout,
   PageSidePaneShell,
-} from "@/features/pages/context"
+} from "@/features/pages/pane/page-side-pane";
 
 import { MailLabelMenu, showMailError } from "../components/mail-actions"
 import { MailComposer } from "../components/mail-composer"

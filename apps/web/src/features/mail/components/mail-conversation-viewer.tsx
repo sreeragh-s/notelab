@@ -19,7 +19,9 @@ import {
   TriangleAlertIcon,
   XIcon,
 } from "@/shared/components/icons"
-import { EmbeddedItemPresentationDropdown } from "@/features/pages/components"
+import {
+  EmbeddedItemPresentationDropdown,
+} from "@/features/pages/pane/embedded-item-presentation-dropdown";
 import { useThemeFamily } from "@/shared/providers/theme-family-provider"
 import { Button } from "@/shared/ui/button"
 import {

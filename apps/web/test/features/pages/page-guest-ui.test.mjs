@@ -14,10 +14,10 @@ export function register({ readSource, assert, loadModule, test }) {
 
   test("page guest UI keeps invitation, management, and shell concerns separate", async () => {
     const [acceptance, shareMenu, teamSettings, pageShell] = await Promise.all([
-      readSource("/src/features/pages/invitations/accept-page-invitation.tsx"),
+      readSource("/src/features/pages/screens/accept-page-invitation.tsx"),
       readSource("/src/features/sidebar/components/nav-actions.tsx"),
       readSource("/src/features/teamspaces/pages/team.tsx"),
-      readSource("/src/features/pages/pages/page.tsx"),
+      readSource("/src/features/pages/screens/page.tsx"),
     ]);
 
     assert.match(acceptance, /useAcceptPageGuestInvitation/);

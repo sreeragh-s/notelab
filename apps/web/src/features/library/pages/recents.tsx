@@ -31,9 +31,14 @@ import { Spinner } from "@/shared/ui/spinner";
 import { Textarea } from "@/shared/ui/textarea";
 import { libraryViewIcons } from "@/features/sidebar";
 import { libraryViewLabels } from "@/features/sidebar";
-import { PageSidePaneLayout, usePageSidePane } from "@/features/pages/context/index";
-import { useOpenEmbeddedPage } from "@/features/pages/hooks/index";
-import { PageEditorPane } from "@/features/pages/pages/index";
+import {
+  PageSidePaneLayout,
+  usePageSidePane,
+} from "@/features/pages/pane/page-side-pane";
+import {
+  useOpenEmbeddedPage,
+} from "@/features/pages/pane/use-open-embedded-page";
+import { PageEditorPane } from "@/features/pages/screens/index";
 import {
   DatabasePageLink,
   DatabaseTableView,

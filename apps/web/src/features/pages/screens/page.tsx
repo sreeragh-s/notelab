@@ -14,12 +14,12 @@ import {
   PageSidePaneLayout,
   PageSidePaneProvider,
   usePageSidePane,
-} from "../context/page-side-pane";
+} from "../pane/page-side-pane";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Button } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
 import { TrashedItemBanner } from "../components/trashed-item-banner";
-import { isEmbeddedMobileViewer } from "../model/embedded-view";
+import { isEmbeddedMobileViewer } from "../pane/embedded-view";
 import { cn } from "@/shared/lib/utils";
 import { toast } from "sonner";
 import { formatPageBreadcrumbLabel } from "../icons/page-icon";
@@ -51,8 +51,8 @@ import {
   insertDatabaseBlockInContent,
   isEffectivelyEmptyPageContent,
 } from "@zilobase/page-context";
-import { EmbeddedPageDialog } from "../components/embedded-page-dialog";
-import { useOpenEmbeddedPage } from "../hooks/use-open-embedded-page";
+import { EmbeddedPageDialog } from "../pane/embedded-page-dialog";
+import { useOpenEmbeddedPage } from "../pane/use-open-embedded-page";
 import { useSession } from "@zilobase/features/auth/react";
 import { useUserSettings } from "@zilobase/features/user-settings/react";
 import { usePageEditorRegistry } from "@/features/editor/runtime/page-editor-registry";
@@ -80,7 +80,7 @@ import {
   getMissingPlacedDatabaseIds,
   getPlacedDatabaseIds,
   insertMeetingBlockInContent,
-} from "../model/page-hierarchy-blocks";
+} from "../navigation/page-hierarchy-blocks";
 
 type PageEditorPaneProps = {
   afterMetadata?: ReactNode;

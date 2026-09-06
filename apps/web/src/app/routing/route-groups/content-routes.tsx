@@ -16,7 +16,7 @@ export const contentRoutes = [
     beforeLoad: async ({ params }) => ({
       publishedShare: await applyPageShareAccess(params.pageId),
     }),
-    component: lazyRouteComponent(() => import("@/features/pages/pages/page")),
+    component: lazyRouteComponent(() => import("@/features/pages/screens/page")),
     pendingComponent: PendingPage,
   }),
   createRoute({

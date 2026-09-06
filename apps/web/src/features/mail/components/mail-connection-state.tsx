@@ -5,8 +5,14 @@ import { toast } from "sonner"
 
 import { apiFetch, getApiErrorMessage } from "@/platform/network/api"
 import { isDesktopApp } from "@/platform/environment"
-import { MainPaneHeaderLeadingControl, PagePaneHeader } from "@/features/pages/components"
-import { PageSidePaneHeaderCell, PageSidePaneShell } from "@/features/pages/context"
+import {
+  MainPaneHeaderLeadingControl,
+  PagePaneHeader,
+} from "@/features/pages/pane/page-pane-header";
+import {
+  PageSidePaneHeaderCell,
+  PageSidePaneShell,
+} from "@/features/pages/pane/page-side-pane";
 import { GoogleIcon } from "@/shared/components/google-icon"
 import { Loader2Icon } from "@/shared/components/icons"
 import { Button } from "@/shared/ui/button"

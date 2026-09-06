@@ -5,12 +5,14 @@ import { PageWorkspaceGate } from "@/features/workspaces"
 import {
   PageSidePaneLayout,
   usePageSidePane,
-} from "@/features/pages/context/index"
-import { useOpenEmbeddedPage } from "@/features/pages/hooks/index"
+} from "@/features/pages/pane/page-side-pane";
+import {
+  useOpenEmbeddedPage,
+} from "@/features/pages/pane/use-open-embedded-page";
 import { useTitleDraft } from "@/features/pages/hooks/index"
 import { PageMetadata as PageMetadataHeader } from "@/features/databases"
 import { MeetingView } from "@/packages/editor/extensions/meeting"
-import { PageEditorPane } from "@/features/pages/pages/index"
+import { PageEditorPane } from "@/features/pages/screens/index"
 import { useMeeting, useUpdateMeeting } from "@zilobase/features/meetings/react";
 import {
   getPageCover,

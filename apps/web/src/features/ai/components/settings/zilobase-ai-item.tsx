@@ -3,7 +3,7 @@ import * as React from "react"
 import { toast } from "sonner"
 
 import { getApiErrorMessage } from "@/platform/network/api"
-import { PageEditorPane } from "@/features/pages/pages/index"
+import { PageEditorPane } from "@/features/pages/screens/index"
 import { PageWorkspaceGate } from "@/features/workspaces"
 import {
   AlertDialog,

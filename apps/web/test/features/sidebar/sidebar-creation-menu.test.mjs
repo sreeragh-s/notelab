@@ -124,7 +124,7 @@ export function register({ readSource, assert, test }) {
       /group\/workspace-row|hover:bg-action-neutral-hover focus-within:bg-action-neutral-hover/,
     )
     assert.match(sidebarPrimitiveSource, /navigation \? <div className="-mx-2">/)
-    const pagePaneHeaderSource = await readSource("/src/features/pages/components/page-pane-header.tsx")
+    const pagePaneHeaderSource = await readSource("/src/features/pages/pane/page-pane-header.tsx")
     const leadingControl = pagePaneHeaderSource.slice(pagePaneHeaderSource.indexOf("export function MainPaneHeaderLeadingControl"), pagePaneHeaderSource.indexOf("export function PageSidePaneCollapseButton"))
     assert.match(leadingControl, /<SidebarTrigger/)
     assert.doesNotMatch(leadingControl, /isCollapsed|return null/)

@@ -8,7 +8,7 @@ import {
   PageSidePaneLayout,
   PageSidePaneProvider,
   usePageSidePane,
-} from "@/features/pages/context/index"
+} from "@/features/pages/pane/page-side-pane";
 import { Skeleton } from "@/shared/ui/skeleton"
 import { Button } from "@/shared/ui/button"
 import { TrashedItemBanner } from "@/features/pages/components/index"
@@ -27,8 +27,12 @@ import {
   useUpdateDatabase,
   useUpdateDataSource,
 } from "@zilobase/features/databases/react";
-import { EmbeddedPageDialog } from "@/features/pages/components/index"
-import { useOpenEmbeddedPage } from "@/features/pages/hooks/index"
+import {
+  EmbeddedPageDialog,
+} from "@/features/pages/pane/embedded-page-dialog";
+import {
+  useOpenEmbeddedPage,
+} from "@/features/pages/pane/use-open-embedded-page";
 import { PageMetadata as PageMetadataView } from "../components/page-metadata"
 import { DatabaseView } from "../views/view/database-view"
 import { toast } from "sonner"
@@ -36,7 +40,7 @@ import {
   PublicPaneTopbar,
   PublicPageBreadcrumb,
   PageEditorPane,
-} from "@/features/pages/pages/index"
+} from "@/features/pages/screens/index"
 import { useDatabaseViewNavigation } from "../hooks/use-database-view-navigation"
 import type { OpenPageOptions } from "@/features/pages"
 import { useTitleDraft } from "@/features/pages/hooks/index"

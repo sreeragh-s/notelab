@@ -56,8 +56,8 @@ import {
   buildCanonicalBreadcrumbTrail,
   getBreadcrumbNavigationSection,
   type BreadcrumbNavigationItem,
-} from "@/features/pages/model/breadcrumb-navigation-model";
-import { useOptionalPageSidePane } from "../context/page-side-pane";
+} from "@/features/pages/navigation/breadcrumb-navigation";
+import { useOptionalPageSidePane } from "./page-side-pane";
 import {
   isPublishedFallbackPage,
   readPublishedEmbeddedItemsOpenAs,

@@ -1,8 +1,12 @@
 import { PageWorkspaceGate } from "@/features/workspaces";
-import { usePageSidePane } from "@/features/pages/context/index";
-import { useOpenEmbeddedPage } from "@/features/pages/hooks/index";
+import {
+  usePageSidePane,
+} from "@/features/pages/pane/page-side-pane";
+import {
+  useOpenEmbeddedPage,
+} from "@/features/pages/pane/use-open-embedded-page";
 import { DatabaseMainPane } from "@/features/databases/pages/index";
-import { PageEditorPane } from "@/features/pages/pages/index";
+import { PageEditorPane } from "@/features/pages/screens/index";
 import { AgentChatWorkspace } from "../components/agent-chat-workspace";
 
 export default function AiPage() {

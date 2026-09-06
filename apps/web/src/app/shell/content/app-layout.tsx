@@ -15,7 +15,7 @@ import {
   usePageSidePaneState,
   PageSidePaneContext,
   PageSidePaneShell,
-} from "@/features/pages/context/index"
+} from "@/features/pages/pane/page-side-pane";
 import { DiscussionsSidebarPanel } from "@/features/comments/index"
 import {
   RightSidebarMobilePanels,
@@ -27,7 +27,10 @@ import {
   type SidebarResizeIntent,
 } from "@/features/sidebar"
 
-import { getDatabaseId, useRoutePageId } from "@/features/pages/components/index"
+import {
+  getDatabaseId,
+  useRoutePageId,
+} from "@/features/pages/pane/page-pane-header";
 import {
   getSettingsSection,
   type SettingsSection,
@@ -45,7 +48,7 @@ import {
   SidebarProvider,
   useSidebar,
 } from "@/shared/ui/sidebar"
-import { isEmbeddedMobileViewer } from "@/features/pages/model/embedded-view"
+import { isEmbeddedMobileViewer } from "@/features/pages/pane/embedded-view"
 import { getDatabaseEmoji } from "@zilobase/features/databases";
 import { useDatabase } from "@zilobase/features/databases/react";
 import { getPageEmoji } from "@zilobase/features/pages";
@@ -53,13 +56,15 @@ import { usePage, useRecordItemVisit } from "@zilobase/features/pages/react";
 import { defaultUserSettings } from "@zilobase/features/user-settings";
 import { useUserSettings } from "@zilobase/features/user-settings/react";
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
-import { LayoutEditorProvider } from "@/features/pages/layout/index"
+import {
+  LayoutEditorProvider,
+} from "@/features/pages/layout";
 import { usePageEditorComments } from "@/features/comments/index"
 import { usePageCommentController } from "@/features/comments/index"
 import {
   PageLayoutSidebarProvider,
   useOptionalPageLayoutSidebar,
-} from "@/features/pages/context/index"
+} from "@/features/pages/layout/page-layout-sidebar";
 import { Button } from "@/shared/ui/button"
 import { FloatingWidget } from "@/shared/components/floating-widget"
 import { AppHeader } from "./app-header"

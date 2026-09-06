@@ -30,7 +30,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog"
-import { useOptionalPageSidePane } from "@/features/pages/context/index"
+import {
+  useOptionalPageSidePane,
+} from "@/features/pages/pane/page-side-pane";
 import { DefaultPageIcon, PageIconDisplay } from "@/features/pages/index"
 import { cn } from "@/shared/lib/utils"
 import { useUndoHistory } from "@/shared/shortcuts"

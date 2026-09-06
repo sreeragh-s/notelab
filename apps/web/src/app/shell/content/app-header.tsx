@@ -5,11 +5,13 @@ import {
   MainPaneHeaderLeadingControl,
   PagePaneHeader,
   PageSidePaneCollapseButton,
-} from "@/features/pages/components"
+} from "@/features/pages/pane/page-pane-header";
 import {
   PageSidePaneHeaderCell,
+} from "@/features/pages/pane/page-side-pane";
+import {
   useOptionalPageLayoutSidebar,
-} from "@/features/pages/context"
+} from "@/features/pages/layout/page-layout-sidebar";
 
 const CustomAgentHeaderActions = lazy(() =>
   import("@/features/ai/components/custom-agent-header-actions").then(

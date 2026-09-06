@@ -21,7 +21,9 @@ import {
   useStartCustomAgentRun,
   useWorkspaceAiModels,
 } from "@zilobase/features/ai-chat/react";
-import { PageSidePaneLayout } from "@/features/pages/context";
+import {
+  PageSidePaneLayout,
+} from "@/features/pages/pane/page-side-pane";
 import { AgentSharePopover } from "../components/settings/agent-sharing";
 import { AgentSettingsPage } from "../components/settings/agent-settings-page";
 import { AgentChatLayout } from "../components/agent-chat-layout";

@@ -54,7 +54,10 @@ import {
   SidebarMenuItem,
 } from "@/shared/ui/sidebar"
 import { WorkspaceSwitcher } from "./workspace-switcher"
-import { clearPromotedFullPagePath, usePromotedFullPagePath } from "@/features/pages/context/index"
+import {
+  clearPromotedFullPagePath,
+  usePromotedFullPagePath,
+} from "@/features/pages/pane/page-side-pane";
 import { useAiChatThreadState } from "@/features/ai/index"
 import { buildDesktopDeepLink } from "@/features/desktop/deep-links/index"
 import {
