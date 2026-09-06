@@ -133,8 +133,8 @@
         "patterns": ["apps/server/src/shared/**"]
       },
       {
-        // Runtime adapter declarations may reference feature-owned wire types;
-        // concrete runtime implementations remain outside infrastructure.
+        // Runtime declarations depend on shared wire contracts; concrete feature
+        // implementations remain outside infrastructure.
         "name": "server-runtime-contract",
         "patterns": ["apps/server/src/infrastructure/runtime/**"]
       },
@@ -448,7 +448,6 @@
         "allow": [
           "package-features",
           "server-bindings",
-          "server-features",
           "server-infrastructure",
           "server-runtime-contract",
           "server-shared"

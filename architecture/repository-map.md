@@ -16,6 +16,6 @@
 | Editor utilities | Markdown splitting and comment extension | [splitter](../packages/markdown-text-splitter), [comments](../packages/tiptap-comment-extension) |
 | Setup and operations | Development, deployment and release tooling | [scripts](../scripts), [deploy](../deploy), [docker](../docker) |
 
-The directory layout already separates features. Some implementation imports still cross feature internals: desktop transport calls offline state, and database view models reference presentation types. These are current dependencies, not examples to copy. The authoritative allowed import graph is in [Fallow configuration](../.fallowrc.json).
+The directory layout already separates features. Some implementation imports still cross feature internals: database view models reference presentation types. App runtime composition now connects transport policy and offline cleanup without reverse feature imports. These are current dependencies, not examples to copy. The authoritative allowed import graph is in [Fallow configuration](../.fallowrc.json).
 
 Migration SQL under [drizzle](../apps/server/drizzle) is ordered history. Published package exports and edition aliases are compatibility interfaces, even when a consumer lives outside this repository.
