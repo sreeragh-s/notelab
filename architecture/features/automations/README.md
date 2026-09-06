@@ -21,6 +21,7 @@ External actions can send Gmail/Slack messages or webhooks. Retries must reuse d
 ## Focused guides
 
 - [Automation execution lifecycle](execution.md)
+- [Automation editing and history](editor.md)
 
 ## Verification and change points
 
@@ -41,7 +42,7 @@ The server keeps transport in `routes.ts` and `slack-routes.ts`. The explicit [m
 
 Background composition imports the run engine, event evaluator, scheduler and history maintenance through those concrete entrypoints; mutation owners use trigger fact capture inside their transactions. The public server adapter aggregate preserves all existing exported names. Moving a file does not change its transaction, lease or authorization boundary.
 
-The web manager remains the feature's entrypoint and composition owner. [Definition controls](../../../apps/web/src/features/databases/automations/definition) own schedule/select editing; [action controls](../../../apps/web/src/features/databases/automations/actions) own the Notion-style action builder and its model. The existing manager screens remain together until their state and presentation responsibilities are refactored.
+The web manager remains the feature's entrypoint and composition owner. [Definition controls](../../../apps/web/src/features/databases/automations/definition) own schedule/select editing; [action controls](../../../apps/web/src/features/databases/automations/actions) own the Notion-style action builder and its model. The manager screens remain together as a cohesive presentation module; the manager hook owns their navigation and editing state as described in the editor guide.
 
 The shared package keeps contracts and pure schedule calculation at `databases/automations`. React query options, hooks and query tests live behind the explicit [React entrypoint](../../../packages/features/src/databases/automations/react/index.ts). Package subpaths, query keys and exported names remain compatible. Database test discovery includes nested automation tests; server tests remain adjacent to their owning capabilities and web tests remain under the feature test root.
 

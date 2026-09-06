@@ -31,12 +31,8 @@ import type { DatabasePropertyFilterOperator } from "../../views/model/database-
 
 type CatalogProperty = DatabaseAutomationCatalog["properties"][number];
 export {
-  actionForDefinition,
   createNotionActionDraft,
   NOTION_ACTION_OPTIONS,
-  notionActionDraftFromAction,
-  notionActionLabel,
-  resolveWebhookHeader,
   type NotionActionDraft,
 } from "./notion-action-model";
 import {

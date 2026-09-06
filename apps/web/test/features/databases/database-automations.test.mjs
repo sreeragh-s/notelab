@@ -2,6 +2,15 @@ export function register({ assert, readSource, test }) {
   const readAutomationManager = async () =>
     (await Promise.all([
       readSource("/src/features/databases/automations/database-automation-manager.tsx"),
+      readSource("/src/features/databases/automations/use-automation-manager.ts"),
+      readSource("/src/features/databases/automations/automation-picker-controls.tsx"),
+      readSource("/src/features/databases/automations/definition/automation-builder.tsx"),
+      readSource("/src/features/databases/automations/definition/automation-trigger-controls.tsx"),
+      readSource("/src/features/databases/automations/definition/automation-draft.ts"),
+      readSource("/src/features/databases/automations/definition/schedule-model.ts"),
+      readSource("/src/features/databases/automations/definition/materialize-webhook-secrets.ts"),
+      readSource("/src/features/databases/automations/actions/property-action-controls.tsx"),
+      readSource("/src/features/databases/automations/actions/property-action-model.ts"),
       readSource("/src/features/databases/automations/database-automation-screens.tsx"),
       readSource("/src/features/databases/automations/definition/automation-schedule.tsx"),
     ])).join("\n")
@@ -60,8 +69,9 @@ export function register({ assert, readSource, test }) {
     assert.match(manager, /function ActionPicker/)
     assert.equal(
       [...manager.matchAll(/h-10 w-full justify-start border-stroke-default px-3 text-sm/g)].length,
-      2
+      1
     )
+    assert.equal([...manager.matchAll(/<AutomationPickerTrigger/g)].length, 2)
     assert.match(manager, /if \(draft\.actions\.length === 0\) return null/)
     assert.match(manager, /draft\.triggerKind === "event" && draft\.triggers\.length === 0/)
   })
@@ -108,8 +118,6 @@ export function register({ assert, readSource, test }) {
     assert.match(manager, /propertyBadge[\s\S]*?bg-surface-subtle[\s\S]*?<AutomationPropertyIcon property=\{property\}/)
     assert.match(manager, /propertyId !== "any"\) return null/)
     assert.match(manager, /getColorTokenBadgeClassName\(option\.color\)/)
-    assert.match(manager, /operands: selection\.operands \?\? \[\]/)
-    assert.match(manager, /operator: selection\.operator \?\? \(selection\.propertyId/)
     assert.match(manager, /function ActionPropertyValueStep/)
     assert.match(manager, /heading="Edit property"/)
     assert.match(manager, /Set \{propertyConfiguration\.property\.name\} to/)
