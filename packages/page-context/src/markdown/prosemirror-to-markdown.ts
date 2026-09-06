@@ -1,12 +1,6 @@
-type ProseMirrorNode = {
-  attrs?: Record<string, unknown>;
-  content?: ProseMirrorNode[];
-  marks?: Array<{ attrs?: Record<string, unknown>; type: string }>;
-  text?: string;
-  type?: string;
-};
+import type { PageDocumentNode } from "../document/page-document";
 
-type BlockSerializer = (node: ProseMirrorNode) => string;
+type BlockSerializer = (node: PageDocumentNode) => string;
 
 export function prosemirrorToMarkdown(content: unknown): string {
   if (content === null || content === undefined) {
@@ -17,7 +11,7 @@ export function prosemirrorToMarkdown(content: unknown): string {
     return "";
   }
 
-  const node = content as ProseMirrorNode;
+  const node = content as PageDocumentNode;
 
   if (node.type === "doc") {
     return serializeBlocks(node.content ?? []);
@@ -26,7 +20,7 @@ export function prosemirrorToMarkdown(content: unknown): string {
   return serializeBlocks([node]).trim();
 }
 
-function serializeBlocks(nodes: ProseMirrorNode[]) {
+function serializeBlocks(nodes: PageDocumentNode[]) {
   const parts: string[] = [];
 
   for (const node of nodes) {
@@ -56,11 +50,11 @@ function trimmedStringAttr(
   return value || fallback;
 }
 
-function serializeParagraph(node: ProseMirrorNode) {
+function serializeParagraph(node: PageDocumentNode) {
   return serializeInline(node.content ?? []);
 }
 
-function serializeHeading(node: ProseMirrorNode) {
+function serializeHeading(node: PageDocumentNode) {
   const level =
     typeof node.attrs?.level === "number"
       ? Math.min(Math.max(node.attrs.level, 1), 6)
@@ -69,84 +63,84 @@ function serializeHeading(node: ProseMirrorNode) {
   return `${"#".repeat(level)} ${serializeInline(node.content ?? [])}`.trim();
 }
 
-function serializeBlockquote(node: ProseMirrorNode) {
+function serializeBlockquote(node: PageDocumentNode) {
   return (node.content ?? [])
     .map((child) => `> ${serializeBlock(child)}`)
     .join("\n");
 }
 
-function serializeCodeBlock(node: ProseMirrorNode) {
+function serializeCodeBlock(node: PageDocumentNode) {
   const language = stringAttr(node.attrs, "language");
   const code = serializeInline(node.content ?? []);
   return `\`\`\`${language}\n${code}\n\`\`\``.trim();
 }
 
-function serializeDatabaseBlock(node: ProseMirrorNode) {
+function serializeDatabaseBlock(node: PageDocumentNode) {
   const databaseId = stringAttr(node.attrs, "databaseId");
   const label = databaseId ? `Database (${databaseId})` : "Database";
   return `[${label}]`;
 }
 
-function serializeMeetingBlock(node: ProseMirrorNode) {
+function serializeMeetingBlock(node: PageDocumentNode) {
   const meetingId = stringAttr(node.attrs, "meetingId");
   return meetingId ? `[Meeting (${meetingId})]` : "[Meeting]";
 }
 
-function serializePageBlock(node: ProseMirrorNode) {
+function serializePageBlock(node: PageDocumentNode) {
   const pageId = stringAttr(node.attrs, "pageId");
   const title = trimmedStringAttr(node.attrs, "title", "Untitled page");
   return pageId ? `[Page: ${title} (${pageId})]` : `[Page: ${title}]`;
 }
 
-function serializeImageBlock(node: ProseMirrorNode) {
+function serializeImageBlock(node: PageDocumentNode) {
   const src = stringAttr(node.attrs, "src");
   const alt = trimmedStringAttr(node.attrs, "alt", "image");
   return src ? `![${alt}](${src})` : `![${alt}]`;
 }
 
-function serializeVideoBlock(node: ProseMirrorNode) {
+function serializeVideoBlock(node: PageDocumentNode) {
   const src = stringAttr(node.attrs, "src");
   return src ? `[Video](${src})` : "[Video]";
 }
 
-function serializeEmbedBlock(node: ProseMirrorNode) {
+function serializeEmbedBlock(node: PageDocumentNode) {
   const url = stringAttr(node.attrs, "url");
   const title = trimmedStringAttr(node.attrs, "title", "Embed");
   return url ? `[${title}](${url})` : `[${title}]`;
 }
 
-function serializeFileBlock(node: ProseMirrorNode) {
+function serializeFileBlock(node: PageDocumentNode) {
   const name = trimmedStringAttr(node.attrs, "name", "File");
   const url = stringAttr(node.attrs, "url");
   return url ? `[File: ${name}](${url})` : `[File: ${name}]`;
 }
 
-function serializeBookmarkBlock(node: ProseMirrorNode) {
+function serializeBookmarkBlock(node: PageDocumentNode) {
   const url = stringAttr(node.attrs, "url");
   const title = trimmedStringAttr(node.attrs, "title", url || "Bookmark");
   return url ? `[${title}](${url})` : `[${title}]`;
 }
 
-function serializeLinkMention(node: ProseMirrorNode) {
+function serializeLinkMention(node: PageDocumentNode) {
   const href = stringAttr(node.attrs, "href");
   const title = trimmedStringAttr(node.attrs, "title", href || "Link");
   return href ? `[${title}](${href})` : title;
 }
 
-function serializeDetailsSummary(node: ProseMirrorNode) {
+function serializeDetailsSummary(node: PageDocumentNode) {
   const summary = serializeInline(node.content ?? []);
   const body = serializeBlocks(
-    (node as ProseMirrorNode & { parentContent?: ProseMirrorNode[] }).content ??
+    (node as PageDocumentNode & { parentContent?: PageDocumentNode[] }).content ??
       [],
   );
   return summary ? `**${summary}**\n${body}`.trim() : body;
 }
 
-function serializeNestedBlocks(node: ProseMirrorNode) {
+function serializeNestedBlocks(node: PageDocumentNode) {
   return serializeBlocks(node.content ?? []);
 }
 
-function serializeDefaultBlock(node: ProseMirrorNode) {
+function serializeDefaultBlock(node: PageDocumentNode) {
   if (node.content?.length) {
     return serializeBlocks(node.content);
   }
@@ -182,12 +176,12 @@ const BLOCK_SERIALIZERS: Record<string, BlockSerializer> = {
   videoBlock: serializeVideoBlock,
 };
 
-function serializeBlock(node: ProseMirrorNode): string {
+function serializeBlock(node: PageDocumentNode): string {
   const serializer = node.type ? BLOCK_SERIALIZERS[node.type] : undefined;
   return serializer ? serializer(node) : serializeDefaultBlock(node);
 }
 
-function serializeList(nodes: ProseMirrorNode[], marker: string) {
+function serializeList(nodes: PageDocumentNode[], marker: string) {
   return nodes
     .map((node) => {
       if (node.type !== "listItem" && node.type !== "taskItem") {
@@ -200,7 +194,7 @@ function serializeList(nodes: ProseMirrorNode[], marker: string) {
     .join("\n");
 }
 
-function serializeOrderedList(nodes: ProseMirrorNode[]) {
+function serializeOrderedList(nodes: PageDocumentNode[]) {
   return nodes
     .map((node, index) => {
       if (node.type !== "listItem") {
@@ -213,7 +207,7 @@ function serializeOrderedList(nodes: ProseMirrorNode[]) {
     .join("\n");
 }
 
-function serializeTaskList(nodes: ProseMirrorNode[]) {
+function serializeTaskList(nodes: PageDocumentNode[]) {
   return nodes
     .map((node) => {
       const checked = node.attrs?.checked === true;
@@ -223,7 +217,7 @@ function serializeTaskList(nodes: ProseMirrorNode[]) {
     .join("\n");
 }
 
-function serializeTable(rows: ProseMirrorNode[]) {
+function serializeTable(rows: PageDocumentNode[]) {
   const tableRows = rows
     .filter((row) => row.type === "tableRow")
     .map((row) =>
@@ -251,7 +245,7 @@ function serializeTable(rows: ProseMirrorNode[]) {
   ].join("\n");
 }
 
-function serializeInline(nodes: ProseMirrorNode[]) {
+function serializeInline(nodes: PageDocumentNode[]) {
   return nodes
     .map((node) => {
       if (node.type === "hardBreak") {

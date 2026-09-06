@@ -1,7 +1,7 @@
 import { Mark, mergeAttributes, type Range } from "@tiptap/core"
 import type { Mark as ProseMirrorMark } from "@tiptap/pm/model"
 
-import { getCommentIdsAtSelection } from "./selection"
+import { getCommentIdsAtSelection } from "./comment-selection"
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {

@@ -41,8 +41,8 @@
       "default": "./src/database/strip-database-payload.ts"
     },
     "./types": {
-      "types": "./src/shared/types.ts",
-      "default": "./src/shared/types.ts"
+      "types": "./src/context/contracts.ts",
+      "default": "./src/context/contracts.ts"
     }
   }
 }

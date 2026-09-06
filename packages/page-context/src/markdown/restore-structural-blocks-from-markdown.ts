@@ -1,10 +1,4 @@
-type MarkdownContentNode = {
-  attrs?: Record<string, unknown>
-  content?: MarkdownContentNode[]
-  marks?: Array<{ attrs?: Record<string, unknown>; type: string }>
-  text?: string
-  type?: string
-}
+import type { PageDocumentNode } from "../document/page-document";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -50,7 +44,7 @@ export function preprocessStructuralBlockMarkdown(markdown: string) {
     .join("\n")
 }
 
-export function restoreStructuralBlocksInMarkdownContent<T extends MarkdownContentNode>(
+export function restoreStructuralBlocksInMarkdownContent<T extends PageDocumentNode>(
   content: T[],
 ): T[] {
   const restored: T[] = []
@@ -69,7 +63,7 @@ export function restoreStructuralBlocksInMarkdownContent<T extends MarkdownConte
   return restored
 }
 
-function matchStructuralBlockNode<T extends MarkdownContentNode>(
+function matchStructuralBlockNode<T extends PageDocumentNode>(
   node: T,
 ): T | null {
   if (node.type !== "paragraph") {
@@ -200,7 +194,7 @@ function matchStructuralBlockText(text: string) {
   return null
 }
 
-function matchStructuralLinkParagraph<T extends MarkdownContentNode>(node: T) {
+function matchStructuralLinkParagraph<T extends PageDocumentNode>(node: T) {
   const textNode = node.content?.find((entry) => entry.type === "text")
 
   if (!textNode || node.content?.length !== 1) {
@@ -311,7 +305,7 @@ function escapeHtmlAttr(value: string) {
     .replace(/</g, "&lt;")
 }
 
-function readPlainParagraphText(node: MarkdownContentNode) {
+function readPlainParagraphText(node: PageDocumentNode) {
   if (!node.content?.length) {
     return ""
   }

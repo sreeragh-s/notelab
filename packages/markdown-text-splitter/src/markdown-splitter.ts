@@ -1,4 +1,4 @@
-import { RecursiveCharacterTextSplitter } from "./character.js";
+import { RecursiveCharacterTextSplitter } from "./character-splitter.js";
 import type { Document } from "./types.js";
 import { Language } from "./types.js";
 

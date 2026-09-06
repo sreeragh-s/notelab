@@ -7,7 +7,7 @@ import {
   getVisiblePropertiesForView,
 } from "./database-view-schema"
 import { formatPropertyValueForContext } from "./format-property-value"
-import type { DatabaseContextPayload } from "../shared/types"
+import type { DatabaseContextPayload } from "../context/contracts"
 
 type ViewDescriptor = {
   viewName: string

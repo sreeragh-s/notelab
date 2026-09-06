@@ -1,8 +1,4 @@
-type PageContentNode = {
-  content?: PageContentNode[]
-  text?: string
-  type?: string
-}
+import type { PageDocumentNode } from "./page-document";
 
 export function isEffectivelyEmptyPageContent(content: unknown): boolean {
   if (content == null) {
@@ -26,10 +22,10 @@ export function isEffectivelyEmptyPageContent(content: unknown): boolean {
     return false
   }
 
-  return isEffectivelyEmptyNode(content as PageContentNode)
+  return isEffectivelyEmptyNode(content as PageDocumentNode)
 }
 
-function isEffectivelyEmptyNode(node: PageContentNode): boolean {
+function isEffectivelyEmptyNode(node: PageDocumentNode): boolean {
   if (node.type === "text") {
     return !node.text?.trim()
   }

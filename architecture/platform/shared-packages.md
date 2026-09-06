@@ -21,3 +21,5 @@ Feature queries re-export their data contracts for compatibility, while canonica
 Server mail code imports the published contracts, organization and predicate modules directly, so pure mail operations do not load React Query through the legacy mail entrypoint. Authentication client declarations live in shared/auth-client; the React provider re-exports their type. Query keys, query options, polling and invalidation behavior are unchanged.
 
 Web TypeScript and Vite resolve shared feature subpaths through the package export map. They no longer assume every subpath names a directory with index.ts; explicit contract and React entrypoints resolve consistently in typechecking and production builds.
+
+See [page-context and editor utility ownership](page-context-and-editor-utilities.md) for conversion invariants, structural content, splitter behavior and comment anchors.

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "vitest"
 
-import type { DatabaseContextPayload } from "../shared/types"
+import type { DatabaseContextPayload } from "../context/contracts"
 import { buildDatabaseMarkdown } from "./build-database-markdown"
 
 const nativeSchema = createSchema({

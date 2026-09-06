@@ -6,7 +6,7 @@ import type {
   ContextSection,
   DatabaseContextSection,
   PageContextSection,
-} from "../shared/types"
+} from "./contracts"
 
 const DEFAULT_MAX_CHARS = 16_000
 
