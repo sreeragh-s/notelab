@@ -93,6 +93,7 @@ const ModelItem = ({
 };
 
 type ChatbotComposerProps = {
+  attachmentsEnabled?: boolean;
   activeMentionQuery: string;
   attachments: ContextAttachment[];
   chefs: string[];
@@ -101,7 +102,6 @@ type ChatbotComposerProps = {
   currentDatabaseId: string | null;
   currentPageId: string | null;
   existingAttachmentKeys: Set<string>;
-  hasMessages: boolean;
   isContextLoading: boolean;
   isSidebar: boolean;
   mentionMenuOpen: boolean;
@@ -132,6 +132,7 @@ type ChatbotComposerProps = {
 };
 
 export const ChatbotComposer = ({
+  attachmentsEnabled = true,
   activeMentionQuery,
   attachments,
   chefs,
@@ -140,7 +141,6 @@ export const ChatbotComposer = ({
   currentDatabaseId,
   currentPageId,
   existingAttachmentKeys,
-  hasMessages,
   isContextLoading,
   isSidebar,
   mentionMenuOpen,
@@ -169,15 +169,9 @@ export const ChatbotComposer = ({
   text,
   textareaRef,
 }: ChatbotComposerProps) => (
-  <div
-    className={
-      hasMessages || isSidebar
-        ? "sticky bottom-0 z-10 -mx-4 mt-auto grid shrink-0 gap-3 bg-gradient-to-t from-surface-canvas via-effect-backdrop to-transparent px-4 pb-4 pt-16 md:mx-0 md:px-4 md:pb-6 md:pt-20"
-        : "z-10 -mx-4 grid shrink-0 gap-3 px-4 pb-4 md:mx-0 md:px-4"
-    }
-  >
+  <div className="relative z-10 -mx-4 grid shrink-0 gap-3 bg-surface-canvas px-4 pt-3 pb-4 md:mx-0 md:px-0 md:pb-6">
     <ChatbotScrollButton targetRef={rootRef} />
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="mx-auto w-full max-w-full">
       {isSidebar ? (
         <div className="mb-2 px-1 text-xs text-content-secondary">
           {isContextLoading
@@ -191,10 +185,10 @@ export const ChatbotComposer = ({
       ) : null}
       <PromptInput
         accept={AI_FILE_ACCEPT}
-        globalDrop
+        globalDrop={attachmentsEnabled}
         inputGroupClassName="h-auto items-stretch overflow-visible focus-within:border-control-border focus-within:ring-0 has-[[data-slot=input-group-control]:focus-visible]:border-control-border has-[[data-slot=input-group-control]:focus-visible]:ring-0"
         maxFileSize={MAX_AI_FILE_BYTES}
-        maxFiles={MAX_AI_FILES}
+        maxFiles={attachmentsEnabled ? MAX_AI_FILES : 0}
         multiple
         onError={(attachmentError) =>
           toast.error("Cannot attach file", {
@@ -243,7 +237,14 @@ export const ChatbotComposer = ({
         <PromptInputFooter>
           <PromptInputTools>
             <PromptInputActionMenu>
-              <PromptInputActionMenuTrigger tooltip="Attach files">
+              <PromptInputActionMenuTrigger
+                disabled={!attachmentsEnabled}
+                tooltip={
+                  attachmentsEnabled
+                    ? "Attach files"
+                    : "Attachments are not supported in this conversation"
+                }
+              >
                 <PlusIcon className="size-4" />
               </PromptInputActionMenuTrigger>
               <PromptInputActionMenuContent>

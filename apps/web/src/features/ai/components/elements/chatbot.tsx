@@ -1,4 +1,10 @@
-"use client";
+import { AgentChatLayout } from "../agent-chat-layout";
+import {
+  emitSettingsEvent,
+  flushSettingsDrafts,
+} from "../../settings/use-settings-draft";
+import type { AgentSettingsEvent } from "@zilobase/features/ai-chat";
+("use client");
 
 import {
   buildPrimaryAttachment,
@@ -17,15 +23,9 @@ import {
   usePageEditAutoApply,
 } from "../../cache/use-page-edit-auto-apply";
 import { usePageEditApplier } from "../../cache/use-page-edit-applier";
-import {
-  AgentLiveDebugger,
-  useAgentLiveDebugger,
-} from "./agent-live-debugger";
+import { AgentLiveDebugger, useAgentLiveDebugger } from "./agent-live-debugger";
 import type { PromptInputMessage } from "./prompt-input";
-import {
-  isHostedDemoRuntime,
-  requestDemoGuard,
-} from "@/features/demo";
+import { isHostedDemoRuntime, requestDemoGuard } from "@/features/demo";
 import {
   aiChatThreadMessagesQueryKey,
   aiChatThreadMessagesQueryOptions,
@@ -53,16 +53,16 @@ import { useSession } from "@zilobase/features/auth";
 import { useZilobaseFeatures } from "@zilobase/features";
 import { useDatabase } from "@zilobase/features/databases";
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
-import { usePageAccessLevel, usePageNavigation } from "@zilobase/features/pages";
+import {
+  usePageAccessLevel,
+  usePageNavigation,
+} from "@zilobase/features/pages";
 import { useQuery } from "@tanstack/react-query";
 import {
   getApiRequestHeaders,
   resolveApiBaseUrl,
 } from "@/features/desktop/network/api";
-import {
-  type UIMessage,
-  isToolUIPart,
-} from "ai";
+import { type UIMessage, isToolUIPart } from "ai";
 import {
   extractPageMarkdownFromContext,
   logPageContextSent,
@@ -96,6 +96,7 @@ export type PendingInitialChatSubmission = {
 };
 
 type ChatbotProps = {
+  beforeComposer?: React.ReactNode;
   databaseId?: string | null;
   isSidebar?: boolean;
   onDraftDirtyChange?: (dirty: boolean) => void;
@@ -182,8 +183,12 @@ const Chatbot = (props: ChatbotProps) => {
   return (
     <ChatbotConversationController
       {...props}
-      initialAgentProfileId={threadMessagesQuery.data?.thread.agentProfileId ?? null}
-      initialAgentProfileName={threadMessagesQuery.data?.thread.agentProfile?.name ?? null}
+      initialAgentProfileId={
+        threadMessagesQuery.data?.thread.agentProfileId ?? null
+      }
+      initialAgentProfileName={
+        threadMessagesQuery.data?.thread.agentProfile?.name ?? null
+      }
       initialMessages={seededInitialMessages.messages}
       initialFeedback={queriedInitialFeedback}
       key={initialMessagesKey}
@@ -194,6 +199,7 @@ const Chatbot = (props: ChatbotProps) => {
 const ChatbotConversationController = ({
   databaseId = null,
   initialFeedback,
+  beforeComposer,
   initialMessages,
   isSidebar = false,
   onDraftDirtyChange,
@@ -229,11 +235,12 @@ const ChatbotConversationController = ({
     ContextAttachMenuEntry[]
   >([]);
   const [feedbackReadyMessageIds, setFeedbackReadyMessageIds] = useState(
-    () => new Set(
-      initialMessages
-        .filter((message) => message.role === "assistant")
-        .map((message) => message.id),
-    ),
+    () =>
+      new Set(
+        initialMessages
+          .filter((message) => message.role === "assistant")
+          .map((message) => message.id),
+      ),
   );
   const mentionMenuRef = useRef<ContextAttachMenuHandle | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -400,8 +407,8 @@ const ChatbotConversationController = ({
 
   const canApplyPageEdits = Boolean(
     isSidebar &&
-    pageId &&
-    (pageAccessLevel === "edit" || pageAccessLevel === "full"),
+      pageId &&
+      (pageAccessLevel === "edit" || pageAccessLevel === "full"),
   );
 
   const buildChatRequestBody = useCallback(
@@ -414,15 +421,18 @@ const ChatbotConversationController = ({
       clientTurnId,
       contextRefs: [
         ...(effectivePrimarySource
-          ? [{
-              id: effectivePrimarySource.id,
-              role: "primary" as const,
-              type: effectivePrimarySource.type,
-            }]
+          ? [
+              {
+                id: effectivePrimarySource.id,
+                role: "primary" as const,
+                type: effectivePrimarySource.type,
+              },
+            ]
           : []),
         ...attachments
-          .filter((attachment) =>
-            attachment.type === "page" || attachment.type === "database"
+          .filter(
+            (attachment) =>
+              attachment.type === "page" || attachment.type === "database",
           )
           .map((attachment) => ({
             id: attachment.id,
@@ -437,11 +447,7 @@ const ChatbotConversationController = ({
         .map((attachment) => attachment.id),
       threadId: requestThreadId,
     }),
-    [
-      attachments,
-      effectivePrimarySource,
-      model,
-    ],
+    [attachments, effectivePrimarySource, model],
   );
 
   const threadMessagesQueryKey = useMemo(
@@ -455,14 +461,16 @@ const ChatbotConversationController = ({
   const liveDebugger = useAgentLiveDebugger();
   const devTrace = useAiDevTrace({ threadId, workspaceId });
   const debugContextRef = useRef<Record<string, unknown>>({});
-  const handleAgentStreamData = useCallback((part: {
-    data: unknown;
-    type: string;
-  }) => {
-    handleAgentData(part);
-    liveDebugger.onData(part);
-    devTrace.record("stream-data", part);
-  }, [devTrace.record, handleAgentData, liveDebugger.onData]);
+  const handleAgentStreamData = useCallback(
+    (part: { data: unknown; type: string }) => {
+      if (part.type === "data-agent-settings")
+        emitSettingsEvent(part.data as AgentSettingsEvent);
+      handleAgentData(part);
+      liveDebugger.onData(part);
+      devTrace.record("stream-data", part);
+    },
+    [devTrace.record, handleAgentData, liveDebugger.onData],
+  );
 
   const {
     clearError,
@@ -967,8 +975,21 @@ const ChatbotConversationController = ({
         return;
       }
 
+      try {
+        await flushSettingsDrafts();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Could not preserve settings draft.",
+        );
+        return;
+      }
+
       const referencedOpenPageIds = [
-        effectivePrimarySource?.type === "page" ? effectivePrimarySource.id : null,
+        effectivePrimarySource?.type === "page"
+          ? effectivePrimarySource.id
+          : null,
         ...attachments
           .filter((attachment) => attachment.type === "page")
           .map((attachment) => attachment.id),
@@ -979,7 +1000,8 @@ const ChatbotConversationController = ({
       });
       if (unsynchronizedPage) {
         toast.error("Wait for the page to finish syncing", {
-          description: "Ask AI reads the server-owned page snapshot, so unsynced edits cannot be attached yet.",
+          description:
+            "Ask AI reads the server-owned page snapshot, so unsynced edits cannot be attached yet.",
         });
         return;
       }
@@ -1011,25 +1033,32 @@ const ChatbotConversationController = ({
       }
 
       let uploadedFiles: Awaited<ReturnType<typeof uploadAiChatFile>>[] = [];
-      devTrace.record("submission-received", {
-        files: files.map((file) => ({
-          filename: file.filename,
-          mediaType: file.mediaType,
-        })),
-        text: content.trim(),
-      }, targetThreadId);
+      devTrace.record(
+        "submission-received",
+        {
+          files: files.map((file) => ({
+            filename: file.filename,
+            mediaType: file.mediaType,
+          })),
+          text: content.trim(),
+        },
+        targetThreadId,
+      );
       try {
-        uploadedFiles = await Promise.all(files.map((part) =>
-          uploadAiChatFile({
-            part,
-            threadId: targetThreadId,
-            workspaceId,
-          })
-        ));
+        uploadedFiles = await Promise.all(
+          files.map((part) =>
+            uploadAiChatFile({
+              part,
+              threadId: targetThreadId,
+              workspaceId,
+            }),
+          ),
+        );
       } catch (uploadError) {
         devTrace.record("file-upload-error", uploadError, targetThreadId);
         toast.error("File upload failed", {
-          description: uploadError instanceof Error ? uploadError.message : "Try again.",
+          description:
+            uploadError instanceof Error ? uploadError.message : "Try again.",
         });
         throw uploadError;
       }
@@ -1051,17 +1080,21 @@ const ChatbotConversationController = ({
           uploadedFiles.map((file) => file.id),
           clientTurnId,
         );
-        devTrace.record("user-message", {
-          clientTurnId,
-          contextRefs: requestBody.contextRefs,
-          files: uploadedFiles.map((file) => ({
-            id: file.id,
-            filename: file.part.filename,
-            mediaType: file.part.mediaType,
-          })),
-          modelId: requestBody.modelId,
-          text: content.trim() || "Review the attached file(s).",
-        }, targetThreadId);
+        devTrace.record(
+          "user-message",
+          {
+            clientTurnId,
+            contextRefs: requestBody.contextRefs,
+            files: uploadedFiles.map((file) => ({
+              id: file.id,
+              filename: file.part.filename,
+              mediaType: file.part.mediaType,
+            })),
+            modelId: requestBody.modelId,
+            text: content.trim() || "Review the attached file(s).",
+          },
+          targetThreadId,
+        );
         devTrace.record("turn-start", { clientTurnId }, targetThreadId);
         posthog?.capture("ai_chat_message_submitted", {
           has_attachments: uploadedFiles.length > 0,
@@ -1121,7 +1154,8 @@ const ChatbotConversationController = ({
   );
 
   const handleSubmit = useCallback(
-    (message: PromptInputMessage) => submitText(message.text || "", message.files),
+    (message: PromptInputMessage) =>
+      submitText(message.text || "", message.files),
     [submitText],
   );
 
@@ -1319,117 +1353,122 @@ const ChatbotConversationController = ({
   }, [visibleMessages.length]);
 
   return (
-    <div
-      className={
-        isSidebar
-          ? "relative flex h-full min-h-0 flex-col"
-          : hasMessages
-            ? "relative flex min-h-full flex-col"
-            : "relative flex min-h-full flex-col justify-center"
-      }
-      ref={rootRef}
-    >
-      {!hasMessages && (
-        <div className="mx-auto mb-6 grid w-full max-w-3xl justify-items-center gap-3 px-4 text-center">
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-surface-secondary text-lg font-semibold">
-            {(initialAgentProfileName ?? "AI").slice(0, 2).toUpperCase()}
-          </div>
-          <div>
-            <h1 className="font-heading text-2xl font-semibold tracking-tight">
-              {getGreeting(session?.user?.name)}
-            </h1>
-            <p className="mt-1 text-sm text-content-secondary">
-              {initialAgentProfileName
-                ? `Chat privately with ${initialAgentProfileName}.`
-                : "Search, create, and work across your Zilobase workspace."}
-            </p>
-          </div>
-          <div className="flex max-w-2xl flex-wrap justify-center gap-2">
-            {starterPrompts(Boolean(initialAgentProfileId)).map((prompt) => (
-              <Button
-                key={prompt}
-                onClick={() => setText(prompt)}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {prompt}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
-      <ChatbotMessages
-        applyingToolCallIds={applyingToolCallIds}
-        debuggerContent={import.meta.env.DEV ? (
-          <AgentLiveDebugger
-            events={liveDebugger.events}
+    <div className="relative flex h-full min-h-0 flex-col">
+      <div
+        ref={rootRef}
+        data-ai-scroll-shell
+        className="min-h-0 flex-1 overflow-y-auto"
+      >
+        <AgentChatLayout sidebar={isSidebar}>
+          {!hasMessages && (
+            <div className="mx-auto mb-6 grid w-full max-w-3xl justify-items-center gap-3 px-4 text-center">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-surface-secondary text-lg font-semibold">
+                {(initialAgentProfileName ?? "AI").slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <h1 className="font-heading text-2xl font-semibold tracking-tight">
+                  {getGreeting(session?.user?.name)}
+                </h1>
+                <p className="mt-1 text-sm text-content-secondary">
+                  {initialAgentProfileName
+                    ? `Chat privately with ${initialAgentProfileName}.`
+                    : "Search, create, and work across your Zilobase workspace."}
+                </p>
+              </div>
+              <div className="flex max-w-2xl flex-wrap justify-center gap-2">
+                {starterPrompts(Boolean(initialAgentProfileId)).map(
+                  (prompt) => (
+                    <Button
+                      key={prompt}
+                      onClick={() => setText(prompt)}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      {prompt}
+                    </Button>
+                  ),
+                )}
+              </div>
+            </div>
+          )}
+          <ChatbotMessages
+            applyingToolCallIds={applyingToolCallIds}
+            debuggerContent={
+              import.meta.env.DEV ? (
+                <AgentLiveDebugger
+                  events={liveDebugger.events}
+                  status={status}
+                  turnStartedAt={liveDebugger.turnStartedAt}
+                />
+              ) : null
+            }
+            feedbackByMessageId={feedbackByMessageId}
+            feedbackPendingMessageId={
+              submitFeedback.isPending
+                ? submitFeedback.variables?.messageId
+                : undefined
+            }
+            feedbackReadyMessageIds={feedbackReadyMessageIds}
+            getPageEditBaselineCurrent={getPageEditBaselineCurrent}
+            getPageEditReviewAvailable={getPageEditReviewAvailable}
+            isSidebar={isSidebar}
+            messages={messages}
+            onApplyPageEdit={handleApplyPageEdit}
+            onDiscardPageEdit={handleDiscardPageEdit}
+            onRetryIncompleteDatabase={handleRetryIncompleteDatabase}
+            onSubmitFeedback={handleSubmitFeedback}
+            onTogglePageEditChanges={handleTogglePageEditChanges}
+            onUndoPageEdit={handleUndoPageEdit}
+            snapshotByToolCallId={snapshotByToolCallId}
             status={status}
-            turnStartedAt={liveDebugger.turnStartedAt}
+            threadId={threadId}
+            visibleDiffToolCallId={visibleDiffToolCallId}
+            visibleMessages={visibleMessages}
+            workspaceId={workspaceId}
           />
-        ) : null}
-        feedbackByMessageId={feedbackByMessageId}
-        feedbackPendingMessageId={
-          submitFeedback.isPending
-            ? submitFeedback.variables?.messageId
-            : undefined
-        }
-        feedbackReadyMessageIds={feedbackReadyMessageIds}
-        getPageEditBaselineCurrent={getPageEditBaselineCurrent}
-        getPageEditReviewAvailable={getPageEditReviewAvailable}
-        isSidebar={isSidebar}
-        messages={messages}
-        onApplyPageEdit={handleApplyPageEdit}
-        onDiscardPageEdit={handleDiscardPageEdit}
-        onRetryIncompleteDatabase={handleRetryIncompleteDatabase}
-        onSubmitFeedback={handleSubmitFeedback}
-        onTogglePageEditChanges={handleTogglePageEditChanges}
-        onUndoPageEdit={handleUndoPageEdit}
-        snapshotByToolCallId={snapshotByToolCallId}
-        status={status}
-        threadId={threadId}
-        visibleDiffToolCallId={visibleDiffToolCallId}
-        visibleMessages={visibleMessages}
-        workspaceId={workspaceId}
-      />
-      <ChatbotComposer
-        activeMentionQuery={activeMentionTrigger?.mentionQuery ?? ""}
-        attachments={attachments}
-        chefs={chefs}
-        contextError={contextError}
-        createThreadPending={createThread.isPending}
-        currentDatabaseId={databaseId}
-        currentPageId={pageId}
-        existingAttachmentKeys={existingAttachmentKeys}
-        hasMessages={hasMessages}
-        isContextLoading={isContextLoading}
-        isSidebar={isSidebar}
-        mentionMenuOpen={mentionMenuOpen}
-        mentionMenuRef={mentionMenuRef}
-        model={model}
-        modelSelectorOpen={modelSelectorOpen}
-        models={models}
-        onAttachContext={handleAttachContext}
-        onEntriesChange={setMentionMenuEntries}
-        onModelSelect={handleModelSelect}
-        onModelSelectorOpenChange={setModelSelectorOpen}
-        onRemoveAttachment={handleRemoveAttachment}
-        onRemovePrimary={handleRemovePrimary}
-        onStop={stop}
-        onSubmit={handleSubmit}
-        onTextChange={handleTextChange}
-        onTextareaKeyDown={handleTextareaKeyDown}
-        pageContextReady={Boolean(pageContext)}
-        primaryAttachment={primaryAttachment}
-        rootRef={rootRef}
-        selectedMentionIndex={selectedMentionIndex}
-        selectedModel={selectedModelData}
-        setSelectedMentionIndex={setSelectedMentionIndex}
-        status={status}
-        syncTextCursor={syncTextCursor}
-        text={text}
-        textareaRef={textareaRef}
-      />
+        </AgentChatLayout>
+      </div>
+      <AgentChatLayout sidebar={isSidebar}>
+        {beforeComposer}
+        <ChatbotComposer
+          activeMentionQuery={activeMentionTrigger?.mentionQuery ?? ""}
+          attachments={attachments}
+          chefs={chefs}
+          contextError={contextError}
+          createThreadPending={createThread.isPending}
+          currentDatabaseId={databaseId}
+          currentPageId={pageId}
+          existingAttachmentKeys={existingAttachmentKeys}
+          isContextLoading={isContextLoading}
+          isSidebar={isSidebar}
+          mentionMenuOpen={mentionMenuOpen}
+          mentionMenuRef={mentionMenuRef}
+          model={model}
+          modelSelectorOpen={modelSelectorOpen}
+          models={models}
+          onAttachContext={handleAttachContext}
+          onEntriesChange={setMentionMenuEntries}
+          onModelSelect={handleModelSelect}
+          onModelSelectorOpenChange={setModelSelectorOpen}
+          onRemoveAttachment={handleRemoveAttachment}
+          onRemovePrimary={handleRemovePrimary}
+          onStop={stop}
+          onSubmit={handleSubmit}
+          onTextChange={handleTextChange}
+          onTextareaKeyDown={handleTextareaKeyDown}
+          pageContextReady={Boolean(pageContext)}
+          primaryAttachment={primaryAttachment}
+          rootRef={rootRef}
+          selectedMentionIndex={selectedMentionIndex}
+          selectedModel={selectedModelData}
+          setSelectedMentionIndex={setSelectedMentionIndex}
+          status={status}
+          syncTextCursor={syncTextCursor}
+          text={text}
+          textareaRef={textareaRef}
+        />
+      </AgentChatLayout>
     </div>
   );
 };
@@ -1438,13 +1477,22 @@ export default Chatbot;
 
 function getGreeting(name?: string | null) {
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const firstName = name?.trim().split(/\s+/)[0];
   return firstName ? `${greeting}, ${firstName}` : greeting;
 }
 
 function starterPrompts(agentSelected: boolean) {
   return agentSelected
-    ? ["What can you help me with?", "Review my priorities", "Draft the next steps"]
-    : ["Summarize my workspace", "Find relevant information", "Create a project plan"];
+    ? [
+        "What can you help me with?",
+        "Review my priorities",
+        "Draft the next steps",
+      ]
+    : [
+        "Summarize my workspace",
+        "Find relevant information",
+        "Create a project plan",
+      ];
 }

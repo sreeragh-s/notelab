@@ -1,3 +1,4 @@
+import { ConnectorSetupCard } from "../settings/settings-connectors";
 "use client";
 
 import { toApiUrl } from "@/features/desktop/network/api";
@@ -69,6 +70,7 @@ const PendingAssistantStatus = ({ status }: { status: ChatStatus }) => {
   return (
     <Message from="assistant">
       <MessageContent>
+
         <div className="not-prose flex w-fit max-w-full items-center gap-2 text-content-secondary">
           <SparklesIcon aria-hidden="true" className="size-4 shrink-0" />
           <Shimmer
@@ -480,6 +482,11 @@ const ChatMessage = ({
   return (
     <Message from={message.role}>
       <MessageContent>
+        {message.parts.flatMap((part, index) => {
+          const p = part as unknown as { type: string; data?: { provider?: string; scope?: string }; output?: { type?: string; provider?: string; scope?: string } };
+          const data = p.type === "data-connector-setup" ? p.data : p.output?.type === "connector-setup" ? p.output : null;
+          return data?.provider ? [<ConnectorSetupCard key={`connect-${index}`} provider={data.provider} scope={data.scope} />] : [];
+        })}
         {partGroups.map((group) => {
           if (group.type === "database-tools") {
             return (
@@ -678,7 +685,7 @@ export const ChatbotMessages = ({
   return (
     <Conversation className={isSidebar ? "min-h-0" : "flex-none overflow-visible"}>
       <ConversationContent
-        className={hasMessages || isSidebar ? "px-0 pb-10 md:px-4" : "px-0 pb-0 md:px-4"}
+        className={hasMessages || isSidebar ? "px-0 pb-10 md:px-0" : "px-0 pb-0 md:px-0"}
         scrollClassName={isSidebar ? undefined : "h-auto! overflow-visible! [scrollbar-gutter:auto]!"}
       >
         {hasMessages ? (
