@@ -101,8 +101,11 @@ describe("standalone Custom Agent migration boundary", () => {
     expect(revisions).toContain("desiredTriggers");
     expect(revisions).toContain("webhookSecretId");
     expect(revisions).toContain('desired.kind === "connector" || desired.kind === "slack"');
-    expect(conversation).toContain("getCurrentAgentRevision(input.profileId)");
-    expect(conversation).toContain("normalizeAgentDefinition(currentRevision.definition)");
+    expect(conversation).toContain("proposeSettings");
+    expect(conversation).not.toContain("applyAgentDefinition");
+    const settings = await readFile(new URL("src/features/ai/settings/settings-service.ts", root), "utf8");
+    expect(settings).toContain("synchronizeMaterializedTriggers");
+    expect(settings).toContain("db.transaction");
   });
 
   it("exposes durable manual runs and scoped approval handling", async () => {

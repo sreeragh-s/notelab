@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { test } from "vitest";
+import { test, vi } from "vitest";
+import { Client } from "pg";
 
-import { runWithDb, runWithDbClient } from "./index";
+import { db, runWithDb, runWithDbClient, runWithIndependentDbEnv } from "./index";
 
 function fakeStandaloneClient(options: { connectError?: Error } = {}) {
   const calls = { connect: 0, end: 0 };
@@ -106,4 +107,26 @@ test("pooled execution does not acquire a redundant connection", async () => {
 
   assert.equal(result, "pooled");
   assert.equal(connects, 0);
+});
+
+
+test("streaming database work survives the parent request scope closing", async () => {
+  const connect = vi.spyOn(Client.prototype, "connect").mockImplementation(async () => undefined as never);
+  const end = vi.spyOn(Client.prototype, "end").mockImplementation(async () => undefined as never);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  let stream!: Promise<boolean>;
+  try {
+    await runWithDb({} as never, async () => {
+      stream = runWithIndependentDbEnv({ DATABASE_URL: "postgres://test:test@localhost:5432/test" }, async () => {
+        await gate;
+        return typeof db.select === "function";
+      });
+    });
+    release();
+    assert.equal(await stream, true);
+  } finally {
+    connect.mockRestore();
+    end.mockRestore();
+  }
 });
