@@ -3,8 +3,8 @@ import { readFile } from "node:fs/promises"
 import { test } from "vitest"
 
 const readMailRouteSources = async () => (await Promise.all([
-  "routes.ts", "connection-routes.ts", "message-routes.ts",
-  "organization-routes.ts", "query-routes.ts", "realtime-routes.ts",
+  "routes.ts", "connections/routes.ts", "compose/routes.ts",
+  "organization/routes.ts", "query/routes.ts", "realtime/routes.ts",
   "route-support.ts",
 ].map((file) => readFile(new URL(file, import.meta.url), "utf8")))).join("\n")
 
@@ -29,7 +29,7 @@ test("workspace connection resolution checks membership and account ownership", 
 
 test("workspace OAuth reuses identities and binds state to a workspace", async () => {
   const oauth = await readFile(
-    new URL("./google-oauth.ts", import.meta.url),
+    new URL("./provider/google-oauth.ts", import.meta.url),
     "utf8",
   )
 

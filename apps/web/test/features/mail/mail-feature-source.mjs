@@ -1,12 +1,12 @@
 const mailFeatureFiles = [
-  "/src/features/mail/pages/mail.tsx",
-  "/src/features/mail/components/mail-actions.tsx",
-  "/src/features/mail/components/mail-connection-state.tsx",
-  "/src/features/mail/components/mail-conversation-viewer.tsx",
-  "/src/features/mail/components/mail-thread-row.tsx",
-  "/src/features/mail/components/mailbox-thread-list.tsx",
-  "/src/features/mail/components/mailbox-topbar.tsx",
-  "/src/features/mail/model/mail-view-model.ts",
+  "/src/features/mail/screens/mail.tsx",
+  "/src/features/mail/messages/mail-actions.tsx",
+  "/src/features/mail/connections/mail-connection-state.tsx",
+  "/src/features/mail/messages/mail-conversation-viewer.tsx",
+  "/src/features/mail/messages/mail-thread-row.tsx",
+  "/src/features/mail/mailbox/mailbox-thread-list.tsx",
+  "/src/features/mail/mailbox/mailbox-topbar.tsx",
+  "/src/features/mail/organization/mail-view-model.ts",
 ]
 
 export async function readMailFeatureSource(readSource) {

@@ -1,6 +1,6 @@
 export function register({ assert, loadModule, readSource, test }) {
   test("mail reply helpers preserve Gmail threading and filter the connected account from reply-all", async () => {
-    const { forwardSeed, replySeed } = await loadModule("/src/features/mail/model/mail-compose.ts")
+    const { forwardSeed, replySeed } = await loadModule("/src/features/mail/compose/mail-compose.ts")
     const message = {
       bodyText: "Original body",
       cc: [{ address: "team@example.com", name: "Team" }],
@@ -25,7 +25,7 @@ export function register({ assert, loadModule, readSource, test }) {
   })
 
   test("the composer auto-saves online drafts and never creates an offline outbox", async () => {
-    const source = await readSource("/src/features/mail/components/mail-composer.tsx")
+    const source = await readSource("/src/features/mail/compose/mail-composer.tsx")
     assert.match(source, /setTimeout\([^]*1_200/)
     assert.match(source, /if \(!online \|\| !hasContent/)
     assert.match(source, /mailApiBasePath\(workspaceId\)/)
@@ -35,7 +35,7 @@ export function register({ assert, loadModule, readSource, test }) {
   })
 
   test("the composer reuses the Ask AI floating widget surface", async () => {
-    const composerSource = await readSource("/src/features/mail/components/mail-composer.tsx")
+    const composerSource = await readSource("/src/features/mail/compose/mail-composer.tsx")
     const widgetSource = await readSource("/src/shared/components/floating-widget.tsx")
 
     assert.match(composerSource, /<FloatingWidget aria-label="Mail composer"/)

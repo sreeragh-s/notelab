@@ -3,8 +3,8 @@ import { readMailFeatureSource } from "./mail-feature-source.mjs"
 export function register({ assert, readSource, test }) {
   test("mail hover actions have preview, reorder, hide, remove, and add flows", async () => {
     const [panel, settings, page] = await Promise.all([
-      readSource("/src/features/mail/components/mail-hover-actions-panel.tsx"),
-      readSource("/src/features/mail/components/mail-view-settings-menu.tsx"),
+      readSource("/src/features/mail/messages/mail-hover-actions-panel.tsx"),
+      readSource("/src/features/mail/organization/mail-view-settings-menu.tsx"),
       readMailFeatureSource(readSource),
     ])
 
@@ -19,7 +19,7 @@ export function register({ assert, readSource, test }) {
   })
 
   test("hover action catalog and specific-label configuration are complete", async () => {
-    const panel = await readSource("/src/features/mail/components/mail-hover-actions-panel.tsx")
+    const panel = await readSource("/src/features/mail/messages/mail-hover-actions-panel.tsx")
     for (const kind of ["star", "archive", "bin", "read_unread", "remind", "command", "any_label", "spam", "reply", "specific_label", "unsubscribe"]) {
       assert.match(panel, new RegExp(`${kind}:`), `missing ${kind}`)
     }

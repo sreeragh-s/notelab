@@ -10,7 +10,7 @@ import {
   MAIL_REALTIME_PROTOCOL,
   verifyMailRealtimeTicket,
   type MailRealtimeTicketClaims,
-} from "../../features/mail/mail-realtime-ticket"
+} from "../../features/mail/realtime/mail-realtime-ticket"
 import { isMailFeatureEnabled, type RuntimeEnv } from "../../shared/config/config"
 import { recordMailMetric } from "../../features/mail/mail-metrics"
 

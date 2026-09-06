@@ -2,7 +2,7 @@ import { readMailFeatureSource } from "./mail-feature-source.mjs"
 
 export function register({ assert, loadModule, readSource, readWorkspace, test }) {
   test("mail view helpers preserve filter counts and stable group ordering", async () => {
-    const model = await loadModule("/src/features/mail/model/mail-view-model.ts")
+    const model = await loadModule("/src/features/mail/organization/mail-view-model.ts")
 
     const filter = {
       filters: [
@@ -40,10 +40,10 @@ export function register({ assert, loadModule, readSource, readWorkspace, test }
 
   test("mail grouping persists configuration and renders full-index group counts", async () => {
     const [editor, groupsHook, page, routes] = await Promise.all([
-      readSource("/src/features/mail/components/mail-group-editor.tsx"),
+      readSource("/src/features/mail/organization/mail-group-editor.tsx"),
       readWorkspace("/packages/features/src/mail/queries.ts"),
       readMailFeatureSource(readSource),
-      readWorkspace("/apps/server/src/features/mail/query-routes.ts"),
+      readWorkspace("/apps/server/src/features/mail/query/routes.ts"),
     ])
 
     for (const label of ["Date", "Starred", "Important", "Email", "Email domain", "Priority", "Label", "Unread"]) {
@@ -61,7 +61,7 @@ export function register({ assert, loadModule, readSource, readWorkspace, test }
 
   test("mail group drag updates only mutable Gmail-backed groups", async () => {
     const [editor, page] = await Promise.all([
-      readSource("/src/features/mail/components/mail-group-editor.tsx"),
+      readSource("/src/features/mail/organization/mail-group-editor.tsx"),
       readMailFeatureSource(readSource),
     ])
 

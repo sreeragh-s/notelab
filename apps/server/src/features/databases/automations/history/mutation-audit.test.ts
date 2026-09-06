@@ -11,7 +11,7 @@ describe("database automation mutation-path audit", () => {
       read("databases/rows/service.ts"),
       read("databases/rows/position-service.ts"),
       read("databases/templates/service.ts"),
-      read("mail/mail-database-sync-worker.ts"),
+      read("mail/database-sync/mail-database-sync-worker.ts"),
       read("pages/page-content-routes.ts"),
       read("ai/tools/ask-ai-database-tools.ts"),
     ]);

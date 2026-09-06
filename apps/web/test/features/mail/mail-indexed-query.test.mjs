@@ -19,7 +19,7 @@ export function register({ assert, readSource, readWorkspace, test }) {
 
   test("Dexie and server filtering share the same predicate evaluator", async () => {
     const controller = await readSource(
-      "/src/features/mail/model/mail-sync-controller.ts",
+      "/src/features/mail/sync/mail-sync-controller.ts",
     )
 
     assert.match(controller, /evaluateMailFilterExpression/)

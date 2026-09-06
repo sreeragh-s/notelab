@@ -31,7 +31,7 @@ export const appRoutes = [
         getParentRoute: () => appRoute,
         path: "/mail",
         validateSearch: validateMailSearch,
-        component: lazyRouteComponent(() => import("@/features/mail/pages/mail")),
+        component: lazyRouteComponent(() => import("@/features/mail/screens/mail")),
       })]
     : []),
   createRoute({

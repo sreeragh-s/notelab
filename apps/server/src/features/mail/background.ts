@@ -1,5 +1,5 @@
-import { advanceMailIndex, publishMailIndexUpdate } from "./mail-index";
-import { drainMailDatabaseSyncOutbox } from "./mail-database-sync-worker";
+import { advanceMailIndex, publishMailIndexUpdate } from "./query/mail-index";
+import { drainMailDatabaseSyncOutbox } from "./database-sync/mail-database-sync-worker";
 import { eq } from "drizzle-orm";
 import type { RuntimeEnv } from "../../shared/config/config";
 import type { BackgroundTaskResult } from "../../infrastructure/background/contracts";

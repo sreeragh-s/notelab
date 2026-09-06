@@ -26,7 +26,7 @@ export function register({ assert, loadModule, readSource, test }) {
       readMailFeatureSource(readSource),
     ])
 
-    assert.match(routeSource, /isFeatureEnabled\("mail"\)[\s\S]*path: "\/mail"[\s\S]*validateSearch: validateMailSearch[\s\S]*lazyRouteComponent\(\(\) => import\("@\/features\/mail\/pages\/mail"\)\)/)
+    assert.match(routeSource, /isFeatureEnabled\("mail"\)[\s\S]*path: "\/mail"[\s\S]*validateSearch: validateMailSearch[\s\S]*lazyRouteComponent\(\(\) => import\("@\/features\/mail\/screens\/mail"\)\)/)
     assert.match(mailSource, /px-4 pb-8 pt-5 sm:px-6 md:px-10 lg:px-12/)
     assert.match(mailSource, /messageGroups\s*\.map/)
     assert.match(mailSource, /<MailThreadRow/)
@@ -104,8 +104,8 @@ export function register({ assert, loadModule, readSource, test }) {
   test("mail renders live Dexie threads, lazy bodies, and scriptless sanitized HTML", async () => {
     const [mailSource, controllerSource, htmlSource] = await Promise.all([
       readMailFeatureSource(readSource),
-      readSource("/src/features/mail/model/mail-sync-controller.ts"),
-      readSource("/src/features/mail/model/mail-html.ts"),
+      readSource("/src/features/mail/sync/mail-sync-controller.ts"),
+      readSource("/src/features/mail/messages/mail-html.ts"),
     ])
 
     assert.doesNotMatch(mailSource, /starterMailMessages|setMessages/)
@@ -140,7 +140,7 @@ export function register({ assert, loadModule, readSource, test }) {
   test("mail organization controls are online-only and available at thread, message, and batch scope", async () => {
     const [mailSource, controllerSource] = await Promise.all([
       readMailFeatureSource(readSource),
-      readSource("/src/features/mail/model/mail-sync-controller.ts"),
+      readSource("/src/features/mail/sync/mail-sync-controller.ts"),
     ])
 
     assert.match(mailSource, /batchSelection\.size[\s\S]*Mark selected read[\s\S]*Archive selected/)

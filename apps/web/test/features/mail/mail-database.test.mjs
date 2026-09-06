@@ -1,7 +1,7 @@
 export function register({ assert, loadModule, test }) {
   test("mail cache names are scoped to origin, user, workspace, and binding", async () => {
     const { mailDatabaseName } = await loadModule(
-      "/src/features/mail/cache/mail-database.ts",
+      "/src/features/mail/storage/mail-database.ts",
     )
 
     assert.equal(
@@ -21,7 +21,7 @@ export function register({ assert, loadModule, test }) {
     globalThis.indexedDB = fake.indexedDB
     globalThis.IDBKeyRange = fake.IDBKeyRange
     const { applyMailSyncResponse, destroyMailDatabase, openMailDatabase } =
-      await loadModule("/src/features/mail/cache/mail-database.ts")
+      await loadModule("/src/features/mail/storage/mail-database.ts")
     const database = await openMailDatabase({
       apiOrigin: "https://api.example.com",
       bindingId: "binding-transaction",
@@ -101,7 +101,7 @@ export function register({ assert, loadModule, test }) {
 
   test("mail cache transactions roll back all writes on failure", async () => {
     const { destroyMailDatabase, openMailDatabase } = await loadModule(
-      "/src/features/mail/cache/mail-database.ts",
+      "/src/features/mail/storage/mail-database.ts",
     )
     const database = await openMailDatabase({
       apiOrigin: "https://api.example.com",
@@ -131,7 +131,7 @@ export function register({ assert, loadModule, test }) {
 
   test("mail account replacement rebuilds the workspace binding cache", async () => {
     const { destroyMailDatabase, openMailDatabase } = await loadModule(
-      "/src/features/mail/cache/mail-database.ts",
+      "/src/features/mail/storage/mail-database.ts",
     )
     const first = await openMailDatabase({
       apiOrigin: "https://replacement.example.com",
@@ -167,7 +167,7 @@ export function register({ assert, loadModule, test }) {
 
   test("incompatible mail cache identity is rebuilt without retaining message data", async () => {
     const { destroyMailDatabase, openMailDatabase } = await loadModule(
-      "/src/features/mail/cache/mail-database.ts",
+      "/src/features/mail/storage/mail-database.ts",
     )
     const identity = {
       apiOrigin: "https://corrupt.example.com",
@@ -194,7 +194,7 @@ export function register({ assert, loadModule, test }) {
       optimisticallyModifyMessage,
       optimisticallyModifyThread,
       restoreMailMutation,
-    } = await loadModule("/src/features/mail/cache/mail-database.ts")
+    } = await loadModule("/src/features/mail/storage/mail-database.ts")
     const database = await openMailDatabase({
       apiOrigin: "https://api.example.com",
       bindingId: "binding-optimistic",
@@ -232,7 +232,7 @@ export function register({ assert, loadModule, test }) {
       deleteMailLabelFromCache,
       destroyMailDatabase,
       openMailDatabase,
-    } = await loadModule("/src/features/mail/cache/mail-database.ts")
+    } = await loadModule("/src/features/mail/storage/mail-database.ts")
     const database = await openMailDatabase({
       apiOrigin: "https://api.example.com",
       bindingId: "binding-label-delete",
@@ -270,7 +270,7 @@ export function register({ assert, loadModule, test }) {
       destroyMailDatabase,
       openMailDatabase,
       queueMailReconciliation,
-    } = await loadModule("/src/features/mail/cache/mail-database.ts")
+    } = await loadModule("/src/features/mail/storage/mail-database.ts")
     const database = await openMailDatabase({
       apiOrigin: "https://api.example.com",
       bindingId: "binding-reconciliation",

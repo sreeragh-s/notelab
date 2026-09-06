@@ -3,7 +3,7 @@ import { readMailFeatureSource } from "./mail-feature-source.mjs"
 export function register({ assert, readSource, readWorkspace, test }) {
   test("database sync shows processing state and locks an active destination", async () => {
     const [panel, queries] = await Promise.all([
-      readSource("/src/features/mail/components/mail-database-sync-panel.tsx"),
+      readSource("/src/features/mail/database-sync/mail-database-sync-panel.tsx"),
       readWorkspace("/packages/features/src/mail/queries.ts"),
     ])
     assert.match(queries, /database-sync-status/)

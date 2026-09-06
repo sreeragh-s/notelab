@@ -14,7 +14,7 @@ export function register({ assert, loadModule, test }) {
     globalThis.Element = parsed.window.Element
     globalThis.Node = parsed.window.Node
     try {
-      const { sanitizeMailHtml } = await loadModule("/src/features/mail/model/mail-html.ts")
+      const { sanitizeMailHtml } = await loadModule("/src/features/mail/messages/mail-html.ts")
       const result = sanitizeMailHtml(
         '<script>alert(1)</script><img src="https://tracker.example/pixel" srcset="https://tracker.example/2x"><a href="javascript:alert(1)">bad</a><a href="https://example.com">safe</a>',
         {},

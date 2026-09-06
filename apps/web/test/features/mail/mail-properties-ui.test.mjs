@@ -6,7 +6,7 @@ export function register({ assert, readSource, readWorkspace, test }) {
       readSource("/src/features/databases/properties/editors/add-database-property-menu.tsx"),
       readSource("/src/features/databases/properties/shared/property-type-picker.tsx"),
       readSource("/src/features/databases/properties/shared/property-value-control.tsx"),
-      readSource("/src/features/mail/components/mail-properties-panel.tsx"),
+      readSource("/src/features/mail/organization/mail-properties-panel.tsx"),
     ])
 
     assert.match(databaseAdd, /PropertyTypePicker/)
@@ -20,7 +20,7 @@ export function register({ assert, readSource, readWorkspace, test }) {
 
   test("mail properties support search, visibility, ordering, CRUD, cells, and thread editing", async () => {
     const [panel, page, hook] = await Promise.all([
-      readSource("/src/features/mail/components/mail-properties-panel.tsx"),
+      readSource("/src/features/mail/organization/mail-properties-panel.tsx"),
       readMailFeatureSource(readSource),
       readWorkspace("/packages/features/src/mail/hooks.ts"),
     ])
@@ -42,8 +42,8 @@ export function register({ assert, readSource, readWorkspace, test }) {
 
   test("custom properties participate in saved filters and groups", async () => {
     const [filter, group, page] = await Promise.all([
-      readSource("/src/features/mail/components/mail-filter-editor.tsx"),
-      readSource("/src/features/mail/components/mail-group-editor.tsx"),
+      readSource("/src/features/mail/organization/mail-filter-editor.tsx"),
+      readSource("/src/features/mail/organization/mail-group-editor.tsx"),
       readMailFeatureSource(readSource),
     ])
 

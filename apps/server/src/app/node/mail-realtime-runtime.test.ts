@@ -7,7 +7,7 @@ import {
   createMailRealtimeTicket,
   MAIL_REALTIME_AUTH_PROTOCOL_PREFIX,
   MAIL_REALTIME_PROTOCOL,
-} from "../../features/mail/mail-realtime-ticket"
+} from "../../features/mail/realtime/mail-realtime-ticket"
 import type { NodeRealtimeBus } from "../../infrastructure/node/realtime-bus"
 import { attachNodeMailRealtimeRuntime } from "./mail-realtime-runtime"
 

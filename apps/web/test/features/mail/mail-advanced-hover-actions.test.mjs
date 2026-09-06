@@ -4,9 +4,9 @@ export function register({ assert, readSource, readWorkspace, test }) {
   test("advanced hover actions connect reminders, commands, labels, reply, and unsubscribe", async () => {
     const [page, dialog, reminders, routes] = await Promise.all([
       readMailFeatureSource(readSource),
-      readSource("/src/features/mail/components/mail-row-action-dialog.tsx"),
+      readSource("/src/features/mail/messages/mail-row-action-dialog.tsx"),
       readWorkspace("/packages/features/src/mail/hooks.ts"),
-      readWorkspace("/apps/server/src/features/mail/query-routes.ts"),
+      readWorkspace("/apps/server/src/features/mail/query/routes.ts"),
     ])
     assert.match(dialog, /Mail commands/)
     assert.match(dialog, /Apply a label/)
@@ -20,7 +20,7 @@ export function register({ assert, readSource, readWorkspace, test }) {
   })
 
   test("unsubscribe validation checks DNS, redirects, credentials, and private networks", async () => {
-    const source = await readWorkspace("/apps/server/src/features/mail/safe-unsubscribe.ts")
+    const source = await readWorkspace("/apps/server/src/features/mail/compose/safe-unsubscribe.ts")
     assert.match(source, /cloudflare-dns\.com\/dns-query/)
     assert.match(source, /redirect: "manual"/)
     assert.match(source, /MAX_REDIRECTS/)

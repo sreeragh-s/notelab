@@ -22,7 +22,7 @@ export function register({ assert, readSource, test }) {
   test("mail routing accepts persisted IDs and repairs unknown IDs to protected Inbox", async () => {
     const [validator, page] = await Promise.all([
       readSource("/src/app/routing/search-validators.ts"),
-      readSource("/src/features/mail/pages/mail.tsx"),
+      readSource("/src/features/mail/screens/mail.tsx"),
     ])
 
     assert.match(validator, /typeof search\.view === "string" && search\.view\.trim\(\)/)

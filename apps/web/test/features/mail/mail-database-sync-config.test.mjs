@@ -1,8 +1,8 @@
 export function register({ assert, readSource, test }) {
   test("database settings reuse the mail view drawer and lock the destination workspace", async () => {
     const [panel, settings] = await Promise.all([
-      readSource("/src/features/mail/components/mail-database-sync-panel.tsx"),
-      readSource("/src/features/mail/components/mail-view-settings-menu.tsx"),
+      readSource("/src/features/mail/database-sync/mail-database-sync-panel.tsx"),
+      readSource("/src/features/mail/organization/mail-view-settings-menu.tsx"),
     ])
     assert.match(settings, /databaseEditor/)
     assert.match(panel, /Destination workspace/)
@@ -11,7 +11,7 @@ export function register({ assert, readSource, test }) {
   })
 
   test("database sync is explicit, confirmed, and records a new-only boundary", async () => {
-    const panel = await readSource("/src/features/mail/components/mail-database-sync-panel.tsx")
+    const panel = await readSource("/src/features/mail/database-sync/mail-database-sync-panel.tsx")
     assert.match(panel, /Subject → Title is required/)
     assert.match(panel, /Create property/)
     assert.match(panel, /window\.confirm/)

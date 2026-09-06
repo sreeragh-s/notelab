@@ -131,9 +131,9 @@ export {
 } from "../features/databases/realtime/outbox";
 export { drainNavigationRealtimeOutbox } from "../features/workspaces/navigation-realtime/outbox";
 export { expireTemporaryMemberships } from "../features/memberships";
-export { renewGmailWatches } from "../features/mail/gmail-watch";
-export { advancePendingMailIndexes } from "../features/mail/mail-index";
-export { drainMailDatabaseSyncOutbox } from "../features/mail/mail-database-sync-worker";
+export { renewGmailWatches } from "../features/mail/sync/gmail-watch";
+export { advancePendingMailIndexes } from "../features/mail/query/mail-index";
+export { drainMailDatabaseSyncOutbox } from "../features/mail/database-sync/mail-database-sync-worker";
 export {
   getDatabaseAutomationEventCaptureMetrics,
   promoteClosedDatabaseAutomationEventWindows,

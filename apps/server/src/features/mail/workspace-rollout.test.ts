@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises"
 import { test } from "vitest"
 
 const readMailRouteSources = async () => (await Promise.all([
-  "routes.ts", "connection-routes.ts", "route-support.ts",
+  "routes.ts", "connections/routes.ts", "route-support.ts",
 ].map((file) => readFile(new URL(file, import.meta.url), "utf8")))).join("\n")
 
 test("workspace rollout has no unscoped authenticated mail compatibility path", async () => {
@@ -27,7 +27,7 @@ test("workspace rollout has no unscoped authenticated mail compatibility path", 
 test("workspace ownership gates every mailbox and permits identity reuse only through private bindings", async () => {
   const [routes, oauth] = await Promise.all([
     readMailRouteSources(),
-    readFile(new URL("./google-oauth.ts", import.meta.url), "utf8"),
+    readFile(new URL("./provider/google-oauth.ts", import.meta.url), "utf8"),
   ])
   assert.match(routes, /requireWorkspaceMember\(c, workspaceId, user\.id\)/)
   assert.match(routes, /eq\(gmailWorkspaceConnection\.workspaceId, workspaceId\)/)

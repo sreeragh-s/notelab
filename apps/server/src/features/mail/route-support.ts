@@ -11,13 +11,13 @@ import { db } from "../../infrastructure/database";
 import { gmailAccount, gmailWorkspaceConnection, member } from "../../infrastructure/database/schema";
 import type { AppBindings } from "../../shared/types";
 import { invalidateDatabaseAutomationDependencies } from "../databases/automations/service";
-import { GmailOauthError } from "./google-oauth";
-import { clearGmailAccessTokenCache, createGmailGateway, GmailApiError } from "./gmail-gateway";
-import { MailComposeError, parseMailComposeRequest } from "./mail-mime";
+import { GmailOauthError } from "./provider/google-oauth";
+import { clearGmailAccessTokenCache, createGmailGateway, GmailApiError } from "./provider/gmail-gateway";
+import { MailComposeError, parseMailComposeRequest } from "./compose/mail-mime";
 import { recordMailMetric } from "./mail-metrics";
 import { MailConcurrencyError, withMailUserConcurrency } from "./user-concurrency";
-import { MailViewServiceError } from "./mail-views";
-import { MailPropertyError } from "./mail-properties";
+import { MailViewServiceError } from "./organization/mail-views";
+import { MailPropertyError } from "./organization/mail-properties";
 
 
 export function oauthError(c: Context<AppBindings>, error: unknown) {

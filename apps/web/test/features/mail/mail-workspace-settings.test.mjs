@@ -16,10 +16,10 @@ export function register({ assert, readSource, test }) {
   test("Mail uses the active workspace API and replaces toolbar disconnect with view settings", async () => {
     const page = await readMailFeatureSource(readSource)
     const controller = await readSource(
-      "/src/features/mail/model/mail-sync-controller.ts",
+      "/src/features/mail/sync/mail-sync-controller.ts",
     )
     const menu = await readSource(
-      "/src/features/mail/components/mail-view-settings-menu.tsx",
+      "/src/features/mail/organization/mail-view-settings-menu.tsx",
     )
 
     assert.match(page, /useActiveWorkspaceId\(\)/)

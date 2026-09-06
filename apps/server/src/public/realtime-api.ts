@@ -17,7 +17,7 @@ export {
   MAIL_REALTIME_PROTOCOL,
   verifyMailRealtimeTicket,
   type MailRealtimeTicketClaims,
-} from "../features/mail/mail-realtime-ticket";
+} from "../features/mail/realtime/mail-realtime-ticket";
 export type { MailNotificationEvent } from "../infrastructure/runtime/runtime-adapter";
 export {
   NAVIGATION_REALTIME_AUTH_PROTOCOL_PREFIX,

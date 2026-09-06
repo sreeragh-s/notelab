@@ -7,7 +7,7 @@ export function register({ assert, readSource, readWorkspace, test }) {
       readMailFeatureSource(readSource),
       readSource("/src/features/sidebar/app-sidebar.tsx"),
       readWorkspace("/packages/features/src/mail/queries.ts"),
-      readSource("/src/features/mail/model/mail-realtime.ts"),
+      readSource("/src/features/mail/realtime/mail-realtime.ts"),
     ])
     assert.doesNotMatch(flags, /mailOrganization/)
     assert.doesNotMatch(page, /organizationEnabled|legacyProviderView|mailOrganization/)

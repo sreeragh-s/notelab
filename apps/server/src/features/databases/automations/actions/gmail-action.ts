@@ -5,9 +5,9 @@ import { isMailFeatureEnabled, type RuntimeEnv } from "../../../../shared/config
 import { db } from "../../../../infrastructure/database";
 import { databaseAutomationDelivery, gmailAccount, gmailWorkspaceConnection, member, user } from "../../../../infrastructure/database/schema";
 import { invalidateDatabaseAutomationDependencies } from "../service";
-import { createGmailGateway, clearGmailAccessTokenCache, GmailApiError } from "../../../mail/gmail-gateway";
-import { sendGmailComposition } from "../../../mail/mail-compose";
-import { parseMailComposeRequest } from "../../../mail/mail-mime";
+import { createGmailGateway, clearGmailAccessTokenCache, GmailApiError } from "../../../mail/provider/gmail-gateway";
+import { sendGmailComposition } from "../../../mail/compose/mail-compose";
+import { parseMailComposeRequest } from "../../../mail/compose/mail-mime";
 import { withMailUserConcurrency } from "../../../mail/user-concurrency";
 import { AutomationActionError, RetryableAutomationActionError } from "../execution/action-error";
 import { type ExecutionContext } from "../execution/execution-context";

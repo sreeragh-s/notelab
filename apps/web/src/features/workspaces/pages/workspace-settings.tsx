@@ -40,7 +40,7 @@ import { GoogleIcon } from "@/shared/components/google-icon"
 import {
   destroyMailDatabase,
   mailDatabaseName,
-} from "@/features/mail/cache/mail-database"
+} from "@/features/mail/storage/mail-database"
 import { useNotionImport } from "@/features/notion-import/index"
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
 import { useWorkspaces, useDeleteWorkspace, useUpdateWorkspace } from "@zilobase/features/workspaces/react";

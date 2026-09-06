@@ -2,11 +2,11 @@ import { Hono } from "hono"
 
 import { isMailFeatureEnabled } from "../../shared/config/config"
 import type { AppBindings } from "../../shared/types"
-import { mailConnectionRoutes, mailProviderCallbackRoutes } from "./connection-routes"
-import { mailMessageRoutes } from "./message-routes"
-import { mailOrganizationRoutes, mailViewStatusRoutes } from "./organization-routes"
-import { mailQueryRoutes, mailSyncRoutes } from "./query-routes"
-import { mailRealtimeRoutes } from "./realtime-routes"
+import { mailConnectionRoutes, mailProviderCallbackRoutes } from "./connections/routes"
+import { mailMessageRoutes } from "./compose/routes"
+import { mailOrganizationRoutes, mailViewStatusRoutes } from "./organization/routes"
+import { mailQueryRoutes, mailSyncRoutes } from "./query/routes"
+import { mailRealtimeRoutes } from "./realtime/routes"
 import { workspaceIdFromContext } from "./route-support"
 
 export {

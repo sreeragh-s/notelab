@@ -1,6 +1,6 @@
 export function register({ assert, loadModule, test }) {
   test("mail thread loading coalesces concurrent intent and foreground requests", async () => {
-    const { loadMailThreadOnce } = await loadModule("/src/features/mail/model/mail-thread-loader.ts")
+    const { loadMailThreadOnce } = await loadModule("/src/features/mail/messages/mail-thread-loader.ts")
     const inFlight = new Map()
     let loads = 0
     let finish

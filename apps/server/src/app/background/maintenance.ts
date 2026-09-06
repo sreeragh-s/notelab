@@ -11,10 +11,10 @@ import { drainDatabaseAutomationRuns } from "../../features/databases/automation
 import { scanDueDatabaseAutomationSchedules } from "../../features/databases/automations/triggers/scheduler";
 import { drainDatabaseRealtimeOutbox } from "../../features/databases/realtime/outbox";
 import { expireTemporaryMemberships } from "../../features/memberships";
-import { renewGmailWatches } from "../../features/mail/gmail-watch";
-import { advancePendingMailIndexes } from "../../features/mail/mail-index";
-import { drainMailDatabaseSyncOutbox } from "../../features/mail/mail-database-sync-worker";
-import { cleanupExpiredGmailSendOperations } from "../../features/mail/mail-compose";
+import { renewGmailWatches } from "../../features/mail/sync/gmail-watch";
+import { advancePendingMailIndexes } from "../../features/mail/query/mail-index";
+import { drainMailDatabaseSyncOutbox } from "../../features/mail/database-sync/mail-database-sync-worker";
+import { cleanupExpiredGmailSendOperations } from "../../features/mail/compose/mail-compose";
 import { drainInProductNotificationOutbox } from "../../features/notifications/outbox";
 import { drainNavigationRealtimeOutbox } from "../../features/workspaces/navigation-realtime/outbox";
 import type { RuntimeEnv } from "../../shared/config/config";
