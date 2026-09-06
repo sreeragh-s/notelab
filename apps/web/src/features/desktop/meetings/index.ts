@@ -1,1 +1,1 @@
-export { useMeetingCapture } from "./use-meeting-capture"
+export { createNativeMeetingCaptureRuntime } from "./native-capture-runtime";

@@ -91,6 +91,10 @@
         "patterns": ["apps/web/src/features/library/**"]
       },
       {
+        "name": "web-meeting-capture",
+        "patterns": ["apps/web/src/features/meetings/capture/**"]
+      },
+      {
         "name": "web-meetings",
         "patterns": ["apps/web/src/features/meetings/**"]
       },
@@ -208,7 +212,8 @@
           "web-tasks",
           "web-desktop",
           "web-platform",
-          "web-offline"
+          "web-offline",
+          "web-meeting-capture"
         ]
       },
       {
@@ -339,7 +344,7 @@
           "web-ai",
           "web-comments",
           "web-databases",
-          "web-desktop",
+          "web-meeting-capture",
           "web-platform",
           "web-editor",
           "web-offline",
@@ -376,6 +381,10 @@
           "web-sidebar",
           "web-teamspaces"
         ]
+      },
+      {
+        "from": "web-meeting-capture",
+        "allow": ["web-meeting-capture"]
       },
       {
         "from": "web-meetings",
@@ -419,7 +428,7 @@
           "web-desktop",
           "web-platform",
           "web-editor",
-          "web-meetings",
+          "web-meeting-capture",
           "web-offline",
           "web-pages",
           "web-shared"
@@ -606,6 +615,8 @@
     "apps/web/src/features/editor/extensions/meeting-transcript-preview.ts",
     "apps/web/src/features/editor/extensions/meeting-transcript-scroll.ts",
     "apps/web/src/features/meetings/capture/browser-meeting-capture.ts",
+    "apps/web/src/features/meetings/capture/browser-audio-processing.ts",
+    "apps/web/src/features/meetings/capture/browser-meeting-transport.ts",
     "apps/web/src/features/meetings/capture/browser-meeting-recovery.ts",
     "apps/web/src/features/editor/extensions/meeting/meeting-transcript-text.ts",
     "apps/web/src/features/offline/documents/offline-structure-guard.ts",

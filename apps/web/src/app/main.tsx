@@ -1,3 +1,4 @@
+import { configureApplicationMeetingCapture } from "./runtime/configure-meeting-capture";
 import React from "react";
 import { configureApplicationSessions } from "./runtime/configure-sessions";
 import { configureApplicationRequests } from "./runtime/configure-requests";
@@ -25,6 +26,7 @@ import "./styles.css";
 
 configureApplicationSessions();
 configureApplicationRequests();
+configureApplicationMeetingCapture();
 installDesktopDiagnostics();
 void bootstrap();
 

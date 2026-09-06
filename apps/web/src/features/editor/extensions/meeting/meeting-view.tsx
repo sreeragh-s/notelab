@@ -77,7 +77,7 @@ import {
 } from "../meeting-transcript-preview"
 import { meetingTranscriptPlainText } from "./meeting-transcript-text"
 import { useMeetingCollaboration } from "./use-meeting-collaboration"
-import { useMeetingCapture } from "@/features/desktop/meetings/index"
+import { useMeetingCapture } from "@/features/meetings/capture"
 
 type MeetingTab = "summary" | "notes" | "transcript"
 

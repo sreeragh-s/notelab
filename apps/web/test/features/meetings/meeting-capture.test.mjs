@@ -13,7 +13,7 @@ export function register({ assert, loadModule, test }) {
 
   test("browser streaming resampler preserves state across callback chunks", async () => {
     const { StreamingResampler } = await loadModule(
-      "/src/features/meetings/capture/browser-meeting-capture.ts",
+      "/src/features/meetings/capture/browser-audio-processing.ts",
     )
     const resampler = new StreamingResampler(48_000, 24_000)
     const first = resampler.process(new Float32Array(241).fill(0.25))
@@ -24,7 +24,7 @@ export function register({ assert, loadModule, test }) {
 
   test("browser meeting transport pauses and resumes on the existing socket", async () => {
     const { BrowserMeetingTransport } = await loadModule(
-      "/src/features/meetings/capture/browser-meeting-capture.ts",
+      "/src/features/meetings/capture/browser-meeting-transport.ts",
     )
     const sockets = []
     const timers = new Map()
@@ -97,7 +97,7 @@ export function register({ assert, loadModule, test }) {
 
   test("browser meeting transport reports live transcript deltas", async () => {
     const { BrowserMeetingTransport } = await loadModule(
-      "/src/features/meetings/capture/browser-meeting-capture.ts",
+      "/src/features/meetings/capture/browser-meeting-transport.ts",
     )
     const sockets = []
     const deltas = []
@@ -154,7 +154,7 @@ export function register({ assert, loadModule, test }) {
 
   test("browser meeting transport keeps microphone and system audio in parallel lanes", async () => {
     const { BrowserMeetingTransport } = await loadModule(
-      "/src/features/meetings/capture/browser-meeting-capture.ts",
+      "/src/features/meetings/capture/browser-meeting-transport.ts",
     )
     const sockets = []
     const transport = new BrowserMeetingTransport(
@@ -200,7 +200,7 @@ export function register({ assert, loadModule, test }) {
 
   test("browser meeting transport replays only audio the server has not acknowledged", async () => {
     const { BrowserMeetingTransport } = await loadModule(
-      "/src/features/meetings/capture/browser-meeting-capture.ts",
+      "/src/features/meetings/capture/browser-meeting-transport.ts",
     )
     const sockets = []
     const timers = new Map()
@@ -255,7 +255,7 @@ export function register({ assert, loadModule, test }) {
 
   test("browser meeting transport reconnects only while recording", async () => {
     const { BrowserMeetingTransport } = await loadModule(
-      "/src/features/meetings/capture/browser-meeting-capture.ts",
+      "/src/features/meetings/capture/browser-meeting-transport.ts",
     )
     const sockets = []
     const timers = new Map()
@@ -302,7 +302,7 @@ export function register({ assert, loadModule, test }) {
 
   test("browser meeting transport does not retry permanent provider configuration failures", async () => {
     const { BrowserMeetingTransport } = await loadModule(
-      "/src/features/meetings/capture/browser-meeting-capture.ts",
+      "/src/features/meetings/capture/browser-meeting-transport.ts",
     )
     const sockets = []
     const timers = new Map()
@@ -338,7 +338,7 @@ export function register({ assert, loadModule, test }) {
 
   test("browser meeting transport bounds repeated transient reconnects", async () => {
     const { BrowserMeetingTransport } = await loadModule(
-      "/src/features/meetings/capture/browser-meeting-capture.ts",
+      "/src/features/meetings/capture/browser-meeting-transport.ts",
     )
     const sockets = []
     const timers = new Map()
