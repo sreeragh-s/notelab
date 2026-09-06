@@ -20,6 +20,7 @@ Streaming work, draft flushing, tool approvals and queued runs have different li
 
 ## Focused guides
 
+- [Browser conversation state and presentation](conversations.md)
 - [Agent execution and MCP](execution-and-mcp.md)
 - [Settings drafts and publication](settings.md)
 

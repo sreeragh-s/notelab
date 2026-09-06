@@ -190,7 +190,7 @@ export function register({ readSource, assert, test }) {
   })
   test("both chats keep the composer outside their scrolling history", async () => {
     const chat = await readSource("/src/features/ai/screens/custom-agent.tsx")
-    const personal = await readSource("/src/features/ai/conversations/components/elements/chatbot.tsx")
+    const personal = await readSource("/src/features/ai/conversations/components/chatbot-conversation.tsx")
     for (const source of [chat, personal]) {
       assert.match(source, /data-ai-scroll-shell[\s\S]*?overflow-y-auto/)
       assert.match(source, /<\/AgentChatLayout>\s*<\/div>\s*<AgentChatLayout[^>]*>\s*\{beforeComposer\}\s*<ChatbotComposer/)

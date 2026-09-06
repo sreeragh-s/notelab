@@ -2,7 +2,7 @@ export function register({ readSource, assert, test }) {
   test("Ask AI stays a draft until the first message is submitted", async () => {
     const stateSource = await readSource("/src/features/ai/conversations/use-ai-chat-thread-state.ts")
     const actionsSource = await readSource("/src/features/ai/conversations/use-ai-chat-thread-actions.ts")
-    const chatbotSource = await readSource("/src/features/ai/conversations/components/elements/chatbot.tsx")
+    const chatbotSource = await readSource("/src/features/ai/conversations/use-chatbot-conversation.ts")
 
     assert.doesNotMatch(stateSource, /useCreateAiChatThread/)
     assert.doesNotMatch(actionsSource, /useCreateAiChatThread/)
