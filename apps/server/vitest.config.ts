@@ -12,6 +12,7 @@ export default defineConfig({
         "src/**/*.d.ts",
         "src/scripts/**",
         "src/infrastructure/database/schema.ts",
+        "src/infrastructure/database/schema/**",
         "src/entrypoints/**",
         "src/app/node/server.ts",
       ],

@@ -758,7 +758,7 @@
     "minTokens": 75,
     // The canonical Drizzle schema intentionally repeats concrete column
     // declarations; abstracting them would obscure persistence contracts.
-    "ignore": ["apps/server/src/infrastructure/database/schema.ts"],
+    "ignore": ["apps/server/src/infrastructure/database/schema.ts", "apps/server/src/infrastructure/database/schema/**"],
     "threshold": 3
   },
   "health": {

@@ -1,3 +1,5 @@
+import { getTableConfig } from "drizzle-orm/pg-core"
+import * as schema from "../../infrastructure/database/schema"
 import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import { test } from "vitest"
@@ -23,10 +25,9 @@ test("workspace rollout has no unscoped authenticated mail compatibility path", 
 })
 
 test("workspace ownership gates every mailbox and permits identity reuse only through private bindings", async () => {
-  const [routes, oauth, schema] = await Promise.all([
+  const [routes, oauth] = await Promise.all([
     readMailRouteSources(),
     readFile(new URL("./google-oauth.ts", import.meta.url), "utf8"),
-    readFile(new URL("../../infrastructure/database/schema.ts", import.meta.url), "utf8"),
   ])
   assert.match(routes, /requireWorkspaceMember\(c, workspaceId, user\.id\)/)
   assert.match(routes, /eq\(gmailWorkspaceConnection\.workspaceId, workspaceId\)/)
@@ -34,9 +35,9 @@ test("workspace ownership gates every mailbox and permits identity reuse only th
   assert.match(routes, /eq\(gmailAccount\.userId, user\.id\)/)
   assert.match(oauth, /target: \[gmailAccount\.userId, gmailAccount\.googleSubject\]/)
   assert.match(oauth, /gmailWorkspaceConnection\.workspaceId,[\s\S]*gmailWorkspaceConnection\.userId/)
-  assert.match(schema, /gmail_account_owner_subject_unique/)
-  assert.match(schema, /gmail_workspace_connection_workspace_user_unique/)
-  assert.doesNotMatch(schema, /export const gmailConnection/)
+  assert.ok(getTableConfig(schema.gmailAccount).indexes.some(index => index.config.name === "gmail_account_owner_subject_unique"))
+  assert.ok(getTableConfig(schema.gmailWorkspaceConnection).indexes.some(index => index.config.name === "gmail_workspace_connection_workspace_user_unique"))
+  assert.equal("gmailConnection" in schema, false)
 })
 
 test("workspace rollout exposes maintenance for Node and alternate deployment adapters", async () => {
