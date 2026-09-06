@@ -30,8 +30,7 @@
       "packages/tiptap-comment-extension"
     ]
   },
-  // Pass-by-pass architecture adoption starts with the domain-neutral web
-  // layer. Complete production coverage is enabled in the final pass.
+  // Capability rules enforce the documented production dependency direction.
   "boundaries": {
     "zones": [
       {
@@ -229,7 +228,6 @@
         "from": "web-sidebar",
         "allow": [
           "package-features",
-          "web-app",
           "web-shared",
           "web-sidebar",
           "web-teamspaces",
@@ -246,12 +244,12 @@
         ]
       },
       {
-        // The published @zilobase/edition-web contract resolves to the
-        // community edition implementation under app during local analysis.
+        // Edition consumers can use the contract and empty community module.
+        // Feature implementations cannot import app composition.
         "from": "web-auth",
         "allow": [
           "package-features",
-          "web-app",
+          "web-edition-contract",
           "web-auth",
           "web-desktop",
           "web-platform",
@@ -262,7 +260,7 @@
         "from": "web-settings",
         "allow": [
           "package-features",
-          "web-app",
+          "web-edition-contract",
           "web-desktop",
           "web-platform",
           "web-offline",
@@ -300,7 +298,6 @@
         "allow": [
           "package-features",
           "package-page-context",
-          "web-app",
           "web-ai",
           "web-comments",
           "web-desktop",
@@ -319,7 +316,6 @@
         "allow": [
           "package-features",
           "web-ai",
-          "web-app",
           "web-comments",
           "web-databases",
           "web-desktop",
@@ -400,7 +396,6 @@
         "from": "web-meetings",
         "allow": [
           "package-features",
-          "web-app",
           "web-databases",
           "web-desktop",
           "web-platform",
@@ -433,7 +428,6 @@
         "from": "web-desktop",
         "allow": [
           "package-features",
-          "web-app",
           "web-auth",
           "web-desktop",
           "web-platform",

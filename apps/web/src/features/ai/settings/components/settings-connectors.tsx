@@ -1,3 +1,4 @@
+import { describeConnectorSetup, connectorActionState } from "../model/connector-setup";
 import { McpConnectionsPanel } from "./mcp-connections";
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -38,41 +39,17 @@ export function ConnectorSetupCard({
       ? { type: "personal" }
       : { type: "agent", agentProfileId: scope };
   const agent = useAiAgentProfile(scope === "personal" ? null : scope);
-  const mayConnect =
-    scope === "personal" ||
-    agent.data?.role === "owner" ||
-    agent.data?.role === "editor";
   const connections = useMcpConnections(ref);
   const gmail = useQuery({
     ...mailConnectionQueryOptions(apiFetch, workspaceId),
     enabled: provider === "gmail" && !!workspaceId,
   });
   const [connecting, setConnecting] = React.useState(false);
-  const approvedId = provider.startsWith("approved:")
-    ? provider.slice(9)
-    : null;
-  const entry = approvedId
-    ? approved.data?.find((x) => x.id === approvedId) && {
-        ...approved.data.find((x) => x.id === approvedId)!,
-        available: true,
-        availabilityReason: null,
-      }
-    : catalog.data?.find((x) => x.id === provider);
-  const existing = connections.data?.find((c) =>
-    approvedId
-      ? c.endpointUrl ===
-        approved.data?.find((x) => x.id === approvedId)?.endpointUrl
-      : c.catalogId === provider,
-  );
-  const connected =
-    provider === "gmail"
-      ? gmail.data?.status === "connected"
-      : existing?.state === "connected";
-  const unavailable =
-    provider === "gmail"
-      ? scope !== "personal" || gmail.data?.providerConfigured === false
-      : !entry?.available;
-  const label = provider === "gmail" ? "Gmail" : (entry?.label ?? provider);
+  const setup = describeConnectorSetup({
+    provider, scope, approved: approved.data, catalog: catalog.data, connections: connections.data, gmail: gmail.data,
+  });
+  const { approvedId, existing, label, description } = setup;
+  const action = connectorActionState(setup, scope, agent.data?.role, connecting);
   const connect = async () => {
     if (!workspaceId) return;
     setConnecting(true);
@@ -143,26 +120,15 @@ export function ConnectorSetupCard({
       <div className="min-w-0 flex-1">
         <p className="font-medium">{label}</p>
         <p className="text-xs text-content-secondary">
-          {connected
-            ? "Connected"
-            : unavailable
-              ? provider === "gmail" && scope !== "personal"
-                ? "Gmail is currently available to personal Ask AI. Delegated Gmail access is not supported."
-                : (entry?.availabilityReason ??
-                  "Connection unavailable on this server.")
-              : "Connect your account to continue."}
+          {description}
         </p>
       </div>
       <Button
-        disabled={connected || connecting || unavailable || !mayConnect}
+        disabled={action.disabled}
         size="sm"
         onClick={() => void connect()}
       >
-        {connected
-          ? "Connected"
-          : connecting
-            ? "Connecting…"
-            : `Connect ${label}`}
+        {action.label}
       </Button>
     </div>
   );

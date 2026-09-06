@@ -67,4 +67,11 @@ export function register({ readSource, assert, loadModule, test }) {
     assert.match(aiPageSource, /<PageEditorPane/)
     assert.match(aiPageSource, /<DatabaseMainPane/)
   })
+  test("citation navigation leaves modified clicks and non-resource links to the browser", async () => {
+    const { canOpenCitationInApp } = await loadModule("/src/features/ai/conversations/components/elements/agent-citation-navigation.ts");
+    const target={id:"page",type:"page"};const event={button:0,metaKey:false,ctrlKey:false,shiftKey:false,altKey:false};
+    assert.equal(canOpenCitationInApp(target,event),true);assert.equal(canOpenCitationInApp(null,event),false);
+    for(const key of ["metaKey","ctrlKey","shiftKey","altKey"])assert.equal(canOpenCitationInApp(target,{...event,[key]:true}),false);
+    for(const button of [1,2])assert.equal(canOpenCitationInApp(target,{...event,button}),false);
+  });
 }

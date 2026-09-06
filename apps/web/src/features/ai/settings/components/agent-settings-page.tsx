@@ -1,3 +1,5 @@
+import { canSaveSettingsTrigger, applySettingsTriggerDraft, settingsTriggerTargetInput } from "../model/trigger-draft";
+import { settingsActionsBusy, settingsProgressLabel } from "../model/draft-actions";
 import { useNavigate } from "@tanstack/react-router";
 import { createPortal } from "react-dom";
 import { SettingsDraftActions } from "./settings-draft-actions";
@@ -94,9 +96,9 @@ function ScopedAgentSettingsPage({
   };
   const state = draft.state;
   const d = state?.definition;
-  const review = draft.reviewOpen ? state?.review ?? null : null;
-  const disabled =
-    !state?.canEdit || draft.publish.isPending || draft.discard.isPending || draft.createInstruction.isPending;
+  const review = draft.reviewOpen ? (state?.review ?? null) : null;
+  const disabled = !state?.canEdit || settingsActionsBusy(draft);
+  function renderSettingsHeader() {
   const tabs: AgentSettingsTab[] = [
     "instructions",
     "connectors",
@@ -104,11 +106,8 @@ function ScopedAgentSettingsPage({
     "activity",
     "versions",
   ];
-  return (
-    <aside
-      className="flex h-full min-h-0 min-w-0 flex-col overflow-x-clip bg-surface-canvas dark:bg-surface-navigation"
-      data-agent-settings-page={scope}
-    >
+
+    return (
       <header className="sticky top-0 z-20 grid min-w-0 shrink-0 gap-3 bg-surface-canvas dark:bg-surface-navigation px-5 py-3">
         {headerTarget ? (
           createPortal(<SettingsDraftActions draft={draft} />, headerTarget)
@@ -124,16 +123,23 @@ function ScopedAgentSettingsPage({
               {tabs.map((t) => (
                 <TabsTrigger key={t} value={t} className="grow-0 capitalize">
                   {t === "access" ? "Triggers & Access" : t}
-                  {draft.changedTabs.includes(t) && <span className="ml-1 inline-block size-1.5 rounded-full bg-action-primary" aria-label="Unsaved changes" />}
+                  {draft.changedTabs.includes(t) && (
+                    <span
+                      className="ml-1 inline-block size-1.5 rounded-full bg-action-primary"
+                      aria-label="Unsaved changes"
+                    />
+                  )}
                 </TabsTrigger>
               ))}
             </TabsList>
           </div>
         </Tabs>
         <div className="flex items-center gap-3 overflow-x-auto text-xs text-content-secondary">
-          {state && <span className="shrink-0">Saved version {state.version}</span>}
+          {state && (
+            <span className="shrink-0">Saved version {state.version}</span>
+          )}
           <span className="sr-only" aria-live="polite">
-            {aiEditing ? "AI is preparing your changes…" : draft.syncing ? "Preserving private draft…" : !state ? "Loading settings…" : ""}
+            {settingsProgressLabel(aiEditing, draft.syncing, Boolean(state))}
           </span>
           {tab === "instructions" && d && (
             <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -150,7 +156,11 @@ function ScopedAgentSettingsPage({
                 disabled={disabled}
                 onClick={() => draft.createInstruction.mutate()}
               >
-                {draft.createInstruction.isPending ? "Creating instruction…" : d.instructionPageId ? "New instruction" : "Create instruction"}
+                {draft.createInstruction.isPending
+                  ? "Creating instruction…"
+                  : d.instructionPageId
+                    ? "New instruction"
+                    : "Create instruction"}
               </Button>
             </div>
           )}
@@ -161,107 +171,94 @@ function ScopedAgentSettingsPage({
           </p>
         )}
       </header>
+    );
+  }
+  function renderVersionHistory() {
+    return (
+      <div className="grid gap-3 px-5 py-6">
+        <h2 className="font-heading text-base font-medium">Version history</h2>
+        {versions.error && <p role="alert">{versions.error.message}</p>}
+        {versions.data?.versions.map((v) => (
+          <div className="flex items-center gap-3 border-b py-3" key={v.id}>
+            <span>Version {v.version}</span>
+            <span className="flex-1 text-xs text-content-secondary">
+              {new Date(v.createdAt).toLocaleString()}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={disabled}
+              onClick={() => {
+                draft.patch(settingsDefinitionSchema.parse(v.definition));
+                setEditorEpoch((n) => n + 1);
+                selectTab("instructions");
+              }}
+            >
+              Restore to draft
+            </Button>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  function renderInstructionPane() {
+    if (!d?.instructionPageId) return null;
+    return (
+      <PageEditorPane
+        key={`${d.instructionPageId}:${editorEpoch}`}
+        pageId={d.instructionPageId}
+        onOpenPage={(pageId) =>
+          void navigate({ to: "/p/$pageId", params: { pageId } })
+        }
+        readOnly={disabled}
+        showCollaborationPresence
+        className={
+          review?.fields.includes("instructionTitle")
+            ? "agent-instruction-title-changed"
+            : undefined
+        }
+        reviewDiff={
+          review &&
+          draft.changedFields.some(
+            (field) =>
+              field === "instructions" || field === "instructionDocument",
+          )
+            ? {
+                beforeMarkdown: review.before.instructions,
+                afterMarkdown: review.after.instructions,
+              }
+            : null
+        }
+      />
+    );
+  }
+
+  function renderSettingsContent() {
+    if (!d) return null;
+    switch (tab) {
+      case "instructions": return renderInstructionPane();
+      case "connectors": return <div className="px-5 py-6"><SettingsConnectors review={review} scope={scope} definition={d} onChange={draft.patch} disabled={disabled} /></div>;
+      case "activity": return <div className="px-5 py-6">{agent ? <><SettingsRunActivity agentId={agent.id} /><AgentMcpActivity agent={agent} /></> : <PersonalMcpActivity />}</div>;
+      case "versions": return renderVersionHistory();
+      case "access": return scope !== "personal" ? <><SettingsTriggers review={review} scope={scope} definition={d} onChange={draft.patch} disabled={disabled} /><SettingsAccess review={review} definition={d} onChange={draft.patch} disabled={disabled} /></> : null;
+    }
+  }
+
+  return (
+    <aside
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-x-clip bg-surface-canvas dark:bg-surface-navigation"
+      data-agent-settings-page={scope}
+    >
+      {renderSettingsHeader()}
       <div className="min-h-0 flex-1 overflow-y-auto pb-12">
         {review && <SettingsReviewSummary review={review} tab={tab} />}
 
-        {d && (
-          <>
-            {tab === "instructions" && (
-              <>
-                {d.instructionPageId && (
-                  <PageEditorPane
-                    key={`${d.instructionPageId}:${editorEpoch}`}
-                    pageId={d.instructionPageId}
-                    onOpenPage={(pageId) => void navigate({ to: "/p/$pageId", params: { pageId } })}
-                    readOnly={disabled}
-                    showCollaborationPresence
-                    className={review?.fields.includes("instructionTitle") ? "agent-instruction-title-changed" : undefined}
-                    reviewDiff={review && draft.changedFields.some((field) => field === "instructions" || field === "instructionDocument") ? {
-                      beforeMarkdown: review.before.instructions,
-                      afterMarkdown: review.after.instructions,
-                    } : null}
-                  />
-                )}
-              </>
-            )}
-            {tab === "connectors" && (
-              <div className="px-5 py-6">
-                <SettingsConnectors
-                  review={review}
-                  scope={scope}
-                  definition={d}
-                  onChange={draft.patch}
-                  disabled={disabled}
-                />
-              </div>
-            )}
-            {tab === "activity" && (
-              <div className="px-5 py-6">
-                {agent ? (
-                  <>
-                    <SettingsRunActivity agentId={agent.id} />
-                    <AgentMcpActivity agent={agent} />
-                  </>
-                ) : (
-                  <PersonalMcpActivity />
-                )}
-              </div>
-            )}
-            {tab === "versions" && (
-              <div className="grid gap-3 px-5 py-6">
-                <h2 className="font-heading text-base font-medium">
-                  Version history
-                </h2>
-                {versions.error && <p role="alert">{versions.error.message}</p>}
-                {versions.data?.versions.map((v) => (
-                  <div
-                    className="flex items-center gap-3 border-b py-3"
-                    key={v.id}
-                  >
-                    <span>Version {v.version}</span>
-                    <span className="flex-1 text-xs text-content-secondary">
-                      {new Date(v.createdAt).toLocaleString()}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={disabled}
-                      onClick={() => {
-                        draft.patch(settingsDefinitionSchema.parse(v.definition));
-                        setEditorEpoch((n) => n + 1);
-                        selectTab("instructions");
-                      }}
-                    >
-                      Restore to draft
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-            {tab === "access" && scope !== "personal" && (
-              <SettingsTriggers
-                review={review}
-                scope={scope}
-                definition={d}
-                onChange={draft.patch}
-                disabled={disabled}
-              />
-            )}
-            {tab === "access" && scope !== "personal" && (
-              <SettingsAccess
-                review={review}
-                definition={d}
-                onChange={draft.patch}
-                disabled={disabled}
-              />
-            )}
-          </>
-        )}
+        {renderSettingsContent()}
       </div>
     </aside>
   );
 }
-export function normalizeSettingsTab(tab?: string | null): AgentSettingsTab {
+function normalizeSettingsTab(tab?: string | null): AgentSettingsTab {
   if (tab === "tools") return "connectors";
   if (tab === "share" || tab === "triggers") return "access";
   return tab === "connectors" ||
@@ -294,6 +291,8 @@ function SettingsTriggers({
   const rotate = useRotateCustomAgentWebhookSecret(scope);
   const [target, setTarget] = React.useState("");
   const [label, setLabel] = React.useState("");
+  const triggerDraft = { kind, cadence, databaseEvent, propertyId, target, label, editingId };
+  const targetInput = settingsTriggerTargetInput(kind, cadence);
   return (
     <fieldset disabled={disabled} className="grid gap-4 px-5 py-6">
       <h2 className="font-heading text-base font-medium">Triggers</h2>
@@ -458,63 +457,19 @@ function SettingsTriggers({
         value={label}
         onChange={(e) => setLabel(e.target.value)}
       />
-      {kind !== "webhook" && (kind !== "schedule" || cadence === "custom") && (
+      {targetInput && (
         <Input
-          aria-label={
-            kind === "schedule" ? "Interval in minutes" : "Resource ID"
-          }
-          placeholder={
-            kind === "schedule"
-              ? "Interval in minutes (minimum 5)"
-              : "Resource ID"
-          }
+          aria-label={targetInput.label}
+          placeholder={targetInput.placeholder}
           value={target}
           onChange={(e) => setTarget(e.target.value)}
         />
       )}
       <Button
         className="w-fit"
-        disabled={
-          !label.trim() ||
-          (kind !== "webhook" && kind !== "schedule" && !target.trim()) ||
-          (kind === "schedule" &&
-            cadence === "custom" &&
-            (!Number.isFinite(Number(target)) || Number(target) < 5))
-        }
+        disabled={!canSaveSettingsTrigger(triggerDraft)}
         onClick={() => {
-          const config =
-            kind === "schedule"
-              ? {
-                  cadence,
-                  ...(cadence === "custom"
-                    ? { intervalMinutes: Number(target) }
-                    : {}),
-                }
-              : kind === "database"
-                ? {
-                    databaseId: target,
-                    event: databaseEvent,
-                    ...(propertyId ? { propertyId } : {}),
-                  }
-                : kind === "meeting"
-                  ? { meetingId: target }
-                  : kind === "webhook"
-                    ? {}
-                    : { pageId: target };
-          onChange({
-            triggers: [
-              ...d.triggers.filter((t) => t.id !== editingId),
-              {
-                id: editingId ?? crypto.randomUUID(),
-                kind: kind as AgentSettingsDefinition["triggers"][number]["kind"],
-                label,
-                config,
-                status:
-                  d.triggers.find((t) => t.id === editingId)?.status ??
-                  (kind === "webhook" ? "paused" : "active"),
-              },
-            ],
-          });
+          onChange({ triggers: applySettingsTriggerDraft(d.triggers, triggerDraft, editingId ?? crypto.randomUUID()) });
           setLabel("");
           setTarget("");
           setEditingId(null);

@@ -121,7 +121,7 @@ export default defineConfig(async () => ({
       },
       {
         find: "@zilobase/edition-web",
-        replacement: `${srcDir}/app/edition/community.tsx`,
+        replacement: `${srcDir}/edition/community-module.ts`,
       },
       { find: "@/packages/editor", replacement: editorDir },
       { find: "@", replacement: srcDir },

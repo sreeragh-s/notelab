@@ -1,9 +1,6 @@
+import { recoverSettingsDraft, settingsDraftVersionChanged } from "./model/draft-recovery";
 import * as React from "react";
-import {
-  hasAgentConfigurationChanges,
-  changedSettingsFields,
-  settingsFieldTab,
-} from "@zilobase/features/ai-chat";
+import { settingsDraftSummary } from "./model/draft-summary";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useZilobaseFeatures } from "@zilobase/features";
 import { useSession } from "@zilobase/features/auth/react";
@@ -86,26 +83,17 @@ export function useSettingsDraft(scope: string) {
   React.useEffect(() => {
     if (!query.data || inFlight.current || Object.keys(pending.current).length)
       return;
-    if (
-      current.current &&
-      (current.current.draftVersion !== query.data.draftVersion ||
-        current.current.version !== query.data.version)
-    )
+    if (settingsDraftVersionChanged(current.current, query.data))
       setDocumentVersion((n) => n + 1);
     let next = query.data;
     try {
-      const local = JSON.parse(localStorage.getItem(storageKey) ?? "null");
-      if (local?.patch && Object.keys(local.patch).length) {
-        pending.current = local.patch;
-        next = { ...next, definition: { ...next.definition, ...local.patch } };
-        if (
-          local.baseVersion !== query.data.baseVersion ||
-          local.draftVersion !== query.data.draftVersion
-        ) {
+      const recovery = recoverSettingsDraft(query.data, localStorage.getItem(storageKey));
+      if (recovery) {
+        pending.current = recovery.patch;
+        next = recovery.state;
+        if (recovery.conflict) {
           blocked.current = true;
-          setError(
-            "A newer draft exists. Your local edits are preserved; discard to load the saved version.",
-          );
+          setError("A newer draft exists. Your local edits are preserved; discard to load the saved version.");
         }
       }
     } catch {
@@ -278,8 +266,7 @@ export function useSettingsDraft(scope: string) {
     },
     onError: (e) => setError(e.message),
   });
-  const changedFields = state ? changedSettingsFields(state) : [];
-  const changedTabs = [...new Set(changedFields.map(settingsFieldTab))];
+  const { changedFields, changedTabs, dirty } = settingsDraftSummary(state);
   const reviewChanges = () => {
     setReviewOpen(true);
     emitSettingsEvent({ scope, tab: changedTabs[0] ?? "instructions", status: "ready" });
@@ -302,8 +289,6 @@ export function useSettingsDraft(scope: string) {
     base,
     headers,
     key,
-    dirty:
-      !!state &&
-      (hasAgentConfigurationChanges(state.definition, state.saved) || !!state.review?.fields.length),
+    dirty,
   };
 }

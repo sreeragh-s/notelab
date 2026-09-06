@@ -479,6 +479,43 @@ const ChatMessage = ({
       : [],
   );
 
+
+  function renderPageEditPart(part: UIMessage["parts"][number], index: number) {
+    if (isToolUIPart(part)) {
+      const toolName = getToolName(part);
+
+      if (isProposePageContentUpdateToolName(toolName)) {
+        const snapshot = snapshotByToolCallId.get(part.toolCallId) ?? null;
+
+        return (
+          <PageEditToolPart
+            isApplying={
+              applyingToolCallIds.includes(part.toolCallId) &&
+              !snapshotByToolCallId.has(part.toolCallId)
+            }
+            isBaselineCurrent={
+              snapshot ? getPageEditBaselineCurrent(snapshot) : false
+            }
+            isDiffVisible={visibleDiffToolCallId === part.toolCallId}
+            isReviewAvailable={
+              snapshot ? getPageEditReviewAvailable(snapshot) : false
+            }
+            key={`${message.id}-${index}`}
+            onApply={onApplyPageEdit}
+            onDiscard={onDiscardPageEdit}
+            onToggleChanges={onTogglePageEditChanges}
+            onUndo={onUndoPageEdit}
+            part={part}
+            snapshot={snapshot}
+          />
+        );
+      }
+
+      return null;
+    }
+
+    return null;
+  }
   return (
     <Message from={message.role}>
       <MessageContent>
@@ -561,41 +598,7 @@ const ChatMessage = ({
             );
           }
 
-          if (isToolUIPart(part)) {
-            const toolName = getToolName(part);
-
-            if (isProposePageContentUpdateToolName(toolName)) {
-              const snapshot =
-                snapshotByToolCallId.get(part.toolCallId) ?? null;
-
-              return (
-                <PageEditToolPart
-                  isApplying={
-                    applyingToolCallIds.includes(part.toolCallId) &&
-                    !snapshotByToolCallId.has(part.toolCallId)
-                  }
-                  isBaselineCurrent={
-                    snapshot ? getPageEditBaselineCurrent(snapshot) : false
-                  }
-                  isDiffVisible={visibleDiffToolCallId === part.toolCallId}
-                  isReviewAvailable={
-                    snapshot ? getPageEditReviewAvailable(snapshot) : false
-                  }
-                  key={`${message.id}-${index}`}
-                  onApply={onApplyPageEdit}
-                  onDiscard={onDiscardPageEdit}
-                  onToggleChanges={onTogglePageEditChanges}
-                  onUndo={onUndoPageEdit}
-                  part={part}
-                  snapshot={snapshot}
-                />
-              );
-            }
-
-            return null;
-          }
-
-          return null;
+          return renderPageEditPart(part, index);
         })}
         {tables.map(({ table, toolCallId }) => (
           <AgentResultTable key={toolCallId} table={table} />

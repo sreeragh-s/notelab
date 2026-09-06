@@ -1,9 +1,5 @@
-import { useEffect, useRef, useState } from "react"
-import {
-  getToolName,
-  isToolUIPart,
-  type UIMessage,
-} from "ai"
+import { useEffect, useRef, useState } from "react";
+import { getToolName, isToolUIPart, type UIMessage } from "ai";
 
 import {
   buildPageEditSnapshotMap,
@@ -13,29 +9,28 @@ import {
   type ProposePageContentUpdateOutput,
   type PageEditSnapshotPart,
   WORKSPACE_EDIT_SNAPSHOT_PART_TYPE,
-} from "@zilobase/features/ai-chat"
-import { prosemirrorToMarkdown } from "@zilobase/page-context"
+} from "@zilobase/features/ai-chat";
+import { prosemirrorToMarkdown } from "@zilobase/page-context";
 
-import { usePageEditorRegistry } from "@/features/editor/runtime/page-editor-registry"
-import { usePageEditApplier } from "./use-page-edit-applier"
-import {
-  logPageEdit,
-  warnPageEdit,
-} from "@zilobase/features/ai-chat"
+import { usePageEditorRegistry } from "@/features/editor/runtime/page-editor-registry";
+import { usePageEditApplier } from "./use-page-edit-applier";
+import { logPageEdit, warnPageEdit } from "@zilobase/features/ai-chat";
 
 type UsePageEditAutoApplyOptions = {
-  enabled?: boolean
-  getContextPageMarkdown?: (pageId: string) => string | null
-  messages: UIMessage[]
-  setMessages: (messages: UIMessage[] | ((prev: UIMessage[]) => UIMessage[])) => void
-}
+  enabled?: boolean;
+  getContextPageMarkdown?: (pageId: string) => string | null;
+  messages: UIMessage[];
+  setMessages: (
+    messages: UIMessage[] | ((prev: UIMessage[]) => UIMessage[]),
+  ) => void;
+};
 
 function buildSnapshotMessage(snapshotPart: PageEditSnapshotPart) {
   return {
     id: crypto.randomUUID(),
     role: "data",
     parts: [snapshotPart],
-  } as unknown as UIMessage
+  } as unknown as UIMessage;
 }
 
 function upsertSnapshotMessage(
@@ -46,46 +41,156 @@ function upsertSnapshotMessage(
     (entry) =>
       (entry.role as string) === "data" &&
       entry.parts.some((entryPart) => {
-        const snapshot = entryPart as unknown as PageEditSnapshotPart
+        const snapshot = entryPart as unknown as PageEditSnapshotPart;
         return (
           snapshot.type === WORKSPACE_EDIT_SNAPSHOT_PART_TYPE &&
           snapshot.toolCallId === snapshotPart.toolCallId
-        )
+        );
       }),
-  )
+  );
 
   if (existingIndex === -1) {
     return dedupeChatMessagesById([
       ...messages,
       buildSnapshotMessage(snapshotPart),
-    ])
+    ]);
   }
 
   return dedupeChatMessagesById(
     messages.map((entry, index) => {
       if (index !== existingIndex) {
-        return entry
+        return entry;
       }
 
       return {
         ...entry,
         parts: [snapshotPart],
-      } as unknown as UIMessage
+      } as unknown as UIMessage;
     }),
-  )
+  );
 }
 
-function readEditorSnapshotState(pageId: string, getEditorHandle: ReturnType<
-  typeof usePageEditorRegistry
->["getEditorHandle"]) {
-  const beforeContentJson = getEditorHandle(pageId)?.getContentJson() ?? null
+function readEditorSnapshotState(
+  pageId: string,
+  getEditorHandle: ReturnType<typeof usePageEditorRegistry>["getEditorHandle"],
+) {
+  const beforeContentJson = getEditorHandle(pageId)?.getContentJson() ?? null;
 
   return {
     beforeContentJson,
     beforeMarkdown: beforeContentJson
       ? prosemirrorToMarkdown(beforeContentJson)
       : "",
+  };
+}
+
+function readAvailablePageEditPart(part: UIMessage["parts"][number]) {
+  if (!isToolUIPart(part)) {
+    return;
   }
+
+  const toolName = getToolName(part);
+
+  if (!isProposePageContentUpdateToolName(toolName)) {
+    return;
+  }
+
+  if (part.state === "output-error" || part.errorText) {
+    warnPageEdit("autoApply:tool-error", {
+      errorText: part.errorText,
+      input: part.input,
+      toolCallId: part.toolCallId,
+    });
+    return;
+  }
+
+  if (part.state !== "output-available") {
+    return;
+  }
+
+  return part;
+}
+
+function invalidEditContent(
+  output: ProposePageContentUpdateOutput,
+  editMode: ProposePageContentUpdateOutput["editMode"],
+) {
+  if (
+    editMode === "full" &&
+    (!output.afterMarkdown || !output.afterMarkdown.trim())
+  ) {
+    return "autoApply:missing-full-output";
+  }
+  if (
+    editMode === "patch" &&
+    (!output.searchText || !output.searchText.trim())
+  ) {
+    return "autoApply:missing-patch-output";
+  }
+  return null;
+}
+
+function readPageEditOutput(rawOutput: unknown, toolCallId: string) {
+  const output = rawOutput as ProposePageContentUpdateOutput | undefined;
+  if (!output?.pageId) {
+    warnPageEdit("autoApply:missing-output", { output, toolCallId });
+    return null;
+  }
+  const editMode =
+    output.editMode ??
+    (output.searchText ? "patch" : output.afterMarkdown ? "full" : null);
+  if (!editMode) {
+    warnPageEdit("autoApply:missing-edit-mode", { output, toolCallId });
+    return null;
+  }
+  const invalid = invalidEditContent(output, editMode);
+  if (invalid) {
+    warnPageEdit(invalid, { output, toolCallId });
+    return null;
+  }
+  return { output, editMode };
+}
+
+function resolvedSnapshot(
+  output: ProposePageContentUpdateOutput,
+  identity: { toolCallId: string; parentMessageId: string },
+  result: ReturnType<ReturnType<typeof usePageEditApplier>["resolvePageEdit"]>,
+  getEditorHandle: ReturnType<typeof usePageEditorRegistry>["getEditorHandle"],
+): PageEditSnapshotPart {
+  const base = {
+    type: WORKSPACE_EDIT_SNAPSHOT_PART_TYPE,
+    ...identity,
+    pageId: output.pageId,
+    summary: output.summary,
+  };
+  if (result.success) {
+    return {
+      ...base,
+      beforeMarkdown: result.beforeMarkdown,
+      afterMarkdown: result.afterMarkdown,
+      beforeContentJson: result.beforeContentJson,
+      status: "preview",
+      appliedAt: new Date().toISOString(),
+    };
+  }
+  if (isStalePageEditResolveError(result.errorMessage)) {
+    return {
+      ...base,
+      ...readEditorSnapshotState(output.pageId, getEditorHandle),
+      afterMarkdown: output.afterMarkdown?.trim() ?? "",
+      status: "declined",
+      appliedAt: new Date().toISOString(),
+    };
+  }
+  return {
+    ...base,
+    beforeMarkdown: "",
+    afterMarkdown: output.afterMarkdown ?? output.replaceText ?? "",
+    beforeContentJson: null,
+    status: "failed",
+    appliedAt: new Date().toISOString(),
+    errorMessage: result.errorMessage,
+  };
 }
 
 export function usePageEditAutoApply({
@@ -94,206 +199,116 @@ export function usePageEditAutoApply({
   messages,
   setMessages,
 }: UsePageEditAutoApplyOptions) {
-  const { getEditorHandle } = usePageEditorRegistry()
-  const { resolvePageEdit } = usePageEditApplier()
-  const processedToolCallIdsRef = useRef(new Set<string>())
-  const [applyingToolCallIds, setApplyingToolCallIds] = useState<string[]>([])
+  const { getEditorHandle } = usePageEditorRegistry();
+  const { resolvePageEdit } = usePageEditApplier();
+  const processedToolCallIdsRef = useRef(new Set<string>());
+  const [applyingToolCallIds, setApplyingToolCallIds] = useState<string[]>([]);
 
   useEffect(() => {
     for (const message of messages) {
       if ((message.role as string) !== "data") {
-        continue
+        continue;
       }
 
       for (const part of message.parts) {
-        const snapshotPart = part as unknown as PageEditSnapshotPart
+        const snapshotPart = part as unknown as PageEditSnapshotPart;
 
         if (
           snapshotPart.type === WORKSPACE_EDIT_SNAPSHOT_PART_TYPE &&
           typeof snapshotPart.toolCallId === "string"
         ) {
-          processedToolCallIdsRef.current.add(snapshotPart.toolCallId)
+          processedToolCallIdsRef.current.add(snapshotPart.toolCallId);
         }
       }
     }
-  }, [messages])
+  }, [messages]);
 
   useEffect(() => {
     if (!enabled) {
-      logPageEdit("autoApply:disabled")
-      return
+      logPageEdit("autoApply:disabled");
+      return;
     }
 
-    const snapshotByToolCallId = buildPageEditSnapshotMap(messages)
+    const snapshotByToolCallId = buildPageEditSnapshotMap(messages);
 
-    for (const message of messages) {
-      if (message.role !== "assistant") {
-        continue
+    function prepareToolSnapshot(
+      message: UIMessage,
+      messagePart: UIMessage["parts"][number],
+    ) {
+      const part = readAvailablePageEditPart(messagePart);
+      if (!part) return;
+
+      const toolCallId = part.toolCallId;
+
+      if (
+        processedToolCallIdsRef.current.has(toolCallId) ||
+        snapshotByToolCallId.has(toolCallId)
+      ) {
+        processedToolCallIdsRef.current.add(toolCallId);
+        return;
       }
 
-      for (const part of message.parts) {
-        if (!isToolUIPart(part)) {
-          continue
-        }
+      processedToolCallIdsRef.current.add(toolCallId);
 
-        const toolName = getToolName(part)
+      const prepared = readPageEditOutput(part.output, toolCallId);
+      if (!prepared) return;
+      const { output, editMode } = prepared;
 
-        if (!isProposePageContentUpdateToolName(toolName)) {
-          continue
-        }
+      logPageEdit("autoApply:tool-output", {
+        editMode,
+        summary: output.summary,
+        toolCallId,
+        pageId: output.pageId,
+      });
 
-        if (part.state === "output-error" || part.errorText) {
-          warnPageEdit("autoApply:tool-error", {
-            errorText: part.errorText,
-            input: part.input,
-            toolCallId: part.toolCallId,
-          })
-          continue
-        }
+      setApplyingToolCallIds((current) =>
+        current.includes(toolCallId) ? current : [...current, toolCallId],
+      );
 
-        if (part.state !== "output-available") {
-          continue
-        }
+      const resolveResult = resolvePageEdit({
+        afterMarkdown: output.afterMarkdown,
+        contextPageMarkdown: getContextPageMarkdown?.(output.pageId) ?? null,
+        editMode,
+        replaceText: output.replaceText,
+        searchText: output.searchText,
+        pageId: output.pageId,
+      });
 
-        const toolCallId = part.toolCallId
-
-        if (
-          processedToolCallIdsRef.current.has(toolCallId) ||
-          snapshotByToolCallId.has(toolCallId)
-        ) {
-          processedToolCallIdsRef.current.add(toolCallId)
-          continue
-        }
-
-        processedToolCallIdsRef.current.add(toolCallId)
-
-        const output = part.output as ProposePageContentUpdateOutput | undefined
-
-        if (!output?.pageId) {
-          warnPageEdit("autoApply:missing-output", {
-            output,
-            toolCallId,
-          })
-          continue
-        }
-
-        const editMode =
-          output.editMode ??
-          (output.searchText ? "patch" : output.afterMarkdown ? "full" : null)
-
-        if (!editMode) {
-          warnPageEdit("autoApply:missing-edit-mode", {
-            output,
-            toolCallId,
-          })
-          continue
-        }
-
-        if (
-          editMode === "full" &&
-          (!output.afterMarkdown || !output.afterMarkdown.trim())
-        ) {
-          warnPageEdit("autoApply:missing-full-output", {
-            output,
-            toolCallId,
-          })
-          continue
-        }
-
-        if (
-          editMode === "patch" &&
-          (!output.searchText || !output.searchText.trim())
-        ) {
-          warnPageEdit("autoApply:missing-patch-output", {
-            output,
-            toolCallId,
-          })
-          continue
-        }
-
-        logPageEdit("autoApply:tool-output", {
-          editMode,
-          summary: output.summary,
+      if (resolveResult.success) {
+        logPageEdit("autoApply:snapshot-ready", {
           toolCallId,
           pageId: output.pageId,
-        })
-
-        setApplyingToolCallIds((current) =>
-          current.includes(toolCallId) ? current : [...current, toolCallId],
-        )
-
-        const resolveResult = resolvePageEdit({
-          afterMarkdown: output.afterMarkdown,
-          contextPageMarkdown: getContextPageMarkdown?.(output.pageId) ?? null,
-          editMode,
-          replaceText: output.replaceText,
-          searchText: output.searchText,
+        });
+      } else {
+        warnPageEdit("autoApply:snapshot-failed", {
+          errorMessage: resolveResult.errorMessage,
+          toolCallId,
           pageId: output.pageId,
-        })
-
-        if (resolveResult.success) {
-          logPageEdit("autoApply:snapshot-ready", {
-            toolCallId,
-            pageId: output.pageId,
-          })
-        } else {
-          warnPageEdit("autoApply:snapshot-failed", {
-            errorMessage: resolveResult.errorMessage,
-            toolCallId,
-            pageId: output.pageId,
-          })
-        }
-
-        const snapshotPart: PageEditSnapshotPart = resolveResult.success
-          ? {
-              type: WORKSPACE_EDIT_SNAPSHOT_PART_TYPE,
-              toolCallId,
-              parentMessageId: message.id,
-              pageId: output.pageId,
-              summary: output.summary,
-              beforeMarkdown: resolveResult.beforeMarkdown,
-              afterMarkdown: resolveResult.afterMarkdown,
-              beforeContentJson: resolveResult.beforeContentJson,
-              status: "preview",
-              appliedAt: new Date().toISOString(),
-            }
-          : isStalePageEditResolveError(resolveResult.errorMessage)
-            ? {
-                type: WORKSPACE_EDIT_SNAPSHOT_PART_TYPE,
-                toolCallId,
-                parentMessageId: message.id,
-                pageId: output.pageId,
-                summary: output.summary,
-                ...readEditorSnapshotState(output.pageId, getEditorHandle),
-                afterMarkdown: output.afterMarkdown?.trim() ?? "",
-                status: "declined",
-                appliedAt: new Date().toISOString(),
-              }
-            : {
-                type: WORKSPACE_EDIT_SNAPSHOT_PART_TYPE,
-                toolCallId,
-                parentMessageId: message.id,
-                pageId: output.pageId,
-                summary: output.summary,
-                beforeMarkdown: "",
-                afterMarkdown:
-                  output.afterMarkdown ??
-                  output.replaceText ??
-                  "",
-                beforeContentJson: null,
-                status: "failed",
-                appliedAt: new Date().toISOString(),
-                errorMessage: resolveResult.errorMessage,
-              }
-
-        setApplyingToolCallIds((current) =>
-          current.filter((entry) => entry !== toolCallId),
-        )
-
-        setMessages((currentMessages) =>
-          upsertSnapshotMessage(currentMessages, snapshotPart),
-        )
+        });
       }
+
+      const snapshotPart = resolvedSnapshot(
+        output,
+        {
+          toolCallId,
+          parentMessageId: message.id,
+        },
+        resolveResult,
+        getEditorHandle,
+      );
+
+      setApplyingToolCallIds((current) =>
+        current.filter((entry) => entry !== toolCallId),
+      );
+
+      setMessages((currentMessages) =>
+        upsertSnapshotMessage(currentMessages, snapshotPart),
+      );
+    }
+
+    for (const message of messages) {
+      if (message.role !== "assistant") continue;
+      for (const part of message.parts) prepareToolSnapshot(message, part);
     }
   }, [
     enabled,
@@ -302,11 +317,11 @@ export function usePageEditAutoApply({
     messages,
     resolvePageEdit,
     setMessages,
-  ])
+  ]);
 
   return {
     applyingToolCallIds,
-  }
+  };
 }
 
 export function updatePageEditSnapshotStatus(
@@ -314,25 +329,25 @@ export function updatePageEditSnapshotStatus(
   toolCallId: string,
   status: PageEditSnapshotPart["status"],
   options?: {
-    afterContentJson?: unknown
+    afterContentJson?: unknown;
   },
 ) {
   return dedupeChatMessagesById(
     messages.map((message) => {
       if ((message.role as string) !== "data") {
-        return message
+        return message;
       }
 
       return {
         ...message,
         parts: message.parts.map((part) => {
-          const snapshot = part as unknown as PageEditSnapshotPart
+          const snapshot = part as unknown as PageEditSnapshotPart;
 
           if (
             snapshot.type !== WORKSPACE_EDIT_SNAPSHOT_PART_TYPE ||
             snapshot.toolCallId !== toolCallId
           ) {
-            return part
+            return part;
           }
 
           return {
@@ -348,9 +363,9 @@ export function updatePageEditSnapshotStatus(
               status === "undone"
                 ? new Date().toISOString()
                 : snapshot.undoneAt,
-          } as unknown as typeof part
+          } as unknown as typeof part;
         }),
-      }
+      };
     }),
-  )
+  );
 }

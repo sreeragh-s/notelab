@@ -48,10 +48,9 @@ databaseAutomationRoutes.get("/:databaseId/automation-capability", async (c) => 
 });
 
 databaseAutomationRoutes.get("/:databaseId/automations", async (c) => {
-  const user = requireDatabaseRouteUser(c);
-  if (!user) return c.json({ error: "Unauthorized" }, 401);
-  const dataSourceId = c.req.query("dataSourceId")?.trim();
-  if (!dataSourceId) return c.json({ code: "AUTOMATION_SOURCE_REQUIRED", error: "dataSourceId is required" }, 400);
+  const source = requireAutomationSource(c);
+  if (!source.ok) return source.response;
+  const { user, dataSourceId } = source;
 
   return handle(c, () => listDatabaseAutomations({
     databaseId: c.req.param("databaseId"),
@@ -116,10 +115,9 @@ databaseAutomationRoutes.post("/:databaseId/automations", async (c) => {
 });
 
 databaseAutomationRoutes.get("/:databaseId/automations/audit", async (c) => {
-  const user = requireDatabaseRouteUser(c);
-  if (!user) return c.json({ error: "Unauthorized" }, 401);
-  const dataSourceId = c.req.query("dataSourceId")?.trim();
-  if (!dataSourceId) return c.json({ code: "AUTOMATION_SOURCE_REQUIRED", error: "dataSourceId is required" }, 400);
+  const source = requireAutomationSource(c);
+  if (!source.ok) return source.response;
+  const { user, dataSourceId } = source;
   return handle(c, () => exportDatabaseAutomationAudit({
     databaseId: c.req.param("databaseId"), dataSourceId, userId: user.id,
   }));
@@ -234,10 +232,9 @@ databaseAutomationRoutes.delete("/:databaseId/automations/:automationId", async 
 });
 
 databaseAutomationRoutes.get("/:databaseId/automation-catalog", async (c) => {
-  const user = requireDatabaseRouteUser(c);
-  if (!user) return c.json({ error: "Unauthorized" }, 401);
-  const dataSourceId = c.req.query("dataSourceId")?.trim();
-  if (!dataSourceId) return c.json({ code: "AUTOMATION_SOURCE_REQUIRED", error: "dataSourceId is required" }, 400);
+  const source = requireAutomationSource(c);
+  if (!source.ok) return source.response;
+  const { user, dataSourceId } = source;
   return handle(c, () => getDatabaseAutomationCatalog({
     databaseId: c.req.param("databaseId"),
     dataSourceId,
@@ -320,4 +317,12 @@ function parseIfMatch(value: string | undefined) {
   if (!value) return null;
   const normalized = value.trim().replace(/^W\//, "").replace(/^"|"$/g, "");
   return /^\d+$/.test(normalized) && Number(normalized) > 0 ? Number(normalized) : null;
+}
+
+function requireAutomationSource(c: Context<AppBindings>) {
+  const user = requireDatabaseRouteUser(c);
+  if (!user) return { ok: false as const, response: c.json({ error: "Unauthorized" }, 401) };
+  const dataSourceId = c.req.query("dataSourceId")?.trim();
+  if (!dataSourceId) return { ok: false as const, response: c.json({ code: "AUTOMATION_SOURCE_REQUIRED", error: "dataSourceId is required" }, 400) };
+  return { ok: true as const, user, dataSourceId };
 }

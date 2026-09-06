@@ -41,7 +41,7 @@ import {
   syncDirtyOfflinePages,
 } from "@/features/offline/index"
 import { clearApiAuthToken } from "@/platform/network/api"
-import { queryClient } from "@/app/query-client"
+import { useQueryClient } from "@tanstack/react-query"
 import { useAppStore } from "@/features/desktop/state/app-store"
 import { useOfflineManifest } from "@/features/offline/index"
 import posthog from "@/shared/lib/posthog"
@@ -49,6 +49,7 @@ import { sessionQueryKey, type SessionResponse } from "@zilobase/features/auth";
 import { useSession, useSignOut, useUpdateUserProfile } from "@zilobase/features/auth/react";
 
 export default function ProfileSettingsPage() {
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { data: sessionData } = useSession()
   const signOut = useSignOut()
@@ -177,6 +178,7 @@ function ProfileDetailsCard({
   initialName: string
   isReady: boolean
 }) {
+  const queryClient = useQueryClient()
   const updateUserProfile = useUpdateUserProfile()
   const imageInputRef = React.useRef<HTMLInputElement | null>(null)
   const [name, setName] = React.useState(initialName)

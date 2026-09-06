@@ -40,7 +40,10 @@ import {
 import { SlashCommandMenu } from "../extensions/slash-command-menu"
 import { getSelectedBlockRangesForTarget } from "../extensions/block-selection"
 
-import { blockContentForItem, insertBlockFromPlus } from "../commands/block-insert"
+import {
+  blockContentForConversion,
+  insertBlockFromPlus,
+} from "../commands/block-insert";
 import {
   armBlockDrag,
   endBlockDrag,
@@ -104,12 +107,6 @@ const turnIntoItems = blockCommandItems.filter((item) =>
     "Toggle",
   ].includes(item.title)
 )
-
-const headingLevelByTitle: Record<string, 1 | 2 | 3> = {
-  "Heading 1": 1,
-  "Heading 2": 2,
-  "Heading 3": 3,
-}
 
 export function DragBlockMenu({
   editor,
@@ -398,39 +395,11 @@ export function DragBlockMenu({
         return
       }
 
-      const content = blockContentForItem(item)
+      const content = blockContentForConversion(item, target.node);
 
       if (!content) {
         return
       }
-      const text =
-        target.node.isTextblock && target.node.textContent.trim()
-          ? target.node.textContent
-          : ""
-
-      if (item.title === "Text" || item.title.startsWith("Heading")) {
-        const textContent = text ? [{ type: "text", text }] : undefined
-        const node =
-          item.title === "Text"
-            ? { type: "paragraph", content: textContent }
-            : {
-                type: "heading",
-                attrs: { level: headingLevelByTitle[item.title] ?? 3 },
-                content: textContent,
-              }
-
-        editor
-          .chain()
-          .focus()
-          .deleteRange({
-            from: target.pos,
-            to: target.pos + target.node.nodeSize,
-          })
-          .insertContentAt(target.pos, node)
-          .run()
-        return
-      }
-
       editor
         .chain()
         .focus()

@@ -19,12 +19,19 @@ export function SettingsReviewSummary({ review, tab }: { review: AgentSettingsRe
   const workspaceId = useActiveWorkspaceId();
   const targets = usePageAccessTargets(workspaceId);
   const navigation = usePageNavigation(workspaceId);
+  const principalName = (row: Record<string, unknown>) => {
+    const people = row.principalType === "team" ? targets.data?.teams : targets.data?.members;
+    const fallback = row.principalType === "team" ? "Team" : "Member";
+    return people?.find((item) => item.id === row.principalId)?.name ?? fallback;
+  };
+  const resourceName = (row: Record<string, unknown>) => {
+    const resources = row.resourceType === "page" ? navigation.data?.pages : navigation.data?.databases;
+    return resources?.find((item) => item.id === row.resourceId)?.name ?? "Resource";
+  };
   const itemName = (row: Record<string, unknown>) => {
     if (row.label) return String(row.label);
-    if (row.principalId) return row.principalType === "team"
-      ? targets.data?.teams.find((item) => item.id === row.principalId)?.name ?? "Team"
-      : targets.data?.members.find((item) => item.id === row.principalId)?.name ?? "Member";
-    if (row.resourceId) return (row.resourceType === "page" ? navigation.data?.pages : navigation.data?.databases)?.find((item) => item.id === row.resourceId)?.name ?? "Resource";
+    if (row.principalId) return principalName(row);
+    if (row.resourceId) return resourceName(row);
     return "Connection";
   };
   const fields = review.fields.filter((field) => settingsFieldTab(field) === tab && labels[field]);

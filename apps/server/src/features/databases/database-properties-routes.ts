@@ -1,3 +1,4 @@
+import { readAuthenticatedJson } from "../../shared/http/auth";
 import { Hono } from "hono";
 import type { AppBindings } from "../../shared/types";
 import { readJsonBody } from "../../shared/http/request";
@@ -66,17 +67,9 @@ databasePropertyRoutes.post("/:id/properties", async (c) => {
 });
 
 databasePropertyRoutes.patch("/:id/properties/reorder", async (c) => {
-  const user = requireUser(c);
-
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const body = await readJsonBody(c.req);
-
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "A JSON body is required" }, 400);
-  }
+  const request = await readAuthenticatedJson(c);
+  if (!request.ok) return request.response;
+  const { user, body } = request;
 
   const { propertyIds } = body as { propertyIds?: unknown };
 
@@ -112,17 +105,9 @@ databasePropertyRoutes.patch("/:id/properties/reorder", async (c) => {
 });
 
 databasePropertyRoutes.patch("/:id/properties/:databasePropertyId", async (c) => {
-  const user = requireUser(c);
-
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const body = await readJsonBody(c.req);
-
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "A JSON body is required" }, 400);
-  }
+  const request = await readAuthenticatedJson(c);
+  if (!request.ok) return request.response;
+  const { user, body } = request;
 
   const patch = body as {
     config?: unknown;

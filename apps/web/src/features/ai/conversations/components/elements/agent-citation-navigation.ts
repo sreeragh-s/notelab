@@ -33,3 +33,10 @@ export function getAgentCitationSidePaneTarget(
 
   return null
 }
+
+export function canOpenCitationInApp(
+  target: AgentCitationSidePaneTarget | null,
+  event: { button: number; metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean },
+): target is AgentCitationSidePaneTarget {
+  return Boolean(target && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey);
+}

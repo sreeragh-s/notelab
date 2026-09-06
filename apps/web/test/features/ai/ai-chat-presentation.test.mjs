@@ -129,16 +129,6 @@ export function register({ readSource, assert, test }) {
     assert.match(headerSource, /<CustomAgentShareHeaderAction agentId=\{props\.agentId\}/)
   })
 
-  test("Instruction and skill menus distinguish creating from adding", async () => {
-    const menuSource = await readSource("/src/features/ai/settings/components/zilobase-ai-create-menu.tsx")
-
-    assert.match(menuSource, /addItemLabel: "Add instruction"/)
-    assert.match(menuSource, /createItemLabel: "Create instruction"/)
-    assert.match(menuSource, /addItemLabel: "Add skill"/)
-    assert.match(menuSource, /existingPageIds\.length > 0[\s\S]*\? config\.addItemLabel[\s\S]*: config\.createItemLabel/)
-    assert.match(menuSource, /<span>\{config\.createItemLabel\}<\/span>/)
-  })
-
   test("Ask AI and custom agents edit isolated instruction drafts", async () => {
     const settingsSource = await readSource("/src/features/ai/settings/components/ai-settings-panel.tsx")
     const pageSource = await readSource("/src/features/ai/settings/components/agent-settings-page.tsx")
@@ -207,7 +197,6 @@ export function register({ readSource, assert, test }) {
     assert.match(picker, /Use saved instruction/)
     assert.match(picker, /<DropdownMenuContent/)
     assert.doesNotMatch(picker, /<Select|<Command/)
-    assert.match(pane, /"New instruction" : "Create instruction"/)
     assert.match(header, /id="agent-settings-header-actions"/)
     assert.doesNotMatch(pane, /aria-label="Close settings"|<XIcon/)
   })

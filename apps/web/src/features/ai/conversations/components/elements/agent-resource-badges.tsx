@@ -12,7 +12,7 @@ import {
   ExternalLinkIcon,
   FileTextIcon,
 } from "@/shared/components/icons";
-import { getAgentCitationSidePaneTarget } from "./agent-citation-navigation";
+import { getAgentCitationSidePaneTarget, canOpenCitationInApp } from "./agent-citation-navigation";
 
 export function AgentResourceBadges({
   citations,
@@ -49,14 +49,7 @@ export function AgentResourceBadges({
             href={href}
             key={`${citation.source}:${citation.id}`}
             onClick={(event) => {
-              if (
-                !sidePaneTarget ||
-                event.button !== 0 ||
-                event.metaKey ||
-                event.ctrlKey ||
-                event.shiftKey ||
-                event.altKey
-              ) {
+              if (!canOpenCitationInApp(sidePaneTarget, event)) {
                 return;
               }
 

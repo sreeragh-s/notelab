@@ -65,7 +65,7 @@ import {
   type DesktopServerProfile,
 } from "@/features/desktop/server/index"
 import { executeDesktopServerSwitch } from "@/features/desktop/server/index"
-import { queryClient } from "@/app/query-client"
+import { useQueryClient } from "@tanstack/react-query"
 import { useAppStore } from "@/features/desktop/state/app-store"
 import { useOfflineManifest } from "@/features/offline/index"
 import { useSession } from "@zilobase/features/auth/react";
@@ -113,6 +113,7 @@ export default function PreferencesSettingsPage() {
 }
 
 function DesktopServerSection() {
+  const queryClient = useQueryClient()
   const [connectOpen, setConnectOpen] = React.useState(false)
   const [profiles, setProfiles] = React.useState<DesktopServerProfile[]>([])
   const [removing, setRemoving] = React.useState<DesktopServerProfile | null>(
@@ -547,6 +548,7 @@ function ThemePreviewPane({
 }
 
 function OfflineAccessSection() {
+  const queryClient = useQueryClient()
   const { data: sessionData } = useSession()
   const { data: workspaces = [] } = useWorkspaces()
   const manifest = useOfflineManifest()

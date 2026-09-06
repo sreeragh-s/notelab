@@ -1,3 +1,4 @@
+import { settingsActionAvailability, settingsActionsVisible } from "../model/draft-actions";
 import { Button } from "@/shared/ui/button";
 import type { useSettingsDraft } from "../use-settings-draft";
 import { toast } from "sonner";
@@ -8,12 +9,8 @@ export function SettingsDraftActions({
   draft: ReturnType<typeof useSettingsDraft>;
   card?: boolean;
 }) {
-  if (
-    !draft.state?.canEdit ||
-    (card && !draft.dirty && !draft.error && !draft.state.pendingRun)
-  )
-    return null;
-  const busy = draft.publish.isPending || draft.discard.isPending || draft.createInstruction.isPending;
+  if (!settingsActionsVisible(draft, card)) return null;
+  const { discardDisabled, saveDisabled } = settingsActionAvailability(draft);
   return (
     <div
       className={
@@ -26,7 +23,7 @@ export function SettingsDraftActions({
         <div className="min-w-0 flex-1 text-sm">
           <button type="button" className="block w-full text-left" onClick={draft.reviewChanges}>
             <span className="block font-medium text-action-link hover:underline">
-              {draft.state.review?.fields.length ? "Review AI changes" : "Review agent changes"}
+              {draft.state?.review?.fields.length ? "Review AI changes" : "Review agent changes"}
             </span>
             <span className="block text-xs text-content-secondary">
               Review your changes, then Save to apply them.
@@ -42,14 +39,14 @@ export function SettingsDraftActions({
       <Button
         size="sm"
         variant="ghost"
-        disabled={busy || (!draft.dirty && !draft.error)}
+        disabled={discardDisabled}
         onClick={() => draft.discard.mutate()}
       >
         Discard
       </Button>
       <Button
         size="sm"
-        disabled={busy || (!draft.dirty && !draft.state?.pendingRun)}
+        disabled={saveDisabled}
         onClick={() =>
           draft.publish.mutate(undefined, {
             onSuccess: (result) => {

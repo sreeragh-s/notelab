@@ -2,9 +2,9 @@
 
 ## Interface and flow
 
-External adapters compose the core server through its published exports. Web composition selects edition behavior through the edition alias; community implementations live in the core repository.
+External adapters compose the core server through its published exports. Web composition selects edition behavior through the edition alias. The empty community implementation lives beside its types under `apps/web/src/edition`, so feature consumers can use the edition interface without importing app composition. Vite and TypeScript resolve the same implementation; Fallow allows only the edition contract for these consumers.
 
-Start at the [entrypoint](../../apps/server/src/public/adapter-api.ts); follow the [implementation](../../apps/server/package.json) and [related modules](../../apps/web/src/app/edition/community.tsx).
+Start at the [entrypoint](../../apps/server/src/public/adapter-api.ts); follow the [implementation](../../apps/server/package.json) and [related modules](../../apps/web/src/edition/community-module.ts).
 
 ## Invariants and failure handling
 

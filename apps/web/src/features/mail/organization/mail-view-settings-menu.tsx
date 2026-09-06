@@ -19,11 +19,11 @@ import {
 import type { ReactNode } from "react"
 
 const panels = [
-  { icon: IntersectSquareIcon, label: "Group", right: undefined, title: "Group" },
-  { icon: FilterIcon, label: "Filter", right: undefined, title: "Filter" },
-  { icon: ListIcon, label: "Properties", right: undefined, title: "Properties" },
-  { icon: DatabaseIcon, label: "Database", right: undefined, title: "Database" },
-] as const
+  { icon: IntersectSquareIcon, label: "Group", title: "Group" },
+  { icon: FilterIcon, label: "Filter", title: "Filter" },
+  { icon: ListIcon, label: "Properties", title: "Properties" },
+  { icon: DatabaseIcon, label: "Database", title: "Database" },
+] as const;
 
 export function MailViewSettingsMenu({
   filterCount = 0,
@@ -44,6 +44,12 @@ export function MailViewSettingsMenu({
   propertiesEditor?: ReactNode
   visiblePropertyCount?: number
 }) {
+  const panelEditors = {
+    Group: groupEditor,
+    Filter: filterEditor,
+    Properties: propertiesEditor,
+    Database: databaseEditor,
+  };
   return (
     <DropDrawer defaultSubDisplayMode="inline">
       <DropDrawerTrigger asChild>
@@ -65,26 +71,38 @@ export function MailViewSettingsMenu({
         <div className="px-2 py-1.5 text-sm font-semibold text-content-primary">
           Edit view
         </div>
-        {panels.map(({ icon: Icon, label, right, title }) => (
+        {panels.map(({ icon: Icon, label, title }) => (
           <DropDrawerSub displayMode="inline" key={label} title={title}>
             <DropDrawerSubTrigger>
               <Icon />
               <span>{label}</span>
               {label === "Filter" && filterDirty ? (
-                <span aria-label="Unsaved filters" className="ml-auto size-1.5 rounded-full bg-feedback-warning" />
+                <span
+                  aria-label="Unsaved filters"
+                  className="ml-auto size-1.5 rounded-full bg-feedback-warning"
+                />
               ) : null}
               {label === "Filter" && filterCount > 0 ? (
-                <span className={filterDirty ? "text-content-secondary" : "ml-auto text-content-secondary"}>{filterCount}</span>
+                <span
+                  className={
+                    filterDirty
+                      ? "text-content-secondary"
+                      : "ml-auto text-content-secondary"
+                  }
+                >
+                  {filterCount}
+                </span>
               ) : null}
               {label === "Properties" ? (
-                <span className="ml-auto text-content-secondary">{visiblePropertyCount} properties</span>
-              ) : null}
-              {right ? (
-                <span className="ml-auto text-content-secondary">{right}</span>
+                <span className="ml-auto text-content-secondary">
+                  {visiblePropertyCount} properties
+                </span>
               ) : null}
             </DropDrawerSubTrigger>
-            <DropDrawerSubContent className={label === "Filter" ? "w-80" : "w-72"}>
-              {label === "Group" && groupEditor ? groupEditor : label === "Filter" && filterEditor ? filterEditor : label === "Properties" && propertiesEditor ? propertiesEditor : label === "Database" && databaseEditor ? databaseEditor : (
+            <DropDrawerSubContent
+              className={label === "Filter" ? "w-80" : "w-72"}
+            >
+              {panelEditors[label] || (
                 <DropDrawerItem disabled>
                   This panel is enabled in its organization pass.
                 </DropDrawerItem>
@@ -99,10 +117,14 @@ export function MailViewSettingsMenu({
             <span>Customize hover actions</span>
           </DropDrawerSubTrigger>
           <DropDrawerSubContent className="w-72">
-            {hoverActionsEditor ?? <DropDrawerItem disabled>Hover actions are unavailable for this view.</DropDrawerItem>}
+            {hoverActionsEditor ?? (
+              <DropDrawerItem disabled>
+                Hover actions are unavailable for this view.
+              </DropDrawerItem>
+            )}
           </DropDrawerSubContent>
         </DropDrawerSub>
       </DropDrawerContent>
     </DropDrawer>
-  )
+  );
 }

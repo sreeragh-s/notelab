@@ -12,7 +12,34 @@ function getColumnCount(title: string) {
   return match ? Number(match[1]) : null
 }
 
-export function blockContentForItem(
+function convertedTextBlock(
+  title: string,
+  node: { isTextblock: boolean; textContent: string },
+): Content {
+  const text =
+    node.isTextblock && node.textContent.trim() ? node.textContent : "";
+  const content = text ? [{ type: "text", text }] : undefined;
+  if (title === "Text") return { type: "paragraph", content };
+  const levels: Record<string, number> = {
+    "Heading 1": 1,
+    "Heading 2": 2,
+    "Heading 3": 3,
+  };
+  return { type: "heading", attrs: { level: levels[title] ?? 3 }, content };
+}
+
+export function blockContentForConversion(
+  item: SlashCommandItem,
+  node: { isTextblock: boolean; textContent: string },
+): Content | null {
+  const content = blockContentForItem(item);
+  if (!content) return null;
+  if (item.title === "Text" || item.title.startsWith("Heading"))
+    return convertedTextBlock(item.title, node);
+  return content;
+}
+
+function blockContentForItem(
   item: SlashCommandItem,
   attrs?: { databaseId?: string; meetingId?: string }
 ): Content | null {

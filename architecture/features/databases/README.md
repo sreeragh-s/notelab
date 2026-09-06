@@ -12,6 +12,8 @@
 
 Database routes compose reads, rows, properties and data-source operations. The web database surface derives a view model and commands from shared payloads; feature mutations coordinate optimistic state and realtime invalidation.
 
+Database JSON routes use shared authenticated input parsing, retaining each operation’s payload validation and permission decisions. [Transport tests](../../../apps/server/src/features/databases/route-input.test.ts) cover malformed input and authentication ordering.
+
 ## Authorization and persistence
 
 A database is page-backed; data sources, rows, views and property values are separate persisted concepts. Resource and data-source access checks constrain mutations. Formula and value rules also have shared implementations.
@@ -35,3 +37,8 @@ Shared mutations are grouped into database lifecycle, data sources, views, prope
 Start with [the existing tests or model](../../../apps/server/src/features/databases/database-routes.test.ts) and the adjacent tests in the owning modules. Exercise observable outcomes through the owning interface; a source assertion alone does not establish runtime behavior. Run the affected workspace scripts described in [testing and quality](../../setup/testing-and-quality.md).
 
 Update this guide when ownership, interfaces, authorization, persistence or cross-module flows change. [Architecture index](../../README.md).
+
+
+The table [model](../../../apps/web/src/features/databases/views/table/model/database-table-model.ts) owns drop-target identity retention, including sub-item parent changes. List [row presentation](../../../apps/web/src/features/databases/views/list/components/list-row-presentation.ts) derives drag indicators and task completion labels. Their tests cover unchanged references, internal/external drag placement and parent nullability while controllers retain drag lifecycle and mutations.
+
+Table, Kanban and toolbar composition keep named local render sections for property cells, grouped rows, cards and view source/actions. State remains in the existing controllers. Form title previews select the existing input or textarea with one shared set of props; question settings and mutations remain unchanged.

@@ -1,3 +1,8 @@
+import {
+  retainTableRowDropTarget,
+  retainGroupRowDropTarget,
+  propertyInsertPositions,
+} from "../model/database-table-model";
 import { useTableRowLayout } from "../controller/use-table-row-layout"
 import { useTableColumns } from "../controller/use-table-columns"
 import { useTableSelection } from "../controller/use-table-selection"
@@ -532,22 +537,14 @@ export function DatabaseTableView() {
   const updateRowDropTarget = (nextTarget: TableRowDropTarget | null) => {
     rowDropTargetRef.current = nextTarget
     setRowDropTarget((currentTarget) =>
-      currentTarget?.index === nextTarget?.index &&
-      currentTarget?.lineTop === nextTarget?.lineTop &&
-      currentTarget?.subItemParentRowId === nextTarget?.subItemParentRowId
-        ? currentTarget
-        : nextTarget
-    )
+      retainTableRowDropTarget(currentTarget, nextTarget),
+    );
   }
   const updateGroupRowDropTarget = (nextTarget: GroupRowDropTarget | null) => {
     groupRowDropTargetRef.current = nextTarget
     setGroupRowDropTarget((currentTarget) =>
-      currentTarget?.localTargetIndex === nextTarget?.localTargetIndex &&
-      currentTarget?.sectionId === nextTarget?.sectionId &&
-      currentTarget?.top === nextTarget?.top
-        ? currentTarget
-        : nextTarget
-    )
+      retainGroupRowDropTarget(currentTarget, nextTarget),
+    );
   }
   const getGroupRowDropTarget = (clientY: number): GroupRowDropTarget | null => {
     const wrapperElement = tableWrapRef.current
@@ -1296,22 +1293,186 @@ export function DatabaseTableView() {
           const showLeftInsert = pendingInsertPropertyKey === leftInsertKey
           const showRightInsert = pendingInsertPropertyKey === rightInsertKey
           const property = propertiesById.get(columnId)
-          const propertyWrapContent = property
-            ? getPropertyWrapContent(property.property.config)
-            : false
-          const PropertyIcon = property
-            ? getDatabasePropertyType(property.property.type).icon
-            : null
-          const customPropertyIcon = property
-            ? getDatabasePropertyIcon(property.property.config)
-            : ""
+          const dragTitle = canReorderColumns
+            ? "Drag to reorder column"
+            : undefined;
+          const insertPositions = propertyInsertPositions(
+            pendingInsertProperty?.position,
+            property?.position,
+          );
+          function renderNameHeader(
+            startHeaderDrag: (event: ReactPointerEvent<HTMLElement>) => void,
+          ) {
+            return canUseHeaderMenus ? (
+              <DatabaseNamePropertyMenu
+                config={databaseConfig}
+                databaseId={loadedDatabaseId}
+                isGrouped={groupProperty?.id === "name"}
+                onOpenChange={(open) =>
+                  handleEditingPropertyOpenChange(headerScope, "name", open)
+                }
+                onInsertProperty={(side) =>
+                  openInsertPropertyMenu("name", 0, side)
+                }
+                onToggleGroup={() =>
+                  togglePropertyGrouping("name", groupProperty?.id === "name")
+                }
+                open={
+                  editingPropertyKey ===
+                  getHeaderEditingKey(headerScope, "name")
+                }
+                schemaActionsEnabled={canEditStructure}
+                sortDirection={
+                  activeDatabaseSorts.find((sort) => sort.column === "name")
+                    ?.direction
+                }
+                onSort={(direction) =>
+                  void saveDatabaseSorts([
+                    ...activeDatabaseSorts.filter(
+                      (sort) => sort.column !== "name",
+                    ),
+                    { column: "name", direction },
+                  ])
+                }
+                onUpdateConfig={(config) =>
+                  void updateNameColumnConfig?.(config)
+                }
+                triggerDragProps={{
+                  onClick: (event) => {
+                    if (suppressPropertyHeaderClickRef.current) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      suppressPropertyHeaderClickRef.current = false;
+                      return;
+                    }
+
+                    handleEditingPropertyOpenChange(headerScope, "name", true);
+                  },
+                  onPointerDownCapture: startHeaderDrag,
+                  title: dragTitle,
+                }}
+                wrapContent={nameColumnWrapContent}
+              />
+            ) : (
+              <span
+                className="database-name-header-content"
+                onPointerDownCapture={startHeaderDrag}
+                title={dragTitle}
+              >
+                <span>Aa</span>
+                <span>{nameColumnLabel}</span>
+              </span>
+            );
+          }
+          function renderPropertyHeader(
+            startHeaderDrag: (event: ReactPointerEvent<HTMLElement>) => void,
+          ) {
+            if (!property) return null;
+            const propertyWrapContent = getPropertyWrapContent(
+              property.property.config,
+            );
+            const PropertyIcon = getDatabasePropertyType(
+              property.property.type,
+            ).icon;
+            const customPropertyIcon = getDatabasePropertyIcon(
+              property.property.config,
+            );
+            return canUseHeaderMenus ? (
+              <DatabasePropertyMenu
+                config={property.property.config}
+                databaseConfig={databaseConfig}
+                databaseId={loadedDatabaseId}
+                databasePropertyId={property.id}
+                isGrouped={groupProperty?.property.id === property.property.id}
+                name={property.property.name}
+                onOpenChange={(open) =>
+                  handleEditingPropertyOpenChange(
+                    headerScope,
+                    property.id,
+                    open,
+                  )
+                }
+                onInsertProperty={(side) =>
+                  openInsertPropertyMenu(property.id, property.position, side)
+                }
+                onEditFormula={() => setFormulaSetupPropertyId(property.id)}
+                onRename={(name) => renameDatabaseProperty(property.id, name)}
+                onToggleGroup={() =>
+                  togglePropertyGrouping(
+                    property.property.id,
+                    groupProperty?.property.id === property.property.id,
+                  )
+                }
+                open={
+                  editingPropertyKey ===
+                  getHeaderEditingKey(headerScope, property.id)
+                }
+                schemaActionsEnabled={canEditStructure}
+                sortDirection={
+                  activeDatabaseSorts.find(
+                    (sort) => sort.column === property.id,
+                  )?.direction
+                }
+                sourceDatabaseId={loadedDatabaseId}
+                sourceDatabaseName={databaseName}
+                sourcePropertyId={property.property.id}
+                onSort={(direction) =>
+                  void saveDatabaseSorts([
+                    ...activeDatabaseSorts.filter(
+                      (sort) => sort.column !== property.id,
+                    ),
+                    { column: property.id, direction },
+                  ])
+                }
+                onUpdateConfig={(config) =>
+                  void updateDatabasePropertyConfig(property.id, config)
+                }
+                triggerDragProps={{
+                  onClick: (event) => {
+                    if (suppressPropertyHeaderClickRef.current) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      suppressPropertyHeaderClickRef.current = false;
+                      return;
+                    }
+
+                    handleEditingPropertyOpenChange(
+                      headerScope,
+                      property.id,
+                      true,
+                    );
+                  },
+                  onPointerDownCapture: startHeaderDrag,
+                  title: dragTitle,
+                }}
+                type={property.property.type}
+                wrapContent={propertyWrapContent}
+                workspaceId={workspaceId ?? databaseWorkspaceId}
+              />
+            ) : (
+              <span
+                className="database-property-header-label flex h-8 min-w-0 items-center gap-2 px-3 py-1"
+                onPointerDownCapture={startHeaderDrag}
+                title={dragTitle}
+              >
+                {customPropertyIcon ? (
+                  <span className="shrink-0">
+                    <PageIconDisplay size="sm" value={customPropertyIcon} />
+                  </span>
+                ) : PropertyIcon ? (
+                  <PropertyIcon className="size-4 shrink-0 text-content-secondary" />
+                ) : null}
+                <span className="truncate">{property.property.name}</span>
+              </span>
+            );
+          }
 
           return (
             <Fragment key={columnId}>
               {showLeftInsert
                 ? renderInsertPropertyHeader(
                     leftInsertKey,
-                    pendingInsertProperty?.position ?? property?.position ?? 0
+                    insertPositions.left,
                   )
                 : null}
               <DatabaseHeaderReorderItem
@@ -1329,194 +1490,9 @@ export function DatabaseTableView() {
               >
                 {(startHeaderDrag) => (
                   <>
-                    {columnId === DATABASE_NAME_COLUMN_ID ? (
-                      canUseHeaderMenus ? (
-                        <DatabaseNamePropertyMenu
-                          config={databaseConfig}
-                          databaseId={loadedDatabaseId}
-                          isGrouped={groupProperty?.id === "name"}
-                          onOpenChange={(open) =>
-                            handleEditingPropertyOpenChange(
-                              headerScope,
-                              "name",
-                              open
-                            )
-                          }
-                          onInsertProperty={(side) =>
-                            openInsertPropertyMenu("name", 0, side)
-                          }
-                          onToggleGroup={() =>
-                            togglePropertyGrouping(
-                              "name",
-                              groupProperty?.id === "name"
-                            )
-                          }
-                          open={
-                            editingPropertyKey ===
-                            getHeaderEditingKey(headerScope, "name")
-                          }
-                          schemaActionsEnabled={canEditStructure}
-                          sortDirection={
-                            activeDatabaseSorts.find(
-                              (sort) => sort.column === "name"
-                            )?.direction
-                          }
-                          onSort={(direction) =>
-                            void saveDatabaseSorts([
-                              ...activeDatabaseSorts.filter(
-                                (sort) => sort.column !== "name"
-                              ),
-                              { column: "name", direction },
-                            ])
-                          }
-                          onUpdateConfig={(config) =>
-                            void updateNameColumnConfig?.(config)
-                          }
-                          triggerDragProps={{
-                            onClick: (event) => {
-                              if (suppressPropertyHeaderClickRef.current) {
-                                event.preventDefault()
-                                event.stopPropagation()
-                                suppressPropertyHeaderClickRef.current = false
-                                return
-                              }
-
-                              handleEditingPropertyOpenChange(
-                                headerScope,
-                                "name",
-                                true
-                              )
-                            },
-                            onPointerDownCapture: startHeaderDrag,
-                            title: canReorderColumns
-                              ? "Drag to reorder column"
-                              : undefined,
-                          }}
-                          wrapContent={nameColumnWrapContent}
-                        />
-                      ) : (
-                        <span
-                          className="database-name-header-content"
-                          onPointerDownCapture={startHeaderDrag}
-                          title={
-                            canReorderColumns
-                              ? "Drag to reorder column"
-                              : undefined
-                          }
-                        >
-                          <span>Aa</span>
-                          <span>{nameColumnLabel}</span>
-                        </span>
-                      )
-                    ) : property && canUseHeaderMenus ? (
-                      <DatabasePropertyMenu
-                        config={property.property.config}
-                        databaseConfig={databaseConfig}
-                        databaseId={loadedDatabaseId}
-                        databasePropertyId={property.id}
-                        isGrouped={
-                          groupProperty?.property.id === property.property.id
-                        }
-                        name={property.property.name}
-                        onOpenChange={(open) =>
-                          handleEditingPropertyOpenChange(
-                            headerScope,
-                            property.id,
-                            open
-                          )
-                        }
-                        onInsertProperty={(side) =>
-                          openInsertPropertyMenu(
-                            property.id,
-                            property.position,
-                            side
-                          )
-                        }
-                        onEditFormula={() =>
-                          setFormulaSetupPropertyId(property.id)
-                        }
-                        onRename={(name) =>
-                          renameDatabaseProperty(property.id, name)
-                        }
-                        onToggleGroup={() =>
-                          togglePropertyGrouping(
-                            property.property.id,
-                            groupProperty?.property.id === property.property.id
-                          )
-                        }
-                        open={
-                          editingPropertyKey ===
-                          getHeaderEditingKey(headerScope, property.id)
-                        }
-                        schemaActionsEnabled={canEditStructure}
-                        sortDirection={
-                          activeDatabaseSorts.find(
-                            (sort) => sort.column === property.id
-                          )?.direction
-                        }
-                        sourceDatabaseId={loadedDatabaseId}
-                        sourceDatabaseName={databaseName}
-                        sourcePropertyId={property.property.id}
-                        onSort={(direction) =>
-                          void saveDatabaseSorts([
-                            ...activeDatabaseSorts.filter(
-                              (sort) => sort.column !== property.id
-                            ),
-                            { column: property.id, direction },
-                          ])
-                        }
-                        onUpdateConfig={(config) =>
-                          void updateDatabasePropertyConfig(property.id, config)
-                        }
-                        triggerDragProps={{
-                          onClick: (event) => {
-                            if (suppressPropertyHeaderClickRef.current) {
-                              event.preventDefault()
-                              event.stopPropagation()
-                              suppressPropertyHeaderClickRef.current = false
-                              return
-                            }
-
-                            handleEditingPropertyOpenChange(
-                              headerScope,
-                              property.id,
-                              true
-                            )
-                          },
-                          onPointerDownCapture: startHeaderDrag,
-                          title: canReorderColumns
-                            ? "Drag to reorder column"
-                            : undefined,
-                        }}
-                        type={property.property.type}
-                        wrapContent={propertyWrapContent}
-                        workspaceId={workspaceId ?? databaseWorkspaceId}
-                      />
-                    ) : property ? (
-                      <span
-                        className="database-property-header-label flex h-8 min-w-0 items-center gap-2 px-3 py-1"
-                        onPointerDownCapture={startHeaderDrag}
-                        title={
-                          canReorderColumns
-                            ? "Drag to reorder column"
-                            : undefined
-                        }
-                      >
-                        {customPropertyIcon ? (
-                          <span className="shrink-0">
-                            <PageIconDisplay
-                              size="sm"
-                              value={customPropertyIcon}
-                            />
-                          </span>
-                        ) : PropertyIcon ? (
-                          <PropertyIcon className="size-4 shrink-0 text-content-secondary" />
-                        ) : null}
-                        <span className="truncate">
-                          {property.property.name}
-                        </span>
-                      </span>
-                    ) : null}
+                    {columnId === DATABASE_NAME_COLUMN_ID
+                      ? renderNameHeader(startHeaderDrag)
+                      : renderPropertyHeader(startHeaderDrag)}
                     <span
                       aria-hidden="true"
                       className="database-column-resize-handle"
@@ -1530,12 +1506,11 @@ export function DatabaseTableView() {
               {showRightInsert
                 ? renderInsertPropertyHeader(
                     rightInsertKey,
-                    pendingInsertProperty?.position ??
-                      (property?.position ?? 0) + 1
+                    insertPositions.right,
                   )
                 : null}
             </Fragment>
-          )
+          );
         })}
         {canEditStructure ? (
           <th className="database-add-property-cell">
@@ -1633,6 +1608,84 @@ export function DatabaseTableView() {
                 pendingInsertPropertyKey === rightInsertKey
               const property = propertiesById.get(columnId)
 
+              function renderPropertyCell() {
+                if (!property) {
+                  return null;
+                }
+
+                const pageProperty = property.property;
+                const key = `${row.pageId}:${pageProperty.id}`;
+                const persistedValue = propertyValuesByKey[key] ?? "";
+                const wrapContent = getPropertyWrapContent(pageProperty.config);
+
+                return (
+                  <Fragment key={property.id}>
+                    {showLeftInsert
+                      ? renderInsertPropertyCell(leftInsertKey)
+                      : null}
+                    <DatabaseActiveTableCell
+                      cellKey={key}
+                      isFillTarget={
+                        cellFillDrag?.propertyId === pageProperty.id &&
+                        fillTargetRowIds.has(row.id)
+                      }
+                      isSelected={selectedCellKey === key}
+                      onFillStart={
+                        editable &&
+                        isDatabasePropertyFillable(pageProperty.type)
+                          ? (event) =>
+                              startCellFill(
+                                row,
+                                pageProperty.id,
+                                pageProperty.type,
+                                persistedValue,
+                                event,
+                              )
+                          : undefined
+                      }
+                      onSelect={() => setSelectedCellKey(key)}
+                      presenceKey={`${row.id}:${pageProperty.id}`}
+                      className={cn(
+                        "database-value-cell",
+                        getConditionalColorClassName(
+                          conditionalColors.propertyColors[property.id],
+                        ),
+                      )}
+                      wrapContent={wrapContent}
+                    >
+                      {() => (
+                        <DatabaseCellContent wrapContent={wrapContent}>
+                          <DatabasePropertyValue
+                            editable={editable}
+                            properties={properties}
+                            propertyValuesByKey={propertyValuesByKey}
+                            onPropertyConfigChange={(
+                              databasePropertyId,
+                              config,
+                            ) =>
+                              updateDatabasePropertyConfig(
+                                databasePropertyId,
+                                config,
+                              )
+                            }
+                            onSaveValue={savePropertyValue}
+                            persistedValue={persistedValue}
+                            personOptions={personOptions}
+                            property={property}
+                            row={row}
+                            titlePropertyLabel={nameColumnLabel}
+                            wrapContent={wrapContent}
+                          />
+                        </DatabaseCellContent>
+                      )}
+                    </DatabaseActiveTableCell>
+                    {showRightInsert
+                      ? renderInsertPropertyCell(rightInsertKey)
+                      : null}
+                  </Fragment>
+                );
+              }
+
               if (columnId === DATABASE_NAME_COLUMN_ID) {
                 return (
                   <Fragment key={columnId}>
@@ -1714,78 +1767,7 @@ export function DatabaseTableView() {
                 )
               }
 
-              if (!property) {
-                return null
-              }
-
-              const pageProperty = property.property
-              const key = `${row.pageId}:${pageProperty.id}`
-              const persistedValue = propertyValuesByKey[key] ?? ""
-              const wrapContent = getPropertyWrapContent(pageProperty.config)
-
-              return (
-                <Fragment key={property.id}>
-                  {showLeftInsert
-                    ? renderInsertPropertyCell(leftInsertKey)
-                    : null}
-                  <DatabaseActiveTableCell
-                    cellKey={key}
-                    isFillTarget={
-                      cellFillDrag?.propertyId === pageProperty.id &&
-                      fillTargetRowIds.has(row.id)
-                    }
-                    isSelected={selectedCellKey === key}
-                    onFillStart={
-                      editable &&
-                      isDatabasePropertyFillable(pageProperty.type)
-                        ? (event) =>
-                            startCellFill(
-                              row,
-                              pageProperty.id,
-                              pageProperty.type,
-                              persistedValue,
-                              event
-                            )
-                        : undefined
-                    }
-                    onSelect={() => setSelectedCellKey(key)}
-                    presenceKey={`${row.id}:${pageProperty.id}`}
-                    className={cn(
-                      "database-value-cell",
-                      getConditionalColorClassName(
-                        conditionalColors.propertyColors[property.id]
-                      )
-                    )}
-                    wrapContent={wrapContent}
-                  >
-                    {() => (
-                      <DatabaseCellContent wrapContent={wrapContent}>
-                        <DatabasePropertyValue
-                          editable={editable}
-                          properties={properties}
-                          propertyValuesByKey={propertyValuesByKey}
-                          onPropertyConfigChange={(databasePropertyId, config) =>
-                            updateDatabasePropertyConfig(
-                              databasePropertyId,
-                              config
-                            )
-                          }
-                          onSaveValue={savePropertyValue}
-                          persistedValue={persistedValue}
-                          personOptions={personOptions}
-                          property={property}
-                          row={row}
-                          titlePropertyLabel={nameColumnLabel}
-                          wrapContent={wrapContent}
-                        />
-                      </DatabaseCellContent>
-                    )}
-                  </DatabaseActiveTableCell>
-                  {showRightInsert
-                    ? renderInsertPropertyCell(rightInsertKey)
-                    : null}
-                </Fragment>
-              )
+              return renderPropertyCell();
             })}
             {editable ? <td /> : null}
           </tr>
@@ -1924,22 +1906,27 @@ export function DatabaseTableView() {
 
           event.preventDefault()
           event.stopPropagation()
-          if (draggedRowId) {
-            const nextMove = getDraggedRowMove()
+          function moveInternalRow() {
+            const nextMove = getDraggedRowMove();
 
             if (isTableSorted) {
               if (nextMove) {
-                setPendingSortedRowReorder(nextMove)
+                setPendingSortedRowReorder(nextMove);
               }
             } else if (nextMove) {
-              applyRowMove(nextMove)
+              applyRowMove(nextMove);
             }
-          } else if (dragPayload) {
+          }
+          function insertExternalRow(
+            dragPayload: NonNullable<
+              ReturnType<typeof getDatabasePageDragPayload>
+            >,
+          ) {
             if (isTableGrouped) {
-              const target = groupRowDropTargetRef.current
+              const target = groupRowDropTargetRef.current;
               const section = groupedSections.find(
                 (candidate) => candidate.id === target?.sectionId,
-              )
+              );
 
               if (target && section) {
                 addDraggedPageRow(
@@ -1951,7 +1938,7 @@ export function DatabaseTableView() {
                   ),
                   section.groupValue,
                   groupProperty,
-                )
+                );
               }
             } else {
               addDraggedPageRow(
@@ -1959,10 +1946,15 @@ export function DatabaseTableView() {
                 getAnchoredRowInsertPosition(
                   rows,
                   visibleRows,
-                  resolvedRowTarget?.index ?? 0
-                )
-              )
+                  resolvedRowTarget?.index ?? 0,
+                ),
+              );
             }
+          }
+          if (draggedRowId) {
+            moveInternalRow();
+          } else if (dragPayload) {
+            insertExternalRow(dragPayload);
           }
           clearRowDrag()
         }}
@@ -2029,6 +2021,39 @@ export function DatabaseTableView() {
                 {groupedSections.map((section) => {
                   const isCollapsed = collapsedGroups[section.id] === true
 
+                  function renderGroupRows() {
+                    return (
+                      <DatabaseVirtualizedTable
+                        columnKeys={columnKeys}
+                        columnWidths={columnWidths}
+                        footerRow={
+                          editable &&
+                          !section.isEmpty &&
+                          groupProperty &&
+                          canCreateRowInKanbanGroup(groupProperty) ? (
+                            <CreateDatabaseRowButton
+                              columnCount={columnKeys.length}
+                              disabled={!databaseId || isAddingDatabaseRow}
+                              onClick={() =>
+                                addDatabaseRow(
+                                  section.groupValue,
+                                  groupProperty,
+                                )
+                              }
+                            />
+                          ) : undefined
+                        }
+                        measurementKey={tableMeasurementKey}
+                        renderRow={renderTableRow}
+                        rows={section.rows}
+                        tableMinWidth={tableMinWidth}
+                        virtualizationEnabled={
+                          !draggedRowId && !isExternalRowDragActive
+                        }
+                      />
+                    );
+                  }
+
                   return (
                     <section
                       className="database-table-group"
@@ -2064,40 +2089,9 @@ export function DatabaseTableView() {
                           {section.rows.length}
                         </span>
                       </button>
-                      {!isCollapsed ? (
-                        <>
-                          <DatabaseVirtualizedTable
-                            columnKeys={columnKeys}
-                            columnWidths={columnWidths}
-                            footerRow={
-                              editable &&
-                              !section.isEmpty &&
-                              groupProperty &&
-                              canCreateRowInKanbanGroup(groupProperty) ? (
-                                <CreateDatabaseRowButton
-                                  columnCount={columnKeys.length}
-                                  disabled={!databaseId || isAddingDatabaseRow}
-                                  onClick={() =>
-                                    addDatabaseRow(
-                                      section.groupValue,
-                                      groupProperty
-                                    )
-                                  }
-                                />
-                              ) : undefined
-                            }
-                            measurementKey={tableMeasurementKey}
-                            renderRow={renderTableRow}
-                            rows={section.rows}
-                            tableMinWidth={tableMinWidth}
-                            virtualizationEnabled={
-                              !draggedRowId && !isExternalRowDragActive
-                            }
-                          />
-                        </>
-                      ) : null}
+                      {!isCollapsed ? <>{renderGroupRows()}</> : null}
                     </section>
-                  )
+                  );
                 })}
               </div>
             ) : (

@@ -1,4 +1,4 @@
-import { encodePageContentAsYjs } from "../../collaboration/service";
+import { encodePageContentAsYjs } from "../../collaboration/document-codec";
 import { markdownToPageContent } from "../conversion/markdown-to-page-content";
 import type {
   AiAgentProfileDetail,

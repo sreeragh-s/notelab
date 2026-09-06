@@ -12,7 +12,7 @@ The page route composition mounts browse, visit, hierarchy, sharing, content and
 
 ## Authorization and persistence
 
-Pages, placements, access grants and collaboration documents represent different concerns. Server handlers resolve resource access before reads/writes. Page lock and layout preferences also influence presentation and permitted editing.
+Pages, placements, access grants and collaboration documents represent different concerns. The [authenticated route guard](../../../apps/server/src/features/pages/page-route-access.ts) resolves identity, page existence, effective access and active workspace in that order, returning the authorized record and access level. Content and sharing handlers use it without changing their distinct required access. Deleted-page, guest and public loading retain separate paths. [Route tests](../../../apps/server/src/features/pages/page-route-access.test.ts) verify denial and workspace-check ordering. Page lock and layout preferences also influence presentation and permitted editing.
 
 ## Side effects, failures and recovery
 

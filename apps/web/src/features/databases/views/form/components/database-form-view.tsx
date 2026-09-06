@@ -192,6 +192,7 @@ export function DatabaseFormView({ preview = false }: { preview?: boolean }) {
             patch: DatabaseFormQuestionSettingsPatch,
           ) => updateDatabaseFormQuestionSettings?.(question.id, patch)
           const property = question.property
+          const TitleControl = settings.longAnswer ? Textarea : Input
 
           return (
             <FormQuestion
@@ -263,17 +264,8 @@ export function DatabaseFormView({ preview = false }: { preview?: boolean }) {
                   property={property}
                   required={settings.required}
                 />
-              ) : settings.longAnswer ? (
-                <Textarea
-                  aria-label={`${settings.label} preview`}
-                  aria-required={settings.required}
-                  onChange={(event) => setPreviewTitle(event.target.value)}
-                  placeholder={preview ? "Your answer" : "Respondent's answer"}
-                  required={settings.required}
-                  value={previewTitle}
-                />
               ) : (
-                <Input
+                <TitleControl
                   aria-label={`${settings.label} preview`}
                   aria-required={settings.required}
                   onChange={(event) => setPreviewTitle(event.target.value)}

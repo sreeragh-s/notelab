@@ -15,7 +15,7 @@
       "@zilobase/ai-conversation-adapter": [
         "./src/features/ai/conversations/use-agent-conversation.ts"
       ],
-      "@zilobase/edition-web": ["./src/app/edition/community.tsx"],
+      "@zilobase/edition-web": ["./src/edition/community-module.ts"],
       "@/*": ["./src/*"],
       "@/packages/editor": ["./src/features/editor/index.ts"],
       "@/packages/editor/*": ["./src/features/editor/*"]

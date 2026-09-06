@@ -1,3 +1,4 @@
+import { readAuthenticatedJson } from "../../shared/http/auth";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import { getAuthenticatedUser as requireUser } from "../../shared/http/auth";
@@ -18,17 +19,9 @@ import { enforceActiveWorkspace, getPage } from "./page-route-support";
 export const pageHierarchyRoutes = new Hono<AppBindings>();
 
 pageHierarchyRoutes.post("/", async (c) => {
-  const user = requireUser(c);
-
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const body = await readJsonBody(c.req);
-
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "A JSON body is required" }, 400);
-  }
+  const request = await readAuthenticatedJson(c);
+  if (!request.ok) return request.response;
+  const { user, body } = request;
 
   const {
     workspaceId,

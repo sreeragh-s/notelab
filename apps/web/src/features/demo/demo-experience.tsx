@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 
 import { Button } from "@/shared/ui/button"
-import { queryClient } from "@/app/query-client"
 import {
   Dialog,
   DialogContent,
@@ -14,11 +13,8 @@ import {
   DEMO_GUARD_EVENT,
   DEMO_SIGNUP_URL,
   isAllowedDemoParent,
-  installDemoCache,
   isHostedDemoRuntime,
 } from "./runtime"
-
-installDemoCache(queryClient)
 
 export function DemoExperience({ children }: React.PropsWithChildren) {
   const demoMode = isHostedDemoRuntime()

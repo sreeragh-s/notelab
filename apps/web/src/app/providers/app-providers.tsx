@@ -17,12 +17,14 @@ import {
   useThemeFamily,
 } from "@/shared/providers/theme-family-provider"
 import { AppIconProvider } from "@/shared/components/app-icon-provider"
-import { DemoExperience } from "@/features/demo"
+import { DemoExperience, installDemoCache } from "@/features/demo"
 import { useNavigationRealtime } from "@zilobase/features/pages/react";
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
 import { useSession } from "@zilobase/features/auth/react";
 
 import posthog from "@/shared/lib/posthog"
+
+installDemoCache(queryClient)
 
 export function AppProviders({ children }: React.PropsWithChildren) {
   return (

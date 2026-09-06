@@ -1,15 +1,9 @@
+import { readAuthenticatedJson } from "../../shared/http/auth";
+import { authorizePageRoute } from "./page-route-access";
 import { and, asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { getAuthenticatedUser as requireUser } from "../../shared/http/auth";
-import {
-  canAccessDatabaseInWorkspace,
-  canAccessPageInWorkspace,
-  getEffectivePageAccessInWorkspace,
-  getEffectivePageAccessForUsers,
-  getMembership,
-  hasAccess,
-  normalizeAccessLevel,
-} from "../access";
+
+import { canAccessDatabaseInWorkspace, canAccessPageInWorkspace, getEffectivePageAccessForUsers, getMembership, hasAccess, normalizeAccessLevel } from "../access";
 import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
 import { db } from "../../infrastructure/database";
 import {
@@ -31,24 +25,16 @@ import {
   enqueueNavigationInvalidation,
   publishCommittedNavigationInvalidation,
 } from "../workspaces/navigation-realtime/outbox";
-import { enforceActiveWorkspace, getPage } from "./page-route-support";
+
 import { getAgentProfileRole } from "../ai/agents/agent-profile-service";
 
 export const pageSharingRoutes = new Hono<AppBindings>();
 export const pageVisitRoutes = new Hono<AppBindings>();
 
 pageVisitRoutes.post("/item-visits", async (c) => {
-  const user = requireUser(c);
-
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const body = await readJsonBody(c.req);
-
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "A JSON body is required" }, 400);
-  }
+  const request = await readAuthenticatedJson(c);
+  if (!request.ok) return request.response;
+  const { user, body } = request;
 
   const { itemId, itemKind, workspaceId } = body as {
     itemId?: unknown;
@@ -130,38 +116,9 @@ pageVisitRoutes.post("/item-visits", async (c) => {
 });
 
 pageSharingRoutes.put("/:id/favorite", async (c) => {
-  const user = requireUser(c);
-
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const record = await getPage(c.req.param("id"));
-
-  if (!record) {
-    return c.json({ error: "Page not found" }, 404);
-  }
-
-  if (
-    !(await canAccessPageInWorkspace(
-      record.id,
-      record.workspaceId,
-      user.id,
-      "view",
-    ))
-  ) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const favoriteOrgMismatch = await enforceActiveWorkspace(
-    c,
-    record.workspaceId,
-    user.id,
-  );
-
-  if (favoriteOrgMismatch) {
-    return favoriteOrgMismatch;
-  }
+  const authorization = await authorizePageRoute(c, "view");
+  if (!authorization.ok) return authorization.response;
+  const { user, record } = authorization;
 
   await db
     .insert(favorite)
@@ -178,38 +135,9 @@ pageSharingRoutes.put("/:id/favorite", async (c) => {
 });
 
 pageSharingRoutes.delete("/:id/favorite", async (c) => {
-  const user = requireUser(c);
-
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const record = await getPage(c.req.param("id"));
-
-  if (!record) {
-    return c.json({ error: "Page not found" }, 404);
-  }
-
-  if (
-    !(await canAccessPageInWorkspace(
-      record.id,
-      record.workspaceId,
-      user.id,
-      "view",
-    ))
-  ) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const unfavoriteOrgMismatch = await enforceActiveWorkspace(
-    c,
-    record.workspaceId,
-    user.id,
-  );
-
-  if (unfavoriteOrgMismatch) {
-    return unfavoriteOrgMismatch;
-  }
+  const authorization = await authorizePageRoute(c, "view");
+  if (!authorization.ok) return authorization.response;
+  const { user, record } = authorization;
 
   await db
     .delete(favorite)
@@ -219,37 +147,9 @@ pageSharingRoutes.delete("/:id/favorite", async (c) => {
 });
 
 pageSharingRoutes.get("/:id/access", async (c) => {
-  const requestUser = requireUser(c);
-
-  if (!requestUser) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const record = await getPage(c.req.param("id"));
-
-  if (!record) {
-    return c.json({ error: "Page not found" }, 404);
-  }
-
-  const accessLevel = await getEffectivePageAccessInWorkspace(
-    record.id,
-    record.workspaceId,
-    requestUser.id,
-  );
-
-  if (!hasAccess(accessLevel, "full")) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const listAccessOrgMismatch = await enforceActiveWorkspace(
-    c,
-    record.workspaceId,
-    requestUser.id,
-  );
-
-  if (listAccessOrgMismatch) {
-    return listAccessOrgMismatch;
-  }
+  const authorization = await authorizePageRoute(c, "full");
+  if (!authorization.ok) return authorization.response;
+  const { user: requestUser, record, accessLevel } = authorization;
 
   const rules = await db
     .select()
@@ -261,37 +161,9 @@ pageSharingRoutes.get("/:id/access", async (c) => {
 });
 
 pageSharingRoutes.get("/:id/access-targets", async (c) => {
-  const requestUser = requireUser(c);
-
-  if (!requestUser) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const record = await getPage(c.req.param("id"));
-
-  if (!record) {
-    return c.json({ error: "Page not found" }, 404);
-  }
-
-  const requestUserAccess = await getEffectivePageAccessInWorkspace(
-    record.id,
-    record.workspaceId,
-    requestUser.id,
-  );
-
-  if (!hasAccess(requestUserAccess, "view")) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const accessTargetsOrgMismatch = await enforceActiveWorkspace(
-    c,
-    record.workspaceId,
-    requestUser.id,
-  );
-
-  if (accessTargetsOrgMismatch) {
-    return accessTargetsOrgMismatch;
-  }
+  const authorization = await authorizePageRoute(c, "view");
+  if (!authorization.ok) return authorization.response;
+  const { user: requestUser, record, accessLevel: requestUserAccess } = authorization;
 
   const [members, guests] = await Promise.all([
     db
@@ -342,37 +214,9 @@ pageSharingRoutes.get("/:id/access-targets", async (c) => {
 });
 
 pageSharingRoutes.put("/:id/access", async (c) => {
-  const requestUser = requireUser(c);
-
-  if (!requestUser) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const record = await getPage(c.req.param("id"));
-
-  if (!record) {
-    return c.json({ error: "Page not found" }, 404);
-  }
-
-  const currentAccess = await getEffectivePageAccessInWorkspace(
-    record.id,
-    record.workspaceId,
-    requestUser.id,
-  );
-
-  if (!hasAccess(currentAccess, "full")) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const putAccessOrgMismatch = await enforceActiveWorkspace(
-    c,
-    record.workspaceId,
-    requestUser.id,
-  );
-
-  if (putAccessOrgMismatch) {
-    return putAccessOrgMismatch;
-  }
+  const authorization = await authorizePageRoute(c, "full");
+  if (!authorization.ok) return authorization.response;
+  const { user: requestUser, record, accessLevel: currentAccess } = authorization;
 
   const body = await readJsonBody(c.req);
 
@@ -533,37 +377,9 @@ function isPageAccessTarget(
 }
 
 pageSharingRoutes.delete("/:id/access/public", async (c) => {
-  const requestUser = requireUser(c);
-
-  if (!requestUser) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const record = await getPage(c.req.param("id"));
-
-  if (!record) {
-    return c.json({ error: "Page not found" }, 404);
-  }
-
-  const accessLevel = await getEffectivePageAccessInWorkspace(
-    record.id,
-    record.workspaceId,
-    requestUser.id,
-  );
-
-  if (!hasAccess(accessLevel, "full")) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const deletePublicAccessOrgMismatch = await enforceActiveWorkspace(
-    c,
-    record.workspaceId,
-    requestUser.id,
-  );
-
-  if (deletePublicAccessOrgMismatch) {
-    return deletePublicAccessOrgMismatch;
-  }
+  const authorization = await authorizePageRoute(c, "full");
+  if (!authorization.ok) return authorization.response;
+  const { user: requestUser, record, accessLevel } = authorization;
 
   const { navigationEvent, rule } = await db.transaction(async (tx) => {
     const [rule] = await tx
@@ -590,37 +406,9 @@ pageSharingRoutes.delete("/:id/access/public", async (c) => {
 });
 
 pageSharingRoutes.delete("/:id/access/:ruleId", async (c) => {
-  const requestUser = requireUser(c);
-
-  if (!requestUser) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const record = await getPage(c.req.param("id"));
-
-  if (!record) {
-    return c.json({ error: "Page not found" }, 404);
-  }
-
-  const accessLevel = await getEffectivePageAccessInWorkspace(
-    record.id,
-    record.workspaceId,
-    requestUser.id,
-  );
-
-  if (!hasAccess(accessLevel, "full")) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const deleteAccessOrgMismatch = await enforceActiveWorkspace(
-    c,
-    record.workspaceId,
-    requestUser.id,
-  );
-
-  if (deleteAccessOrgMismatch) {
-    return deleteAccessOrgMismatch;
-  }
+  const authorization = await authorizePageRoute(c, "full");
+  if (!authorization.ok) return authorization.response;
+  const { user: requestUser, record, accessLevel } = authorization;
 
   const { navigationEvent, rule } = await db.transaction(async (tx) => {
     const [rule] = await tx

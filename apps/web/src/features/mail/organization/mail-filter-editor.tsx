@@ -1,3 +1,7 @@
+import {
+  changeMailFilterCondition,
+  defaultMailFilterValue as defaultValue,
+} from "./filter-condition";
 import { useMemo, useState } from "react"
 import {
   mailQuickFilterCatalog,
@@ -8,7 +12,6 @@ import {
   type MailFilterExpression,
   type MailFilterNode,
   type MailFilterOperator,
-  type MailFilterValue,
   type MailLabelRecord,
   type MailPropertyDefinition,
   type MailPropertyWorkspaceMember,
@@ -786,10 +789,6 @@ function defaultConditionForProperty(propertyId: string, properties: PropertyDef
     : getDatabaseFilterOperatorsForType(property?.propertyType ?? "text")[0]?.value ?? "is") as MailFilterOperator
   return { id: crypto.randomUUID(), operator, propertyId, type: "condition", values: operator === "is_empty" || operator === "is_not_empty" ? [] : [defaultValue(property)] }
 }
-function defaultValue(property: PropertyDefinition | undefined): MailFilterValue {
-  if (property?.propertyType === "checkbox") return true
-  return property?.valueOptions[0]?.value ?? ""
-}
 function toDatabaseCondition(condition: MailFilterCondition, properties: PropertyDefinition[]) {
   const property = properties.find((item) => item.id === condition.propertyId)
   return {
@@ -805,14 +804,7 @@ function toDatabaseCondition(condition: MailFilterCondition, properties: Propert
 function updateCondition(root: MailFilterExpression, id: string, patch: { operator?: DatabasePropertyFilterOperator; propertyId?: string; values?: string[] }, properties: PropertyDefinition[]) {
   return mapExpression(root, (node) => {
     if (node.type !== "condition" || node.id !== id) return node
-    const propertyId = patch.propertyId ?? node.propertyId
-    const property = properties.find((item) => item.id === propertyId)
-    const operator = (patch.propertyId
-      ? propertyId === "categories" ? "contains" : getDatabaseFilterOperatorsForType(property?.propertyType ?? "text")[0]?.value
-      : patch.operator) ?? node.operator
-    const rawValues = patch.propertyId ? [String(defaultValue(property))] : patch.values ?? node.values.map(String)
-    const values = rawValues.map((value): MailFilterValue => property?.propertyType === "checkbox" ? value === "true" : property?.propertyType === "number" ? Number(value) : value)
-    return { ...node, operator: operator as MailFilterOperator, propertyId, values }
+    return changeMailFilterCondition(node, patch, properties);
   })
 }
 function mapExpression(expression: MailFilterExpression, mapper: (node: MailFilterNode) => MailFilterNode): MailFilterExpression {

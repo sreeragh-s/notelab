@@ -1,3 +1,4 @@
+import { changeDraftToolPolicy, savedToolPolicy, canEditMcpToolPolicy, isConnectorDraftChanged } from "../model/mcp-tool-draft";
 import { flushSettingsDrafts } from "../use-settings-draft";
 import type { AgentSettingsDefinition } from "@zilobase/features/ai-chat";
 import {
@@ -34,16 +35,6 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import { Switch } from "@/shared/ui/switch";
-
-export function PersonalMcpConnections() {
-  return (
-    <McpConnectionsPanel
-      canEdit
-      delegated={false}
-      scope={{ type: "personal" }}
-    />
-  );
-}
 
 export type ConnectorDraft = {
   review?: import("@zilobase/features/ai-chat").AgentSettingsReview | null;
@@ -220,20 +211,6 @@ export function McpConnectionsPanel({
   );
 }
 
-export function AgentMcpConnections({
-  agent,
-}: {
-  agent: AiAgentProfileDetail;
-}) {
-  return (
-    <McpConnectionsPanel
-      canEdit={agent.role === "owner" || agent.role === "editor"}
-      delegated
-      scope={{ type: "agent", agentProfileId: agent.id }}
-    />
-  );
-}
-
 function ConnectionCard({
   canDisconnect,
   connection,
@@ -304,37 +281,19 @@ function ConnectionCard({
     "DELETE",
   );
 
+  const policiesEditable = canEditMcpToolPolicy(Boolean(draft), isAuthenticator, canDisconnect);
   const saveTool = async (
     tool: McpToolPolicy,
     changes: Partial<McpToolPolicy>,
   ) => {
     if (draft) {
-      const current = selected?.tools.find((item) => item.toolId === tool.id);
-      patchDraft({
-        tools: [
-          ...(selected?.tools ?? []).filter((item) => item.toolId !== tool.id),
-          {
-            toolId: tool.id,
-            classification: current?.classification ?? tool.classification,
-            enabled: current?.enabled ?? false,
-            executionMode: current?.executionMode ?? "always_ask",
-            ...changes,
-          },
-        ],
-      });
+      patchDraft({ tools: changeDraftToolPolicy(selected?.tools ?? [], tool, changes) });
       return;
     }
     try {
       await updateTools.mutateAsync({
         connectionId: connection.id,
-        policies: [
-          {
-            classification: changes.classification ?? tool.classification,
-            enabled: changes.enabled ?? tool.enabled,
-            executionMode: changes.executionMode ?? tool.executionMode,
-            toolId: tool.id,
-          },
-        ],
+        policies: [savedToolPolicy(tool, changes)],
       });
     } catch (error) {
       showError("Could not update tool", error);
@@ -342,7 +301,7 @@ function ConnectionCard({
   };
 
   return (
-    <div data-ai-changed={draft?.review?.fields.includes("connectors") && JSON.stringify(draft.review.before.connectors.find((item) => item.connectionId === connection.id)) !== JSON.stringify(selected) || undefined} className="grid gap-3 rounded-md border p-3">
+    <div data-ai-changed={isConnectorDraftChanged(draft?.review, connection.id, selected)} className="grid gap-3 rounded-md border p-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-medium">{connection.serverLabel}</span>
         <Badge variant="outline">{connection.state.replaceAll("_", " ")}</Badge>
@@ -448,8 +407,7 @@ function ConnectionCard({
                   checked={tool.enabled}
                   className="hidden md:flex"
                   disabled={
-                    (!draft && !isAuthenticator) ||
-                    !canDisconnect ||
+                    !policiesEditable ||
                     !tool.available
                   }
                   onCheckedChange={(checked) =>
@@ -466,7 +424,7 @@ function ConnectionCard({
                 </span>
               </label>
               <Select
-                disabled={(!draft && !isAuthenticator) || !canDisconnect}
+                disabled={!policiesEditable}
                 onValueChange={(classification) =>
                   void saveTool(tool, {
                     classification:
@@ -485,7 +443,7 @@ function ConnectionCard({
                 </SelectContent>
               </Select>
               <Select
-                disabled={(!draft && !isAuthenticator) || !canDisconnect}
+                disabled={!policiesEditable}
                 onValueChange={(executionMode) =>
                   void saveTool(tool, {
                     executionMode:

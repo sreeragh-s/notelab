@@ -187,3 +187,17 @@ export function getTableColumnKeys({
     ...(canEditStructure ? [ADD_PROPERTY_COLUMN_ID] : []),
   ]
 }
+
+export function retainTableRowDropTarget(current: TableRowDropTarget | null, next: TableRowDropTarget | null) {
+  if (!current || !next) return next;
+  return current.index === next.index && current.lineTop === next.lineTop && current.subItemParentRowId === next.subItemParentRowId ? current : next;
+}
+
+export function retainGroupRowDropTarget(current: GroupRowDropTarget | null, next: GroupRowDropTarget | null) {
+  if (!current || !next) return next;
+  return current.localTargetIndex === next.localTargetIndex && current.sectionId === next.sectionId && current.top === next.top ? current : next;
+}
+
+export function propertyInsertPositions(pending: number | undefined, property: number | undefined) {
+  return { left: pending ?? property ?? 0, right: pending ?? (property ?? 0) + 1 };
+}

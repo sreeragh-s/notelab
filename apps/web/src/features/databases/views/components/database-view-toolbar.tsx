@@ -558,6 +558,96 @@ export function DatabaseViewToolbar() {
                     selectInactiveView();
                   };
 
+                  function renderViewSource() {
+                    return (
+                      <DropDrawerSub>
+                        <DropDrawerSubTrigger>
+                          <ToolbarMenuRow
+                            icon={<Database />}
+                            label="Source"
+                            right={
+                              <>
+                                {isExternalDataSourceView(view) ? (
+                                  <ArrowUpRightIcon className="size-3" />
+                                ) : null}
+                                <span className="block max-w-28 truncate">
+                                  {sourceDatabaseName}
+                                </span>
+                              </>
+                            }
+                          />
+                        </DropDrawerSubTrigger>
+                        <DropDrawerSubContent className="w-60">
+                          <DropDrawerItem
+                            disabled={!sourceParentDatabaseId}
+                            onSelect={() =>
+                              openDatabaseFullPage(sourceParentDatabaseId)
+                            }
+                          >
+                            <ArrowUpRightIcon />
+                            <span>
+                              {isExternalDataSourceView(view)
+                                ? "Open source database"
+                                : "Open database"}
+                            </span>
+                          </DropDrawerItem>
+                        </DropDrawerSubContent>
+                      </DropDrawerSub>
+                    );
+                  }
+
+                  function renderViewActions() {
+                    return (
+                      <>
+                        <DropDrawerItem onSelect={copyDatabaseViewLink}>
+                          <Copy />
+                          <span>Copy link to view</span>
+                        </DropDrawerItem>
+                        <DropDrawerItem
+                          disabled={!sourceParentDatabaseId}
+                          onSelect={() =>
+                            openDatabaseFullPage(sourceParentDatabaseId)
+                          }
+                        >
+                          <ArrowUpRightIcon />
+                          <span>
+                            {isExternalDataSourceView(view)
+                              ? "Open source database"
+                              : "Open as full page"}
+                          </span>
+                        </DropDrawerItem>
+                        <DropDrawerItem
+                          disabled={!onShowTitleChange}
+                          onSelect={() => onShowTitleChange?.(!showTitle)}
+                        >
+                          <EyeOff />
+                          <span>
+                            {showTitle
+                              ? "Hide data source titles"
+                              : "Show data source title"}
+                          </span>
+                        </DropDrawerItem>
+                        <DropDrawerSeparator />
+                        <DropDrawerItem
+                          disabled={!editable || !databaseId}
+                          onSelect={() => duplicateDatabaseView(view)}
+                        >
+                          <CopyPlus />
+                          <span>Duplicate view</span>
+                        </DropDrawerItem>
+                        <DropDrawerItem
+                          disabled={
+                            !editable || !databaseId || viewTabs.length <= 1
+                          }
+                          onSelect={() => setPendingDeleteView(view)}
+                        >
+                          <Trash2 />
+                          <span>Delete view</span>
+                        </DropDrawerItem>
+                      </>
+                    );
+                  }
+
                   return (
                     <DropDrawer
                       key={view.id}
@@ -664,85 +754,9 @@ export function DatabaseViewToolbar() {
                           <SlidersHorizontalIcon />
                           <span>Edit view</span>
                         </DropDrawerItem>
-                        <DropDrawerSub>
-                          <DropDrawerSubTrigger>
-                            <ToolbarMenuRow
-                              icon={<Database />}
-                              label="Source"
-                              right={
-                                <>
-                                  {isExternalDataSourceView(view) ? (
-                                    <ArrowUpRightIcon className="size-3" />
-                                  ) : null}
-                                  <span className="block max-w-28 truncate">
-                                    {sourceDatabaseName}
-                                  </span>
-                                </>
-                              }
-                            />
-                          </DropDrawerSubTrigger>
-                          <DropDrawerSubContent className="w-60">
-                            <DropDrawerItem
-                              disabled={!sourceParentDatabaseId}
-                              onSelect={() =>
-                                openDatabaseFullPage(sourceParentDatabaseId)
-                              }
-                            >
-                              <ArrowUpRightIcon />
-                              <span>
-                                {isExternalDataSourceView(view)
-                                  ? "Open source database"
-                                  : "Open database"}
-                              </span>
-                            </DropDrawerItem>
-                          </DropDrawerSubContent>
-                        </DropDrawerSub>
+                        {renderViewSource()}
                         <DropDrawerSeparator />
-                        <DropDrawerItem onSelect={copyDatabaseViewLink}>
-                          <Copy />
-                          <span>Copy link to view</span>
-                        </DropDrawerItem>
-                        <DropDrawerItem
-                          disabled={!sourceParentDatabaseId}
-                          onSelect={() =>
-                            openDatabaseFullPage(sourceParentDatabaseId)
-                          }
-                        >
-                          <ArrowUpRightIcon />
-                          <span>
-                            {isExternalDataSourceView(view)
-                              ? "Open source database"
-                              : "Open as full page"}
-                          </span>
-                        </DropDrawerItem>
-                        <DropDrawerItem
-                          disabled={!onShowTitleChange}
-                          onSelect={() => onShowTitleChange?.(!showTitle)}
-                        >
-                          <EyeOff />
-                          <span>
-                            {showTitle
-                              ? "Hide data source titles"
-                              : "Show data source title"}
-                          </span>
-                        </DropDrawerItem>
-                        <DropDrawerSeparator />
-                        <DropDrawerItem
-                          disabled={!editable || !databaseId}
-                          onSelect={() => duplicateDatabaseView(view)}
-                        >
-                          <CopyPlus />
-                          <span>Duplicate view</span>
-                        </DropDrawerItem>
-                        <DropDrawerItem
-                          disabled={
-                            !editable || !databaseId || viewTabs.length <= 1
-                          }
-                          onSelect={() => setPendingDeleteView(view)}
-                        >
-                          <Trash2 />
-                          <span>Delete view</span>
-                        </DropDrawerItem>
+                        {renderViewActions()}
                       </DropDrawerContent>
                     </DropDrawer>
                   );

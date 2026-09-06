@@ -1,3 +1,4 @@
+import { readAuthenticatedJson } from "../../shared/http/auth";
 import { Hono } from "hono";
 import type { AppBindings } from "../../shared/types";
 import { readJsonBody } from "../../shared/http/request";
@@ -13,17 +14,9 @@ import { requireDatabaseRouteUser as requireUser, serviceMutationErrorResponse }
 export const databaseSourceRoutes = new Hono<AppBindings>();
 
 databaseSourceRoutes.patch("/:id", async (c) => {
-  const user = requireUser(c);
-
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const body = await readJsonBody(c.req);
-
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "A JSON body is required" }, 400);
-  }
+  const request = await readAuthenticatedJson(c);
+  if (!request.ok) return request.response;
+  const { user, body } = request;
 
   const patch = body as { name?: unknown; config?: unknown };
   if (patch.name !== undefined) {
@@ -52,12 +45,9 @@ databaseSourceRoutes.patch("/:id", async (c) => {
 });
 
 databaseSourceRoutes.patch("/data-sources/:dataSourceId", async (c) => {
-  const user = requireUser(c);
-  if (!user) return c.json({ error: "Unauthorized" }, 401);
-  const body = await readJsonBody(c.req);
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "A JSON body is required" }, 400);
-  }
+  const request = await readAuthenticatedJson(c);
+  if (!request.ok) return request.response;
+  const { user, body } = request;
   const { config, name } = body as { config?: unknown; name?: unknown };
   if (name !== undefined && typeof name !== "string") {
     return c.json({ error: "name must be a string" }, 400);
@@ -81,17 +71,9 @@ databaseSourceRoutes.patch("/data-sources/:dataSourceId", async (c) => {
 });
 
 databaseSourceRoutes.patch("/:id/views/:viewId", async (c) => {
-  const user = requireUser(c);
-
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const body = await readJsonBody(c.req);
-
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "A JSON body is required" }, 400);
-  }
+  const request = await readAuthenticatedJson(c);
+  if (!request.ok) return request.response;
+  const { user, body } = request;
 
   const patch = body as { name?: unknown; config?: unknown; type?: unknown };
 
@@ -173,12 +155,9 @@ databaseSourceRoutes.post("/:id/views", async (c) => {
 });
 
 databaseSourceRoutes.post("/:id/data-sources/new", async (c) => {
-  const user = requireUser(c);
-  if (!user) return c.json({ error: "Unauthorized" }, 401);
-  const body = await readJsonBody(c.req);
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "A JSON body is required" }, 400);
-  }
+  const request = await readAuthenticatedJson(c);
+  if (!request.ok) return request.response;
+  const { user, body } = request;
   const { config, name, viewName, viewType } = body as Record<string, unknown>;
   if (name !== undefined && typeof name !== "string") {
     return c.json({ error: "name must be a string" }, 400);
@@ -210,12 +189,9 @@ databaseSourceRoutes.post("/:id/data-sources/new", async (c) => {
 });
 
 databaseSourceRoutes.post("/:id/data-sources", async (c) => {
-  const user = requireUser(c);
-  if (!user) return c.json({ error: "Unauthorized" }, 401);
-  const body = await readJsonBody(c.req);
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "A JSON body is required" }, 400);
-  }
+  const request = await readAuthenticatedJson(c);
+  if (!request.ok) return request.response;
+  const { user, body } = request;
   const { config, dataSourceId, name, type } = body as Record<string, unknown>;
   if (typeof dataSourceId !== "string" || dataSourceId.length === 0) {
     return c.json({ error: "dataSourceId must be a string" }, 400);
@@ -321,17 +297,9 @@ databaseSourceRoutes.delete("/:id/views/:viewId", async (c) => {
 });
 
 databaseSourceRoutes.post("/:id/apply-template", async (c) => {
-  const user = requireUser(c);
-
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const body = await readJsonBody(c.req);
-
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "A JSON body is required" }, 400);
-  }
+  const request = await readAuthenticatedJson(c);
+  if (!request.ok) return request.response;
+  const { user, body } = request;
 
   const { config, name, properties, rows } = body as {
     config?: unknown;

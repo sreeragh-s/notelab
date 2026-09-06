@@ -439,6 +439,7 @@ export function ColumnControls({ editor }: { editor: Editor | null }) {
       return
     }
 
+    const activeEditor = editor;
     let updateFrame: number | null = null
     let pointerFrame: number | null = null
     let latestPointerEvent: globalThis.PointerEvent | null = null
@@ -449,53 +450,56 @@ export function ColumnControls({ editor }: { editor: Editor | null }) {
         updateRect()
       })
     }
+    function applyPointerHover(event: globalThis.PointerEvent) {
+      if (dragState.current || pointerState.current || menuRef.current) {
+        return;
+      }
+
+      const currentRect = rectRef.current;
+      const controlIndex = getColumnControlIndex(event.target);
+
+      if (currentRect) {
+        const index =
+          controlIndex ??
+          getColumnIndexAtPoint(currentRect, event.clientX, event.clientY);
+        if (index !== null) {
+          setRect(currentRect);
+          setHoveredColumnIndex(index);
+          return;
+        }
+      }
+
+      if (isColumnControlElement(event.target)) {
+        return;
+      }
+
+      const hoveredColumnBlock = findHoveredColumnBlock(
+        activeEditor,
+        event.target,
+      );
+
+      if (hoveredColumnBlock) {
+        hoveredColumnBlockRef.current = hoveredColumnBlock.dom;
+        setRect(hoveredColumnBlock.rect);
+        setHoveredColumnIndex(hoveredColumnBlock.columnIndex);
+      } else {
+        hoveredColumnBlockRef.current = null;
+        setRect(null);
+        setHoveredColumnIndex(null);
+      }
+    }
     const updateHoveredColumnBlock = (event: globalThis.PointerEvent) => {
-      latestPointerEvent = event
-      if (pointerFrame !== null) return
+      latestPointerEvent = event;
+      if (pointerFrame !== null) return;
 
       pointerFrame = window.requestAnimationFrame(() => {
-        pointerFrame = null
-        const event = latestPointerEvent
-        if (!event) return
+        pointerFrame = null;
+        const event = latestPointerEvent;
+        if (!event) return;
 
-        if (
-          dragState.current ||
-          pointerState.current ||
-          menuRef.current
-        ) {
-          return
-        }
-
-        const currentRect = rectRef.current
-        const controlIndex = getColumnControlIndex(event.target)
-
-        if (currentRect && controlIndex !== null) {
-          setRect(currentRect)
-          setHoveredColumnIndex(controlIndex)
-          return
-        }
-
-        const controlZoneIndex = currentRect
-          ? getColumnIndexAtPoint(currentRect, event.clientX, event.clientY)
-          : null
-
-        if (currentRect && controlZoneIndex !== null) {
-          setRect(currentRect)
-          setHoveredColumnIndex(controlZoneIndex)
-          return
-        }
-
-        if (isColumnControlElement(event.target)) {
-          return
-        }
-
-        const hoveredColumnBlock = findHoveredColumnBlock(editor, event.target)
-
-        hoveredColumnBlockRef.current = hoveredColumnBlock?.dom ?? null
-        setRect(hoveredColumnBlock?.rect ?? null)
-        setHoveredColumnIndex(hoveredColumnBlock?.columnIndex ?? null)
-      })
-    }
+        applyPointerHover(event);
+      });
+    };
 
     updateRect()
     editor.on("selectionUpdate", updateOnNextFrame)

@@ -1,3 +1,4 @@
+import { sha256Hex } from "../../../../shared/crypto/sha256";
 import { and, eq, gt, isNull } from "drizzle-orm";
 
 import { db, runWithDbEnv } from "../../../../infrastructure/database";
@@ -255,8 +256,4 @@ function bytesToBase64Url(bytes: Uint8Array) {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-async function sha256Hex(value: string) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }

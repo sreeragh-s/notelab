@@ -1,3 +1,4 @@
+import { readAuthenticatedJson } from "../../shared/http/auth";
 import { Hono } from "hono";
 import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
 import type { AppBindings } from "../../shared/types";
@@ -13,17 +14,9 @@ export const databaseCoreRoutes = new Hono<AppBindings>();
 export const databaseCreateRoutes = new Hono<AppBindings>();
 
 databaseCreateRoutes.post("/", async (c) => {
-  const user = requireUser(c);
-
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const body = await readJsonBody(c.req);
-
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "A JSON body is required" }, 400);
-  }
+  const request = await readAuthenticatedJson(c);
+  if (!request.ok) return request.response;
+  const { user, body } = request;
 
   const {
     workspaceId,

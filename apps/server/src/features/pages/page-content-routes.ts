@@ -1,7 +1,8 @@
+import { authorizePageRoute } from "./page-route-access";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { Hono } from "hono";
-import { getAuthenticatedUser as requireUser } from "../../shared/http/auth";
-import { canAccessDatabaseInWorkspace, canAccessPageInWorkspace, getEffectivePageAccessInWorkspace, getWorkspaceRealtimeAccessExpiration, hasAccess } from "../access";
+
+import { canAccessDatabaseInWorkspace, getWorkspaceRealtimeAccessExpiration, hasAccess } from "../access";
 import { db } from "../../infrastructure/database";
 import { database, dataSource, databaseProperty, databaseRow, page, pageProperty, pagePropertyValue } from "../../infrastructure/database/schema";
 import type { AppBindings } from "../../shared/types";
@@ -11,43 +12,14 @@ import { getCollaborationWebSocketUrl } from "../../infrastructure/runtime/runti
 import { enqueueNavigationInvalidation, publishCommittedNavigationInvalidation } from "../workspaces/navigation-realtime/outbox";
 import { commitDatabaseMutationBatch, mutationResponse } from "../databases/core";
 import { lockDatabaseAutomationFactRows } from "../databases/automations/triggers/event-capture";
-import { enforceActiveWorkspace, getPage, getPagePropertyPayload } from "./page-route-support";
+import { getPagePropertyPayload } from "./page-route-support";
 
 export const pageContentRoutes = new Hono<AppBindings>();
 
 pageContentRoutes.get("/:id/properties", async (c) => {
-  const user = requireUser(c);
-
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const record = await getPage(c.req.param("id"));
-
-  if (!record) {
-    return c.json({ error: "Page not found" }, 404);
-  }
-
-  if (
-    !(await canAccessPageInWorkspace(
-      record.id,
-      record.workspaceId,
-      user.id,
-      "view",
-    ))
-  ) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const propertiesOrgMismatch = await enforceActiveWorkspace(
-    c,
-    record.workspaceId,
-    user.id,
-  );
-
-  if (propertiesOrgMismatch) {
-    return propertiesOrgMismatch;
-  }
+  const authorization = await authorizePageRoute(c, "view");
+  if (!authorization.ok) return authorization.response;
+  const { user, record } = authorization;
 
   return c.json(
     await getPagePropertyPayload(record.id, record.workspaceId, user.id),
@@ -55,38 +27,9 @@ pageContentRoutes.get("/:id/properties", async (c) => {
 });
 
 pageContentRoutes.put("/:id/properties/:propertyId/value", async (c) => {
-  const user = requireUser(c);
-
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const record = await getPage(c.req.param("id"));
-
-  if (!record) {
-    return c.json({ error: "Page not found" }, 404);
-  }
-
-  if (
-    !(await canAccessPageInWorkspace(
-      record.id,
-      record.workspaceId,
-      user.id,
-      "edit",
-    ))
-  ) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const propertyValueOrgMismatch = await enforceActiveWorkspace(
-    c,
-    record.workspaceId,
-    user.id,
-  );
-
-  if (propertyValueOrgMismatch) {
-    return propertyValueOrgMismatch;
-  }
+  const authorization = await authorizePageRoute(c, "edit");
+  if (!authorization.ok) return authorization.response;
+  const { user, record } = authorization;
 
   const body = await readJsonBody(c.req);
 
@@ -241,37 +184,9 @@ pageContentRoutes.put("/:id/properties/:propertyId/value", async (c) => {
 });
 
 pageContentRoutes.post("/:id/collaboration-ticket", async (c) => {
-  const user = requireUser(c);
-
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const existing = await getPage(c.req.param("id"));
-
-  if (!existing) {
-    return c.json({ error: "Page not found" }, 404);
-  }
-
-  const accessLevel = await getEffectivePageAccessInWorkspace(
-    existing.id,
-    existing.workspaceId,
-    user.id,
-  );
-
-  if (!hasAccess(accessLevel, "view")) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const workspaceMismatch = await enforceActiveWorkspace(
-    c,
-    existing.workspaceId,
-    user.id,
-  );
-
-  if (workspaceMismatch) {
-    return workspaceMismatch;
-  }
+  const authorization = await authorizePageRoute(c, "view");
+  if (!authorization.ok) return authorization.response;
+  const { user, record: existing, accessLevel } = authorization;
 
   const [ticket, initialState] = await Promise.all([
     createCollaborationTicket(
@@ -308,38 +223,9 @@ pageContentRoutes.post("/:id/collaboration-ticket", async (c) => {
 });
 
 pageContentRoutes.patch("/:id/content", async (c) => {
-  const user = requireUser(c);
-
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const existing = await getPage(c.req.param("id"));
-
-  if (!existing) {
-    return c.json({ error: "Page not found" }, 404);
-  }
-
-  if (
-    !(await canAccessPageInWorkspace(
-      existing.id,
-      existing.workspaceId,
-      user.id,
-      "edit",
-    ))
-  ) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const patchOrgMismatch = await enforceActiveWorkspace(
-    c,
-    existing.workspaceId,
-    user.id,
-  );
-
-  if (patchOrgMismatch) {
-    return patchOrgMismatch;
-  }
+  const authorization = await authorizePageRoute(c, "edit");
+  if (!authorization.ok) return authorization.response;
+  const { user, record: existing } = authorization;
 
   const body = await readJsonBody(c.req);
 
@@ -397,38 +283,9 @@ pageContentRoutes.patch("/:id/content", async (c) => {
 });
 
 pageContentRoutes.patch("/:id", async (c) => {
-  const user = requireUser(c);
-
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const existing = await getPage(c.req.param("id"));
-
-  if (!existing) {
-    return c.json({ error: "Page not found" }, 404);
-  }
-
-  if (
-    !(await canAccessPageInWorkspace(
-      existing.id,
-      existing.workspaceId,
-      user.id,
-      "edit",
-    ))
-  ) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const patchOrgMismatch = await enforceActiveWorkspace(
-    c,
-    existing.workspaceId,
-    user.id,
-  );
-
-  if (patchOrgMismatch) {
-    return patchOrgMismatch;
-  }
+  const authorization = await authorizePageRoute(c, "edit");
+  if (!authorization.ok) return authorization.response;
+  const { user, record: existing } = authorization;
 
   const body = await readJsonBody(c.req);
 

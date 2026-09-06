@@ -509,40 +509,9 @@ export function DatabaseKanbanView() {
                     ? cardDrag.dropTarget
                     : null
 
-                return (
-                  <section
-                    className="database-kanban-column"
-                    data-color-token={colorToken.value ?? undefined}
-                    key={option.id}
-                    onDragLeave={(event) => cardDrag.leave(option, event)}
-                    onDragOver={(event) => cardDrag.dragOver(option, event)}
-                    onDrop={(event) => cardDrag.drop(option, event)}
-                    style={
-                      colorToken.value
-                        ? ({
-                            "--database-kanban-accent": `var(--zb-color-palette-text-${colorToken.value})`,
-                            "--database-kanban-tint": colorWithAlpha(
-                              colorToken.value,
-                              0.18
-                            ),
-                          } as CSSProperties)
-                        : undefined
-                    }
-                  >
-                    <div className="database-kanban-column-header">
-                      <span className={getColorTokenBadgeClassName(option.color)}>
-                        {option.color ? (
-                          <span
-                            aria-hidden="true"
-                            className={getColorTokenDotClassName(option.color)}
-                          />
-                        ) : null}
-                        {option.name}
-                      </span>
-                      <span className="database-kanban-count">
-                        {optionItems.length}
-                      </span>
-                    </div>
+                const groupPropertyId = groupProperty.property.id;
+                function renderColumnCards() {
+                  return (
                     <div className="database-kanban-cards">
                       {optionItems.map((item: DatabaseRow, index: number) => (
                         <article
@@ -586,9 +555,8 @@ export function DatabaseKanbanView() {
                                     item,
                                     property,
                                     isEmptyOption &&
-                                      property.property.id ===
-                                        groupProperty.property.id
-                                  )
+                                      property.property.id === groupPropertyId,
+                                  ),
                               )}
                             </div>
                           ) : null}
@@ -616,8 +584,48 @@ export function DatabaseKanbanView() {
                         </button>
                       ) : null}
                     </div>
+                  );
+                }
+
+                return (
+                  <section
+                    className="database-kanban-column"
+                    data-color-token={colorToken.value ?? undefined}
+                    key={option.id}
+                    onDragLeave={(event) => cardDrag.leave(option, event)}
+                    onDragOver={(event) => cardDrag.dragOver(option, event)}
+                    onDrop={(event) => cardDrag.drop(option, event)}
+                    style={
+                      colorToken.value
+                        ? ({
+                            "--database-kanban-accent": `var(--zb-color-palette-text-${colorToken.value})`,
+                            "--database-kanban-tint": colorWithAlpha(
+                              colorToken.value,
+                              0.18,
+                            ),
+                          } as CSSProperties)
+                        : undefined
+                    }
+                  >
+                    <div className="database-kanban-column-header">
+                      <span
+                        className={getColorTokenBadgeClassName(option.color)}
+                      >
+                        {option.color ? (
+                          <span
+                            aria-hidden="true"
+                            className={getColorTokenDotClassName(option.color)}
+                          />
+                        ) : null}
+                        {option.name}
+                      </span>
+                      <span className="database-kanban-count">
+                        {optionItems.length}
+                      </span>
+                    </div>
+                    {renderColumnCards()}
                   </section>
-                )
+                );
               })}
               {editable && canCreateKanbanGroup(groupProperty) ? (
                 <section className="database-kanban-column database-kanban-new-column">

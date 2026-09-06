@@ -1,3 +1,4 @@
+import { sha256Hex } from "../../../shared/crypto/sha256";
 import { safeAgentReturnPath } from "../../ai/mcp/connections/oauth-return";
 import { and, eq, gt, isNull } from "drizzle-orm"
 
@@ -359,12 +360,7 @@ function bytesToBase64Url(bytes: Uint8Array) {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
 }
 
-async function sha256Hex(value: string) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))
-  return [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("")
-}
+
 
 export class GmailOauthError extends Error {
   constructor(message: string, readonly status: number) {

@@ -1,3 +1,4 @@
+import { listRowDragAttributes, listRowCompletionLabel } from "./list-row-presentation";
 import { useMemo } from "react"
 import { GripVertical, Loader2, Plus } from "@/shared/components/icons"
 
@@ -74,20 +75,7 @@ export function DatabaseListView() {
         {rows.map((row, rowIndex) => (
           <div
             className="database-list-row"
-            data-dragging={rowDrag.draggedRowId === row.id ? "true" : undefined}
-            data-drop-after={
-              (rowDrag.draggedRowId || rowDrag.isExternalDragActive) &&
-              rowDrag.dropTargetIndex === rowIndex + 1 &&
-              rowIndex === rows.length - 1
-                ? "true"
-                : undefined
-            }
-            data-drop-before={
-              (rowDrag.draggedRowId || rowDrag.isExternalDragActive) &&
-              rowDrag.dropTargetIndex === rowIndex
-                ? "true"
-                : undefined
-            }
+            {...listRowDragAttributes(row.id, rowIndex, rows.length, rowDrag)}
             key={row.id}
             onDragOver={(event) => rowDrag.updateDropTarget(event, rowIndex)}
             onDrop={rowDrag.drop}
@@ -111,11 +99,7 @@ export function DatabaseListView() {
             ) : null}
             {isRowComplete && setRowComplete ? (
               <Checkbox
-                aria-label={
-                  isRowComplete(row)
-                    ? `Mark ${row.page.name || "task"} as not done`
-                    : `Mark ${row.page.name || "task"} as done`
-                }
+                aria-label={listRowCompletionLabel(row.page.name, isRowComplete(row))}
                 checked={isRowComplete(row)}
                 className="database-list-row-checkbox"
                 disabled={!editable}

@@ -1,7 +1,6 @@
 export function register({ readSource, assert, test }) {
   test("sidebar aligns the workspace switcher and notifications at the top", async () => {
     const sidebarSource = await readSource("/src/features/sidebar/app-sidebar.tsx")
-    const themeSource = await readSource("/src/features/sidebar/components/sidebar-theme-switcher.tsx")
     const workspaceSource = await readSource("/src/features/sidebar/workspace-switcher.tsx")
     const sidebarPrimitiveSource = await readSource("/src/shared/ui/sidebar.tsx")
     const sidebarTabsSource = await readSource("/src/features/sidebar/components/sidebar-layout-tabs.tsx")
@@ -192,7 +191,6 @@ export function register({ readSource, assert, test }) {
       sidebarDatabaseViewSource,
       /<SidebarMenuButton asChild isActive=\{row\.pageId === activePageId\}>/,
     )
-    assert.match(themeSource, /Light[\s\S]*Dark[\s\S]*System/)
     assert.match(sidebarSource, /<SidebarHeader[\s\S]*navigation=\{!customizing \? <SidebarLayoutTabs/)
     assert.match(workspaceSource, /<span>Settings<\/span>/)
     assert.match(workspaceSource, /Add workspace[\s\S]*WorkspaceSettingsItem/)

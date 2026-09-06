@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { normalizeMailFilterExpression } from "@zilobase/features/mail/organization";
+import { isIndexedQueryBody, isGroupedQueryBody, indexedQueryOptions, groupedQueryOptions } from "./query-input";
 import { type MailSyncRequest } from "@zilobase/features/mail/contracts";
 import type { AppBindings } from "../../../shared/types";
 import { readJsonBody } from "../../../shared/http/request";
@@ -64,30 +64,15 @@ mailQueryRoutes.post("/query", async (c) => {
   const owned = await requireWorkspaceMailBinding(c)
   if (owned instanceof Response) return owned
   const body = (await readJsonBody(c.req)) as Record<string, unknown> | null
-  if (
-    !body ||
-    typeof body.routeId !== "string" ||
-    !body.routeId ||
-    body.routeId.length > 200 ||
-    (body.cursor !== undefined && typeof body.cursor !== "string") ||
-    (body.filter !== undefined && (!body.filter || typeof body.filter !== "object")) ||
-    (body.groupKey !== undefined && (typeof body.groupKey !== "string" || body.groupKey.length > 500)) ||
-    (body.limit !== undefined && (!Number.isInteger(body.limit) || Number(body.limit) < 1 || Number(body.limit) > 100)) ||
-    (body.search !== undefined && (typeof body.search !== "string" || body.search.length > 500))
-  ) {
+  if (!isIndexedQueryBody(body)) {
     return c.json({ message: "A valid indexed mail query is required." }, 400)
   }
   try {
     return c.json(await queryIndexedMail({
       bindingId: owned.bindingId,
-      ...(typeof body.cursor === "string" ? { cursor: body.cursor } : {}),
       env: c.env,
-      ...(body.filter !== undefined ? { filter: normalizeMailFilterExpression(body.filter) } : {}),
       gmailAccountId: owned.connection.id,
-      ...(typeof body.groupKey === "string" ? { groupKey: body.groupKey } : {}),
-      ...(typeof body.limit === "number" ? { limit: body.limit } : {}),
-      routeId: body.routeId,
-      ...(typeof body.search === "string" ? { search: body.search } : {}),
+      ...indexedQueryOptions(body),
     }))
   } catch (error) {
     if (error instanceof MailQueryError) {
@@ -101,22 +86,13 @@ mailQueryRoutes.post("/query/groups", async (c) => {
   const owned = await requireWorkspaceMailBinding(c)
   if (owned instanceof Response) return owned
   const body = (await readJsonBody(c.req)) as Record<string, unknown> | null
-  if (
-    !body ||
-    typeof body.routeId !== "string" ||
-    !body.routeId ||
-    body.routeId.length > 200 ||
-    (body.filter !== undefined && (!body.filter || typeof body.filter !== "object")) ||
-    (body.search !== undefined && (typeof body.search !== "string" || body.search.length > 500))
-  ) return c.json({ message: "A valid grouped mail query is required." }, 400)
+  if (!isGroupedQueryBody(body)) return c.json({ message: "A valid grouped mail query is required." }, 400)
   try {
     return c.json(await queryIndexedMailGroups({
       bindingId: owned.bindingId,
       env: c.env,
-      ...(body.filter !== undefined ? { filter: normalizeMailFilterExpression(body.filter) } : {}),
       gmailAccountId: owned.connection.id,
-      routeId: body.routeId,
-      ...(typeof body.search === "string" ? { search: body.search } : {}),
+      ...groupedQueryOptions(body),
     }))
   } catch (error) {
     if (error instanceof MailQueryError) return c.json({ message: error.message }, error.status)

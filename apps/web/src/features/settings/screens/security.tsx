@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import { clearApiAuthToken, getApiErrorMessage } from "@/platform/network/api"
 import { useAppStore } from "@/features/desktop/state/app-store"
 import { clearAllOfflineData } from "@/features/offline"
-import { queryClient } from "@/app/query-client"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -200,6 +200,7 @@ function DeleteAccountSection({
   hasPassword: boolean
   isReady: boolean
 }) {
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
   const deleteAccount = useDeleteAccount()
   const [open, setOpen] = React.useState(false)

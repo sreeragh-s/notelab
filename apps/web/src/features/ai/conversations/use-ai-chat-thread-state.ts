@@ -1,3 +1,4 @@
+import { keepSelectedThread, demoFallbackThreadId } from "./model/thread-selection";
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
 import { useAiChatThreads } from "@zilobase/features/ai-chat/react";
 import { useRouterState } from "@tanstack/react-router";
@@ -190,17 +191,12 @@ export function useAiChatThreadState(options?: { enabled?: boolean }) {
 
     const threads = threadsQuery.data?.threads ?? [];
 
-    if (
-      activeThreadId &&
-      threads.some((thread) => thread.id === activeThreadId)
-    ) {
+    if (keepSelectedThread(activeThreadId, threads)) {
       markBootstrapped(workspaceId);
       return;
     }
 
-    const fallbackThreadId = isHostedDemoRuntime()
-      ? threads.find((thread) => thread.pinnedAt)?.id ?? threads[0]?.id ?? null
-      : null;
+    const fallbackThreadId = demoFallbackThreadId(threads, isHostedDemoRuntime());
     setStoredActiveThreadId(workspaceId, fallbackThreadId);
     markBootstrapped(workspaceId);
     replaceAiThreadSearchParam(fallbackThreadId);

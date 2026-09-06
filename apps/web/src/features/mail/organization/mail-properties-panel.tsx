@@ -1,3 +1,4 @@
+import { mailPropertyLabel } from "./property-label";
 import { useMemo, useState } from "react"
 import { Reorder } from "motion/react"
 import {
@@ -46,7 +47,7 @@ export function MailPropertiesPanel({
   const allIds = [...mailSystemPropertyCatalog.map((property) => property.id), ...properties.map((property) => property.id)]
   const orderedIds = [...config.propertyOrder.filter((id) => allIds.includes(id)), ...allIds.filter((id) => !config.propertyOrder.includes(id))]
   const shownIds = orderedIds.filter((id) => {
-    const label = propertyMap.get(id)?.name ?? mailSystemPropertyCatalog.find((property) => property.id === id)?.label ?? id
+    const label = mailPropertyLabel(id, propertyMap.get(id), mailSystemPropertyCatalog.find((property) => property.id === id))
     return label.toLowerCase().includes(query.trim().toLowerCase())
   })
 
@@ -58,6 +59,7 @@ export function MailPropertiesPanel({
         {shownIds.map((id) => {
           const custom = propertyMap.get(id)
           const system = mailSystemPropertyCatalog.find((property) => property.id === id)
+          const label = mailPropertyLabel(id, custom, system)
           const hidden = config.hiddenPropertyIds.includes(id)
           const definition = custom ? getDatabasePropertyType(custom.type) : null
           const Icon = definition?.icon
@@ -65,8 +67,8 @@ export function MailPropertiesPanel({
             <div className="flex h-8 items-center gap-2 rounded-md px-1.5 text-sm text-content-primary hover:bg-action-neutral-hover">
               <GripVerticalIcon className="size-4 cursor-grab text-content-secondary" />
               {Icon ? <Icon className="size-4" /> : null}
-              <span className="min-w-0 flex-1 truncate">{custom?.name ?? system?.label ?? id}</span>
-              <Button aria-label={`${hidden ? "Show" : "Hide"} ${custom?.name ?? system?.label ?? id}`} onClick={(event) => {
+              <span className="min-w-0 flex-1 truncate">{label}</span>
+              <Button aria-label={`${hidden ? "Show" : "Hide"} ${label}`} onClick={(event) => {
                 event.stopPropagation()
                 onConfigChange({ ...config, hiddenPropertyIds: hidden ? config.hiddenPropertyIds.filter((item) => item !== id) : [...config.hiddenPropertyIds, id] })
               }} size="icon" type="button" variant="ghost">{hidden ? <EyeOffIcon /> : <EyeIcon />}</Button>

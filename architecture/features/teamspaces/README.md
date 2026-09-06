@@ -16,6 +16,10 @@ The [creation entrypoint](../../../apps/web/src/features/teamspaces/creation/ind
 
 Teamspaces, principals and team membership live in Postgres. Security policy controls public sharing, guests and export on associated pages/databases. Content operations must resolve policy for the content being accessed.
 
+## Server management interface
+
+[Management](../../../apps/server/src/features/teamspaces/management.ts) shares its visibility loader between reads and management checks. Settings, archive and restore use one private transaction operation that updates the teamspace and enqueues navigation invalidation together, publishes after commit, then leaves operation-specific auditing to the caller. Restore retains its unique-name conflict mapping; join retains its own policy.
+
 ## Side effects, failures and recovery
 
 Management changes can affect content ownership and navigation. Batch archive runs sequentially, stops on the first failure, and clears selection only after every selected archive succeeds. Invite acceptance requires a matching active workspace and guards pending/success states. Existing principals are excluded from member/group candidates. Invite links retain the workspace and token query parameters. Integrity checks protect associations; preserve transaction and authorization behavior when reorganizing management implementation.

@@ -130,23 +130,12 @@ export class TeamspaceManagementService {
     }));
   }
 
-  async get(input: { teamspaceId: string; userId: string; workspaceId: string }) {
-    const [membership, record] = await Promise.all([
-      getMembership(input.workspaceId, input.userId),
-      this.getRecord(input.workspaceId, input.teamspaceId),
-    ]);
-    if (!membership) throw new TeamspaceManagementError("Forbidden", 403);
-    if (!record) throw new TeamspaceManagementError("Teamspace not found.", 404);
-    const role = await this.getRole(record.id, input.userId);
-    if (
-      !canDiscoverTeamspace({
-        accessMode: record.accessMode as TeamspaceAccessMode,
-        isTeamspacePrincipal: Boolean(role),
-        isWorkspaceOwner: membership.role === "owner",
-      })
-    ) {
-      throw new TeamspaceManagementError("Teamspace not found.", 404);
-    }
+  async get(input: {
+    teamspaceId: string;
+    userId: string;
+    workspaceId: string;
+  }) {
+    const { record, role } = await this.requireVisible(input);
     return { ...record, currentUserRole: role };
   }
 
@@ -184,36 +173,40 @@ export class TeamspaceManagementService {
     }
 
     try {
-      const { navigationEvent, record: result } = await this.database.transaction(async (transaction) => {
-        const [created] = await transaction
-          .insert(teamspace)
-          .values({
-            accessMode: input.accessMode,
-            createdById: input.userId,
-            description: input.description ?? null,
-            icon: input.icon ?? null,
+      const { navigationEvent, record: result } =
+        await this.database.transaction(async (transaction) => {
+          const [created] = await transaction
+            .insert(teamspace)
+            .values({
+              accessMode: input.accessMode,
+              createdById: input.userId,
+              description: input.description ?? null,
+              icon: input.icon ?? null,
+              id: crypto.randomUUID(),
+              name: input.name,
+              workspaceId: input.workspaceId,
+            })
+            .returning();
+          if (!created) throw new Error("Teamspace could not be created");
+          await transaction.insert(teamspacePrincipal).values({
+            addedById: input.userId,
             id: crypto.randomUUID(),
-            name: input.name,
-            workspaceId: input.workspaceId,
-          })
-          .returning();
-        if (!created) throw new Error("Teamspace could not be created");
-        await transaction.insert(teamspacePrincipal).values({
-          addedById: input.userId,
-          id: crypto.randomUUID(),
-          membershipSource: "creator",
-          principalId: input.userId,
-          principalType: "user",
-          role: "owner",
-          teamspaceId: created.id,
+            membershipSource: "creator",
+            principalId: input.userId,
+            principalType: "user",
+            role: "owner",
+            teamspaceId: created.id,
+          });
+          return {
+            navigationEvent: this.env
+              ? await enqueueNavigationInvalidation(
+                  transaction,
+                  input.workspaceId,
+                )
+              : null,
+            record: created,
+          };
         });
-        return {
-          navigationEvent: this.env
-            ? await enqueueNavigationInvalidation(transaction, input.workspaceId)
-            : null,
-          record: created,
-        };
-      });
       if (navigationEvent) {
         await publishCommittedNavigationInvalidation(navigationEvent, this.env);
       }
@@ -251,8 +244,10 @@ export class TeamspaceManagementService {
         403,
       );
     }
-    const { navigationEvent, updated } = await this.database.transaction(async (transaction) => {
-      const [updated] = await transaction.update(teamspace).set({
+    const updated = await this.updateWithNavigation(
+      input.workspaceId,
+      record.id,
+      {
         ...(input.accessMode !== undefined
           ? { accessMode: input.accessMode }
           : {}),
@@ -280,19 +275,8 @@ export class TeamspaceManagementService {
           ? { sidebarEditPolicy: input.sidebarEditPolicy }
           : {}),
         updatedAt: new Date(),
-      })
-      .where(eq(teamspace.id, record.id))
-      .returning();
-      return {
-        navigationEvent: this.env
-          ? await enqueueNavigationInvalidation(transaction, input.workspaceId)
-          : null,
-        updated,
-      };
-    });
-    if (navigationEvent) {
-      await publishCommittedNavigationInvalidation(navigationEvent, this.env);
-    }
+      },
+    );
     await this.audit("teamspace.updated", input, {
       teamspaceId: record.id,
     });
@@ -311,24 +295,15 @@ export class TeamspaceManagementService {
         409,
       );
     }
-    const { navigationEvent, updated } = await this.database.transaction(async (transaction) => {
-      const [updated] = await transaction.update(teamspace).set({
+    const updated = await this.updateWithNavigation(
+      input.workspaceId,
+      record.id,
+      {
         archivedAt: new Date(),
         archivedById: input.userId,
         updatedAt: new Date(),
-      })
-      .where(eq(teamspace.id, record.id))
-      .returning();
-      return {
-        navigationEvent: this.env
-          ? await enqueueNavigationInvalidation(transaction, input.workspaceId)
-          : null,
-        updated,
-      };
-    });
-    if (navigationEvent) {
-      await publishCommittedNavigationInvalidation(navigationEvent, this.env);
-    }
+      },
+    );
     await this.audit("teamspace.archived", input, { teamspaceId: record.id });
     return updated!;
   }
@@ -346,24 +321,14 @@ export class TeamspaceManagementService {
       );
     }
     const record = await this.getRecord(input.workspaceId, input.teamspaceId);
-    if (!record) throw new TeamspaceManagementError("Teamspace not found.", 404);
+    if (!record)
+      throw new TeamspaceManagementError("Teamspace not found.", 404);
     try {
-      const { navigationEvent, updated } = await this.database.transaction(async (transaction) => {
-        const [updated] = await transaction
-          .update(teamspace)
-          .set({ archivedAt: null, archivedById: null, updatedAt: new Date() })
-          .where(eq(teamspace.id, record.id))
-          .returning();
-        return {
-          navigationEvent: this.env
-            ? await enqueueNavigationInvalidation(transaction, input.workspaceId)
-            : null,
-          updated,
-        };
-      });
-      if (navigationEvent) {
-        await publishCommittedNavigationInvalidation(navigationEvent, this.env);
-      }
+      const updated = await this.updateWithNavigation(
+        input.workspaceId,
+        record.id,
+        { archivedAt: null, archivedById: null, updatedAt: new Date() },
+      );
       await this.audit("teamspace.restored", input, { teamspaceId: record.id });
       return updated!;
     } catch (error) {
@@ -470,7 +435,8 @@ export class TeamspaceManagementService {
         ),
       )
       .limit(1);
-    if (!record) throw new TeamspaceManagementError("Invite link is invalid.", 404);
+    if (!record)
+      throw new TeamspaceManagementError("Invite link is invalid.", 404);
     const [principal] = await this.database
       .insert(teamspacePrincipal)
       .values({
@@ -485,7 +451,8 @@ export class TeamspaceManagementService {
       .onConflictDoNothing()
       .returning();
     return {
-      principal: principal ?? (await this.getDirectPrincipal(record.id, input.userId)),
+      principal:
+        principal ?? (await this.getDirectPrincipal(record.id, input.userId)),
       teamspaceId: record.id,
     };
   }
@@ -520,7 +487,10 @@ export class TeamspaceManagementService {
         ),
       );
     if (records.length !== ids.length) {
-      throw new TeamspaceManagementError("A default teamspace was not found.", 404);
+      throw new TeamspaceManagementError(
+        "A default teamspace was not found.",
+        404,
+      );
     }
     const members = await this.database
       .select({ userId: member.userId })
@@ -563,13 +533,18 @@ export class TeamspaceManagementService {
     return { defaultTeamspaceIds: ids };
   }
 
-  async join(input: { teamspaceId: string; userId: string; workspaceId: string }) {
+  async join(input: {
+    teamspaceId: string;
+    userId: string;
+    workspaceId: string;
+  }) {
     const [membership, record] = await Promise.all([
       getMembership(input.workspaceId, input.userId),
       this.getRecord(input.workspaceId, input.teamspaceId),
     ]);
     if (!membership) throw new TeamspaceManagementError("Forbidden", 403);
-    if (!record) throw new TeamspaceManagementError("Teamspace not found.", 404);
+    if (!record)
+      throw new TeamspaceManagementError("Teamspace not found.", 404);
     if (
       !canJoinTeamspace({
         accessMode: record.accessMode as TeamspaceAccessMode,
@@ -577,7 +552,10 @@ export class TeamspaceManagementService {
         isActiveWorkspaceMember: true,
       })
     ) {
-      throw new TeamspaceManagementError("This teamspace cannot be joined.", 403);
+      throw new TeamspaceManagementError(
+        "This teamspace cannot be joined.",
+        403,
+      );
     }
     const [created] = await this.database
       .insert(teamspacePrincipal)
@@ -598,9 +576,14 @@ export class TeamspaceManagementService {
     return created ?? (await this.getDirectPrincipal(record.id, input.userId));
   }
 
-  async leave(input: { teamspaceId: string; userId: string; workspaceId: string }) {
+  async leave(input: {
+    teamspaceId: string;
+    userId: string;
+    workspaceId: string;
+  }) {
     const record = await this.getRecord(input.workspaceId, input.teamspaceId);
-    if (!record) throw new TeamspaceManagementError("Teamspace not found.", 404);
+    if (!record)
+      throw new TeamspaceManagementError("Teamspace not found.", 404);
     if (record.isDefault) {
       throw new TeamspaceManagementError(
         "Default teamspaces cannot be left.",
@@ -608,7 +591,8 @@ export class TeamspaceManagementService {
       );
     }
     const principal = await this.getDirectPrincipal(record.id, input.userId);
-    if (!principal) throw new TeamspaceManagementError("Membership not found.", 404);
+    if (!principal)
+      throw new TeamspaceManagementError("Membership not found.", 404);
     if (principal.role === "owner") {
       const [{ count }] = await this.database
         .select({ count: sql<number>`count(*)::integer` })
@@ -764,8 +748,12 @@ export class TeamspaceManagementService {
     workspaceId: string;
   }) {
     await this.requireManage(input);
-    const principal = await this.getPrincipal(input.teamspaceId, input.principalId);
-    if (!principal) throw new TeamspaceManagementError("Member not found.", 404);
+    const principal = await this.getPrincipal(
+      input.teamspaceId,
+      input.principalId,
+    );
+    if (!principal)
+      throw new TeamspaceManagementError("Member not found.", 404);
     await this.assertOwnerRemains(input.teamspaceId, principal, input.role);
     const [updated] = await this.database
       .update(teamspacePrincipal)
@@ -792,8 +780,12 @@ export class TeamspaceManagementService {
     workspaceId: string;
   }) {
     await this.requireManage(input);
-    const principal = await this.getPrincipal(input.teamspaceId, input.principalId);
-    if (!principal) throw new TeamspaceManagementError("Member not found.", 404);
+    const principal = await this.getPrincipal(
+      input.teamspaceId,
+      input.principalId,
+    );
+    if (!principal)
+      throw new TeamspaceManagementError("Member not found.", 404);
     await this.assertOwnerRemains(input.teamspaceId, principal, "member");
     await this.database
       .delete(teamspacePrincipal)
@@ -832,7 +824,10 @@ export class TeamspaceManagementService {
     }
     const [updated] = await this.database
       .update(workspace)
-      .set({ teamspaceCreationPolicy: input.creationPolicy, updatedAt: new Date() })
+      .set({
+        teamspaceCreationPolicy: input.creationPolicy,
+        updatedAt: new Date(),
+      })
       .where(eq(workspace.id, input.workspaceId))
       .returning({ creationPolicy: workspace.teamspaceCreationPolicy });
     await this.audit("teamspace.creation_policy_changed", input, {
@@ -904,6 +899,31 @@ export class TeamspaceManagementService {
       .then((rows) => rows[0] ?? null);
   }
 
+  private async updateWithNavigation(
+    workspaceId: string,
+    teamspaceId: string,
+    values: Partial<typeof teamspace.$inferInsert>,
+  ) {
+    const { updated, navigationEvent } = await this.database.transaction(
+      async (transaction) => {
+        const [updated] = await transaction
+          .update(teamspace)
+          .set(values)
+          .where(eq(teamspace.id, teamspaceId))
+          .returning();
+        return {
+          updated,
+          navigationEvent: this.env
+            ? await enqueueNavigationInvalidation(transaction, workspaceId)
+            : null,
+        };
+      },
+    );
+    if (navigationEvent)
+      await publishCommittedNavigationInvalidation(navigationEvent, this.env);
+    return updated;
+  }
+
   private async requireVisible(input: {
     teamspaceId: string;
     userId: string;
@@ -914,7 +934,8 @@ export class TeamspaceManagementService {
       this.getRecord(input.workspaceId, input.teamspaceId),
     ]);
     if (!membership) throw new TeamspaceManagementError("Forbidden", 403);
-    if (!record) throw new TeamspaceManagementError("Teamspace not found.", 404);
+    if (!record)
+      throw new TeamspaceManagementError("Teamspace not found.", 404);
     const role = await this.getRole(record.id, input.userId);
     if (
       !canDiscoverTeamspace({

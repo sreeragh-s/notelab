@@ -14,6 +14,8 @@ A **module** presents one deliberate **interface**. That interface includes inva
 - App composition owns feature orchestration. Shared code and runtime mechanisms must not import their feature callers.
 - Keep external package subpaths, HTTP routes, Tauri commands, environment keys and storage formats compatible during internal refactoring.
 
+Web feature rules no longer allow app composition imports. Settings use the provider query client; app providers install demo cache behavior; edition alias consumers use the focused edition contract zone. Published compatibility exports remain intentional, while unused internal UI and wrappers are removed.
+
 These are the direction for new and refactored code. Existing exceptions are visible in [Fallow](../.fallowrc.json); narrowing them requires migrating callers and tests in the same change. File length signals a review, not an automatic split. Do not weaken health thresholds to hide moved functions.
 
 ## Documentation and verification

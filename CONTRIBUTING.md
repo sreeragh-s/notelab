@@ -171,12 +171,7 @@ npm run verify:architecture # Complete production Fallow report
 npm run verify              # All of the above
 ```
 
-The post-refactor verification baseline is 701 server tests, 140 shared-feature
-tests, and 42 desktop tests. Server coverage is 45.15% statements, 40.12%
-branches, 49.05% functions, and 46.47% lines. Production duplication is 2.15%,
-the initial web JavaScript chunk is approximately 0.49 MB, all 25 ordinary
-route chunks remain below 1 MB, and the lockfile contains one Shiki
-installation. Every TypeScript workspace typechecks independently.
+Verification evidence and the scope of each gate are described in [testing and quality](architecture/setup/testing-and-quality.md). Use current command output for counts and coverage; source moves and new behavioral tests change those measurements.
 
 `verify:architecture` requires zero production unresolved imports, dependency
 cycles, boundary violations, unused files, unused exports, and dependency

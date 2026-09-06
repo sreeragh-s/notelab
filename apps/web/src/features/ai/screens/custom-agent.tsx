@@ -1,3 +1,6 @@
+import { agentMetadata } from "../settings/model/agent-metadata";
+import { sharingActionAvailability } from "../settings/model/draft-actions";
+import { readCustomAgentEvents, replayCustomAgentSettingsEvents } from "../conversations/adapters/custom-agent-events";
 import { SettingsDraftActions } from "../settings/components/settings-draft-actions";
 import { useSession } from "@zilobase/features/auth/react";
 import { PageMetadata } from "@/features/databases";
@@ -105,6 +108,8 @@ function CustomAgentWorkspace({ agentId }: { agentId: string }) {
   }, [agentId, setPanel]);
   if (agent.isLoading) return <p className="p-6">Loading agent…</p>;
   if (!agent.data) return <p className="p-6">Agent unavailable.</p>;
+  const metadata = agentMetadata(agent.data, draft.state?.definition);
+  const { canEdit } = sharingActionAvailability(draft);
   return (
     <>
       {shareAnchor && (
@@ -135,36 +140,12 @@ function CustomAgentWorkspace({ agentId }: { agentId: string }) {
                     contentClassName={
                       userSettings.pageFullWidth ? "" : "mx-auto max-w-[900px]"
                     }
-                    cover={
-                      (draft.state
-                        ? draft.state.definition.cover
-                        : agent.data.cover) ?? ""
-                    }
-                    icon={
-                      typeof (draft.state
-                        ? draft.state.definition.icon
-                        : agent.data.icon) === "string"
-                        ? String(
-                            draft.state
-                              ? draft.state.definition.icon
-                              : agent.data.icon,
-                          )
-                        : ""
-                    }
-                    iconPosition={
-                      draft.state?.definition.iconPosition ??
-                      agent.data.iconPosition
-                    }
-                    title={draft.state?.definition.name ?? agent.data.name}
-                    description={
-                      draft.state?.definition.description ??
-                      agent.data.description
-                    }
-                    editable={
-                      !!draft.state?.canEdit &&
-                      !draft.publish.isPending &&
-                      !draft.discard.isPending
-                    }
+                    cover={metadata.cover}
+                    icon={metadata.icon}
+                    iconPosition={metadata.iconPosition}
+                    title={metadata.title}
+                    description={metadata.description}
+                    editable={canEdit}
                     onTitleChange={(name) => draft.patch({ name })}
                     onDescriptionChange={(description) =>
                       draft.patch({ description })
@@ -255,20 +236,7 @@ function AgentChat({
     [conversation.data],
   );
   React.useEffect(() => {
-    for (const m of conversation.data?.messages ?? [])
-      for (const part of m.parts) {
-        const p = part as { type: string; data?: AgentSettingsEvent };
-        const id = `${m.id}:${p.data?.status}`;
-        if (
-          p.type === "data-agent-settings" &&
-          new Date(m.createdAt).getTime() >= mountedAt.current &&
-          p.data &&
-          !seen.current.has(id)
-        ) {
-          seen.current.add(id);
-          emitSettingsEvent(p.data);
-        }
-      }
+    replayCustomAgentSettingsEvents(conversation.data?.messages ?? [], mountedAt.current, seen.current, emitSettingsEvent);
   }, [conversation.data]);
   const send = async ({ text: value }: { text: string }) => {
     if (!value.trim() || sending) return;
@@ -298,32 +266,7 @@ function AgentChat({
       );
       if (!response.ok || !response.body)
         throw new Error("Could not send message.");
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      while (true) {
-        const chunk = await reader.read();
-        if (chunk.done) break;
-        buffer += decoder.decode(chunk.value, { stream: true });
-        const events = buffer.split("\n\n");
-        buffer = events.pop() ?? "";
-        for (const event of events) {
-          const name = event
-            .split("\n")
-            .find((l) => l.startsWith("event:"))
-            ?.slice(6)
-            .trim();
-          const raw = event
-            .split("\n")
-            .filter((l) => l.startsWith("data:"))
-            .map((l) => l.slice(5).trim())
-            .join("\n");
-          if (!raw) continue;
-          const data = JSON.parse(raw);
-          if (name === "settings") emitSettingsEvent(data);
-          if (name === "error") throw new Error(data.error);
-        }
-      }
+      await readCustomAgentEvents(response.body, emitSettingsEvent);
       await conversation.refetch();
     } catch (e) {
       if (!abort.current?.signal.aborted) {

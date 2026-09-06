@@ -1,6 +1,6 @@
-import type { EditionWebModule } from "../../edition/community"
+import type { EditionWebModule } from "./community";
 
-export type { EditionWebModule } from "../../edition/community"
+export type { EditionWebModule } from "./community";
 
 export const editionWebModule: EditionWebModule = {
   routePrefix: "/_edition",

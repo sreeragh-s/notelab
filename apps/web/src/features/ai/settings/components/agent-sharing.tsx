@@ -1,3 +1,4 @@
+import { sharingActionAvailability } from "../model/draft-actions";
 import type { useSettingsDraft } from "../use-settings-draft";
 import { ChevronsUpDownIcon, Trash2Icon } from "@/shared/components/icons";
 import * as React from "react";
@@ -51,6 +52,7 @@ export function AgentSharePopover({
       id: `${grant.principalType}:${grant.principalId}`,
     })),
   };
+  const { actionsDisabled } = sharingActionAvailability(draft);
   return (
     <Popover
       open
@@ -94,22 +96,14 @@ export function AgentSharePopover({
             <Button
               variant="ghost"
               size="sm"
-              disabled={
-                !draft.dirty ||
-                draft.publish.isPending ||
-                draft.discard.isPending
-              }
+              disabled={actionsDisabled}
               onClick={() => draft.discard.mutate()}
             >
               Discard
             </Button>
             <Button
               size="sm"
-              disabled={
-                !draft.dirty ||
-                draft.publish.isPending ||
-                draft.discard.isPending
-              }
+              disabled={actionsDisabled}
               onClick={() =>
                 draft.publish.mutate(undefined, {
                   onSuccess: (result) => {
@@ -128,7 +122,7 @@ export function AgentSharePopover({
   );
 }
 
-export function AgentShare({
+function AgentShare({
   agent,
   showLifecycle = true,
   draft,
@@ -148,10 +142,7 @@ export function AgentShare({
   const [targetPickerOpen, setTargetPickerOpen] = React.useState(false);
   const [role, setRole] = React.useState<"editor" | "user">("user");
   const [newOwnerUserId, setNewOwnerUserId] = React.useState("");
-  const canEdit =
-    !!draft.state?.canEdit &&
-    !draft.publish.isPending &&
-    !draft.discard.isPending;
+  const { canEdit } = sharingActionAvailability(draft);
   const targetValue = principalId ? `${principalType}:${principalId}` : "";
   const targetByKey = React.useMemo(() => {
     const map = new Map<string, { detail?: string; label: string }>();

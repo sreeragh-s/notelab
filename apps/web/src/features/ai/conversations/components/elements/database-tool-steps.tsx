@@ -481,6 +481,19 @@ const DatabaseToolStep = ({
   );
 };
 
+function canRetryBlueprint(
+  part: ToolPart,
+  progress: AgentProgressSnapshot | undefined,
+  retryAvailable: boolean,
+) {
+  return (
+    getToolName(part) === "buildDatabaseFromBlueprint" &&
+    retryAvailable &&
+    (progress?.status === "failed" ||
+      readDatabaseToolOutput(part.output)?.ok === false)
+  );
+}
+
 export const DatabaseToolStepsGroup = ({
   onRetryIncomplete,
   parts,
@@ -537,11 +550,11 @@ export const DatabaseToolStepsGroup = ({
               (toolName === "buildDatabaseFromBlueprint"
                 ? readBlueprintOutputSteps(part.output)
                 : []);
-            const canRetry =
-              toolName === "buildDatabaseFromBlueprint" &&
-              Boolean(onRetryIncomplete) &&
-              (progress?.status === "failed" ||
-                readDatabaseToolOutput(part.output)?.ok === false);
+            const canRetry = canRetryBlueprint(
+              part,
+              progress,
+              Boolean(onRetryIncomplete),
+            );
 
             return (
               <Fragment key={part.toolCallId}>

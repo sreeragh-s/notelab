@@ -1,3 +1,4 @@
+import { sha256Hex } from "../../../shared/crypto/sha256";
 import { getStringEnv, type RuntimeEnv } from "../../../shared/config/config";
 
 const CREDENTIAL_KEY_VERSION = "v1";
@@ -131,15 +132,7 @@ function toArrayBuffer(bytes: Uint8Array) {
   ) as ArrayBuffer;
 }
 
-async function sha256Hex(value: string) {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(value),
-  );
-  return [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
+
 
 function bytesToBase64(bytes: Uint8Array) {
   let binary = "";

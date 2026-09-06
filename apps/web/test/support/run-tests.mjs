@@ -132,7 +132,7 @@ function aliasPlugin() {
         })
       )
       build.onResolve({ filter: /^@zilobase\/edition-web$/ }, () => ({
-        path: join(srcDir, "edition", "community.tsx"),
+        path: join(srcDir, "edition", "community-module.ts"),
       }))
       build.onResolve({ filter: /^@\/packages\/editor\/?/ }, async (args) => ({
         path: await resolveAliasPath(
@@ -174,7 +174,7 @@ function aliasPlugin() {
         })
       )
       build.onResolve(
-        { filter: /^@zilobase\/features\/(databases\/appearance|user-settings\/sidebar-config)$/ },
+        { filter: /^@zilobase\/features\/(databases\/appearance|user-settings\/sidebar-config|ai-chat\/settings-contract)$/ },
         (args) => ({
           path: join(workspaceDir, "packages/features/src", `${args.path.slice("@zilobase/features/".length)}.ts`),
         }),
