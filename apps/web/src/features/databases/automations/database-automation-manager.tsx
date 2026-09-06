@@ -92,7 +92,7 @@ import {
   notionActionLabel,
   resolveWebhookHeader,
   type NotionActionDraft,
-} from "./notion-action-builder";
+} from "./actions/notion-action-builder";
 
 import {
   AutomationList,
@@ -102,14 +102,14 @@ import {
   RunList,
 } from "./database-automation-screens"
 
-import { AutomationSelect } from "./automation-select"
+import { AutomationSelect } from "./definition/automation-select"
 import {
   ScheduleEditor,
   scheduleDefinition,
   scheduleDraft,
   scheduleTriggerLabel,
   type ScheduleDraft,
-} from "./automation-schedule"
+} from "./definition/automation-schedule"
 type Screen = "builder" | "list" | "run" | "runs";
 const automationMenuItemClassName = "min-h-9 px-2 py-2 text-[13px]";
 type TriggerDraft = {

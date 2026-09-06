@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "test": "tsx --test \"src/**/*.test.ts\"",
-    "test:databases": "tsx --test src/databases/*.test.ts src/databases/automations/*.test.ts src/databases/formula/*.test.ts",
+    "test:databases": "tsx --test src/databases/*.test.ts \"src/databases/automations/**/*.test.ts\" src/databases/formula/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

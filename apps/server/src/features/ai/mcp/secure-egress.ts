@@ -1,7 +1,7 @@
 import type { FetchLike } from "@modelcontextprotocol/client";
 
 import { fetchMcpRequest } from "../../../infrastructure/runtime/runtime-adapter";
-import { isBlockedAddress } from "../../databases/automations/webhook-egress";
+import { isBlockedAddress } from "../../databases/automations/actions/webhook-egress";
 import { MCP_LIMITS } from "./config";
 
 const MAX_MCP_REQUEST_BYTES = 1024 * 1024;

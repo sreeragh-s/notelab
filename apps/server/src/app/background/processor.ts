@@ -1,8 +1,8 @@
 import { AI_JOB_HANDLERS } from "../../features/ai/jobs/ai-job-handlers";
 import { runAiJobById } from "../../features/ai/jobs/ai-jobs";
 import { processAgentRun } from "../../features/ai/agents/agent-run-service";
-import { processDatabaseAutomationEventWindow } from "../../features/databases/automations/evaluator";
-import { processDatabaseAutomationRun } from "../../features/databases/automations/run-engine";
+import { processDatabaseAutomationEventWindow } from "../../features/databases/automations/triggers/event-evaluator";
+import { processDatabaseAutomationRun } from "../../features/databases/automations/execution/run-engine";
 import { processMailIndexTask, processMailDatabaseSyncTask } from "../../features/mail/background";
 import { processDatabaseRealtimeTask } from "../../features/databases/realtime/background";
 import { processNavigationRealtimeTask } from "../../features/workspaces/navigation-realtime/background";

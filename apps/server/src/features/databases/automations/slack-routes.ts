@@ -9,7 +9,7 @@ import { readJsonBody } from "../../../shared/http/request";
 import { requireDatabaseRouteUser } from "../route-support";
 import { requireDataSourceAccess } from "../access/data-source-access";
 import { getDatabaseAutomationCatalog, invalidateDatabaseAutomationDependencies } from "./service";
-import { beginSlackOauth, completeSlackOauth, listSlackChannels, SlackProviderError } from "./slack-provider";
+import { beginSlackOauth, completeSlackOauth, listSlackChannels, SlackProviderError } from "./actions/slack-provider";
 
 export const automationSlackRoutes = new Hono<AppBindings>();
 export const automationSlackProviderRoutes = new Hono<AppBindings>();

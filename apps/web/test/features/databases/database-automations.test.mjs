@@ -3,12 +3,12 @@ export function register({ assert, readSource, test }) {
     (await Promise.all([
       readSource("/src/features/databases/automations/database-automation-manager.tsx"),
       readSource("/src/features/databases/automations/database-automation-screens.tsx"),
-      readSource("/src/features/databases/automations/automation-schedule.tsx"),
+      readSource("/src/features/databases/automations/definition/automation-schedule.tsx"),
     ])).join("\n")
   const readNotionActions = async () =>
     (await Promise.all([
-      readSource("/src/features/databases/automations/notion-action-builder.tsx"),
-      readSource("/src/features/databases/automations/notion-action-model.ts"),
+      readSource("/src/features/databases/automations/actions/notion-action-builder.tsx"),
+      readSource("/src/features/databases/automations/actions/notion-action-model.ts"),
     ])).join("\n")
   test("database automation release is server-capability gated and source scoped", async () => {
     const [manager, toolbar] = await Promise.all([

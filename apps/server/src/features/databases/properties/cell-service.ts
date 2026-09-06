@@ -14,7 +14,7 @@ import { commitDataSourceMutation } from "../core/commit";
 import {
   lockDatabaseAutomationFactRows,
   type DatabaseMutationOrigin,
-} from "../automations/event-capture";
+} from "../automations/triggers/event-capture";
 import type { DatabaseDelta } from "../realtime/delta";
 import { validateCellValue } from "./config";
 import { ServiceMutationError } from "../../../shared/errors/service-mutation-error";

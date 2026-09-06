@@ -6,7 +6,7 @@ import { type MailAddress } from "@zilobase/features/mail/contracts";
 import { requireDatabaseEditAccess } from "../databases/access/database-access"
 import { requireDataSourceEditAccess } from "../databases/access/data-source-access"
 import { commitDataSourceMutation } from "../databases/core/commit"
-import { lockDatabaseAutomationFactRows } from "../databases/automations/event-capture"
+import { lockDatabaseAutomationFactRows } from "../databases/automations/triggers/event-capture"
 import { validateCellValue } from "../databases/properties/config"
 import { fetchDatabaseRowDelta, fetchDatabaseValuesForPage } from "../databases/realtime/delta"
 import { upsertPageItemPlacement } from "../pages/placements"

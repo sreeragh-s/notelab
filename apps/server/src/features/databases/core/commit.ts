@@ -24,7 +24,7 @@ import {
 import {
   captureDatabaseAutomationMutationFacts,
   type DatabaseAutomationMutationFactCandidate,
-} from "../automations/event-capture";
+} from "../automations/triggers/event-capture";
 import { createBackgroundTask } from "../../../infrastructure/background/contracts";
 import { dispatchBackgroundTasks } from "../../../infrastructure/background/dispatch";
 

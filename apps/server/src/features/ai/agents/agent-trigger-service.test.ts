@@ -34,7 +34,7 @@ vi.mock("./agent-revision-service", () => ({
   applyAgentDefinition: state.apply,
 }));
 vi.mock("./agent-run-queue", () => ({ enqueueAgentRun: state.enqueue }));
-vi.mock("../../databases/automations/secret-crypto", () => ({
+vi.mock("../../databases/automations/actions/secret-crypto", () => ({
   encryptAutomationSecret: async () => ({ ciphertext: "encrypted" }),
 }));
 vi.mock("../../../infrastructure/database", () => {

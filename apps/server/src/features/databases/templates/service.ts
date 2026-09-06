@@ -27,7 +27,7 @@ import {
 } from "../properties/config";
 import { normalizeDatabasePropertyType } from "../properties/types";
 import { ServiceMutationError } from "../../../shared/errors/service-mutation-error";
-import { lockDatabaseAutomationFactRows } from "../automations/event-capture";
+import { lockDatabaseAutomationFactRows } from "../automations/triggers/event-capture";
 
 export type DatabaseTemplateInput = {
   config: unknown;

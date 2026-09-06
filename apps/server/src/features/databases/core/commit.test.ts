@@ -13,7 +13,7 @@ vi.mock("../../../infrastructure/database", () => ({
 vi.mock("../realtime/outbox", () => ({
   publishDatabaseRealtimeEvent: mocks.publish,
 }));
-vi.mock("../automations/event-capture", () => ({
+vi.mock("../automations/triggers/event-capture", () => ({
   captureDatabaseAutomationMutationFacts: mocks.capture,
 }));
 

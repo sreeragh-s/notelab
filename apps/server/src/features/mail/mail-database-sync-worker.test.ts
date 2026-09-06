@@ -50,7 +50,7 @@ vi.mock("../databases/core/commit", () => ({
     return callback(db as unknown as Record<string, unknown>);
   }),
 }));
-vi.mock("../databases/automations/event-capture", () => ({ lockDatabaseAutomationFactRows: vi.fn(async () => undefined) }));
+vi.mock("../databases/automations/triggers/event-capture", () => ({ lockDatabaseAutomationFactRows: vi.fn(async () => undefined) }));
 vi.mock("../databases/properties/config", () => ({ validateCellValue: vi.fn() }));
 vi.mock("../databases/realtime/delta", () => ({
   fetchDatabaseRowDelta: vi.fn(async () => ({ rows: [] })),

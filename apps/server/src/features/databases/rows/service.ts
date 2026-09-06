@@ -26,7 +26,7 @@ import {
 import {
   lockDatabaseAutomationFactRows,
   type DatabaseMutationOrigin,
-} from "../automations/event-capture";
+} from "../automations/triggers/event-capture";
 import { fetchDatabaseRowDelta } from "../realtime/delta";
 import { isDatabaseHostPageId } from "../core/host-page";
 import { getStatusDefaultValue, validateCellValue } from "../properties/config";

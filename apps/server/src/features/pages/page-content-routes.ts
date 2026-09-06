@@ -10,7 +10,7 @@ import { createCollaborationTicket, documentNameForPage, getOrCreateCollaboratio
 import { getCollaborationWebSocketUrl } from "../../infrastructure/runtime/runtime-adapter";
 import { enqueueNavigationInvalidation, publishCommittedNavigationInvalidation } from "../workspaces/navigation-realtime/outbox";
 import { commitDatabaseMutationBatch, mutationResponse } from "../databases/core";
-import { lockDatabaseAutomationFactRows } from "../databases/automations/event-capture";
+import { lockDatabaseAutomationFactRows } from "../databases/automations/triggers/event-capture";
 import { enforceActiveWorkspace, getPage, getPagePropertyPayload } from "./page-route-support";
 
 export const pageContentRoutes = new Hono<AppBindings>();

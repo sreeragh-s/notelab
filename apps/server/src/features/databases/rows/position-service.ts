@@ -13,7 +13,7 @@ import { commitDataSourceMutation } from "../core/commit";
 import {
   lockDatabaseAutomationFactRows,
   type DatabaseMutationOrigin,
-} from "../automations/event-capture";
+} from "../automations/triggers/event-capture";
 import { rowPositionDelta } from "../realtime/delta";
 import {
   hasDuplicateValues,

@@ -1,9 +1,9 @@
 export {
   getDatabaseAutomation,
   listDatabaseAutomations,
-} from "./read-service";
-export { exportDatabaseAutomationAudit } from "./run-history-service";
-export { validateDatabaseAutomation } from "./validation-service";
+} from "./definition/definition-read";
+export { exportDatabaseAutomationAudit } from "./history/audit-export";
+export { validateDatabaseAutomation } from "./definition/definition-validation";
 export {
   createDatabaseAutomation,
   createDatabaseAutomationSecret,
@@ -11,9 +11,9 @@ export {
   duplicateDatabaseAutomation,
   setDatabaseAutomationPaused,
   updateDatabaseAutomation,
-} from "./lifecycle-service";
+} from "./definition/definition-lifecycle";
 export {
   getDatabaseAutomationCatalog,
   invalidateDatabaseAutomationDependencies,
-} from "./catalog-service";
-export { DatabaseAutomationError } from "./service-support";
+} from "./definition/definition-catalog";
+export { DatabaseAutomationError } from "./definition/definition-context";

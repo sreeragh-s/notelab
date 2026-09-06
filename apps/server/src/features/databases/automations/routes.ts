@@ -30,7 +30,7 @@ import {
 import {
   getDatabaseAutomationRun,
   listDatabaseAutomationRuns,
-} from "./run-history";
+} from "./history/run-history";
 
 export const databaseAutomationRoutes = new Hono<AppBindings>();
 

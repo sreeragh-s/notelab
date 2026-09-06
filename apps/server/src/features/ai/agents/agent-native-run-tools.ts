@@ -33,7 +33,7 @@ import {
   replacePageContent,
 } from "../../collaboration/service";
 import { getDatabaseRecord } from "../../databases/access";
-import { lockDatabaseAutomationFactRows } from "../../databases/automations/event-capture";
+import { lockDatabaseAutomationFactRows } from "../../databases/automations/triggers/event-capture";
 import { getDatabasePayload } from "../../databases/core";
 import { commitDataSourceMutation } from "../../databases/core/commit";
 import { validateCellValue } from "../../databases/properties/config";
