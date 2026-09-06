@@ -1,5 +1,5 @@
-import { getDatabasePropertyCellKind } from "../core/database-property-types"
-import type { DatabasePropertyValue } from "../core/database-property-values"
+import { getDatabasePropertyCellKind } from "../properties/property-catalog"
+import type { DatabasePropertyValue } from "../properties/property-values"
 import { areSerializedPropertyValuesEqual } from "./database-item-utils"
 
 export type DatabaseCellFillHistoryChange = {

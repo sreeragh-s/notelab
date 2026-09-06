@@ -41,10 +41,8 @@ import {
 } from "@zilobase/features/databases/react";
 import { usePageNavigation } from "@zilobase/features/pages/react";
 
-import {
-  DatabaseSearchableMenuItems,
-  type DatabaseSearchableMenuOption,
-} from "../../../views/view/database-searchable-menu-items";
+import { DatabaseSearchableMenuItems } from "../../../views/components/database-searchable-menu-items";
+import { type DatabaseSearchableMenuOption } from "../../../views/menu-option-contracts";
 import type { DatabasePropertyConfig } from "../../../views/model/database-view-config";
 import {
   getRelationNeedsRepair,

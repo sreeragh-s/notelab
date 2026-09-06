@@ -1,4 +1,4 @@
-import { DATABASE_PAGE_DRAG_MIME } from "../core/database-contracts"
+import { DATABASE_PAGE_DRAG_MIME } from "./database-drag-contracts";
 import {
   hasDragType,
   readDragPayload,

@@ -4,7 +4,7 @@ import {
   toStringArray,
   toTrimmedStringArray,
   type DatabasePropertyValue,
-} from "../core/database-property-values"
+} from "../properties/property-values"
 import {
   evaluateDatabaseFilter,
   evaluateDatabaseFilters,

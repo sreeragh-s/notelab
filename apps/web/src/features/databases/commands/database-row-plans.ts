@@ -5,8 +5,8 @@ import type {
 
 import {
   isSelectLikePropertyType,
-} from "../core/database-property-types"
-import { serializePropertyValue } from "../core/database-property-values"
+} from "../properties/property-catalog"
+import { serializePropertyValue } from "../properties/property-values"
 import {
   canUpdateKanbanGroupProperty,
   type DatabasePropertyListItem,

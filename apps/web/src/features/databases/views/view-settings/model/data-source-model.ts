@@ -1,4 +1,4 @@
-import type { DatabaseSourceMenuItem } from "./types";
+import type { DatabaseSourceMenuItem } from "../view-settings-contracts";
 
 export function partitionManagedDataSources(
   dataSources: DatabaseSourceMenuItem[],

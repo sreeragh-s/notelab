@@ -1,4 +1,4 @@
-import { isReadOnlyPropertyType } from "../../core/database-property-types"
+import { isReadOnlyPropertyType } from "../property-catalog"
 
 export type ReadOnlyTimePropertySource = {
   createdAt: string

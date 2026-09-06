@@ -1,4 +1,4 @@
-import type { DatabasePropertyValue } from "../core/database-property-values"
+import type { DatabasePropertyValue } from "../properties/property-values"
 
 export function getRawDatabaseGroupValue(value: DatabasePropertyValue) {
   return Array.isArray(value) ? (value[0] ?? "") : value

@@ -12,7 +12,7 @@ import {
   TimelineSidebarRowCell,
   timelineTableStyle,
   type TimelineSidebarRowCellProps,
-} from "../view/database-timeline-sidebar"
+} from "../components/database-timeline-sidebar"
 import {
   getTimelineViewRowKey,
   type TimelineViewRow,

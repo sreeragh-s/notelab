@@ -8,7 +8,7 @@ import {
   DropDrawerSeparator,
 } from "@/shared/ui/dropdrawer";
 
-import { getNextDatabaseOptionColor } from "../../../core/database-property-types";
+import { getNextDatabaseOptionColor } from "../../property-catalog";
 import type {
   DatabasePropertyConfig,
   DatabaseSelectOption,

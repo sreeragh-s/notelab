@@ -53,7 +53,7 @@ import {
   type DatabasePropertyConfig,
   type DatabaseSortConfig,
 } from "@/features/databases";
-import { DatabaseMainPane } from "@/features/databases/pages/index";
+import { DatabaseMainPane } from "@/features/databases/screens/index";
 import { buildHomepageHierarchy } from "@/features/library/model/homepage-hierarchy";
 import { DEFAULT_MEETING_ITEM_ICON } from "@/features/pages/index";
 import {

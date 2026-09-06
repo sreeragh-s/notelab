@@ -10,9 +10,9 @@ import {
   getColorTokenBadgeClassName,
   getColorTokenDotClassName,
 } from "@/shared/lib/color-tokens"
-import { getNextDatabaseOptionColor } from "../../core/database-property-types"
+import { getNextDatabaseOptionColor } from "../property-catalog"
 import type { DatabaseSelectOption } from "../../views/model/database-view-config"
-import { toStringArray } from "../../core/database-property-values"
+import { toStringArray } from "../property-values"
 
 type DatabasePropertySelectOption = DatabaseSelectOption & {
   suffix?: string

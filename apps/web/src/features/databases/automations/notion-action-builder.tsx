@@ -25,10 +25,8 @@ import {
 } from "@/shared/ui/select";
 import { Textarea } from "@/shared/ui/textarea";
 import { useSlackAutomationChannels } from "@zilobase/features/databases/automations/react";
-import {
-  DatabaseConditionValueControl,
-  type DatabaseCondition,
-} from "../views/view/database-condition-editor";
+import { DatabaseConditionValueControl } from "../views/components/database-condition-editor";
+import { type DatabaseCondition } from "../views/model/filter-sort-contracts";
 import type { DatabasePropertyFilterOperator } from "../views/model/database-view-config";
 
 type CatalogProperty = DatabaseAutomationCatalog["properties"][number];

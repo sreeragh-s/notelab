@@ -11,7 +11,7 @@ import {
   hasDatabasePropertyTypeEditSettings,
   isDateLikePropertyType,
   isSelectLikePropertyType,
-} from "../../core/database-property-types";
+} from "../property-catalog";
 import {
   getNumberPropertyConfig,
   NumberPropertySettings,
@@ -25,7 +25,7 @@ import {
   getStatusDefaultOptionId,
   type DatabasePropertyConfig,
 } from "../../views/model/database-view-config";
-import { useDatabaseActionsContext } from "../../views/model/database-view-context";
+import { useDatabaseActionsContext } from "../../views/state/database-view-context";
 import { DatePropertySettings } from "./date/date-property-settings";
 import {
   FilesPropertySettings,

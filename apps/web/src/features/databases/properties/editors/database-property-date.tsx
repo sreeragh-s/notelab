@@ -24,7 +24,7 @@ import {
   type TimeFormatValue,
 } from "../model/database-date-config"
 import { parseDatabaseDateValue } from "../model/database-date-value"
-import { firstScalarValue } from "../../core/database-property-values"
+import { firstScalarValue } from "../property-values"
 
 type DatabasePropertyDateProps = {
   editable?: boolean

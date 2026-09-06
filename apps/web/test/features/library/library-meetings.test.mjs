@@ -4,8 +4,8 @@ const sidebarConfigPath = "/packages/features/src/user-settings/sidebar-config.t
 export function register({ readSource, assert, loadModule, test }) {
   const readToolbarSource = async () =>
     (await Promise.all([
-      readSource("/src/features/databases/views/view/database-view-toolbar.tsx"),
-      readSource("/src/features/databases/views/view/database-view-toolbar-dialogs.tsx"),
+      readSource("/src/features/databases/views/components/database-view-toolbar.tsx"),
+      readSource("/src/features/databases/views/components/database-view-toolbar-dialogs.tsx"),
     ])).join("\n")
   test("Library Teamspaces uses a dedicated teamspace directory", async () => {
     const source = await readSource("/src/features/library/pages/recents.tsx")

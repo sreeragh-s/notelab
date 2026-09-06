@@ -11,7 +11,7 @@ import {
   type MailViewConfig,
 } from "@zilobase/features/mail"
 
-import { databasePropertyTypes, defaultStatusOptions, getDatabasePropertyType } from "@/features/databases/core/database-property-types"
+import { databasePropertyTypes, defaultStatusOptions, getDatabasePropertyType } from "@/features/databases/properties/property-catalog"
 import { PropertyTypePicker } from "@/features/databases/properties/shared/property-type-picker"
 import { DataSourcePropertyValueControl } from "@/features/databases/properties/shared/property-value-control"
 import { EyeIcon, EyeOffIcon, GripVerticalIcon, Plus, Trash2Icon } from "@/shared/components/icons"

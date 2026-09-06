@@ -1,8 +1,8 @@
-import { defaultStatusOptions } from "../../../core/database-property-types"
+import { defaultStatusOptions } from "../../../properties/property-catalog"
 import {
   isReadOnlyPropertyType,
   isSelectLikePropertyType,
-} from "../../../core/database-property-types"
+} from "../../../properties/property-catalog"
 
 export type DatabaseSelectOption = {
   color?: string

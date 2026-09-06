@@ -7,7 +7,7 @@ import {
   DropDrawerTrigger,
 } from "@/shared/ui/dropdrawer"
 
-import { databasePropertyTypes } from "../../core/database-property-types"
+import { databasePropertyTypes } from "../property-catalog"
 import { PropertyTypePicker } from "../shared/property-type-picker"
 
 export function AddDatabasePropertyMenu({

@@ -3,7 +3,7 @@ import type { DatabasePayload, DatabaseRow } from "@zilobase/features/databases"
 import {
   toStringArray,
   type DatabasePropertyValue,
-} from "../core/database-property-values"
+} from "../properties/property-values"
 import { findAddedDatabaseRow, type NewRowSetup } from "./database-row-plans"
 import type { DatabaseRowMutations } from "./database-mutation-adapters"
 

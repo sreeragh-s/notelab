@@ -1,7 +1,7 @@
 export function register({ assert, loadModule, readSource, test }) {
   test("timeline name cells stay single-line by default", async () => {
     const sidebar = await readSource(
-      "/src/features/databases/views/timeline/view/database-timeline-sidebar.tsx"
+      "/src/features/databases/views/timeline/components/database-timeline-sidebar.tsx"
     )
 
     assert.match(sidebar, /<DatabaseCellContent wrapContent=\{false\}>/)

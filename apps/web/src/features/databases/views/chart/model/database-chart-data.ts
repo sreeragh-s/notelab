@@ -5,7 +5,7 @@ import {
   getPaletteColor,
   type ColorTokenId,
 } from "@/shared/lib/color-tokens"
-import type { DatabasePropertyValue } from "../../../core/database-property-values"
+import type { DatabasePropertyValue } from "../../../properties/property-values"
 import { formatDatabaseDateValue } from "../../../properties/model/database-date-config"
 import { getReadOnlyTimePropertyRawValue } from "../../../properties/model/read-only-time-property"
 import { getSelectOptions } from "../../kanban/model/database-kanban-config"

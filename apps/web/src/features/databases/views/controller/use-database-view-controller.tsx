@@ -29,9 +29,9 @@ import { toast } from "sonner"
 import {
   createSampleRowContent,
   type DatabaseSetupSelection,
-} from "../../setup/view/database-setup-card"
+} from "../../setup/components/database-setup-card"
 import { getDatabaseSetupTemplate } from "../../setup/model/database-setup-templates"
-import { serializePropertyValue } from "../../core/database-property-values"
+import { serializePropertyValue } from "../../properties/property-values"
 import { usePage, usePagePersonAccessTargets, useUpdatePage } from "@zilobase/features/pages/react";
 import {
   getDatabasePageDragPayload,
@@ -41,19 +41,19 @@ import {
 import type {
   DatabaseSourceViewSelection,
   DatabaseViewProviderValue,
-} from "../model/database-view-context"
+} from "../state/database-view-context"
 import { getDatabaseViewCommands } from "../../commands/database-view-commands"
-import { getDatabaseViewModel } from "../../model/database-view-model"
+import { getDatabaseViewModel } from "../model/database-view-model"
 import {
   readLatestViewConfig,
   writeLatestViewConfig,
-} from "../../model/view-config-cache"
+} from "../model/view-config-cache"
 import {
   getDatabaseDataSourceSummaries,
   getDatabaseViewTabs,
   resolveRequestedDatabaseViewId,
   shouldUseDatabaseSetupMode,
-} from "../../model/database-controller-state"
+} from "../model/database-controller-state"
 import {
   getDatabaseSetupDismissed,
   getMergedDatabaseConfig,

@@ -1,8 +1,4 @@
-import {
-  databaseAddPropertyColumnDefaultWidth,
-  databaseColumnDefaultWidth,
-  databaseNameColumnDefaultWidth,
-} from "../../../core/database-contracts"
+import { databaseAddPropertyColumnDefaultWidth, databaseColumnDefaultWidth, databaseNameColumnDefaultWidth } from "../../model/column-dimensions";
 import type { SortableDatabaseItem } from "../../../interactions/database-item-utils"
 import type { DatabaseRowDropTarget } from "../../../interactions/database-table-layout"
 import type { DatabaseTableGroupSection } from "../../../interactions/database-table-group-sections"

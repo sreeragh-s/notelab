@@ -42,12 +42,12 @@ import {
 
 import { ImageSourcePicker } from "@/features/pages/images/image-source-picker"
 
-import { getDatabasePropertyType } from "../core/database-property-types"
+import { getDatabasePropertyType } from "../properties/property-catalog"
 import {
   type DatabasePropertyValue,
   parsePropertyValue,
   serializePropertyValue,
-} from "../core/database-property-values"
+} from "../properties/property-values"
 import { CollaborationPresence } from "@/features/editor/collaboration/collaboration-presence"
 import type { CollaborationPresenceUser } from "@/features/editor/collaboration/collaboration-presence"
 import { PageMetadataProperties } from "./page-metadata-properties"

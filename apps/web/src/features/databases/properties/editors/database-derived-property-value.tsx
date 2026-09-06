@@ -31,7 +31,7 @@ import { getNumberDisplayValue } from "./database-property-input"
 import {
   toStringArray,
   type DatabasePropertyValue,
-} from "../../core/database-property-values"
+} from "../property-values"
 
 type DatabaseRow = {
   createdAt: string

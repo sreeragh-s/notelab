@@ -3,7 +3,7 @@ import type { ColorTokenId } from "@/shared/lib/color-tokens"
 import {
   defaultStatusOption,
   defaultStatusOptions,
-} from "../../core/database-property-types"
+} from "../../properties/property-catalog"
 
 export type DatabaseSetupTemplateId =
   | "tasks-tracker"

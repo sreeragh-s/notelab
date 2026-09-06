@@ -14,7 +14,7 @@ import {
   type DatabasePropertyFilterConfig,
   type DatabasePropertyFilterOperator,
 } from "@zilobase/features/databases/filter";
-import { defaultStatusOption } from "../../core/database-property-types";
+import { defaultStatusOption } from "../../properties/property-catalog";
 
 export {
   databaseDateFilterOperators,

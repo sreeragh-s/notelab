@@ -5,9 +5,9 @@ export function register({ readSource, assert, loadModule, test }) {
       databaseColumnDefaultWidth,
       databaseNameColumnDefaultWidth,
     } = await loadModule(
-      "/src/features/databases/core/database-contracts.ts"
+      "/src/features/databases/views/model/column-dimensions.ts"
     )
-    const tableSource = await readSource("/src/features/databases/views/table/view/database-table-shell.tsx")
+    const tableSource = await readSource("/src/features/databases/views/table/components/database-table-shell.tsx")
 
     assert.equal(databaseColumnDefaultWidth, 200)
     assert.equal(databaseNameColumnDefaultWidth, databaseColumnDefaultWidth * 1.25)

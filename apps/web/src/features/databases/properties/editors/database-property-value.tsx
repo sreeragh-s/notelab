@@ -8,25 +8,25 @@ import {
 import {
   defaultStatusOption,
   defaultStatusOptions,
-} from "../../core/database-property-types"
+} from "../property-catalog"
 import { DatabasePropertyButton } from "./database-property-button"
 import { DatabasePropertyDate } from "./database-property-date"
 import { DatabasePropertyFiles } from "./database-property-files"
 import { DatabasePropertyInput } from "./database-property-input"
 import { DatabasePropertySelect } from "./database-property-select"
-import { getDatabasePropertyCellKind } from "../../core/database-property-types"
+import { getDatabasePropertyCellKind } from "../property-catalog"
 import { DatabaseFormulaValue } from "../formula/view/database-formula-value"
-import { type DatabasePropertyValue } from "../../core/database-property-values"
+import { type DatabasePropertyValue } from "../property-values"
 import { formatDatabaseDateValue } from "../model/database-date-config"
 import {
   getReadOnlyTimePropertyRawValue,
 } from "../model/read-only-time-property"
-import { useDatabaseActionsContext, useDatabaseDataContext, useDatabaseUiContext } from "../../views/model/database-view-context"
+import { useDatabaseActionsContext, useDatabaseDataContext, useDatabaseUiContext } from "../../views/state/database-view-context"
 import {
   useDatabaseCellDraft,
   useSetActiveDatabaseCell,
   useUpdateDatabaseCellDraft,
-} from "../../views/model/database-cell-state"
+} from "../../views/state/database-cell-state"
 import { getPersonLimit, getPropertyWrapContent } from "../../views/model/database-view-config"
 import { type DatabasePropertyListItem } from "../../views/kanban/model/database-kanban-config"
 import { DatabaseRelationPropertyValue, DatabaseRollupPropertyValue } from "./database-derived-property-value"

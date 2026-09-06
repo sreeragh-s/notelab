@@ -4,7 +4,7 @@ import type {
   DatabaseChartSettings,
   DatabaseChartSort,
 } from "../../chart/model/database-chart-config";
-import type { DatabaseViewProperty } from "./types";
+import type { DatabaseViewProperty } from "../view-settings-contracts";
 
 export const chartDateIntervalOptions: Array<{
   label: string;

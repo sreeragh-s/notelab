@@ -10,7 +10,7 @@ import {
 import {
   defaultStatusOptions,
   getNextDatabaseOptionColor,
-} from "../../../core/database-property-types";
+} from "../../property-catalog";
 import type {
   DatabasePropertyConfig,
   DatabaseSelectOption,

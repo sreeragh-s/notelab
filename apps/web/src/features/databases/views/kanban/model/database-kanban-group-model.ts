@@ -1,8 +1,8 @@
-import { defaultStatusOption } from "../../../core/database-property-types"
+import { defaultStatusOption } from "../../../properties/property-catalog"
 import {
   toStringArray,
   type DatabasePropertyValue as DatabaseCellValue,
-} from "../../../core/database-property-values"
+} from "../../../properties/property-values"
 import { formatDatabaseDateValue } from "../../../properties/model/database-date-config"
 import type { SortableDatabaseItem } from "../../../interactions/database-item-utils"
 import type { DatabasePropertyConfig } from "../../model/database-view-config"

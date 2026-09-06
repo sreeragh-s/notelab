@@ -14,8 +14,8 @@ import {
   type MailPropertyWorkspaceMember,
 } from "@zilobase/features/mail"
 
-import { DatabaseConditionEditor } from "@/features/databases/views/view/database-condition-editor"
-import type { DatabaseSearchableMenuOption } from "@/features/databases/views/view/database-searchable-menu-items"
+import { DatabaseConditionEditor } from "@/features/databases/views/components/database-condition-editor"
+import type { DatabaseSearchableMenuOption } from "@/features/databases/views/menu-option-contracts";
 import { getDatabaseFilterOperatorLabel, getDatabaseFilterOperatorsForType, type DatabasePropertyFilterOperator } from "@/features/databases/views/model/database-view-config"
 import { ChevronDown, CircleX, FilterIcon, MailIcon, Paperclip, Plus, SearchIcon, UserIcon, XIcon } from "@/shared/components/icons"
 import { Button } from "@/shared/ui/button"

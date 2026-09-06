@@ -23,10 +23,10 @@ import {
 import {
   createSampleRowContent,
   type DatabaseSetupSelection,
-} from "@/features/databases/setup/view/database-setup-card"
+} from "@/features/databases/setup/components/database-setup-card"
 import { getDatabaseSetupTemplate } from "@/features/databases/setup/model/database-setup-templates"
-import { DatabaseViewSkeleton } from "@/features/databases/views/view/database-view-skeleton"
-import { getDatabaseViewModel } from "@/features/databases/model/database-view-model"
+import { DatabaseViewSkeleton } from "@/features/databases/views/components/database-view-skeleton"
+import { getDatabaseViewModel } from "@/features/databases/views/model/database-view-model"
 import {
   getDatabaseFilterOperatorsForType,
   getMergedDatabaseConfig,
@@ -39,13 +39,13 @@ import {
   type DatabaseSortConfig,
   type DatabaseSubItemsSettings,
 } from "@/features/databases/views/model/database-view-config"
-import type { DatabaseFilterUpdatePatch } from "@/features/databases/views/view/database-filter-menu"
-import type { DatabaseSortUpdatePatch } from "@/features/databases/views/view/database-sort-menu"
+import type { DatabaseFilterUpdatePatch } from "../../databases/views/model/filter-sort-contracts";
+import type { DatabaseSortUpdatePatch } from "../../databases/views/model/filter-sort-contracts";
 import {
   serializePropertyValue,
   type DatabasePropertyValue,
-} from "@/features/databases/core/database-property-values"
-import { defaultStatusOptions } from "@/features/databases/core/database-property-types"
+} from "@/features/databases/properties/property-values"
+import { defaultStatusOptions } from "@/features/databases/properties/property-catalog"
 import { TaskDatabaseListAdapter } from "../components/task-database-list-adapter"
 import { getDatabaseEmoji } from "@zilobase/features/databases"
 import {
@@ -83,17 +83,17 @@ import {
 } from "../model/tasks-model"
 
 const DatabaseListView = lazy(() =>
-  import("@/features/databases/views/list/view/database-list-view").then(
+  import("@/features/databases/views/list/components/database-list-view").then(
     (module) => ({ default: module.DatabaseListView }),
   ),
 )
 const DatabaseSetupCard = lazy(() =>
-  import("@/features/databases/setup/view/database-setup-card").then(
+  import("@/features/databases/setup/components/database-setup-card").then(
     (module) => ({ default: module.DatabaseSetupCard }),
   ),
 )
 const DatabaseViewToolbar = lazy(() =>
-  import("@/features/databases/views/view/database-view-toolbar").then(
+  import("@/features/databases/views/components/database-view-toolbar").then(
     (module) => ({ default: module.DatabaseViewToolbar }),
   ),
 )

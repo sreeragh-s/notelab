@@ -8,7 +8,7 @@ import type {
   DatabaseView,
 } from "@zilobase/features/databases";
 
-import { defaultStatusOption } from "../core/database-property-types";
+import { defaultStatusOption } from "../properties/property-catalog";
 import {
   getKanbanGroupPropertyId,
   type DatabasePropertyListItem,
@@ -21,11 +21,11 @@ import {
 import {
   getDefaultDatabasePropertyConfig,
   isSelectLikePropertyType,
-} from "../core/database-property-types";
+} from "../properties/property-catalog";
 import {
   serializePropertyValue,
   type DatabasePropertyValue,
-} from "../core/database-property-values";
+} from "../properties/property-values";
 import {
   areSerializedPropertyValuesEqual,
   hasViewHiddenPropertyIds,
@@ -50,7 +50,7 @@ import {
   type DatabaseSortConfig,
   type DatabaseSubItemsSettings,
 } from "../views/model/database-view-config";
-import type { DatabaseFilterUpdatePatch } from "../views/view/database-filter-menu";
+import type { DatabaseFilterUpdatePatch } from "../views/model/filter-sort-contracts";
 import { getRelationLimitTrimUpdates } from "../properties/relations/model/database-relation-sync";
 import {
   defaultDatabaseChartSettings,

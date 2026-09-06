@@ -4,8 +4,8 @@ export function register({ readSource, assert, loadModule, test }) {
   test("Tasks uses the shared database list view", async () => {
     const [source, listView, dataSourceSettings, styles] = await Promise.all([
       readSource("/src/features/tasks/pages/tasks.tsx"),
-      readSource("/src/features/databases/views/list/view/database-list-view.tsx"),
-      readSource("/src/features/databases/views/view-settings/view/data-source-settings.tsx"),
+      readSource("/src/features/databases/views/list/components/database-list-view.tsx"),
+      readSource("/src/features/databases/views/view-settings/components/data-source-settings.tsx"),
       readSource("/src/features/databases/styles/database.css"),
     ]);
 

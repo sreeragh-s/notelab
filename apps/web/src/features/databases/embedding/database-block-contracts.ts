@@ -1,0 +1,15 @@
+export type DatabaseBlockEditorRuntime = {
+  getEditable: () => boolean
+  subscribe: (listener: () => void) => () => void
+}
+
+export type DatabaseBlockOptions = {
+  currentPageId?: string | null
+  editable?: boolean
+  editorRuntime?: DatabaseBlockEditorRuntime
+  onOpenPage?: (
+    pageId: string,
+    options?: { databaseId?: string | null },
+  ) => void
+  workspaceId?: string | null
+}

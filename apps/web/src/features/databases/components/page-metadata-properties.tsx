@@ -11,10 +11,10 @@ import { DatabasePropertyInput } from "../properties/editors/database-property-i
 import { DatabasePropertySelect } from "../properties/editors/database-property-select"
 import { DatabaseRelationPropertyValue } from "../properties/editors/database-property-value"
 import { formatDatabaseDateValue } from "../properties/model/database-date-config"
-import { defaultStatusOptions, getDatabasePropertyType } from "../core/database-property-types"
+import { defaultStatusOptions, getDatabasePropertyType } from "../properties/property-catalog"
 import { getPersonLimit } from "../views/model/database-view-config"
 import type { DatabasePresenceCollaborator } from "@zilobase/features/databases"
-import type { DatabasePropertyValue } from "../core/database-property-values"
+import type { DatabasePropertyValue } from "../properties/property-values"
 
 type PagePropertyPayload = ReturnType<typeof usePageProperties>["data"]
 type PageProperty = NonNullable<PagePropertyPayload>["properties"][number]

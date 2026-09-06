@@ -5,7 +5,7 @@ import type { GanttFeature, GanttStatus } from "../gantt"
 import { getPaletteColor } from "@/shared/lib/color-tokens"
 import { parseLocalDateMatch } from "../../../properties/model/database-date-value"
 
-import { defaultStatusOptions } from "../../../core/database-property-types"
+import { defaultStatusOptions } from "../../../properties/property-catalog"
 import {
   getSelectOptions,
   type DatabasePropertyListItem,
@@ -14,7 +14,7 @@ import {
   firstScalarValue,
   serializePropertyValue,
   type DatabasePropertyValue,
-} from "../../../core/database-property-values"
+} from "../../../properties/property-values"
 
 export const UNSCHEDULED_GROUP_NAME = "Unscheduled"
 export const DEFAULT_TIMELINE_ITEM_DURATION_DAYS = 5

@@ -78,13 +78,11 @@ import { cn } from "@/shared/lib/utils";
 import { getColorTokenBadgeClassName } from "@/shared/lib/color-tokens";
 import { PageIconDisplay } from "@/features/pages/index";
 
-import { getDatabasePropertyType } from "../core/database-property-types";
-import {
-  DatabaseConditionValueControl,
-  type DatabaseCondition,
-} from "../views/view/database-condition-editor";
+import { getDatabasePropertyType } from "../properties/property-catalog";
+import { DatabaseConditionValueControl } from "../views/components/database-condition-editor";
+import { type DatabaseCondition } from "../views/model/filter-sort-contracts";
 import type { DatabasePropertyFilterOperator } from "../views/model/database-view-config";
-import { DatabaseViewToolbarButton } from "../views/view/database-view-toolbar-button";
+import { DatabaseViewToolbarButton } from "../views/components/database-view-toolbar-button";
 import {
   actionForDefinition,
   createNotionActionDraft,

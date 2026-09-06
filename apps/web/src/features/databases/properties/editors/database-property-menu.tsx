@@ -74,7 +74,7 @@ import { Textarea } from "@/shared/ui/textarea";
 import {
   databasePropertyTypes,
   getDatabasePropertyType,
-} from "../../core/database-property-types";
+} from "../property-catalog";
 import {
   getDatabaseSorts,
   getDatabasePropertyIcon,
@@ -86,7 +86,7 @@ import {
   type DatabaseSortDirection,
 } from "../../views/model/database-view-config";
 import { DatabasePropertyEditSubmenu } from "../configuration";
-import { useClearDatabasePropertyDrafts } from "../../views/model/database-cell-state";
+import { useClearDatabasePropertyDrafts } from "../../views/state/database-cell-state";
 
 export { DatabaseNamePropertyMenu } from "./database-name-property-menu";
 export { DatabasePropertyEditSubmenu } from "../configuration";

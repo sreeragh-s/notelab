@@ -34,8 +34,8 @@ import { Switch } from "@/shared/ui/switch"
 import { Textarea } from "@/shared/ui/textarea"
 import { cn } from "@/shared/lib/utils"
 
-import { getDatabasePropertyType } from "../../../core/database-property-types"
-import { useDatabaseActionsContext, useDatabaseDataContext, useDatabaseUiContext } from "../../../views/model/database-view-context"
+import { getDatabasePropertyType } from "../../property-catalog"
+import { useDatabaseActionsContext, useDatabaseDataContext, useDatabaseUiContext } from "../../../views/state/database-view-context"
 import {
   escapeFormulaString,
   getFormulaExpression,

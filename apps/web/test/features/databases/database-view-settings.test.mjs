@@ -3,11 +3,11 @@ import { readFile } from "node:fs/promises";
 export function register({ readSource, assert, loadModule, test }) {
   const readToolbarSource = async () =>
     (await Promise.all([
-      readSource("/src/features/databases/views/view/database-view-toolbar.tsx"),
-      readSource("/src/features/databases/views/view/database-view-toolbar-dialogs.tsx"),
+      readSource("/src/features/databases/views/components/database-view-toolbar.tsx"),
+      readSource("/src/features/databases/views/components/database-view-toolbar-dialogs.tsx"),
     ])).join("\n")
   test("link existing data source owns its nested picker state", async () => {
-    const settings = await readSource("/src/features/databases/views/view-settings/view/data-source-settings.tsx");
+    const settings = await readSource("/src/features/databases/views/view-settings/components/data-source-settings.tsx");
 
     assert.match(settings, /function LinkExistingDataSourcePicker/);
     assert.match(
@@ -69,9 +69,9 @@ export function register({ readSource, assert, loadModule, test }) {
   test("adding a data source opens the shared database setup chooser", async () => {
     const [controller, controllerModel, databaseView, setupCard] = await Promise.all([
       readSource("/src/features/databases/views/controller/use-database-view-controller.tsx"),
-      readSource("/src/features/databases/model/database-controller-state.ts"),
-      readSource("/src/features/databases/views/view/database-view.tsx"),
-      readSource("/src/features/databases/setup/view/database-setup-card.tsx"),
+      readSource("/src/features/databases/views/model/database-controller-state.ts"),
+      readSource("/src/features/databases/views/components/database-view.tsx"),
+      readSource("/src/features/databases/setup/components/database-setup-card.tsx"),
     ]);
 
     assert.match(
@@ -111,7 +111,7 @@ export function register({ readSource, assert, loadModule, test }) {
   test("deleting a final source view keeps it recoverable", async () => {
     const [controller, sourceItems] = await Promise.all([
       readSource("/src/features/databases/views/controller/use-database-view-controller.tsx"),
-      readSource("/src/features/databases/views/view-settings/view/data-source-items.tsx"),
+      readSource("/src/features/databases/views/view-settings/components/data-source-items.tsx"),
     ]);
 
     assert.match(
@@ -165,9 +165,9 @@ export function register({ readSource, assert, loadModule, test }) {
       await Promise.all([
         readSource("/src/shared/ui/dropdown-menu.tsx"),
         readSource("/src/shared/ui/dropdrawer.tsx"),
-        readSource("/src/features/databases/views/view-settings/view/index.tsx"),
-        readSource("/src/features/databases/views/view-settings/view/data-source-settings.tsx"),
-        readSource("/src/features/databases/views/view-settings/view/sub-items-settings.tsx"),
+        readSource("/src/features/databases/views/view-settings/components/index.tsx"),
+        readSource("/src/features/databases/views/view-settings/components/data-source-settings.tsx"),
+        readSource("/src/features/databases/views/view-settings/components/sub-items-settings.tsx"),
         readToolbarSource(),
       ]);
 
