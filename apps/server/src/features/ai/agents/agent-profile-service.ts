@@ -1,3 +1,5 @@
+import { encodePageContentAsYjs } from "../../collaboration/service";
+import { markdownToPageContent } from "../conversion/markdown-to-page-content";
 import type {
   AiAgentProfileDetail,
   AiAgentProfileRole,
@@ -8,6 +10,8 @@ import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { db } from "../../../infrastructure/database";
 import {
+  page,
+  pageCollaborationDocument,
   aiAgentConversation,
   aiAgentProfile,
   aiAgentProfileAccess,
@@ -124,6 +128,12 @@ export async function createAgentProfile(input: {
   };
   const definition = definitionForProfile(values);
   await db.transaction(async (tx) => {
+    if (input.instructions?.trim()) {
+    const instructionPageId = crypto.randomUUID();
+    const content = markdownToPageContent(input.instructions ?? "");
+    await tx.insert(page).values({ id: instructionPageId, workspaceId: input.workspaceId, createdById: input.ownerUserId, type: "pageblock", name: "", content, metadata: { zilobaseai: "instruction", agentInstructionsScope: `agent:${id}` } });
+    await tx.insert(pageCollaborationDocument).values({ pageId: instructionPageId, state: Buffer.from(encodePageContentAsYjs(content)), updatedAt: now });
+    }
     await tx.insert(aiAgentProfile).values({
       ...values,
       createdAt: now,
@@ -481,7 +491,7 @@ function serializeConnection(
   };
 }
 
-async function validateAccessPrincipals(
+export async function validateAccessPrincipals(
   workspaceId: string,
   grants: Array<{ principalId: string; principalType: "user" | "team" }>,
 ) {
