@@ -1,3 +1,4 @@
+import { versionedPackageFiles } from "./versioned-packages.mjs";
 import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 
@@ -6,12 +7,9 @@ const semver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
 
 const releaseFiles = [
   "CHANGELOG.md",
-  "package.json",
+  ...versionedPackageFiles,
   "package-lock.json",
-  "apps/web/package.json",
-  "apps/server/package.json",
   "apps/server/src/shared/version.ts",
-  "apps/desktop/package.json",
   "apps/desktop/src-tauri/Cargo.toml",
   "apps/desktop/src-tauri/Cargo.lock",
   "apps/desktop/src-tauri/tauri.conf.json",

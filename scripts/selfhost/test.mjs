@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { CookieJar } from "./cookie-jar.mjs";
+
 import assert from "node:assert/strict"
 import { createHash, randomBytes } from "node:crypto"
 import { createWriteStream } from "node:fs"
@@ -48,29 +50,6 @@ const serverOrigin = `http://127.0.0.1:${httpPort}`
 const mailpitOrigin = `http://127.0.0.1:${mailpitPort}`
 let resetCompleted = false
 
-class CookieJar {
-  cookies = new Map()
-
-  header() {
-    return [...this.cookies]
-      .map(([name, value]) => `${name}=${value}`)
-      .join("; ")
-  }
-
-  store(headers) {
-    const values =
-      headers.getSetCookie?.() ?? splitSetCookie(headers.get("set-cookie"))
-    for (const value of values) {
-      const cookie = value.split(";", 1)[0]
-      const separator = cookie.indexOf("=")
-      if (separator > 0)
-        this.cookies.set(
-          cookie.slice(0, separator),
-          cookie.slice(separator + 1),
-        )
-    }
-  }
-}
 
 try {
   console.info("Checking that production Compose rejects missing secrets...")
@@ -702,9 +681,7 @@ async function json(url) {
   return response.json()
 }
 
-function splitSetCookie(value) {
-  return value ? value.split(/,(?=\s*[^;,]+=)/g).map((item) => item.trim()) : []
-}
+
 
 async function getFreePort() {
   return new Promise((resolve, reject) => {

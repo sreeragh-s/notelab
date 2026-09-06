@@ -1,3 +1,4 @@
+import { versionedPackageFiles } from "./versioned-packages.mjs";
 import { readFileSync, writeFileSync } from "node:fs"
 
 const version = process.argv[2]
@@ -8,19 +9,10 @@ if (!version || !semver.test(version)) {
   process.exit(1)
 }
 
-const jsonFiles = [
-  ["package.json", ["version"]],
-  ["apps/web/package.json", ["version"]],
-  ["apps/server/package.json", ["version"]],
-  ["apps/desktop/package.json", ["version"]],
-]
-
-for (const [file, path] of jsonFiles) {
-  const json = JSON.parse(readFileSync(file, "utf8"))
-  let target = json
-  for (const key of path.slice(0, -1)) target = target[key]
-  target[path.at(-1)] = version
-  writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`)
+for (const file of versionedPackageFiles) {
+  const json = JSON.parse(readFileSync(file, "utf8"));
+  json.version = version;
+  writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`);
 }
 
 for (const file of ["apps/desktop/src-tauri/Cargo.toml", "apps/desktop/src-tauri/tauri.conf.json"]) {

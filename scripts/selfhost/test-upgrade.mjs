@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { CookieJar } from "./cookie-jar.mjs";
+
 import assert from "node:assert/strict"
 import { randomBytes } from "node:crypto"
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
@@ -10,27 +12,6 @@ import process from "node:process"
 import { spawn } from "node:child_process"
 import { fileURLToPath } from "node:url"
 
-class CookieJar {
-  cookies = new Map()
-  header() {
-    return [...this.cookies]
-      .map(([name, value]) => `${name}=${value}`)
-      .join("; ")
-  }
-  store(headers) {
-    const values =
-      headers.getSetCookie?.() ?? splitSetCookie(headers.get("set-cookie"))
-    for (const value of values) {
-      const cookie = value.split(";", 1)[0]
-      const separator = cookie.indexOf("=")
-      if (separator > 0)
-        this.cookies.set(
-          cookie.slice(0, separator),
-          cookie.slice(separator + 1),
-        )
-    }
-  }
-}
 
 const previousImage = required("ZILOBASE_PREVIOUS_IMAGE")
 const currentImage = required("ZILOBASE_CURRENT_IMAGE")
@@ -288,9 +269,7 @@ function required(name) {
   return value
 }
 
-function splitSetCookie(value) {
-  return value ? value.split(/,(?=\s*[^;,]+=)/g).map((item) => item.trim()) : []
-}
+
 
 function sanitize(value) {
   return value

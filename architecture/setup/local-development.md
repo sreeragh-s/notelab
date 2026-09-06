@@ -1,6 +1,8 @@
 # Local development
 
-The development CLI coordinates dependency containers and local processes. Node and worker profiles use the same core application with different runtime composition. The CLI owns setup/status/logs/down/reset behavior; the runbook explains when to use each command. Reset commands are destructive operational actions, not refactor verification.
+The development CLI coordinates dependency containers and local processes. Node and worker profiles use the same core application with different runtime composition. [Profile configuration](../../scripts/dev/config.mjs) owns runtime ports, origins, database/bucket identities and generated-state locations. [Environment setup](../../scripts/dev/env.mjs) owns template creation and generated configuration migration; [process support](../../scripts/dev/process.mjs) owns subprocess shutdown, port availability and log redaction. [Local runtime orchestration](../../scripts/dev/local.mjs) and [Kubernetes orchestration](../../scripts/dev/k8s.mjs) keep their separate lifecycle semantics. The hosted Worker profile consumes the adjacent adapter through its existing contract; this repository does not own that adapter’s implementation.
+
+[Desktop profile startup](../../scripts/desktop/profile.mjs) reuses the development configuration, while the [macOS debug runner](../../scripts/desktop/run-signed-macos-debug.mjs) owns local signing and launch. The CLI owns setup/status/logs/down/reset behavior; the runbook explains when to use each command. Reset commands are destructive operational actions, not refactor verification.
 
 ## Ownership
 
