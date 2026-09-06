@@ -1,3 +1,4 @@
+import { safeAgentReturnPath } from "./oauth-return";
 import {
   discoverOAuthServerInfo,
   exchangeAuthorization,
@@ -36,6 +37,7 @@ import {
 const OAUTH_ATTEMPT_TTL_MS = 10 * 60 * 1_000;
 
 export async function beginMcpOAuth(input: {
+  returnTo?: string | null;
   connectionId: string;
   env: RuntimeEnv;
   userId: string;
@@ -112,6 +114,7 @@ export async function beginMcpOAuth(input: {
     keyVersion: encryptedVerifier.keyVersion,
     redirectUri,
     stateHash: await sha256(state),
+    returnTo: safeAgentReturnPath(input.returnTo),
   });
   return {
     authorizationUrl: started.authorizationUrl.toString(),
@@ -370,4 +373,12 @@ function randomUrlSafe(size: number) {
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/g, "");
+}
+
+export async function getMcpOAuthReturnPath(state: string) {
+  const [row] = await db.select({ returnTo: aiMcpOauthAttempt.returnTo }).from(aiMcpOauthAttempt).where(and(eq(aiMcpOauthAttempt.stateHash, await sha256(state)), gt(aiMcpOauthAttempt.expiresAt, new Date()), isNull(aiMcpOauthAttempt.consumedAt))).limit(1);
+  return safeAgentReturnPath(row?.returnTo);
+}
+export async function cancelMcpOAuth(state: string) {
+  await db.update(aiMcpOauthAttempt).set({ consumedAt: new Date() }).where(and(eq(aiMcpOauthAttempt.stateHash, await sha256(state)), isNull(aiMcpOauthAttempt.consumedAt)));
 }

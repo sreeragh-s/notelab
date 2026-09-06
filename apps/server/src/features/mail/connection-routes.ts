@@ -1,3 +1,5 @@
+import { gmailChatReturnPath } from "./google-oauth";
+import { mcpOAuthReturnUrl } from "../ai/mcp/oauth-return";
 import { and, count, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db, runWithDbEnv } from "../../infrastructure/database";
@@ -59,13 +61,14 @@ mailConnectionRoutes.post("/oauth/start", async (c) => {
   if (!gmailProviderConfigured(c.env)) {
     return c.json({ message: "Gmail is not configured on this server." }, 503)
   }
-  const body = (await readJsonBody(c.req, {})) as { client?: unknown }
+  const body = (await readJsonBody(c.req, {})) as { client?: unknown; returnTo?: string }
   if (body.client !== "web" && body.client !== "desktop") {
     return c.json({ message: "A valid Gmail client is required." }, 400)
   }
   try {
     const authorizationUrl = await beginGmailOauth(c.env, {
       clientKind: body.client,
+      returnTo: body.returnTo,
       userId: user.id,
       workspaceId,
     })
@@ -83,8 +86,11 @@ mailProviderCallbackRoutes.get("/oauth/google/callback", async (c) => {
   c.header("Content-Security-Policy", "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; navigate-to 'self' zilobase:")
   const state = c.req.query("state")
   const code = c.req.query("code")
+  const returnTo = state ? await runWithDbEnv(c.env, () => gmailChatReturnPath(state)).catch(() => null) : null
   if (!state || !code || c.req.query("error")) {
     await recordMailMetric("oauth_outcome", { outcome: "failure" })
+    if (state) await runWithDbEnv(c.env, () => gmailChatReturnPath(state, true));
+    if (returnTo) return c.redirect(mcpOAuthReturnUrl(getCanonicalWebOrigin(c.env), { type: "personal" }, "failed", returnTo));
     return c.html(renderOauthResult("Gmail connection was cancelled."), 400)
   }
   try {
@@ -115,10 +121,12 @@ mailProviderCallbackRoutes.get("/oauth/google/callback", async (c) => {
       const deepLink = buildDesktopMailReturnUrl(discovery)
       return c.html(renderOauthResult("Gmail connected. Return to Zilobase Desktop.", deepLink.toString()))
     }
+    if (result.returnTo) return c.redirect(mcpOAuthReturnUrl(getCanonicalWebOrigin(c.env), { type: "personal" }, "connected", result.returnTo));
     const target = new URL("/mail?connection=success", getCanonicalWebOrigin(c.env))
     return c.redirect(target.toString())
   } catch (error) {
     await recordMailMetric("oauth_outcome", { outcome: "failure" })
+    if (returnTo) return c.redirect(mcpOAuthReturnUrl(getCanonicalWebOrigin(c.env), { type: "personal" }, "failed", returnTo));
     return c.html(
       renderOauthResult(error instanceof Error ? error.message : "Gmail could not be connected."),
       error instanceof GmailOauthError ? (error.status as 400) : 500,
