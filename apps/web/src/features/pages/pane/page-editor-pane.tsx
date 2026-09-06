@@ -45,7 +45,7 @@ import {
 import { useSession } from "@zilobase/features/auth/react";
 import { useUserSettings } from "@zilobase/features/user-settings/react";
 import { usePageEditorRegistry } from "@/features/editor/runtime/page-editor-registry";
-import { createPageEditorHandle } from "@/features/ai/cache/index";
+import { createPageEditorHandle } from "@/features/editor/runtime/page-editor-handle";
 import {
   Editor,
   type PageEditPreviewControls,
@@ -324,6 +324,7 @@ export function PageEditorPane({
     );
   const collaboration = usePageCollaboration({
     enabled: collaborationEnabled,
+    localOnly: demoMode,
     pageId,
     user: session?.user,
     workspaceId: page?.workspaceId,

@@ -7,7 +7,7 @@ import type {
 } from "../toolbar/toolbar-contracts"
 import type { CreatedPage } from "../extensions/page-block"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
-import type { CollaborationUser } from "../collaboration/use-page-collaboration"
+import type { CollaborationUser } from "../collaboration/collaboration-contracts"
 import type { PageLayoutConfig } from "@zilobase/features/pages"
 import type { PageIconPosition } from "@zilobase/features/pages"
 import type { OpenPageOptions } from "@/features/pages"

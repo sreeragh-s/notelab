@@ -1,13 +1,8 @@
 import { useCallback } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import type { MutableRefObject } from "react"
 
 import { usePageEditorRegistry } from "@/features/editor/runtime/page-editor-registry"
-import type { Content, Editor } from "@tiptap/core"
 
-import type { PageEditorHandle } from "@/features/editor/runtime/page-editor-registry"
-import { parseMarkdownContent } from "@/features/editor/commands/editor-ai-utils"
-import type { PageEditPreviewControls } from "@/features/editor/core/types"
 import { useZilobaseFeatures } from "@zilobase/features"
 import { pageQueryKey, type PageDetail } from "@zilobase/features/pages"
 import {
@@ -223,60 +218,4 @@ export function usePageEditApplier() {
 
 function readWorkspaceIdFromPageDetail(detail: PageDetail | null | undefined) {
   return detail?.page?.workspaceId ?? null
-}
-
-export function createPageEditorHandle(input: {
-  editable: boolean
-  getEditor: () => Editor | null
-  isSynchronized?: () => boolean
-  onContentChange?: (content: unknown) => void
-  pageEditPreviewRef?: MutableRefObject<PageEditPreviewControls | null>
-}): PageEditorHandle {
-  const applyContent = (content: unknown) => {
-    const editor = input.getEditor()
-
-    if (!editor || !input.editable) {
-      return false
-    }
-
-    editor.commands.setContent(content as Content)
-    input.onContentChange?.(editor.getJSON())
-    return true
-  }
-
-  const getPreviewControls = () => input.pageEditPreviewRef?.current ?? null
-
-  return {
-    acceptEditDiffPreview: () => getPreviewControls()?.accept() ?? false,
-    clearEditDiffPreview: (options) => {
-      getPreviewControls()?.clear(options)
-    },
-    getActiveEditDiffToolCallId: () => getPreviewControls()?.toolCallId() ?? null,
-    getContentJson: () => input.getEditor()?.getJSON() ?? null,
-    isEditDiffPreviewActive: () => getPreviewControls()?.isActive() ?? false,
-    isEditable: () => input.editable,
-    isSynchronized: () => input.isSynchronized?.() ?? true,
-    setContentFromMarkdown: (markdown) => {
-      const editor = input.getEditor()
-
-      if (!editor || !input.editable) {
-        return false
-      }
-
-      const parsed = parseMarkdownContent(editor, markdown, {
-        unwrapPlainFencedBlock: true,
-      })
-
-      if (!parsed) {
-        return false
-      }
-
-      return applyContent({
-        type: "doc",
-        content: parsed.content,
-      })
-    },
-    setContentJson: (content) => applyContent(content),
-    showEditDiffPreview: (request) => getPreviewControls()?.show(request) ?? false,
-  }
 }
