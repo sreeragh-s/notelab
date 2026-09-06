@@ -575,6 +575,20 @@
       "when": 1788570000000,
       "tag": "0081_custom_agent_page_appearance",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1788656400000,
+      "tag": "0082_agent_settings_drafts",
+      "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1788660000000,
+      "tag": "0083_agent_settings_review",
+      "breakpoints": true
     }
   ]
 }

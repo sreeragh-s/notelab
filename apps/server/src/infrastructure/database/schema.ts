@@ -2619,6 +2619,7 @@ export const aiMcpOauthAttempt = pgTable(
     codeVerifierAuthTag: text("code_verifier_auth_tag").notNull(),
     issuer: text("issuer"),
     redirectUri: text("redirect_uri").notNull(),
+    returnTo: text("return_to"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     consumedAt: timestamp("consumed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
@@ -3493,3 +3494,32 @@ export const rateLimit = pgTable("rateLimit", {
   count: integer("count").notNull(),
   lastRequest: integer("last_request").notNull(),
 });
+
+// Settings snapshots exclude credentials. Draft rows belong to their editor.
+export const aiSettings = pgTable("ai_settings", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull().references(() => workspace.id, { onDelete: "cascade" }),
+  scope: text("scope").notNull(),
+  definition: jsonb("definition").notNull(),
+  version: integer("version").notNull().default(1),
+  ...timestampColumns(),
+}, (t) => [uniqueIndex("ai_settings_scope_unique").on(t.workspaceId, t.scope)]);
+export const aiSettingsDraft = pgTable("ai_settings_draft", {
+  id: text("id").primaryKey(),
+  settingsId: text("settings_id").notNull().references(() => aiSettings.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  definition: jsonb("definition").notNull(),
+  baseVersion: integer("base_version").notNull(),
+  draftVersion: integer("draft_version").notNull().default(1),
+  review: jsonb("review"),
+  pendingRun: text("pending_run"),
+  ...timestampColumns(),
+}, (t) => [uniqueIndex("ai_settings_draft_editor_unique").on(t.settingsId, t.userId)]);
+export const aiSettingsVersion = pgTable("ai_settings_version", {
+  id: text("id").primaryKey(),
+  settingsId: text("settings_id").notNull().references(() => aiSettings.id, { onDelete: "cascade" }),
+  definition: jsonb("definition").notNull(),
+  version: integer("version").notNull(),
+  createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("ai_settings_version_unique").on(t.settingsId, t.version)]);
