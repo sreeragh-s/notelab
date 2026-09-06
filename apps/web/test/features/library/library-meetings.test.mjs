@@ -57,7 +57,7 @@ export function register({ readSource, assert, loadModule, test }) {
     assert.match(librarySource, /id: "meetings", label: libraryViewLabels\.meetings/)
     assert.match(librarySource, /useWorkspaceMeetings\(/)
     assert.match(librarySource, /fallbackIcon: view\.icon/)
-    assert.match(toolbarSource, /view\.fallbackIcon \?\? \(view\.type/)
+    assert.match(toolbarSource, /view\.fallbackIcon\s*\?\?\s*getDatabaseViewTypePresentation\(view\.type\)\.Icon/)
     assert.match(customizeSource, /const Icon = libraryViewIcons\[view\]/)
     assert.match(customizeSource, /<Icon \/>\{libraryViewLabels\[view\]\}/)
     assert.doesNotMatch(

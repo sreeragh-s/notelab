@@ -5,6 +5,9 @@ export function register({ readSource, assert, loadModule, test }) {
     (await Promise.all([
       readSource("/src/features/databases/views/components/database-view-toolbar.tsx"),
       readSource("/src/features/databases/views/components/database-view-toolbar-dialogs.tsx"),
+      readSource("/src/features/databases/views/components/database-toolbar-actions.tsx"),
+      readSource("/src/features/databases/views/components/database-settings-control.tsx"),
+      readSource("/src/features/databases/views/model/toolbar-source.ts"),
     ])).join("\n")
   test("link existing data source owns its nested picker state", async () => {
     const settings = await readSource("/src/features/databases/views/view-settings/components/data-source-settings.tsx");
@@ -149,7 +152,7 @@ export function register({ readSource, assert, loadModule, test }) {
   test("embedded database expand links use the host database id", async () => {
     const toolbar = await readToolbarSource();
 
-    assert.match(toolbar, /const expandDatabaseId = hostDatabaseId \?\? databaseId/);
+    assert.match(toolbar, /expandDatabaseId: host\.hostDatabaseId \?\? host\.databaseId/);
     assert.match(
       toolbar,
       /showExpandButton && expandDatabaseId[\s\S]*?params=\{\{ databaseId: expandDatabaseId \}\}/,
@@ -171,8 +174,8 @@ export function register({ readSource, assert, loadModule, test }) {
         readToolbarSource(),
       ]);
 
-    assert.match(toolbar, /activeDataSourceId=/);
-    assert.match(toolbar, /activeViewTab\?\.dataSourceId/);
+    assert.match(toolbar, /activeDataSourceId:/);
+    assert.match(toolbar, /view\?\.dataSourceId/);
     assert.match(settings, /activeDataSourceName/);
     assert.match(settings, /icon=\{<Cable \/>\}/);
     assert.match(settings, /getDatabaseIconNode\(database\)/);

@@ -13,7 +13,7 @@ export function register({ assert, readSource, test }) {
   test("database automation release is server-capability gated and source scoped", async () => {
     const [manager, toolbar] = await Promise.all([
       readAutomationManager(),
-      readSource("/src/features/databases/views/components/database-view-toolbar.tsx")
+      readSource("/src/features/databases/views/components/database-toolbar-actions.tsx")
     ])
     assert.match(toolbar, /useDatabaseAutomationCapability/)
     assert.match(toolbar, /const automationUiAvailable = import\.meta\.env\.DEV/)
@@ -24,11 +24,11 @@ export function register({ assert, readSource, test }) {
     assert.match(toolbar, /activeViewTab\?\.dataSourceId/)
     assert.match(
       toolbar,
-      /automationsEnabled && automationDatabaseId && automationDataSourceId/
+      /if \(!enabled \|\| !databaseId \|\| !dataSourceId\) return null/
     )
     assert.match(
       toolbar,
-      /onOpenAutomations=\{automationsEnabled \? \(\) => setAutomationManagerOpen\(true\) : undefined\}/
+      /onOpenAutomations=\{\s*automationsEnabled\s*\? \(\) => setAutomationManagerOpen\(true\)\s*:\s*undefined\s*\}/
     )
     assert.match(manager, /useDatabaseAutomations\(databaseId, dataSourceId\)/)
   })
