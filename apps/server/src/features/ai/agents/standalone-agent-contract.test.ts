@@ -98,7 +98,7 @@ describe("standalone Custom Agent migration boundary", () => {
     expect(revisions).toContain('desired.kind === "connector" || desired.kind === "slack"');
     expect(conversation).toContain("proposeSettings");
     expect(conversation).not.toContain("applyAgentDefinition");
-    const settings = await readFile(new URL("src/features/ai/settings/settings-service.ts", root), "utf8");
+    const settings = (await Promise.all(["settings-publication.ts", "settings-materialization.ts"].map(file => readFile(new URL(`src/features/ai/settings/${file}`, root), "utf8")))).join("\n");
     expect(settings).toContain("synchronizeMaterializedTriggers");
     expect(settings).toContain("db.transaction");
   });

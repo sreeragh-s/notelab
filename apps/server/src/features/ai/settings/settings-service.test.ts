@@ -13,12 +13,13 @@ const memory = vi.hoisted(() => ({
   tables: {} as Record<string, Record<string, unknown>[]>,
   role: "owner",
   member: true,
+  resourceAllowed: true,
   failMaterialization: false,
 }));
 vi.mock("../../access", () => ({
   getMembership: async () => memory.member,
-  canAccessPageInWorkspace: async () => true,
-  canAccessDatabaseInWorkspace: async () => true,
+  canAccessPageInWorkspace: async () => memory.resourceAllowed,
+  canAccessDatabaseInWorkspace: async () => memory.resourceAllowed,
 }));
 vi.mock("../agents/agent-profile-service", () => {
   class AgentProfileError extends Error {
@@ -184,8 +185,46 @@ beforeEach(() => {
   memory.tables = {};
   memory.role = "owner";
   memory.member = true;
+  memory.resourceAllowed = true;
   memory.failMaterialization = false;
   seed();
+});
+describe("settings baseline migration", () => {
+  it("imports personal instructions once and records the initial version", async () => {
+    memory.tables.ai_settings = [];
+    memory.tables.ai_agent_user_preference = [{ workspaceId: "workspace", userId: "alice", instructions: "Personal guidance" }];
+    memory.tables.page = [{ id: "instruction", workspaceId: "workspace", name: "Legacy guide", content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Page guidance" }] }] } }];
+    const first = await readSettings(actor);
+    expect(first.saved.instructions).toContain("Personal guidance");
+    expect(first.saved.instructions).toContain("Legacy guide");
+    expect(first.saved.instructions).toContain("Page guidance");
+    expect(first.version).toBe(1);
+    memory.tables.ai_agent_user_preference[0]!.instructions = "Later legacy change";
+    expect((await readSettings(actor)).saved).toEqual(first.saved);
+    expect(memory.tables.ai_settings).toHaveLength(1);
+    expect(memory.tables.ai_settings_version).toHaveLength(1);
+  });
+  it("omits inaccessible legacy instruction pages", async () => {
+    memory.tables.ai_settings = [];
+    memory.resourceAllowed = false;
+    memory.tables.page = [{ id: "private", workspaceId: "workspace", name: "Private guide", content: null }];
+    expect((await readSettings(actor)).saved.instructions).toBe("");
+  });
+  it("preserves custom-agent profile versions when initializing settings", async () => {
+    memory.tables.ai_settings = [];
+    memory.tables.ai_agent_profile = [{ id: "agent", name: "Existing agent", description: "Legacy profile", icon: null, cover: null, iconPosition: "inline", instructions: "Agent guidance", version: 4 }];
+    const result = await readSettings({ ...actor, scope: "agent" });
+    expect(result.version).toBe(4);
+    expect(result.saved.name).toBe("Existing agent");
+    expect(result.saved.instructions).toBe("Agent guidance");
+    expect(memory.tables.ai_settings_version[0]!.version).toBe(4);
+  });
+  it("does not create a baseline for a missing custom agent", async () => {
+    memory.tables.ai_settings = [];
+    await expect(readSettings({ ...actor, scope: "missing" })).rejects.toMatchObject({ code: "agent_not_found" });
+    expect(memory.tables.ai_settings).toHaveLength(0);
+    expect(memory.tables.ai_settings_version).toBeUndefined();
+  });
 });
 describe("private settings drafts", () => {
   it("treats a migrated source link as the saved baseline without publishing a version", async () => {
@@ -380,6 +419,57 @@ describe("private settings drafts", () => {
     await expect(publishSettings(actor, draft)).rejects.toMatchObject({
       code: "connector_unavailable",
     });
+  });
+  it("rejects revoked resource grants before materializing a published agent", async () => {
+    seed("agent:agent");
+    memory.tables.ai_agent_profile = [{ id: "agent", version: 1 }];
+    const custom = { ...actor, scope: "agent" };
+    const draft = await updateSettingsDraft(custom, { baseVersion: 1, draftVersion: 0, patch: { resources: [{ resourceType: "page", resourceId: "page", accessLevel: "edit" }] } });
+    memory.resourceAllowed = false;
+    await expect(publishSettings(custom, draft)).rejects.toMatchObject({ code: "agent_resource_grant_forbidden", status: 403 });
+    expect(memory.tables.ai_settings![0]!.version).toBe(1);
+    expect(memory.tables.ai_settings_draft).toHaveLength(1);
+    expect(memory.tables.ai_agent_revision).toBeUndefined();
+  });
+  it("requires the connector authenticator to change always-allow policy", async () => {
+    memory.tables.ai_mcp_connection = [{ id: "connection", workspaceId: "workspace", scopeType: "personal", scopeUserId: "alice", authenticatedByUserId: "bob", alwaysAllowEnabled: false }];
+    const draft = await updateSettingsDraft(actor, { baseVersion: 1, draftVersion: 0, patch: { connectors: [{ connectionId: "connection", alwaysAllowEnabled: true, tools: [] }] } });
+    await expect(publishSettings(actor, draft)).rejects.toMatchObject({ code: "connector_authenticator_required", status: 403 });
+    expect(memory.tables.ai_mcp_connection[0]!.alwaysAllowEnabled).toBe(false);
+    expect(memory.tables.ai_settings_draft).toHaveLength(1);
+  });
+  it("rejects an unsupported custom schedule before publication writes", async () => {
+    seed("agent:agent");
+    memory.tables.ai_agent_profile = [{ id: "agent", version: 1 }];
+    const custom = { ...actor, scope: "agent" };
+    const draft = await updateSettingsDraft(custom, { baseVersion: 1, draftVersion: 0, patch: { triggers: [{ id: "trigger", kind: "schedule", label: "Too frequent", status: "active", config: { cadence: "custom", intervalMinutes: 1 } }] } });
+    await expect(publishSettings(custom, draft)).rejects.toMatchObject({ code: "invalid_schedule" });
+    expect(memory.tables.ai_settings![0]!.version).toBe(1);
+    expect(memory.tables.ai_settings_draft).toHaveLength(1);
+  });
+  it.each([
+    ["webhook", {}, "webhook_secret_required"],
+    ["schedule", { cadence: "hourly" }, "invalid_schedule"],
+    ["connector", {}, "trigger_adapter_required"],
+    ["database", { event: "unsupported" }, "invalid_database_event"],
+    ["meeting", { meetingId: "missing" }, "meeting_access_required"],
+    ["database", { event: "row_added", databaseId: "ungranted" }, "trigger_access_required"],
+  ] as const)("validates %s trigger authority and configuration before publication", async (kind, config, code) => {
+    seed("agent:agent");
+    memory.tables.ai_agent_profile = [{ id: "agent", version: 1 }];
+    const custom = { ...actor, scope: "agent" };
+    const draft = await updateSettingsDraft(custom, { baseVersion: 1, draftVersion: 0, patch: { triggers: [{ id: "trigger", kind, config, label: "Trigger", status: "active" }] } });
+    await expect(publishSettings(custom, draft)).rejects.toMatchObject({ code });
+    expect(memory.tables.ai_settings![0]!.version).toBe(1);
+    expect(memory.tables.ai_settings_draft).toHaveLength(1);
+  });
+  it("rejects an unavailable connector tool without replacing saved policy", async () => {
+    memory.tables.ai_mcp_connection = [{ id: "connection", workspaceId: "workspace", scopeType: "personal", scopeUserId: "alice", authenticatedByUserId: "alice", alwaysAllowEnabled: false }];
+    memory.tables.ai_mcp_tool_snapshot = [{ id: "tool", connectionId: "connection", available: false, enabled: false }];
+    const draft = await updateSettingsDraft(actor, { baseVersion: 1, draftVersion: 0, patch: { connectors: [{ connectionId: "connection", alwaysAllowEnabled: false, tools: [{ toolId: "tool", enabled: true, classification: "read", executionMode: "always_ask" }] }] } });
+    await expect(publishSettings(actor, draft)).rejects.toMatchObject({ code: "connector_tool_unavailable" });
+    expect(memory.tables.ai_mcp_tool_snapshot[0]!.enabled).toBe(false);
+    expect(memory.tables.ai_settings_draft).toHaveLength(1);
   });
   it("publishes profile, resources, sharing and connector policy in one version", async () => {
     seed("agent:agent");

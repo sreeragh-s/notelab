@@ -13,7 +13,7 @@ import {
   canAccessPageInWorkspace,
   canAccessDatabaseInWorkspace,
 } from "../../access";
-import { authorizeSettings, type SettingsActor } from "./settings-service";
+import { authorizeSettings, type SettingsActor } from "./settings-access";
 import { MCP_SERVER_CATALOG } from "../mcp/connections/catalog";
 import { activeMembershipCondition } from "../../memberships";
 
