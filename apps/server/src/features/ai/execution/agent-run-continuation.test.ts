@@ -17,6 +17,12 @@ const state = vi.hoisted(() => ({
   events: vi.fn(),
   dispatch: vi.fn(),
   stop: vi.fn(),
+  nativeTools: vi.fn(),
+  mcpTools: vi.fn(),
+  conversation: vi.fn(),
+}));
+vi.mock("../conversations/agent-conversation-service", () => ({
+  appendConversationMessage: state.conversation,
 }));
 vi.mock("ai", async (original) => ({
   ...(await original<typeof import("ai")>()),
@@ -34,11 +40,11 @@ vi.mock("./agent-run-lease", () => ({
 vi.mock("../agents/agent-resource-service", () => ({
   listAgentResourcesForExecution: async () => state.resources,
 }));
-vi.mock("./agent-native-run-tools", () => ({
-  buildAgentNativeRunTools: () => ({}),
+vi.mock("../tools/agent-native-run-tools", () => ({
+  buildAgentNativeRunTools: state.nativeTools,
 }));
 vi.mock("../mcp/execution/mcp-run-tools", () => ({
-  buildMcpAgentRunTools: async () => ({ tools: {} }),
+  buildMcpAgentRunTools: state.mcpTools,
 }));
 vi.mock("../providers/ai-provider", () => ({
   resolveWorkspaceAiModel: async () => ({ model: "model" }),
@@ -62,7 +68,9 @@ vi.mock("../../../infrastructure/database", () => {
       case "ai_agent_revision":
         return [{ compiledDefinition: { instructions: "Saved instructions" } }];
       case "ai_agent_profile":
-        return state.missingProfile ? [] : [{ name: "Agent" }];
+        return state.missingProfile
+          ? []
+          : [{ name: "Agent", ownerUserId: "owner" }];
       case "ai_agent_tool_execution":
         return selection?.toolCallId
           ? state.writes
@@ -131,11 +139,87 @@ beforeEach(() => {
   state.resources = [];
   state.ambiguous = false;
   state.missingProfile = false;
+  state.nativeTools.mockReturnValue({});
+  state.mcpTools.mockResolvedValue({ tools: {} });
   state.saves.mockResolvedValue(false);
   state.generate.mockResolvedValue(result);
 });
 
 describe("agent model continuation", () => {
+  it("passes validated native grants and the original snapshot to MCP", async () => {
+    const valid = {
+      resourceType: "page",
+      resourceId: "page",
+      accessLevel: "edit",
+    };
+    const snapshot = {
+      resources: [
+        valid,
+        null,
+        [],
+        { resourceType: "workspace", resourceId: "w", accessLevel: "full" },
+        { resourceType: "page", resourceId: 1, accessLevel: "view" },
+        { resourceType: "page", resourceId: "bad", accessLevel: "owner" },
+      ],
+    };
+    state.run.permissionSnapshot = snapshot;
+    await processAgentRun(env, work);
+    expect(state.nativeTools).toHaveBeenCalledWith(
+      expect.objectContaining({
+        permissionSnapshot: [valid],
+        runId: "run",
+        profileId: "agent",
+        workspaceId: "workspace",
+      }),
+    );
+    expect(state.mcpTools).toHaveBeenCalledWith(
+      expect.objectContaining({
+        permissionSnapshot: snapshot,
+        runId: "run",
+        profileId: "agent",
+        workspaceId: "workspace",
+      }),
+    );
+  });
+  it.each([null, [], {}, { resources: "invalid" }])(
+    "treats malformed native permission snapshots as no grants: %j",
+    async (snapshot) => {
+      state.run.permissionSnapshot = snapshot;
+      await processAgentRun(env, work);
+      expect(state.nativeTools).toHaveBeenCalledWith(
+        expect.objectContaining({ permissionSnapshot: [] }),
+      );
+    },
+  );
+  it("requires a durable initial checkpoint before calling the model", async () => {
+    state.saves.mockRejectedValueOnce(new Error("Encryption unavailable"));
+    expect((await processAgentRun(env, work)).outcome).toBe("retry");
+    expect(state.generate).not.toHaveBeenCalled();
+    expect(state.stop).toHaveBeenCalled();
+  });
+  it.each([undefined, "initiator"])(
+    "renders a scoped Connect card for the run actor %s",
+    async (userId) => {
+      state.run.initiatedByUserId = userId;
+      await processAgentRun(env, work);
+      const options = state.generate.mock.calls[0]![0];
+      await expect(
+        options.tools.connectAccount.execute({ provider: "gmail" }),
+      ).resolves.toMatchObject({ status: "connection_required" });
+      expect(state.conversation).toHaveBeenCalledWith({
+        profileId: "agent",
+        authorUserId: userId ?? "owner",
+        kind: "message",
+        role: "assistant",
+        parts: [
+          {
+            type: "data-connector-setup",
+            data: { provider: "gmail", scope: "agent" },
+          },
+        ],
+      });
+    },
+  );
   it("completes a fresh run and publishes its final answer", async () => {
     expect((await processAgentRun(env, work)).outcome).toBe("completed");
     expect(state.run.status).toBe("succeeded");
@@ -215,6 +299,8 @@ describe("agent model continuation", () => {
     state.resources = [{ eligibleEditorCount: 0 }];
     expect((await processAgentRun(env, work)).outcome).toBe("terminal");
     expect(state.run.errorCode).toBe("AGENT_ACCESS_PAUSED");
+    expect(state.nativeTools).not.toHaveBeenCalled();
+    expect(state.mcpTools).not.toHaveBeenCalled();
   });
   it("bounds the total model steps across approvals", async () => {
     state.checkpoint.steps = 15;

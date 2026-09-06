@@ -47,8 +47,8 @@ import {
   hashPageContentMarkdown,
   isPageContentVersionCurrent,
 } from "../conversion/page-content-version";
-import { buildDatabaseTable } from "../tools/ask-ai-workspace-tools";
-import { appendRunEvent } from "./agent-run-records";
+import { buildDatabaseTable } from "./ask-ai-workspace-tools";
+import { appendRunEvent } from "../execution/agent-run-records";
 
 const MAX_PAGE_MARKDOWN_CHARS = 48_000;
 const MAX_PAGE_WRITE_MARKDOWN_CHARS = 64_000;

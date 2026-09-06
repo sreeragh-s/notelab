@@ -35,7 +35,7 @@ describe("standalone Custom Agent migration boundary", () => {
   });
 
   it("uses only agent-principal checks in native run tools", async () => {
-    const tools = await readFile(new URL("src/features/ai/execution/agent-native-run-tools.ts", root), "utf8");
+    const tools = await readFile(new URL("src/features/ai/tools/agent-native-run-tools.ts", root), "utf8");
     expect(tools).toContain("canAgentAccessPage");
     expect(tools).toContain("canAgentAccessDatabase");
     expect(tools).toContain("canAgentSnapshotAccessPage");
@@ -59,12 +59,6 @@ describe("standalone Custom Agent migration boundary", () => {
     expect(migration).toContain('ADD COLUMN "cover" text');
     expect(migration).toContain('ADD COLUMN "icon_position" text NOT NULL DEFAULT \'inline\'');
     expect(migration).toContain("CHECK (\"icon_position\" IN ('inline', 'top'))");
-  });
-
-  it("bounds each queued run by its captured permissions and current revocations", async () => {
-    const runs = await readFile(new URL("src/features/ai/execution/agent-run-service.ts", root), "utf8");
-    expect(runs).toContain("readPermissionSnapshot(run.permissionSnapshot)");
-    expect(runs).toContain("liveResources.some((resource) => resource.eligibleEditorCount === 0)");
   });
 
   it("dispatches native events through the deduplicated run boundary", async () => {
