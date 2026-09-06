@@ -129,6 +129,7 @@ describe("standalone agent ownership and revisions", () => {
     });
     expect(result).toBeNull(); // Readback has no fixture; verify the complete creation transaction.
     expect(state.writes).toHaveLength(4);
+    expect(state.writes.some((value) => "pageId" in value || "metadata" in value)).toBe(false);
     expect(state.writes[0]).toMatchObject({
       name: "New",
       status: "active",
@@ -258,11 +259,11 @@ describe("standalone agent ownership and revisions", () => {
   it("duplicates configuration but not credentials or sharing", async () => {
     state.rows = [[profile], [profile]];
     await duplicateAgentProfile(input);
-    expect(state.writes[0]).toMatchObject({
+    expect(state.writes[2]).toMatchObject({
       name: "Agent copy",
       instructions: "Saved",
       ownerUserId: "owner",
     });
-    expect(state.writes).toHaveLength(4);
+    expect(state.writes).toHaveLength(6);
   });
 });

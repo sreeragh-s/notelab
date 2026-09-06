@@ -116,12 +116,13 @@ function SideHeader({
         onClick={props.onCloseAuxiliarySidePane}
       />
       {showAgentActionsInSidePane && props.agentId ? (
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
           <Suspense fallback={null}>
             <CustomAgentShareHeaderAction agentId={props.agentId} />
           </Suspense>
         </div>
       ) : null}
+      <div id="agent-settings-header-actions" className={showAgentActionsInSidePane ? "ml-2" : "ml-auto"} />
     </div>
   )
 }

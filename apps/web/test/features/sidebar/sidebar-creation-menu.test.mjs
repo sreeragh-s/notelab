@@ -1,5 +1,5 @@
 export function register({ readSource, assert, test }) {
-  test("sidebar pins the Zilobase logo at the top and workspace switcher at the bottom", async () => {
+  test("sidebar aligns the workspace switcher and notifications at the top", async () => {
     const sidebarSource = await readSource("/src/features/sidebar/app-sidebar.tsx")
     const themeSource = await readSource("/src/features/sidebar/components/sidebar-theme-switcher.tsx")
     const workspaceSource = await readSource("/src/features/sidebar/workspace-switcher.tsx")
@@ -21,8 +21,7 @@ export function register({ readSource, assert, test }) {
     const appIconProviderSource = await readSource("/src/shared/components/app-icon-provider.tsx")
     const iconPickerSource = await readSource("/src/shared/ui/icon-emoji-picker.tsx")
 
-    assert.match(sidebarSource, /<ZilobaseLogo className="h-5 w-auto" \/>/)
-    assert.match(sidebarSource, /<span className="sr-only">Zilobase<\/span>/)
+    assert.doesNotMatch(sidebarSource, /ZilobaseLogo|SidebarThemeSwitcher|SidebarTrigger/)
     assert.doesNotMatch(sidebarSource, /<NewMenu/)
     assert.match(sidebarSource, /<span>Customize sidebar<\/span>/)
     assert.match(sidebarSource, /<SidebarMenuItem><SidebarMenuButton onClick=\{\(\) => setCustomizing\(true\)\}/)
@@ -125,22 +124,30 @@ export function register({ readSource, assert, test }) {
       /group\/workspace-row|hover:bg-action-neutral-hover focus-within:bg-action-neutral-hover/,
     )
     assert.match(sidebarPrimitiveSource, /navigation \? <div className="-mx-2">/)
+    const pagePaneHeaderSource = await readSource("/src/features/pages/components/page-pane-header.tsx")
+    const leadingControl = pagePaneHeaderSource.slice(pagePaneHeaderSource.indexOf("export function MainPaneHeaderLeadingControl"), pagePaneHeaderSource.indexOf("export function PageSidePaneCollapseButton"))
+    assert.match(leadingControl, /<SidebarTrigger/)
+    assert.doesNotMatch(leadingControl, /isCollapsed|return null/)
     const headerStart = sidebarSource.indexOf("<SidebarHeader")
-    const contentStart = sidebarSource.indexOf("<SidebarContent>")
+    const contentStart = sidebarSource.indexOf("<SidebarContent")
     const footerStart = sidebarSource.indexOf("<SidebarFooter")
-    const logoPosition = sidebarSource.indexOf("<ZilobaseLogo", headerStart)
+    assert.ok(sidebarSource.indexOf("<SidebarShortcutList") < contentStart, "Shortcuts must remain outside the scrolling sections")
+    assert.match(sidebarSource, /<SidebarContent className="block overflow-x-hidden overflow-y-auto overscroll-y-contain"/)
+    assert.ok(sidebarSource.indexOf("<AgentsSection", contentStart) < footerStart, "Agents must scroll with the remaining sections")
+
+    const notificationPosition = sidebarSource.indexOf("<NotificationCenter", headerStart)
     const workspaceSwitcherPosition = sidebarSource.indexOf(
       "<WorkspaceSwitcher",
       headerStart,
     )
 
     assert.ok(
-      logoPosition > headerStart && logoPosition < contentStart,
-      "Zilobase logo must stay in the sidebar header",
+      notificationPosition > headerStart && notificationPosition < contentStart,
+      "Notifications must stay beside the workspace switcher",
     )
     assert.ok(
-      workspaceSwitcherPosition > footerStart,
-      "Workspace switcher must stay in the sidebar footer",
+      workspaceSwitcherPosition > headerStart && workspaceSwitcherPosition < contentStart,
+      "Workspace switcher must stay in the sidebar header",
     )
     assert.ok(
       sidebarSource.indexOf("<span>Customize sidebar</span>") <

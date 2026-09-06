@@ -31,7 +31,7 @@ import {
   BreadcrumbSeparator,
 } from "@/shared/ui/breadcrumb";
 import { Separator } from "@/shared/ui/separator";
-import { SidebarTrigger, useSidebar } from "@/shared/ui/sidebar";
+import { SidebarTrigger } from "@/shared/ui/sidebar";
 import { libraryViewIcons, mailViewIcons } from "@/features/sidebar";
 import { libraryViewLabels, mailViewLabels } from "@/features/sidebar";
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
@@ -131,12 +131,12 @@ export function PagePaneHeader({
     <header
       className={`flex h-12 shrink-0 items-center gap-2 ${className ?? ""}`}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
+      <div className="flex h-7 min-w-0 flex-1 items-center gap-2 px-3">
         {leadingControls}
         {showBreadcrumb ? <AppBreadcrumbs pathname={pathname} /> : null}
       </div>
       {showActions ? (
-        <div className="ml-auto px-3" data-page-side-pane-avoid>
+        <div className="ml-auto flex h-7 shrink-0 items-center px-3" data-page-side-pane-avoid>
           {actions ?? (
             <NavActions
               databaseId={databaseId}
@@ -155,13 +155,6 @@ export function PagePaneHeader({
 }
 
 export function MainPaneHeaderLeadingControl() {
-  const { isMobile, open, openMobile } = useSidebar();
-  const isCollapsed = isMobile ? !openMobile : !open;
-
-  if (!isCollapsed) {
-    return null;
-  }
-
   return (
     <>
       <SidebarTrigger className="shrink-0" />

@@ -251,7 +251,7 @@ function SidebarHeader({
       {...props}
     >
       <div className="flex h-8 items-center">
-        <div className="h-full min-w-0 flex-1">{children}</div>
+        <div className="flex h-full min-w-0 flex-1 items-center">{children}</div>
         {actions ? (
           <div className="flex shrink-0 items-center gap-0.5">{actions}</div>
         ) : null}

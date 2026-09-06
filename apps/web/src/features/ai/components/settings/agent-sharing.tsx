@@ -1,22 +1,18 @@
-import {
-  ChevronsUpDownIcon,
-  LockIcon,
-  Trash2Icon,
-} from "@/shared/components/icons"
-import * as React from "react"
-import { toast } from "sonner"
+import type { useSettingsDraft } from "../../settings/use-settings-draft";
+import { ChevronsUpDownIcon, Trash2Icon } from "@/shared/components/icons";
+import * as React from "react";
+import { toast } from "sonner";
 
 import {
   type AiAgentProfileDetail,
   useArchiveAiAgentProfile,
-  useReplaceAiAgentProfileAccess,
   useTransferAiAgentProfile,
-} from "@zilobase/features/ai-chat"
-import { usePageAccessTargets } from "@zilobase/features/pages"
-import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
+} from "@zilobase/features/ai-chat";
+import { usePageAccessTargets } from "@zilobase/features/pages";
+import { useActiveWorkspaceId } from "@zilobase/features/workspaces";
 
-import { Badge } from "@/shared/ui/badge"
-import { Button } from "@/shared/ui/button"
+import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -24,107 +20,167 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/shared/ui/command"
-import { Input } from "@/shared/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover"
+} from "@/shared/ui/command";
+import { Input } from "@/shared/ui/input";
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/shared/ui/popover";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/shared/ui/select"
+} from "@/shared/ui/select";
 
-export function AgentSharePopover({ agent }: { agent: AiAgentProfileDetail }) {
-  const [open, setOpen] = React.useState(false)
-
+export function AgentSharePopover({
+  agent,
+  draft,
+  anchor,
+  onClose,
+}: {
+  agent: AiAgentProfileDetail;
+  draft: ReturnType<typeof useSettingsDraft>;
+  anchor: HTMLElement;
+  onClose: () => void;
+}) {
+  const effectiveAgent = {
+    ...agent,
+    access: (draft.state?.definition.grants ?? agent.access).map((grant) => ({
+      ...grant,
+      id: `${grant.principalType}:${grant.principalId}`,
+    })),
+  };
   return (
-    <Popover onOpenChange={setOpen} open={open}>
-      <PopoverTrigger asChild>
-        <Button
-          className="h-7 gap-2 data-[state=open]:bg-action-neutral-hover"
-          size="sm"
-          variant="outline"
-        >
-          <LockIcon />
-          Share
-        </Button>
-      </PopoverTrigger>
-      {open ? (
-        <PopoverContent
-          align="end"
-          className="w-[min(36rem,calc(100vw-2rem))] p-4"
-          onOpenAutoFocus={(event) => event.preventDefault()}
-        >
-          <div className="mb-4 grid gap-1.5">
-            <div className="font-semibold leading-none tracking-tight">
-              Share agent
-            </div>
-            <div className="text-sm text-content-secondary">
-              Members can chat with this agent using the agent's own explicitly
-              granted access.
-            </div>
+    <Popover
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <PopoverAnchor virtualRef={{ current: anchor }} />
+      <PopoverContent
+        align="end"
+        className="w-[min(36rem,calc(100vw-2rem))] p-4"
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onInteractOutside={(event) => {
+          if (anchor.contains(event.target as Node)) event.preventDefault();
+        }}
+      >
+        <div className="mb-4 grid gap-1.5">
+          <div className="font-semibold leading-none tracking-tight">
+            Share agent
           </div>
-          <AgentShare agent={agent} showLifecycle={false} />
-        </PopoverContent>
-      ) : null}
+          <div className="text-sm text-content-secondary">
+            Members can chat with this agent using the agent's own explicitly
+            granted access.
+          </div>
+        </div>
+        <AgentShare
+          agent={effectiveAgent}
+          draft={draft}
+          showLifecycle={false}
+        />
+        {draft.error && (
+          <p role="alert" className="mt-3 text-sm text-feedback-danger-text">
+            {draft.error}
+          </p>
+        )}
+        {draft.state?.canEdit && (
+          <div className="mt-4 flex items-center justify-end gap-2 border-t border-stroke-default pt-3">
+            <span className="mr-auto text-xs text-content-secondary">
+              {draft.dirty ? "Unsaved agent changes" : "All changes saved"}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={
+                !draft.dirty ||
+                draft.publish.isPending ||
+                draft.discard.isPending
+              }
+              onClick={() => draft.discard.mutate()}
+            >
+              Discard
+            </Button>
+            <Button
+              size="sm"
+              disabled={
+                !draft.dirty ||
+                draft.publish.isPending ||
+                draft.discard.isPending
+              }
+              onClick={() =>
+                draft.publish.mutate(undefined, {
+                  onSuccess: (result) => {
+                    if (result.runError) toast.error(result.runError);
+                    else onClose();
+                  },
+                })
+              }
+            >
+              Save changes
+            </Button>
+          </div>
+        )}
+      </PopoverContent>
     </Popover>
-  )
+  );
 }
 
 export function AgentShare({
   agent,
   showLifecycle = true,
+  draft,
 }: {
-  agent: AiAgentProfileDetail
-  showLifecycle?: boolean
+  agent: AiAgentProfileDetail;
+  draft: ReturnType<typeof useSettingsDraft>;
+  showLifecycle?: boolean;
 }) {
-  const workspaceId = useActiveWorkspaceId()
-  const targets = usePageAccessTargets(workspaceId)
-  const replaceAccess = useReplaceAiAgentProfileAccess(agent.id)
-  const transferOwnership = useTransferAiAgentProfile(agent.id)
-  const archiveAgent = useArchiveAiAgentProfile(agent.id)
-  const [principalId, setPrincipalId] = React.useState("")
+  const workspaceId = useActiveWorkspaceId();
+  const targets = usePageAccessTargets(workspaceId);
+  const transferOwnership = useTransferAiAgentProfile(agent.id);
+  const archiveAgent = useArchiveAiAgentProfile(agent.id);
+  const [principalId, setPrincipalId] = React.useState("");
   const [principalType, setPrincipalType] = React.useState<"user" | "team">(
     "user",
-  )
-  const [targetPickerOpen, setTargetPickerOpen] = React.useState(false)
-  const [role, setRole] = React.useState<"editor" | "user">("user")
-  const [newOwnerUserId, setNewOwnerUserId] = React.useState("")
-  const canEdit = ["owner", "editor"].includes(agent.role)
-  const targetValue = principalId ? `${principalType}:${principalId}` : ""
+  );
+  const [targetPickerOpen, setTargetPickerOpen] = React.useState(false);
+  const [role, setRole] = React.useState<"editor" | "user">("user");
+  const [newOwnerUserId, setNewOwnerUserId] = React.useState("");
+  const canEdit =
+    !!draft.state?.canEdit &&
+    !draft.publish.isPending &&
+    !draft.discard.isPending;
+  const targetValue = principalId ? `${principalType}:${principalId}` : "";
   const targetByKey = React.useMemo(() => {
-    const map = new Map<string, { detail?: string; label: string }>()
+    const map = new Map<string, { detail?: string; label: string }>();
     for (const member of targets.data?.members ?? []) {
       map.set(`user:${member.id}`, {
         detail: member.email,
         label: member.name || member.email,
-      })
+      });
     }
     for (const team of targets.data?.teams ?? []) {
-      map.set(`team:${team.id}`, { detail: "Team", label: team.name })
+      map.set(`team:${team.id}`, { detail: "Team", label: team.name });
     }
-    return map
-  }, [targets.data?.members, targets.data?.teams])
-  const selectedTarget = targetValue ? targetByKey.get(targetValue) : null
+    return map;
+  }, [targets.data?.members, targets.data?.teams]);
+  const selectedTarget = targetValue ? targetByKey.get(targetValue) : null;
 
-  const save = async (grants: AiAgentProfileDetail["access"]) => {
-    try {
-      await replaceAccess.mutateAsync({
-        grants: grants.map(
-          ({ principalId: id, principalType: type, role: grantRole }) => ({
-            principalId: id,
-            principalType: type,
-            role: grantRole,
-          }),
-        ),
-      })
-      setPrincipalId("")
-      toast.success("Agent sharing updated.")
-    } catch (error) {
-      showError("Could not update sharing", error)
-    }
-  }
+  const save = (grants: AiAgentProfileDetail["access"]) => {
+    draft.patch({
+      grants: grants.map(({ principalId, principalType, role }) => ({
+        principalId,
+        principalType,
+        role,
+      })),
+    });
+    setPrincipalId("");
+  };
 
   function renderTargetPicker() {
     return (
@@ -159,9 +215,9 @@ export function AgentShare({
                     <CommandItem
                       key={member.id}
                       onSelect={() => {
-                        setPrincipalType("user")
-                        setPrincipalId(member.id)
-                        setTargetPickerOpen(false)
+                        setPrincipalType("user");
+                        setPrincipalId(member.id);
+                        setTargetPickerOpen(false);
                       }}
                       value={`${member.name} ${member.email}`}
                     >
@@ -182,9 +238,9 @@ export function AgentShare({
                     <CommandItem
                       key={team.id}
                       onSelect={() => {
-                        setPrincipalType("team")
-                        setPrincipalId(team.id)
-                        setTargetPickerOpen(false)
+                        setPrincipalType("team");
+                        setPrincipalId(team.id);
+                        setTargetPickerOpen(false);
                       }}
                       value={`${team.name} team`}
                     >
@@ -197,7 +253,7 @@ export function AgentShare({
           </Command>
         </PopoverContent>
       </Popover>
-    )
+    );
   }
 
   function renderOwnershipLifecycle() {
@@ -230,7 +286,7 @@ export function AgentShare({
                     .then(() => toast.success("Agent ownership transferred."))
                     .catch((error) =>
                       showError("Could not transfer ownership", error),
-                    )
+                    );
                 }
               }}
               type="button"
@@ -251,7 +307,7 @@ export function AgentShare({
                     .then(() => toast.success("Agent archived."))
                     .catch((error) =>
                       showError("Could not archive agent", error),
-                    )
+                    );
                 }
               }}
               type="button"
@@ -262,7 +318,7 @@ export function AgentShare({
           </div>
         </div>
       )
-    )
+    );
   }
 
   return (
@@ -288,6 +344,7 @@ export function AgentShare({
       {agent.access.map((grant) => (
         <div
           className="flex items-center gap-2 rounded border p-2 text-sm"
+          data-ai-changed={draft?.reviewOpen && draft.state?.review?.fields.includes("grants") && JSON.stringify(draft.state.review.before.grants.find((old) => old.principalId === grant.principalId && old.principalType === grant.principalType)) !== JSON.stringify({ principalType: grant.principalType, principalId: grant.principalId, role: grant.role }) || undefined}
           key={grant.id}
         >
           <Badge variant="outline">{grant.principalType}</Badge>
@@ -329,7 +386,7 @@ export function AgentShare({
             </SelectContent>
           </Select>
           <Button
-            disabled={!principalId.trim() || replaceAccess.isPending}
+            disabled={!principalId.trim() || draft.publish.isPending}
             onClick={() => {
               const grants = agent.access.filter(
                 (item) =>
@@ -337,7 +394,7 @@ export function AgentShare({
                     item.principalId === principalId.trim() &&
                     item.principalType === principalType
                   ),
-              )
+              );
               void save([
                 ...grants,
                 {
@@ -346,7 +403,7 @@ export function AgentShare({
                   principalType,
                   role,
                 },
-              ])
+              ]);
             }}
             type="button"
           >
@@ -356,11 +413,11 @@ export function AgentShare({
       )}
       {renderOwnershipLifecycle()}
     </div>
-  )
+  );
 }
 
 function showError(title: string, error: unknown) {
   toast.error(title, {
     description: error instanceof Error ? error.message : "Try again.",
-  })
+  });
 }

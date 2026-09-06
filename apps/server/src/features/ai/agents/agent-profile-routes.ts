@@ -1,9 +1,10 @@
+import { streamSSE } from "hono/streaming";
 import { and, eq, gt } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { requestedAiWorkspaceId } from "../route-workspace";
 import * as z from "zod";
 
-import { db } from "../../../infrastructure/database";
+import { db, runWithIndependentDbEnv } from "../../../infrastructure/database";
 import {
   aiAgentConversationMessage,
   aiAgentPendingAction,
@@ -81,6 +82,7 @@ const transferSchema = z.object({
   newOwnerUserId: z.string().trim().min(1).max(160),
 });
 const messageSchema = z.object({
+  modelId: z.string().min(1).max(160).optional(),
   clientId: z.string().trim().min(1).max(160).optional(),
   message: z.string().trim().min(1).max(20_000),
 });
@@ -240,6 +242,24 @@ aiAgentProfileRoutes.post("/agents/:agentId/conversation/messages", async (c) =>
     201,
   ),
 );
+
+aiAgentProfileRoutes.post("/agents/:agentId/conversation/messages/stream", async c => handle(c, async auth => {
+  const body = messageSchema.parse(await c.req.json());
+  await requireAgentProfileRole({ ...auth, profileId: c.req.param("agentId"), minimum: "user" });
+  return streamSSE(c, stream => runWithIndependentDbEnv(c.env, async () => {
+    const abort = new AbortController();
+    stream.onAbort(() => abort.abort());
+    try {
+      await submitAgentConversationMessage({ ...auth, ...body, env: c.env, profileId: c.req.param("agentId"), abortSignal: abort.signal,
+        onSettingsEvent: event => stream.writeSSE({ event: "settings", data: JSON.stringify(event) }),
+      });
+      await stream.writeSSE({ event: "complete", data: "{}" });
+    } catch (error) {
+      if (!abort.signal.aborted) console.error("Agent conversation request failed:", error instanceof Error ? error.message : "Unknown error");
+      if (!abort.signal.aborted) await stream.writeSSE({ event: "error", data: JSON.stringify({ error: error instanceof AgentProfileError ? error.message : "Could not complete this request. Please try again." }) });
+    }
+  }));
+}));
 
 aiAgentProfileRoutes.get("/agents/:agentId/revisions", async (c) =>
   handle(c, async (auth) => ({
@@ -647,6 +667,7 @@ async function handle(
   }
   try {
     const result = await action({ userId: user.id, workspaceId });
+    if (result instanceof Response) return result;
     return c.json(result, successStatus);
   } catch (error) {
     if (error instanceof AgentProfileError) {

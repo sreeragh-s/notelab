@@ -14,3 +14,5 @@ export * from "./conversation-adapter"
 export * from "./mcp-contract"
 export * from "./mcp-hooks"
 export * from "./custom-agent-contract"
+
+export * from "./settings-contract";

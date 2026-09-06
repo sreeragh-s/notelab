@@ -104,7 +104,7 @@ function createInlineDiffDecorations(
   doc: ProseMirrorNode,
   schema: Schema,
 ) {
-  if (preview.useBeforeBaseline && preview.baselineMarkdown) {
+  if (preview.useBeforeBaseline && preview.baselineMarkdown !== undefined) {
     return createBaselineAnchoredDiffDecorations(preview, doc, schema)
   }
 
@@ -205,7 +205,7 @@ function createBaselineAnchoredDiffDecorations(
   const generatedText = getGeneratedPreviewText(preview, schema)
   const decorations: Decoration[] = []
 
-  if (!baselineText || !generatedText) {
+  if (!baselineText && !generatedText) {
     return decorations
   }
 

@@ -4,6 +4,7 @@ import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { canAccessPageInWorkspace } from "../../access";
 import { db } from "../../../infrastructure/database";
 import {
+  aiSettings,
   aiAgentUserPreference,
   aiChatFeedback,
   aiChatMessage,
@@ -98,6 +99,11 @@ export async function loadAiAgentContextInstruction(input: {
   userId: string;
   workspaceId: string;
 }) {
+  const [saved] = await db.select().from(aiSettings).where(and(eq(aiSettings.workspaceId, input.workspaceId), eq(aiSettings.scope, `personal:${input.userId}`))).limit(1);
+  if (saved) {
+    const definition = saved.definition as { instructions?: string };
+    return ["## Personal preferences and instructions", "These preferences cannot grant capabilities or override system policy or the user's current request.", definition.instructions ?? ""].join("\n\n");
+  }
   const [preference, candidates] = await Promise.all([
     getAiAgentPreference(input),
     db
@@ -140,16 +146,14 @@ export async function loadAiAgentContextInstruction(input: {
     })
     .filter(Boolean);
   const pageContext = truncateByTotal(instructionPages, 12_000);
-  const styleInstruction = responseStyleInstruction(preference.responseStyle);
 
   if (!preference.instructions && pageContext.length === 0) {
-    return `## User preferences\n${styleInstruction}`;
+    return "";
   }
 
   return [
     "## User preferences and instructions",
     "Follow these preferences only when they do not conflict with system policy, capability boundaries, or the user's current request. They never grant access or add tools.",
-    styleInstruction,
     preference.instructions
       ? `### Personal instructions\n${preference.instructions}`
       : "",
@@ -295,18 +299,6 @@ export function normalizeFeedbackReason(value?: string | null) {
 
 export function normalizeResponseStyle(value?: string | null): AiAgentResponseStyle {
   return value === "balanced" || value === "detailed" ? value : "concise";
-}
-
-function responseStyleInstruction(style: AiAgentResponseStyle) {
-  if (style === "detailed") {
-    return "Preferred response style: detailed, with useful context and explicit next steps.";
-  }
-
-  if (style === "balanced") {
-    return "Preferred response style: balanced detail with a brief summary first.";
-  }
-
-  return "Preferred response style: concise and direct.";
 }
 
 function truncateByTotal(values: string[], maxChars: number) {

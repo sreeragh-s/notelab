@@ -1,4 +1,7 @@
-"use client"
+import { useSettingsDraft } from "../settings/use-settings-draft";
+import { SettingsDraftActions } from "./settings/settings-draft-actions";
+import type { AgentSettingsEvent } from "@zilobase/features/ai-chat";
+("use client");
 
 import {
   lazy,
@@ -8,9 +11,9 @@ import {
   useMemo,
   useState,
   type ReactNode,
-} from "react"
-import { useRouter, useRouterState } from "@tanstack/react-router"
-import { toast } from "sonner"
+} from "react";
+import { useRouter, useRouterState } from "@tanstack/react-router";
+import { toast } from "sonner";
 
 import {
   ChevronsRightIcon,
@@ -18,18 +21,16 @@ import {
   SidebarSimpleIcon,
   SlidersHorizontalIcon,
   XIcon,
-} from "@/shared/components/icons"
-import { Button } from "@/shared/ui/button"
-import { PageSidePaneLayout } from "@/features/pages/context"
-import { PageEditorPane } from "@/features/pages/pages"
-import { PageWorkspaceGate } from "@/features/workspaces"
+} from "@/shared/components/icons";
+import { Button } from "@/shared/ui/button";
+import { PageSidePaneLayout } from "@/features/pages/context";
 
-import { useAiChatThreadState } from "../conversation/use-ai-chat-thread-state"
-import type { ChatPresentationMode } from "./chat-sidebar"
-import { AiSettingsPanel } from "./ai-settings-panel"
-import type { PendingInitialChatSubmission } from "./elements/chatbot"
+import { useAiChatThreadState } from "../conversation/use-ai-chat-thread-state";
+import type { ChatPresentationMode } from "./chat-sidebar";
+import { AiSettingsPanel } from "./ai-settings-panel";
+import type { PendingInitialChatSubmission } from "./elements/chatbot";
 
-const Chatbot = lazy(() => import("./elements/chatbot"))
+const Chatbot = lazy(() => import("./elements/chatbot"));
 
 export function AgentChatWorkspace({
   databaseId,
@@ -43,82 +44,90 @@ export function AgentChatWorkspace({
   pageId,
   presentationMode = "sidebar",
 }: {
-  databaseId?: string | null
-  externalSidePane?: ReactNode | null
-  externalSidePaneOpen?: boolean
-  externalSidePaneVisible?: boolean
-  isSidebar?: boolean
-  onClose?: () => void
-  onPresentationModeChange?: (mode: ChatPresentationMode) => void
-  open?: boolean
-  pageId?: string | null
-  presentationMode?: ChatPresentationMode
+  databaseId?: string | null;
+  externalSidePane?: ReactNode | null;
+  externalSidePaneOpen?: boolean;
+  externalSidePaneVisible?: boolean;
+  isSidebar?: boolean;
+  onClose?: () => void;
+  onPresentationModeChange?: (mode: ChatPresentationMode) => void;
+  open?: boolean;
+  pageId?: string | null;
+  presentationMode?: ChatPresentationMode;
 }) {
-  const router = useRouter()
+  const router = useRouter();
   const searchStr = useRouterState({
     select: (state) => state.location.searchStr,
-  })
-  const routeSearch = useMemo(() => new URLSearchParams(searchStr), [searchStr])
+  });
+  const routeSearch = useMemo(
+    () => new URLSearchParams(searchStr),
+    [searchStr],
+  );
   const { activeThreadId, isBootstrapping, setActiveThreadId } =
-    useAiChatThreadState({ enabled: open })
-  const [, setDraftDirty] = useState(false)
+    useAiChatThreadState({ enabled: open });
+  const [, setDraftDirty] = useState(false);
   const [pendingInitialSubmission, setPendingInitialSubmission] =
-    useState<PendingInitialChatSubmission | null>(null)
-  const [sidebarSettingsOpen, setSidebarSettingsOpen] = useState(false)
+    useState<PendingInitialChatSubmission | null>(null);
+  const [sidebarSettingsOpen, setSidebarSettingsOpen] = useState(false);
+  const [sidebarSettingsTab, setSidebarSettingsTab] = useState<string | null>(
+    null,
+  );
   const settingsOpen = isSidebar
     ? sidebarSettingsOpen
-    : routeSearch.get("panel") === "settings"
-  const { settingsTab, expandedSettingsPageId } = settingsLocation(
-    routeSearch,
-    isSidebar,
-  )
+    : routeSearch.get("panel") === "settings";
+  const { settingsTab } = settingsLocation(routeSearch, isSidebar);
 
   const setSettings = useCallback(
     (next: boolean) => {
       if (isSidebar) {
-        setSidebarSettingsOpen(next)
-        return
+        setSidebarSettingsOpen(next);
+        return;
       }
-      updateSettingsSearch(router, next, settingsTab)
+      updateSettingsSearch(router, next, settingsTab);
     },
     [isSidebar, router, settingsTab],
-  )
-
-  const setExpandedSettingsPage = useCallback(
-    (pageId: string | null) => {
-      if (isSidebar) return
-      const search = new URLSearchParams(searchStr)
-      if (pageId) search.set("settingsPage", pageId)
-      else search.delete("settingsPage")
-      const query = search.toString()
-      router.history.replace(`/ai${query ? `?${query}` : ""}`)
-    },
-    [isSidebar, router.history, searchStr],
-  )
+  );
 
   useEffect(() => {
-    if (isSidebar) return
-    const result = readSearchParam("mcp")
-    if (result === "connected")
-      toast.success("MCP connection completed. Review and enable its tools.")
-    if (result === "failed")
-      toast.error("MCP connection failed. Try reconnecting.")
-    if (result) clearSearchParams("mcp")
-  }, [isSidebar])
+    const listener = (e: Event) => {
+      const event = (e as CustomEvent<AgentSettingsEvent>).detail;
+      if (event.scope !== "personal") return;
+      if (isSidebar) {
+        setSidebarSettingsTab(event.tab);
+        setSidebarSettingsOpen(true);
+      } else updateSettingsSearch(router, true, event.tab);
+    };
+    window.addEventListener("agent-settings", listener);
+    return () => window.removeEventListener("agent-settings", listener);
+  }, [isSidebar, router]);
 
+  useEffect(() => {
+    if (isSidebar) return;
+    const result = readSearchParam("mcp");
+    if (result === "connected")
+      toast.success(
+        "Account connected. Select permissions and Save to enable them.",
+      );
+    if (result === "failed")
+      toast.error("MCP connection failed. Try reconnecting.");
+    if (result) clearSearchParams("mcp");
+  }, [isSidebar]);
+
+  const settingsDraft = useSettingsDraft("personal");
   const chat = isBootstrapping ? (
     <LoadingChat />
   ) : (
     <Suspense fallback={<LoadingChat />}>
       <Chatbot
+        beforeComposer={<SettingsDraftActions draft={settingsDraft} card />}
         databaseId={databaseId}
         isSidebar={isSidebar}
         key={activeThreadId ?? "personal-draft"}
         onDraftDirtyChange={setDraftDirty}
         onInitialSubmissionConsumed={() => setPendingInitialSubmission(null)}
         onInitialSubmissionPrepared={(submission) => {
-          setPendingInitialSubmission(submission)
-          setActiveThreadId(submission.threadId)
+          setPendingInitialSubmission(submission);
+          setActiveThreadId(submission.threadId);
         }}
         onThreadCreated={setActiveThreadId}
         pageId={pageId}
@@ -126,30 +135,19 @@ export function AgentChatWorkspace({
         threadId={activeThreadId}
       />
     </Suspense>
-  )
+  );
 
   function renderSettingsPanel() {
-    return expandedSettingsPageId ? (
-      <PageWorkspaceGate pageId={expandedSettingsPageId}>
-        <PageEditorPane
-          className="min-h-0 flex-1 overflow-y-auto"
-          enableComments={false}
-          key={expandedSettingsPageId}
-          layoutPanelMode="overlay"
-          onOpenPage={setExpandedSettingsPage}
-          pageId={expandedSettingsPageId}
-        />
-      </PageWorkspaceGate>
-    ) : (
+    return (
       <AiSettingsPanel
-        initialTab={settingsTab}
+        draft={settingsDraft}
+        initialTab={isSidebar ? sidebarSettingsTab : settingsTab}
         onClose={() => setSettings(false)}
-        onExpandPage={isSidebar ? undefined : setExpandedSettingsPage}
-        showCloseButton={isSidebar}
       />
-    )
+    );
   }
-  const settingsPanel = renderSettingsPanel()
+
+  const settingsPanel = renderSettingsPanel();
   function renderMain() {
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-surface-canvas">
@@ -176,18 +174,22 @@ export function AgentChatWorkspace({
             isSidebar && settingsOpen
               ? "min-h-0 flex-1 overflow-hidden"
               : isSidebar
-                ? "min-h-0 flex-1 overflow-y-auto px-4 py-4"
-                : "min-h-0 flex-1 overflow-y-auto px-4 pb-5 md:px-6"
+                ? "min-h-0 flex-1 overflow-hidden px-4 py-4"
+                : "min-h-0 flex-1 overflow-hidden pb-5"
           }
-          data-ai-scroll-shell
+          data-ai-workspace-shell
         >
-          {isSidebar && settingsOpen ? settingsPanel : chat}
+          {isSidebar && settingsOpen ? (
+            settingsPanel
+          ) : (
+            <div className="h-full min-h-0">{chat}</div>
+          )}
         </div>
       </div>
-    )
+    );
   }
-  const main = renderMain()
-  if (isSidebar) return main
+  const main = renderMain();
+  if (isSidebar) return main;
   return (
     <PageSidePaneLayout
       main={main}
@@ -196,7 +198,7 @@ export function AgentChatWorkspace({
       sidePaneOpen={settingsOpen || externalSidePaneOpen}
       sidePaneVisible={settingsOpen || externalSidePaneVisible}
     />
-  )
+  );
 }
 
 function ChatHeader({
@@ -204,9 +206,9 @@ function ChatHeader({
   onPresentationModeChange,
   presentationMode,
 }: {
-  onClose?: () => void
-  onPresentationModeChange?: (mode: ChatPresentationMode) => void
-  presentationMode: ChatPresentationMode
+  onClose?: () => void;
+  onPresentationModeChange?: (mode: ChatPresentationMode) => void;
+  presentationMode: ChatPresentationMode;
 }) {
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
@@ -248,15 +250,15 @@ function ChatHeader({
         </Button>
       ) : null}
     </header>
-  )
+  );
 }
 
 function settingsLocation(search: URLSearchParams, isSidebar: boolean) {
-  if (isSidebar) return { settingsTab: null, expandedSettingsPageId: null }
+  if (isSidebar) return { settingsTab: null, expandedSettingsPageId: null };
   return {
     settingsTab: search.get("settingsTab"),
     expandedSettingsPageId: search.get("settingsPage"),
-  }
+  };
 }
 
 function LoadingChat() {
@@ -264,13 +266,13 @@ function LoadingChat() {
     <div className="flex h-full min-h-40 items-center justify-center text-sm text-content-secondary">
       Loading chat…
     </div>
-  )
+  );
 }
 
 function readSearchParam(name: string) {
   return typeof window === "undefined"
     ? null
-    : new URLSearchParams(window.location.search).get(name)
+    : new URLSearchParams(window.location.search).get(name);
 }
 
 function updateSettingsSearch(
@@ -279,30 +281,30 @@ function updateSettingsSearch(
   settingsTab: string | null,
 ) {
   if (typeof window === "undefined" || window.location.pathname !== "/ai")
-    return
-  const url = new URL(window.location.href)
+    return;
+  const url = new URL(window.location.href);
   if (open) {
-    url.searchParams.set("panel", "settings")
-    url.searchParams.set("settingsScope", "personal")
-    url.searchParams.delete("p")
-    url.searchParams.delete("d")
-    if (settingsTab) url.searchParams.set("settingsTab", settingsTab)
+    url.searchParams.set("panel", "settings");
+    url.searchParams.set("settingsScope", "personal");
+    url.searchParams.delete("p");
+    url.searchParams.delete("d");
+    if (settingsTab) url.searchParams.set("settingsTab", settingsTab);
   } else {
-    url.searchParams.delete("panel")
-    url.searchParams.delete("settingsScope")
-    url.searchParams.delete("settingsTab")
-    url.searchParams.delete("settingsPage")
+    url.searchParams.delete("panel");
+    url.searchParams.delete("settingsScope");
+    url.searchParams.delete("settingsTab");
+    url.searchParams.delete("settingsPage");
   }
-  router.history.replace(`${url.pathname}${url.search}${url.hash}`)
+  router.history.replace(`${url.pathname}${url.search}${url.hash}`);
 }
 
 function clearSearchParams(...names: string[]) {
-  if (typeof window === "undefined") return
-  const url = new URL(window.location.href)
-  for (const name of names) url.searchParams.delete(name)
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  for (const name of names) url.searchParams.delete(name);
   window.history.replaceState(
     window.history.state,
     "",
     `${url.pathname}${url.search}${url.hash}`,
-  )
+  );
 }

@@ -1,3 +1,4 @@
+import { getMcpOAuthReturnPath, cancelMcpOAuth } from "./oauth";
 import { mcpOAuthReturnUrl } from "./oauth-return";
 import { Hono, type Context } from "hono";
 import { requestedAiWorkspaceId } from "../route-workspace";
@@ -202,6 +203,7 @@ aiMcpRoutes.post(
   async (c) =>
     handle(c, async (auth) => {
       const result = await beginMcpOAuth({
+        returnTo: (await c.req.json().catch(() => ({}))).returnTo,
         ...auth,
         scope: agentMcpScope(c.req.param("agentId")),
         connectionId: c.req.param("connectionId"),
@@ -218,9 +220,13 @@ aiMcpRoutes.get("/mcp/oauth/callback", async (c) => {
   if (!isMcpEnabled(c.env)) return c.json({ error: "MCP is disabled." }, 404);
   const code = c.req.query("code");
   const state = c.req.query("state");
-  if (!code || !state)
-    return c.json({ error: "OAuth callback is missing code or state." }, 400);
+  if (!state) return c.json({ error: "OAuth callback is missing state." }, 400);
+  const returnTo = await getMcpOAuthReturnPath(state).catch(() => null);
   const callbackScope = await getMcpOAuthCallbackScope(state).catch(() => null);
+  if (!code || c.req.query("error")) {
+    await cancelMcpOAuth(state);
+    return c.redirect(mcpOAuthReturnUrl(getCanonicalWebOrigin(c.env), callbackScope, "failed", returnTo), 302);
+  }
   try {
     const connection = await completeMcpOAuth({
       code,
@@ -233,12 +239,13 @@ aiMcpRoutes.get("/mcp/oauth/callback", async (c) => {
         getCanonicalWebOrigin(c.env),
         getMcpScopeFromConnection(connection),
         "connected",
+        returnTo,
       ),
       302,
     );
   } catch (error) {
     return c.redirect(
-      mcpOAuthReturnUrl(getCanonicalWebOrigin(c.env), callbackScope, "failed"),
+      mcpOAuthReturnUrl(getCanonicalWebOrigin(c.env), callbackScope, "failed", returnTo),
       302,
     );
   }
@@ -342,6 +349,7 @@ aiMcpRoutes.put("/mcp/connections/:connectionId/headers", async (c) =>
 aiMcpRoutes.post("/mcp/connections/:connectionId/oauth/start", async (c) =>
   handle(c, async (auth) => {
     const result = await beginMcpOAuth({
+        returnTo: (await c.req.json().catch(() => ({}))).returnTo,
       ...auth,
       connectionId: c.req.param("connectionId"),
       env: c.env,

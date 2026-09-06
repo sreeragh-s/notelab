@@ -67,6 +67,7 @@ type PageMetadataProps = {
   cover?: string
   databaseId?: string | null
   description?: string
+  descriptionInitiallyHidden?: boolean
   descriptionPlaceholder?: string
   editable?: boolean
   enableComments?: boolean
@@ -157,6 +158,7 @@ export function PageMetadata({
   cover: coverProp,
   databaseId,
   description: descriptionProp,
+  descriptionInitiallyHidden = false,
   descriptionPlaceholder = "Description (optional)",
   editable = true,
   enableComments = true,
@@ -201,6 +203,7 @@ export function PageMetadata({
   >({})
   const titleRowRef = useRef<HTMLDivElement | null>(null)
   const titleRef = useRef<HTMLTextAreaElement | null>(null)
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false)
   const descriptionRowRef = useRef<HTMLDivElement | null>(null)
   const descriptionRef = useRef<HTMLTextAreaElement | null>(null)
   const { editorCommentsOpenRequest } = usePageEditorComments()
@@ -288,6 +291,7 @@ export function PageMetadata({
   const title = titleProp ?? localTitle
   const hasDescription =
     descriptionProp !== undefined || onDescriptionChange !== undefined
+  const showDescription = hasDescription && (!descriptionInitiallyHidden || !!description || descriptionExpanded)
   const metadataSubject = headingLabel ?? "page"
   const metadataSubjectLowercase = metadataSubject.toLowerCase()
   const unresolvedThreads = useMemo(
@@ -642,7 +646,7 @@ export function PageMetadata({
           variant="ghost"
         >
           <SmilePlus />
-            {headingLabel ? `${headingLabel} icon` : "Add icon"}
+            {headingLabel ? `Add ${metadataSubjectLowercase} icon` : "Add icon"}
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -684,6 +688,7 @@ export function PageMetadata({
   ) : null
 
   const showMetadataActions =
+    (hasDescription && !showDescription && editable) ||
     (!icon && editable) ||
     (!cover && editable) ||
     (commentsEnabled &&
@@ -739,6 +744,7 @@ export function PageMetadata({
       ) : null}
 
       <div
+        data-page-metadata-content
         className={`${contentClassName ?? ""} relative ${compact ? (compactSpacing === "comfortable" ? "px-8 py-5" : "px-4 py-4") : "px-5 pt-1 pb-0 sm:px-8 md:px-20 lg:px-24"}`}
       >
         {showHeading && iconPosition === "top" && pageIcon ? (
@@ -759,6 +765,12 @@ export function PageMetadata({
               className={`absolute inset-0 flex flex-wrap items-center gap-2 ${metadataActionVisibilityClassName}`}
             >
             {!icon ? iconPicker : null}
+            {hasDescription && !showDescription && editable && (
+              <Button className="text-content-secondary" size="sm" type="button" variant="ghost"
+                onClick={() => { setDescriptionExpanded(true); requestAnimationFrame(() => descriptionRef.current?.focus()) }}>
+                <MessageSquare />Add {metadataSubjectLowercase} description
+              </Button>
+            )}
             {!cover && editable ? (
               <Popover onOpenChange={setCoverOpen} open={coverOpen}>
                 <PopoverTrigger asChild>
@@ -770,7 +782,7 @@ export function PageMetadata({
                     variant="ghost"
                   >
                     <ImagePlus />
-                      {headingLabel ? `${headingLabel} cover` : "Add cover"}
+                      {headingLabel ? `Add ${metadataSubjectLowercase} cover` : "Add cover"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent
@@ -849,7 +861,7 @@ export function PageMetadata({
           </div>
         ) : null}
 
-        {showHeading && hasDescription && (editable || description) ? (
+        {showHeading && showDescription && (editable || description) ? (
           <div className="mt-3 flex" ref={descriptionRowRef}>
             <textarea
               aria-label={

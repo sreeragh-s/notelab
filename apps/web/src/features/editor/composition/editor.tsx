@@ -84,6 +84,7 @@ export function Editor({
   workspaceId,
   title,
   pageEditPreviewRef,
+  reviewDiff,
   pageId,
 }: EditorProps = {}) {
   const editorId = useId()
@@ -388,6 +389,21 @@ export function Editor({
       ),
     )
   }, [editor, selectionAiPreview])
+
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return
+    if (!reviewDiff) {
+      setSelectionAiPreview((current) => current?.toolCallId === "agent-settings-review" ? null : current)
+      return
+    }
+    const range = getFullDocumentPreviewRange(editor)
+    setSelectionAiPreview({
+      baselineMarkdown: reviewDiff.beforeMarkdown,
+      generatedMarkdown: reviewDiff.afterMarkdown,
+      from: range.from, to: range.to, isStreaming: false,
+      source: "page-edit", toolCallId: "agent-settings-review", useBeforeBaseline: true,
+    })
+  }, [editor, reviewDiff?.beforeMarkdown, reviewDiff?.afterMarkdown])
 
   const acceptSelectionAiPreview = useCallback(() => {
     if (pendingPageEditRef.current) {

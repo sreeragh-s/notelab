@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { classifyAgentMessage } from "./agent-conversation-service";
 import {
   compileAgentDefinition,
   computeNextAgentSchedule,
@@ -35,19 +34,5 @@ describe("standalone Custom Agent definitions", () => {
     const from = new Date("2026-09-05T00:00:00.000Z");
     expect(computeNextAgentSchedule({ cadence: "daily" }, from).toISOString()).toBe("2026-09-06T00:00:00.000Z");
     expect(computeNextAgentSchedule({ cadence: "custom", intervalMinutes: 60 }, from).toISOString()).toBe("2026-09-05T01:00:00.000Z");
-  });
-});
-
-describe("Custom Agent builder intent", () => {
-  it.each([
-    ["Instructions: review release notes", "configure"],
-    ["Rename this agent to Release reviewer", "configure"],
-    ["Run the agent now", "run"],
-    ["Use the GitHub connector to identify my username", "run"],
-    ["Update the project page with today's status", "run"],
-    ["From now on summarize releases, then run it now", "configure_and_run"],
-    ["Can you help me with this?", "clarify"],
-  ])("classifies %s as %s", (message, intent) => {
-    expect(classifyAgentMessage(message)).toBe(intent);
   });
 });

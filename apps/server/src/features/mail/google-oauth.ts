@@ -1,3 +1,4 @@
+import { safeAgentReturnPath } from "../ai/mcp/oauth-return";
 import { and, eq, gt, isNull } from "drizzle-orm"
 
 import { db, runWithDbEnv } from "../../infrastructure/database"
@@ -49,7 +50,7 @@ export function gmailProviderConfigured(env: RuntimeEnv) {
 
 export async function beginGmailOauth(
   env: RuntimeEnv,
-  input: { clientKind: OAuthClientKind; userId: string; workspaceId: string },
+  input: { clientKind: OAuthClientKind; userId: string; workspaceId: string; returnTo?: string },
 ) {
   const clientId = getRequiredStringEnv(env, "GMAIL_GOOGLE_CLIENT_ID")
   getRequiredStringEnv(env, "GMAIL_GOOGLE_CLIENT_SECRET")
@@ -74,7 +75,7 @@ export async function beginGmailOauth(
     codeVerifierIv: encrypted.iv,
     codeVerifierKeyVersion: encrypted.keyVersion,
     clientKind: input.clientKind,
-    returnPath: `/workspaces/${input.workspaceId}/mail`,
+    returnPath: safeAgentReturnPath(input.returnTo) ?? `/workspaces/${input.workspaceId}/mail`,
     expiresAt: new Date(now.getTime() + OAUTH_ATTEMPT_TTL_MS),
     createdAt: now,
     updatedAt: now,
@@ -266,6 +267,7 @@ async function completeGmailOauthWithDatabase(
     })
   return {
     clientKind: attempt.clientKind as OAuthClientKind,
+    returnTo: safeAgentReturnPath(attempt.returnPath),
     connectionId: account.id,
     workspaceId: attempt.workspaceId,
   }
@@ -369,4 +371,11 @@ export class GmailOauthError extends Error {
     super(message)
     this.name = "GmailOauthError"
   }
+}
+
+export async function gmailChatReturnPath(state: string, consume = false) {
+  const [attempt] = await db.select().from(gmailOauthAttempt).where(eq(gmailOauthAttempt.stateHash, await sha256Hex(state))).limit(1);
+  if (!attempt || attempt.consumedAt || attempt.expiresAt < new Date()) return null;
+  if (consume) await db.update(gmailOauthAttempt).set({ consumedAt: new Date() }).where(eq(gmailOauthAttempt.id, attempt.id));
+  return safeAgentReturnPath(attempt.returnPath);
 }

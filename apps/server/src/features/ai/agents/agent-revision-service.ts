@@ -106,7 +106,7 @@ export async function applyAgentDefinition(input: {
   return getAgentRevision(input.profileId, revisionId);
 }
 
-async function synchronizeMaterializedTriggers(
+export async function synchronizeMaterializedTriggers(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   profileId: string,
   revisionId: string,
@@ -138,7 +138,9 @@ async function synchronizeMaterializedTriggers(
     const status = materializedTriggerStatus(desired, Boolean(current));
     const nextRunAt =
       desired.kind === "schedule" && status === "active"
-        ? computeNextAgentSchedule(desired.config, now)
+        ? current?.kind === "schedule" && current.status === "active" && JSON.stringify(current.config) === JSON.stringify(desired.config)
+          ? current.nextRunAt ?? computeNextAgentSchedule(desired.config, now)
+          : computeNextAgentSchedule(desired.config, now)
         : null;
     if (current) {
       await tx

@@ -12,6 +12,7 @@ const expectedFeatureExports = [
   "./ai-chat/custom-agent-contract",
   "./ai-chat/live-agent",
   "./ai-chat/mcp-contract",
+  "./ai-chat/settings-contract",
   "./ai-chat/tool-registry",
   "./api-keys",
   "./auth",

@@ -1,3 +1,4 @@
+import { aiSettingsRoutes } from "../features/ai/settings/settings-routes";
 import type { Hono } from "hono";
 
 import { aiAgentProfileRoutes, aiAgentWebhookRoutes, aiMcpRoutes, aiRoutes, aiThreadRoutes } from "../features/ai/routes";
@@ -30,6 +31,7 @@ export function registerRoutes(app: Hono<AppBindings>) {
   app.route("/", automationSlackProviderRoutes);
   app.route("/api/ai", aiRoutes);
   app.route("/api/ai", aiThreadRoutes);
+  app.route("/api/ai", aiSettingsRoutes);
   app.route("/api/ai", aiAgentProfileRoutes);
   app.route("/api/ai", aiAgentWebhookRoutes);
   app.route("/api/ai", aiMcpRoutes);

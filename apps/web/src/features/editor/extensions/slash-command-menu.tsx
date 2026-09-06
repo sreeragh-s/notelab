@@ -54,7 +54,6 @@ export function SlashCommandMenu({
                 key={item.title}
                 onMouseDown={(event) => {
                   event.preventDefault()
-                  selectItem(index)
                 }}
                 onSelect={() => selectItem(index)}
                 ref={index === selectedIndex ? selectedItemRef : undefined}

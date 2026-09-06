@@ -143,6 +143,11 @@ export function runWithDbEnv<T>(
   return runWithDbClient(createDbClient(env), callback, options);
 }
 
+/** Streaming responses outlive the request middleware and need their own scope. */
+export function runWithIndependentDbEnv<T>(env: DbEnv, callback: () => Promise<T>) {
+  return databaseStore.exit(() => runWithDbEnv(env, callback));
+}
+
 function hasDatabaseContext() {
   return databaseStore.getStore()?.active === true;
 }

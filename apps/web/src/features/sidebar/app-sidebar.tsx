@@ -52,10 +52,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
 } from "@/shared/ui/sidebar"
 import { WorkspaceSwitcher } from "./workspace-switcher"
-import { ZilobaseLogo } from "@/shared/components/zilobase-logo"
 import { clearPromotedFullPagePath, usePromotedFullPagePath } from "@/features/pages/context/index"
 import { useAiChatThreadState } from "@/features/ai/index"
 import { buildDesktopDeepLink } from "@/features/desktop/deep-links/index"
@@ -99,7 +97,6 @@ import { isFeatureEnabled } from "@/shared/config/feature-flags"
 import { withoutMailFeatures } from "./model/sidebar-layout-model"
 import { WorkspaceMailNavigation } from "./components/workspace-mail-navigation"
 import { NotificationCenter } from "@/features/notifications"
-import { SidebarThemeSwitcher } from "./components/sidebar-theme-switcher"
 
 const sidebarNavigationIcons: SidebarNavigationIcons = {
   getDatabaseIcon: (database: Parameters<typeof getDatabaseIconNode>[0]) =>
@@ -317,47 +314,45 @@ export function AppSidebar({
   return (
     <Sidebar aria-label="Application sidebar" {...props}>
       <SidebarHeader
-        actions={
-          <>
-            {workspaceId ? <NotificationCenter workspaceId={workspaceId} /> : null}
-            <SidebarThemeSwitcher />
-            <SidebarTrigger className="mr-0.5 shrink-0" />
-          </>
-        }
-        className={hasOverlayTitleBar ? "pt-9" : undefined}
+        actions={workspaceId ? <NotificationCenter workspaceId={workspaceId} /> : null}
+        className={hasOverlayTitleBar ? "shrink-0 pt-9" : "shrink-0"}
         data-tauri-drag-region={hasOverlayTitleBar ? "deep" : undefined}
         navigation={!customizing ? <SidebarLayoutTabs activeTabId={activeTab.id} onOpenSearch={openSearch} onSelectTab={selectNavigationTab} tabs={layout.tabs} /> : null}
       >
-        <div className="flex h-full items-center px-1.5"><ZilobaseLogo className="h-5 w-auto" /><span className="sr-only">Zilobase</span></div>
+        <WorkspaceSwitcher onOpenSettings={onOpenSettings} settingsOpen={settingsOpen} />
       </SidebarHeader>
       {customizing ? (
         <SidebarCustomizePanel activeTabId={activeTabId} databases={navigation?.databases ?? []} disabled={updateUserSettings.isPending} key={`${workspaceId}:${JSON.stringify(layout)}`} layout={layout} onActiveTabChange={selectTab} onCancel={() => setCustomizing(false)} onDone={saveLayout} onOpenSearch={openSearch} pages={navigation?.pages ?? []} workspaceId={workspaceId} />
       ) : (
-        <SidebarContent>
-          <div aria-hidden="true" className="h-3 shrink-0" />
-          {activeTab.id === "mail" ? (
-            <WorkspaceMailNavigation workspaceId={workspaceId} />
-          ) : (
-            <>
+        <>
+          {activeTab.id !== "mail" && (
+            <div className="shrink-0 pt-3" data-sidebar="shortcuts">
               <SidebarShortcutList databases={navigation?.databases ?? []} onCreateChat={handleCreateChat} onCreateDatabase={handleCreateDatabase} onCreatePage={handleCreatePage} onOpenSettings={onOpenSettings} pages={navigation?.pages ?? []} settingsOpen={settingsOpen} shortcuts={activeTab.shortcuts} />
-              <AgentsSection activeAgentId={activeAgentId} />
-              <DndContext collisionDetection={closestCenter} onDragEnd={handleRuntimeSectionDragEnd} sensors={runtimeSectionSensors}>
-                <SortableContext items={activeTab.sections.map((section) => section.id)} strategy={verticalListSortingStrategy}>
-                  {activeTab.sections.map((section) => <RuntimeSectionDragItem id={section.id} key={section.id}>{renderSection(section)}</RuntimeSectionDragItem>)}
-                </SortableContext>
-              </DndContext>
-            </>
+            </div>
           )}
-        </SidebarContent>
+          <SidebarContent className="block overflow-x-hidden overflow-y-auto overscroll-y-contain" aria-label="Sidebar sections">
+            {activeTab.id === "mail" ? (
+              <WorkspaceMailNavigation workspaceId={workspaceId} />
+            ) : (
+              <>
+                <AgentsSection activeAgentId={activeAgentId} />
+                <DndContext collisionDetection={closestCenter} onDragEnd={handleRuntimeSectionDragEnd} sensors={runtimeSectionSensors}>
+                  <SortableContext items={activeTab.sections.map((section) => section.id)} strategy={verticalListSortingStrategy}>
+                    {activeTab.sections.map((section) => <RuntimeSectionDragItem id={section.id} key={section.id}>{renderSection(section)}</RuntimeSectionDragItem>)}
+                  </SortableContext>
+                </DndContext>
+              </>
+            )}
+          </SidebarContent>
+        </>
       )}
-      <SidebarFooter className="relative z-10 bg-surface-navigation p-0">
+      <SidebarFooter className="relative z-10 shrink-0 bg-surface-navigation p-0">
         {!customizing ? (
           <SidebarMenu className="gap-2 p-2">
             <SidebarMenuItem><SidebarMenuButton onClick={() => setCustomizing(true)} title="Customize sidebar" type="button"><SlidersHorizontalIcon /><span>Customize sidebar</span></SidebarMenuButton></SidebarMenuItem>
             {!isDesktopApp() && desktopLinkServer ? <SidebarMenuItem><a className="flex w-full items-start gap-2.5 rounded-lg bg-action-neutral-hover p-3 text-content-primary ring-1 ring-stroke-default transition-colors hover:bg-action-neutral-hover focus-visible:ring-2 focus-visible:ring-action-focus-ring focus-visible:outline-none" href={buildDesktopDeepLink(location.href, desktopLinkServer)}><MonitorUpIcon className="mt-0.5 size-4 shrink-0" /><span className="min-w-0"><span className="block text-sm font-medium">Open in desktop app</span><span className="mt-0.5 block text-xs leading-snug text-content-secondary">Continue this page in the desktop experience.</span></span></a></SidebarMenuItem> : null}
           </SidebarMenu>
         ) : null}
-        <div className="border-t border-stroke-default px-2 py-2"><WorkspaceSwitcher onOpenSettings={onOpenSettings} settingsOpen={settingsOpen} /></div>
       </SidebarFooter>
     </Sidebar>
   )
