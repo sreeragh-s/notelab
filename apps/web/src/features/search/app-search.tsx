@@ -1,3 +1,4 @@
+import { combineSearchResults, getSearchResultDestination, type SearchResult } from "./search-results";
 import {
   createContext,
   useContext,
@@ -21,12 +22,10 @@ import {
 } from "@/shared/ui/command"
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
 import { useAppSearchResults } from "@zilobase/features/search/react";
-import type { AppSearchResult } from "@zilobase/features/search"
 import { DefaultPageIcon, PageIconDisplay } from "@/features/pages/index"
 import { useAppShortcut } from "@/shared/shortcuts"
 import { useAiAgentProfiles } from "@zilobase/features/ai-chat/react";
 
-type SearchResult = AppSearchResult | { emoji: null; id: string; path: string; title: string; type: "agent" }
 
 type AppSearchContextValue = {
   openSearch: () => void
@@ -46,16 +45,7 @@ export function AppSearchProvider({ children }: { children: ReactNode }) {
     open,
   )
   const agents = useAiAgentProfiles({ enabled: open })
-  const combinedResults: SearchResult[] = useMemo(() => [
-    ...(agents.data ?? []).filter((agent) => !debouncedQuery || agent.name.toLowerCase().includes(debouncedQuery.toLowerCase())).map((agent) => ({
-      emoji: null,
-      id: agent.id,
-      path: "Agents",
-      title: agent.name,
-      type: "agent" as const,
-    })),
-    ...results,
-  ], [agents.data, debouncedQuery, results])
+  const combinedResults = useMemo(() => combineSearchResults(agents.data ?? [], results, debouncedQuery), [agents.data, debouncedQuery, results]);
   const contextValue = useMemo(() => ({ openSearch: () => setOpen(true) }), [])
 
   useAppShortcut(
@@ -70,24 +60,8 @@ export function AppSearchProvider({ children }: { children: ReactNode }) {
   const openResult = (result: SearchResult) => {
     setOpen(false)
 
-    if (result.type === "database") {
-      void navigate({
-        to: "/d/$databaseId",
-        params: { databaseId: result.id },
-        search: { view: undefined },
-      })
-      return
-    }
-    if (result.type === "agent") {
-      void navigate({ to: "/agents/$agentId", params: { agentId: result.id } })
-      return
-    }
-
-    void navigate({
-      to: "/p/$pageId",
-      params: { pageId: result.id },
-    })
-  }
+    void navigate(getSearchResultDestination(result));
+  };
 
   return (
     <AppSearchContext.Provider value={contextValue}>

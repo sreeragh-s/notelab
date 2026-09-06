@@ -1,6 +1,6 @@
 import { strFromU8, unzipSync } from "fflate"
 
-import { normalizeNotionHtmlBlocks } from "@/features/notion-import/lib/notion-html-blocks"
+import { normalizeNotionHtmlBlocks } from "./notion-html-blocks"
 
 type CreatePageInput = {
   emoji?: string

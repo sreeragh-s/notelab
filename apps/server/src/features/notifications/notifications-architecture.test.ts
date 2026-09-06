@@ -4,7 +4,7 @@ import { expect, test } from "vitest";
 test("notifications use a durable inbox, delivery receipt, and polling-safe outbox", async () => {
   const [migration, service, outbox, routes] = await Promise.all([
     readFile(new URL("../../../drizzle/0074_in_product_notifications.sql", import.meta.url), "utf8"),
-    readFile(new URL("./service.ts", import.meta.url), "utf8"),
+    readFile(new URL("./notification-operations.ts", import.meta.url), "utf8"),
     readFile(new URL("./outbox.ts", import.meta.url), "utf8"),
     readFile(new URL("./routes.ts", import.meta.url), "utf8"),
   ]);

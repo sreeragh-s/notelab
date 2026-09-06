@@ -8,7 +8,7 @@
 
 ## Main flow
 
-User settings routes persist page/layout and profile preferences. Shared sidebar configuration and web settings presentation apply those preferences across navigation and page screens.
+User settings routes persist page/layout and profile preferences. Web route screens live under [screens](../../../apps/web/src/features/settings/screens), while the [settings interface](../../../apps/web/src/features/settings/index.ts) exposes named screens and shell components. Preferences own theme, typography, offline-data and desktop settings presentation; profile and security retain their separate account commands. API-key management is exposed in the same settings shell, with authorization owned by the API-key feature. Shared sidebar configuration and web settings presentation apply those preferences across navigation and page screens.
 
 ## Authorization and persistence
 

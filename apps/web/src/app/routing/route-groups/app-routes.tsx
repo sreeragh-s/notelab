@@ -18,7 +18,7 @@ export const appRoutes = [
   createRoute({
     getParentRoute: () => appRoute,
     path: "/canvas",
-    component: lazyRouteComponent(() => import("@/features/canvas/pages/canvas")),
+    component: lazyRouteComponent(() => import("@/features/canvas/screens/canvas")),
   }),
   createRoute({
     getParentRoute: () => appRoute,
@@ -37,7 +37,7 @@ export const appRoutes = [
   createRoute({
     getParentRoute: () => appRoute,
     path: "/tasks",
-    component: lazyRouteComponent(() => import("@/features/tasks/pages/tasks")),
+    component: lazyRouteComponent(() => import("@/features/tasks/screens/tasks")),
   }),
   createRoute({
     getParentRoute: () => appRoute,

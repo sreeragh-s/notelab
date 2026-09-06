@@ -6,7 +6,7 @@ import {
 } from "../access";
 import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
 import type { AppBindings } from "../../shared/types";
-import { searchWorkspaceItems } from "./service";
+import { searchWorkspaceItems } from "./workspace-search";
 
 export const searchRoutes = new Hono<AppBindings>();
 

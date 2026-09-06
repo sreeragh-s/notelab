@@ -5,7 +5,7 @@ import {
   listInProductNotifications,
   markInProductNotificationRead,
   NotificationError,
-} from "./service";
+} from "./notification-operations";
 
 export const notificationRoutes = new Hono<AppBindings>();
 

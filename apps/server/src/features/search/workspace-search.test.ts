@@ -4,7 +4,7 @@ import { test } from "vitest";
 import {
   SEARCH_HEADLINE_OPTIONS,
   stripSearchHeadlineMarkers,
-} from "./service";
+} from "./workspace-search";
 
 test("PostgreSQL headline options use non-empty selection markers", () => {
   assert.doesNotMatch(SEARCH_HEADLINE_OPTIONS, /StartSel=\s*(?:,|$)/);

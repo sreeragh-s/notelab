@@ -1,5 +1,4 @@
 export { AppSidebar } from "./app-sidebar";
-export { AppSearchProvider } from "./app-search";
 export { NavActions } from "./components/nav-actions";
 export { libraryViewIcons } from "./components/sidebar-layout-icons";
 export { mailViewIcons } from "./components/sidebar-layout-icons";

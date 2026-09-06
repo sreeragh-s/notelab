@@ -47,6 +47,10 @@
         "patterns": ["apps/web/src/features/sidebar/**"]
       },
       {
+        "name": "web-search",
+        "patterns": ["apps/web/src/features/search/**"]
+      },
+      {
         "name": "web-auth",
         "patterns": ["apps/web/src/features/auth/**"]
       },
@@ -213,8 +217,13 @@
           "web-desktop",
           "web-platform",
           "web-offline",
-          "web-meeting-capture"
+          "web-meeting-capture",
+          "web-search"
         ]
+      },
+      {
+        "from": "web-search",
+        "allow": ["web-search", "web-shared", "web-pages", "package-features"]
       },
       {
         "from": "web-sidebar",
@@ -232,7 +241,8 @@
           "web-tasks",
           "web-desktop",
           "web-platform",
-          "web-offline"
+          "web-offline",
+          "web-search"
         ]
       },
       {
@@ -639,8 +649,8 @@
     "apps/web/src/platform/network/image-upload.ts",
     "apps/web/src/features/workspaces/invitations/invitation-link.ts",
     "apps/web/src/features/meetings/model/meeting-navigation.ts",
-    "apps/web/src/features/notion-import/lib/notion-html-blocks.ts",
-    "apps/web/src/features/notion-import/lib/notion-import.ts",
+    "apps/web/src/features/notion-import/conversion/notion-html-blocks.ts",
+    "apps/web/src/features/notion-import/conversion/notion-import.ts",
     "apps/web/src/features/offline/documents/offline-documents.ts",
     "apps/web/src/features/offline/documents/offline-recovery.ts",
     "apps/web/src/features/offline/model/offline-store.ts",

@@ -17,17 +17,17 @@ export const settingsRoutes = [
   createRoute({
     getParentRoute: () => appRoute,
     path: "/settings/preferences",
-    component: lazyRouteComponent(() => import("@/features/settings/pages/preferences")),
+    component: lazyRouteComponent(() => import("@/features/settings/screens/preferences")),
   }),
   createRoute({
     getParentRoute: () => appRoute,
     path: "/settings/profile",
-    component: lazyRouteComponent(() => import("@/features/settings/pages/profile")),
+    component: lazyRouteComponent(() => import("@/features/settings/screens/profile")),
   }),
   createRoute({
     getParentRoute: () => appRoute,
     path: "/settings/security",
-    component: lazyRouteComponent(() => import("@/features/settings/pages/security")),
+    component: lazyRouteComponent(() => import("@/features/settings/screens/security")),
   }),
   createRoute({
     getParentRoute: () => appRoute,
@@ -37,7 +37,7 @@ export const settingsRoutes = [
   createRoute({
     getParentRoute: () => appRoute,
     path: "/settings/api-keys",
-    component: lazyRouteComponent(() => import("@/features/settings/pages/api-keys")),
+    component: lazyRouteComponent(() => import("@/features/settings/screens/api-keys")),
   }),
   createRoute({
     getParentRoute: () => appRoute,

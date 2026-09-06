@@ -10,7 +10,7 @@
 
 ## Main flow
 
-Notification operations list and mark in-product notifications and create automation notifications for eligible recipients. The outbox publishes through the runtime adapter; the notification center consumes shared queries.
+[Notification operations](../../../apps/server/src/features/notifications/notification-operations.ts) list and mark in-product notifications and create automation notifications for eligible recipients. The outbox publishes through the runtime adapter; the notification center consumes shared queries.
 
 ## Authorization and persistence
 

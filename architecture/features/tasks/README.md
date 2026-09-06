@@ -6,7 +6,7 @@
 
 ## Main flow
 
-The tasks screen derives task-oriented presentation using database data and a database-list adapter. Task models belong to this feature; row/property persistence stays with database operations.
+The [tasks screen](../../../apps/web/src/features/tasks/screens/tasks.tsx) derives task-oriented presentation using database data and a [database-list adapter](../../../apps/web/src/features/tasks/components/task-database-list-adapter.tsx). The [task model](../../../apps/web/src/features/tasks/model/tasks-model.ts) derives schema/status/assignee decisions; the screen coordinates selected task databases, completion mutations and navigation. Task models belong to this feature; row/property persistence stays with database operations.
 
 ## Authorization and persistence
 

@@ -111,7 +111,7 @@ export function register({ readSource, assert, loadModule, test }) {
   })
 
   test("settings lists saved desktop servers and can remove one instance", async () => {
-    const source = await readSource("/src/features/settings/pages/preferences.tsx")
+    const source = await readSource("/src/features/settings/screens/preferences.tsx")
     assert.match(source, /listDesktopServerProfiles/)
     assert.match(source, /Remove from this device/)
     assert.match(source, /Connect another server/)

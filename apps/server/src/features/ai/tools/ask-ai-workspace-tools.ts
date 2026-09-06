@@ -15,7 +15,7 @@ import {
 } from "../../access";
 import { db } from "../../../infrastructure/database";
 import { page, pageCollaborationDocument } from "../../../infrastructure/database/schema";
-import { searchWorkspaceItems } from "../../search/service";
+import { searchWorkspaceItems } from "../../search/workspace-search";
 import { getDatabaseRecord } from "../../databases/access";
 import { getDatabasePayload } from "../../databases/core";
 import { hashPageContentMarkdown } from "../conversion/page-content-version";

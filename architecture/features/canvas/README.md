@@ -6,7 +6,7 @@
 
 ## Main flow
 
-The canvas screen composes flow nodes, edges, geometry and rough-shape rendering. Models define shapes and initial elements; presentation owns interactive rendering.
+The [canvas screen](../../../apps/web/src/features/canvas/screens/canvas.tsx) composes a ReactFlow provider with [flow-canvas](../../../apps/web/src/features/canvas/components/flow-canvas.tsx). Nodes, edges, geometry and rough-shape rendering retain their existing focused modules. Models define shapes and initial elements; presentation owns interactive rendering.
 
 ## Authorization and persistence
 

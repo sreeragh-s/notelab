@@ -7,7 +7,7 @@ import { databaseRow } from "../../../../infrastructure/database/schema";
 import { getEffectivePageAccessForUsers } from "../../../access";
 import { createDatabaseRowService } from "../../rows/service";
 import { applyDatabaseAutomationRowOperations } from "../actions/internal-mutations";
-import { accessibleNotificationPageId, activeNotificationRecipientIds, createAutomationNotifications } from "../../../notifications/service";
+import { accessibleNotificationPageId, activeNotificationRecipientIds, createAutomationNotifications } from "../../../notifications/notification-operations";
 import { AutomationActionError } from "./action-error";
 import { type ExecutionContext } from "./execution-context";
 import { resolveRichText, scalarString, userIds, resolveExpression, resolveOperations, resolveEditTarget, requireTriggerRow, assertBoundedValue, stableActionSuffix, requireOwner, stringList } from "../actions/action-values";

@@ -21,7 +21,7 @@ import {
 import * as React from "react"
 import { toast } from "sonner"
 
-import { useAppSearch } from "./app-search"
+import { useAppSearch } from "@/features/search"
 import { DatabaseViewIcon } from "@/features/databases"
 import { AiChatsSection } from "./components/ai-chats-section"
 import { AgentsSection } from "./components/agents-section"

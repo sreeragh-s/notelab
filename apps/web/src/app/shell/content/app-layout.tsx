@@ -4,7 +4,7 @@ import { Outlet, useNavigate, useRouter, useRouterState } from "@tanstack/react-
 import { ChevronsRightIcon, SidebarSimpleIcon } from "@/shared/components/icons"
 
 import { AppSidebar } from "@/features/sidebar"
-import { AppSearchProvider } from "@/features/sidebar"
+import { AppSearchProvider } from "@/features/search"
 import {
   DesktopTabs,
   getDesktopTabTitle,

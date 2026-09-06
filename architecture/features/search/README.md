@@ -4,11 +4,11 @@
 
 - [apps/server/src/features/search](../../../apps/server/src/features/search)
 - [packages/features/src/search](../../../packages/features/src/search)
-- [apps/web/src/features/sidebar/app-search.tsx](../../../apps/web/src/features/sidebar/app-search.tsx)
+- [apps/web/src/features/search/app-search.tsx](../../../apps/web/src/features/search/app-search.tsx)
 
 ## Main flow
 
-searchWorkspaceItems normalizes a query and searches indexed content, returning page/database navigation results and excerpts. Shared queries connect the sidebar search surface to server routes.
+searchWorkspaceItems normalizes a query and searches indexed content, returning page/database navigation results and excerpts. Shared queries connect the [search feature interface](../../../apps/web/src/features/search/index.ts) to server routes. App composition mounts the search provider; the sidebar consumes only its open-search command. The provider keeps its 250ms debounce, shortcut, dialog and query lifecycle. A [pure result model](../../../apps/web/src/features/search/search-results.ts) combines matching agents before server results and resolves page/database/agent destinations, including clearing a database view selection. Search presentation does not own persistence.
 
 ## Authorization and persistence
 
@@ -20,6 +20,6 @@ Query limits and excerpt marker handling are part of the result interface. Empty
 
 ## Verification and change points
 
-Start with [the existing tests or model](../../../apps/server/src/features/search/service.test.ts) and the adjacent tests in the owning modules. Exercise observable outcomes through the owning interface; a source assertion alone does not establish runtime behavior. Run the affected workspace scripts described in [testing and quality](../../setup/testing-and-quality.md).
+[Search result tests](../../../apps/web/test/features/search/search-results.test.mjs) cover agent filtering/order and destinations. Start with [the existing tests or model](../../../apps/server/src/features/search/workspace-search.test.ts) and the adjacent tests in the owning modules. Exercise observable outcomes through the owning interface; a source assertion alone does not establish runtime behavior. Run the affected workspace scripts described in [testing and quality](../../setup/testing-and-quality.md).
 
 Update this guide when ownership, interfaces, authorization, persistence or cross-module flows change. [Architecture index](../../README.md).
