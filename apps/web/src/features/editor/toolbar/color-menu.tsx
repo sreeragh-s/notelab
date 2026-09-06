@@ -13,7 +13,7 @@ import {
   getPaletteColor,
   isPaletteColorActive,
 } from "@/shared/lib/color-tokens"
-import type { ColorToken, EditorControlProps } from "./types"
+import type { ColorToken, EditorControlProps } from "./toolbar-contracts"
 
 function ColorSwatch({
   token,

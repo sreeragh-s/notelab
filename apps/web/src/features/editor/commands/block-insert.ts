@@ -1,10 +1,10 @@
 import type { Content } from "@tiptap/core"
 import type { Editor } from "@tiptap/react"
 
-import type { SlashCommandItem } from "@/packages/editor/extensions/slash-command"
+import type { SlashCommandItem } from "../extensions/slash-command"
 import { createDatabaseSetupBlockContent } from "@/features/databases"
 
-import type { DragHandleTarget } from "./types"
+import type { DragHandleTarget } from "../toolbar/toolbar-contracts"
 
 function getColumnCount(title: string) {
   const match = title.match(/^([2-4]) Columns$/)

@@ -36,11 +36,11 @@ import {
 import {
   slashCommandItems,
   type SlashCommandItem,
-} from "@/packages/editor/extensions/slash-command"
-import { SlashCommandMenu } from "@/packages/editor/extensions/slash-command-menu"
-import { getSelectedBlockRangesForTarget } from "../../extensions/block-selection"
+} from "../extensions/slash-command"
+import { SlashCommandMenu } from "../extensions/slash-command-menu"
+import { getSelectedBlockRangesForTarget } from "../extensions/block-selection"
 
-import { blockContentForItem, insertBlockFromPlus } from "./block-insert"
+import { blockContentForItem, insertBlockFromPlus } from "../commands/block-insert"
 import {
   armBlockDrag,
   endBlockDrag,
@@ -48,13 +48,13 @@ import {
 } from "./block-drag"
 import { colorWithAlpha, getPaletteColor } from "@/shared/lib/color-tokens"
 import { setDatabasePageDragPayload } from "@/features/databases"
-import type { DragHandleTarget } from "./types"
+import type { DragHandleTarget } from "../toolbar/toolbar-contracts"
 import type {
   StructuralBlockDeleteAction,
   StructuralBlockDeleteRequest,
-} from "../../core/types"
+} from "../core/types"
 import { toast } from "sonner"
-import { ColorPicker } from "./color-menu"
+import { ColorPicker } from "../toolbar/color-menu"
 
 type PendingStructuralBlockDelete = StructuralBlockDeleteRequest & {
   action: StructuralBlockDeleteAction

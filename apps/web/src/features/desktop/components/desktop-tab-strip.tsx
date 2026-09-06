@@ -39,7 +39,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/shared/ui/tooltip"
-import { hasEditorBlockDragData } from "@/packages/editor/components/editor/block-drag-session"
+import { hasEditorBlockDragData } from "@/features/editor/drag-drop/block-drag-session"
 
 type DesktopTabStripProps = {
   activeTabId: string | null

@@ -20,7 +20,7 @@ import {
   createEditorDragDrop,
   registerBlockDragSource,
   type BlockDragPayload,
-} from "@/packages/editor/components/editor/block-drag";
+} from "../drag-drop/block-drag";
 import {
   getDropDatabaseElement,
   insertDraggedDatabasePage,
@@ -53,7 +53,7 @@ import {
   handleBlockSelectionBeforeInput,
   handleBlockSelectionClipboardMutation,
   handleBlockSelectionKeyDown,
-} from "@/packages/editor/extensions/block-selection";
+} from "../extensions/block-selection";
 
 type UseEditorInstanceOptions = {
   databaseEditorRuntime: DatabaseBlockEditorRuntime;

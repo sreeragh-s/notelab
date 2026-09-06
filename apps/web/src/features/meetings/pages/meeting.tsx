@@ -11,7 +11,7 @@ import {
 } from "@/features/pages/pane/use-open-embedded-page";
 import { useTitleDraft } from "@/features/pages/hooks/index"
 import { PageMetadata as PageMetadataHeader } from "@/features/databases"
-import { MeetingView } from "@/packages/editor/extensions/meeting"
+import { MeetingView } from "@/features/editor/extensions/meeting"
 import { PageEditorPane } from "@/features/pages/pane/page-editor-pane";
 import { useMeeting, useUpdateMeeting } from "@zilobase/features/meetings/react";
 import {

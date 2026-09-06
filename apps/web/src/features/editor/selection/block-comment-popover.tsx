@@ -19,7 +19,7 @@ import {
 import { usePageCommentsSnapshot } from "@/features/comments/index"
 import { getCommentIdsInRange } from "@zilobase/tiptap-comment-extension"
 
-import type { DragHandleTarget } from "./types"
+import type { DragHandleTarget } from "../toolbar/toolbar-contracts"
 
 function getBlockCommentRange(target: DragHandleTarget) {
   if (target.node.isLeaf || target.node.isAtom) return null

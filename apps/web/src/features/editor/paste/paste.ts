@@ -2,7 +2,7 @@ import type { EditorView } from "@tiptap/pm/view"
 import {
   normalizeEmbedUrl,
   type EmbedProvider,
-} from "@/packages/editor/extensions/embed-block"
+} from "../extensions/embed-block"
 import { pastedBlockElementSelector } from "../core/constants"
 import type { EditorTableType, PasteChoiceState } from "../core/types"
 

@@ -1,8 +1,8 @@
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import type { EditorView } from "@tiptap/pm/view"
 
-import type { BlockDropLine } from "@/packages/editor/core/types"
-import type { DragHandleTarget } from "./types"
+import type { BlockDropLine } from "../core/types"
+import type { DragHandleTarget } from "../toolbar/toolbar-contracts"
 
 type BlockDropTarget = {
   line: BlockDropLine

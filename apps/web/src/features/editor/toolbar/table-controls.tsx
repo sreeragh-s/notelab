@@ -24,7 +24,7 @@ import {
   type PinnedReorderHandle,
   type TableControlRect,
   type TableDragState,
-} from "./table-drag"
+} from "../drag-drop/table-drag"
 
 const tableColumnMinWidth = 180
 

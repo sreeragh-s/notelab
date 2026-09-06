@@ -2,7 +2,7 @@ import type { Editor as TiptapEditor } from "@tiptap/react"
 import type {
   ToolbarAction,
   ToolbarAttrs,
-} from "@/packages/editor/components/editor/types"
+} from "../toolbar/toolbar-contracts"
 
 const toolbarCommands: Record<
   ToolbarAction,

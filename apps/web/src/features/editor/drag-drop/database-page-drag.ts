@@ -5,7 +5,7 @@ import {
   getEditorInsertDropTarget,
   isMultiBlockDragPayload,
   type BlockDragPayload,
-} from "@/packages/editor/components/editor/block-drag";
+} from "./block-drag";
 import {
   getDatabasePageDragPayload as getNativeDatabasePageDragPayload,
   hasDatabasePageDragPayload,

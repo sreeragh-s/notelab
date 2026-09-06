@@ -7,17 +7,17 @@ import {
   ButtonGroupSeparator,
 } from "@/shared/ui/button-group"
 
-import { blockSelectionPluginKey } from "@/packages/editor/extensions/block-selection"
+import { blockSelectionPluginKey } from "../extensions/block-selection"
 
-import { ColorMenu } from "../components/editor/color-menu"
+import { ColorMenu } from "../toolbar/color-menu"
 import { SelectionAiMenu } from "./selection-ai-menu"
-import { toolbarGroups } from "../components/editor/toolbar-data"
-import { ToolbarButton } from "../components/editor/toolbar-button"
-import type { SelectionAiDiffPreview } from "@/packages/editor/core/types"
+import { toolbarGroups } from "../toolbar/toolbar-data"
+import { ToolbarButton } from "../toolbar/toolbar-button"
+import type { SelectionAiDiffPreview } from "../core/types"
 import type {
   EditorControlProps,
   RunToolbarCommand,
-} from "../components/editor/types"
+} from "../toolbar/toolbar-contracts"
 
 const SELECTION_BUBBLE_MENU_PLUGIN_KEY = "selectionBubbleMenu"
 

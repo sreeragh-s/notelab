@@ -49,15 +49,15 @@ import { createPageEditorHandle } from "@/features/ai/cache/index";
 import {
   Editor,
   type PageEditPreviewControls,
-} from "@/packages/editor";
+} from "@/features/editor";
 import type {
   PageLayoutPanelMode,
   StructuralBlockDeleteRequest,
-} from "@/packages/editor/core/types";
+} from "@/features/editor/core/types";
 import type { OpenPageOptions } from "../navigation/open-page-options";
-import { usePageCollaboration } from "@/packages/editor/collaboration/use-page-collaboration";
+import { usePageCollaboration } from "@/features/editor/collaboration/use-page-collaboration";
 import { isHostedDemoRuntime } from "@/features/demo";
-import { canEditOnlineDatabase } from "@/packages/editor/database-editability";
+import { canEditOnlineDatabase } from "@/features/editor/database-editability";
 import {
   useConnectivity,
   useOfflineManifest,

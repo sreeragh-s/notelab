@@ -4,7 +4,7 @@ import type { Editor as TiptapEditor } from "@tiptap/react"
 import {
   getBlockDragHandleRect,
   resolveBlockDragTargetFromPoint,
-} from "@/packages/editor/components/editor/block-drag"
+} from "./block-drag"
 import type { DragHandleState } from "../core/types"
 
 export const useEditorDragHandle = (

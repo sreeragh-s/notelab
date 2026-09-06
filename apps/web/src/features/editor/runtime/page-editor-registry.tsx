@@ -11,7 +11,7 @@ import {
 import type {
   PageEditPreviewClearOptions,
   PageEditPreviewRequest,
-} from "@/packages/editor/core/types"
+} from "../core/types"
 
 export type PageEditorHandle = {
   acceptEditDiffPreview: () => boolean

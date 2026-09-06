@@ -4,7 +4,7 @@ import { useCallback } from "react"
 import {
   fetchBookmarkMetadata,
   getFallbackBookmarkMetadata,
-} from "@/packages/editor/extensions/bookmark-block"
+} from "../extensions/bookmark-block"
 import {
   DropdownMenu,
   DropdownMenuContent,

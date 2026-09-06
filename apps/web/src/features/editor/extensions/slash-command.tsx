@@ -45,9 +45,9 @@ import {
   FigmaIcon,
   MiroIcon,
   YouTubeIcon,
-} from "@/packages/editor/extensions/embed-block"
-import { openAskAiPopover } from "@/packages/editor/extensions/ask-ai-block"
-import type { CreatedPage } from "@/packages/editor/extensions/page-block"
+} from "./embed-block"
+import { openAskAiPopover } from "./ask-ai-block"
+import type { CreatedPage } from "./page-block"
 
 import { SlashCommandMenu } from "./slash-command-menu"
 

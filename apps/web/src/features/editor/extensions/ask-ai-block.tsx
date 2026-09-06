@@ -31,7 +31,7 @@ import {
   parseMarkdownContent,
   readStreamError,
   type GeneratedRange,
-} from "@/packages/editor/commands/editor-ai-utils"
+} from "../commands/editor-ai-utils"
 import { getApiRequestHeaders, toApiUrl } from "@/platform/network/api"
 import { desktopNetworkFetch } from "@/platform/network/index"
 

@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu"
-import { Editor } from "@/packages/editor"
+import { Editor } from "@/features/editor"
 import { useDatabase, useDatabaseIdForRowPage } from "@zilobase/features/databases/react";
 import {
   getPageCover,

@@ -20,7 +20,7 @@ import {
   Underline,
 } from "@/shared/components/icons"
 
-import type { ToolbarItem } from "./types"
+import type { ToolbarItem } from "./toolbar-contracts"
 
 export const toolbarGroups: ToolbarItem[][] = [
   [

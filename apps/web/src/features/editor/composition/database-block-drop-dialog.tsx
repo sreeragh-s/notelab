@@ -1,4 +1,4 @@
-import type { BlockDragPayload } from "@/packages/editor/components/editor/block-drag"
+import type { BlockDragPayload } from "../drag-drop/block-drag"
 import {
   AlertDialog,
   AlertDialogAction,

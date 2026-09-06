@@ -1,6 +1,6 @@
 import { Button } from "@/shared/ui/button"
 
-import type { RunToolbarCommand, ToolbarItem } from "./types"
+import type { RunToolbarCommand, ToolbarItem } from "./toolbar-contracts"
 
 export function ToolbarButton({
   editor,

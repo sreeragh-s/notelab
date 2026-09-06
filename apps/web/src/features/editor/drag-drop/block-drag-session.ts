@@ -11,12 +11,12 @@ import {
   readDragPayload,
   writeDragPayload,
 } from "@/shared/lib/drag-drop"
-import { getSelectedBlockRangesForTarget } from "../../extensions/block-selection"
+import { getSelectedBlockRangesForTarget } from "../extensions/block-selection"
 import {
   setDatabaseBlockDragImage,
   setMultiBlockDragImage,
 } from "./block-drag-preview"
-import type { DragHandleTarget } from "./types"
+import type { DragHandleTarget } from "../toolbar/toolbar-contracts"
 
 export const EDITOR_BLOCK_DRAG_MIME =
   "application/x-zilobase-editor-block-drag"

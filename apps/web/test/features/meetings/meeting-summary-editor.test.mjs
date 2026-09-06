@@ -13,8 +13,8 @@ export function register({ readSource, assert, test }) {
         readSource("/src/features/editor/extensions/meeting/meeting-view.tsx"),
         readSource("/src/features/meetings/pages/meeting.tsx"),
         readSource("/src/features/meetings/styles/meeting.css"),
-        readSource("/src/features/editor/runtime/create-base-extensions.ts"),
-        readSource("/src/features/editor/runtime/use-editor-extensions.ts"),
+        readSource("/src/features/editor/composition/create-base-extensions.ts"),
+        readSource("/src/features/editor/composition/use-editor-extensions.ts"),
         readSource("/src/features/editor/extensions/meeting/use-meeting-collaboration.ts"),
       ])
 

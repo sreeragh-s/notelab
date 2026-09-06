@@ -3,7 +3,7 @@ import type { HocuspocusProvider } from "@hocuspocus/provider"
 import type { SessionUser } from "@zilobase/features/auth"
 import * as Y from "yjs"
 
-import { collaborationColor } from "@/packages/editor/collaboration/color"
+import { collaborationColor } from "../../collaboration/color"
 import { apiFetch } from "@/platform/network/api"
 import {
   applyTicketState,

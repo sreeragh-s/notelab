@@ -1,7 +1,7 @@
 import type { DragEvent as ReactDragEvent } from "react"
 import type { EditorView } from "@tiptap/pm/view"
 
-import type { BlockDropLine } from "@/packages/editor/core/types"
+import type { BlockDropLine } from "../core/types"
 import { dropEditorBlock, prepareEditorListDrop } from "./block-drop"
 import { getEditorInsertDropTarget } from "./block-drag-geometry"
 import {

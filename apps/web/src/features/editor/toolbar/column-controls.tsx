@@ -19,7 +19,7 @@ import {
   type ColumnAxisRect,
   type ColumnBlockRect,
   type ColumnDragState,
-} from "./column-drag"
+} from "../drag-drop/column-drag"
 
 type ColumnMenuState = {
   index: number

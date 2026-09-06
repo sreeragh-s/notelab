@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { EditorContent } from "@tiptap/react"
 import { TextSelection } from "@tiptap/pm/state"
-import { SelectionAiDiffDock } from "@/packages/editor/selection/selection-ai-diff-dock"
-import { MobileActionBar } from "@/packages/editor/components/editor/mobile-action-bar"
+import { SelectionAiDiffDock } from "../selection/selection-ai-diff-dock"
+import { MobileActionBar } from "../toolbar/mobile-action-bar"
 import {
   PageMetadata,
   type PageMetadataHandle,
 } from "@/features/databases"
-import { PageLayoutModuleCanvas } from "@/packages/editor/components/editor/page-layout-module-canvas"
-import { PageLayoutTabs } from "@/packages/editor/components/editor/page-layout-tabs"
+import { PageLayoutModuleCanvas } from "../layout/page-layout-module-canvas"
+import { PageLayoutTabs } from "../layout/page-layout-tabs"
 import { starterContent } from "../core/constants"
 import {
   getFullDocumentPreviewRange,
@@ -26,7 +26,7 @@ import type {
 import { useEditorDatabaseActions } from "../commands/use-editor-database-actions"
 import { useEditorMeetingActions } from "../commands/use-editor-meeting-actions"
 import { useEditorDragHandle } from "../drag-drop/use-editor-drag-handle"
-import { useEditorExtensions } from "../runtime/use-editor-extensions"
+import { useEditorExtensions } from "./use-editor-extensions"
 import { useEditorInstance } from "../runtime/use-editor-instance"
 import { useEditorMenuEffects } from "../runtime/use-editor-menu-effects"
 import { useEditorRuntime } from "../runtime/use-editor-runtime"
@@ -36,7 +36,7 @@ import {
   canMoveDatabaseBlockToPage,
   dropCrossEditorBlock,
   getBlockDragDatabaseId,
-} from "@/packages/editor/components/editor/block-drag"
+} from "../drag-drop/block-drag"
 import { cn } from "@/shared/lib/utils"
 import { UndoHistoryScope } from "@/shared/shortcuts"
 import { toast } from "sonner"

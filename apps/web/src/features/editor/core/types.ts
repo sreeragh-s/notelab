@@ -1,11 +1,11 @@
 import type { Editor } from "@tiptap/core"
 import type { MutableRefObject, ReactNode } from "react"
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
-import type { EmbedProvider } from "@/packages/editor/extensions/embed-block"
+import type { EmbedProvider } from "../extensions/embed-block"
 import type {
   DragHandleTarget,
-} from "@/packages/editor/components/editor/types"
-import type { CreatedPage } from "@/packages/editor/extensions/page-block"
+} from "../toolbar/toolbar-contracts"
+import type { CreatedPage } from "../extensions/page-block"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import type { CollaborationUser } from "../collaboration/use-page-collaboration"
 import type { PageLayoutConfig } from "@zilobase/features/pages"
@@ -157,7 +157,7 @@ export type DragHandleState = {
 }
 
 export type DatabasePageDropPayload = {
-  blockPayload?: import("@/packages/editor/components/editor/block-drag").BlockDragPayload
+  blockPayload?: import("../drag-drop/block-drag").BlockDragPayload
   pageId: string
   title?: string
 }

@@ -26,7 +26,7 @@ import { cn } from "@/shared/lib/utils"
 import {
   useOptionalPageLayoutSidebar,
 } from "@/features/pages/layout/page-layout-sidebar";
-import type { PageLayoutPanelMode } from "@/packages/editor/core/types"
+import type { PageLayoutPanelMode } from "../core/types"
 import {
   canMovePageLayoutModuleToRegion,
   movePageLayoutModule,
