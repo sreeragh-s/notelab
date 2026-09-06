@@ -16,7 +16,7 @@ describe("standalone Custom Agent migration boundary", () => {
   });
 
   it("keeps Universal Ask AI personal-only at thread creation", async () => {
-    const routes = await readFile(new URL("src/features/ai/thread-routes.ts", root), "utf8");
+    const routes = await readFile(new URL("src/features/ai/conversations/thread-routes.ts", root), "utf8");
     expect(routes).toContain("const createThreadSchema = z.object({");
     expect(routes).toContain("agentProfileId: null");
     const schema = routes.slice(
@@ -27,15 +27,15 @@ describe("standalone Custom Agent migration boundary", () => {
   });
 
   it("keeps migrated agent chats private and exposes them read-only under the agent", async () => {
-    const conversation = await readFile(new URL("src/features/ai/agents/agent-conversation-service.ts", root), "utf8");
-    const routes = await readFile(new URL("src/features/ai/agents/agent-profile-routes.ts", root), "utf8");
+    const conversation = await readFile(new URL("src/features/ai/conversations/agent-conversation-service.ts", root), "utf8");
+    const routes = await readFile(new URL("src/features/ai/agents/routes.ts", root), "utf8");
     expect(conversation).toContain('eq(aiAgentConversation.visibility, "legacy_private")');
     expect(conversation).toContain("eq(aiAgentConversation.legacyOwnerUserId, input.userId)");
     expect(routes).toContain('/agents/:agentId/legacy-conversations');
   });
 
   it("uses only agent-principal checks in native run tools", async () => {
-    const tools = await readFile(new URL("src/features/ai/agents/agent-native-run-tools.ts", root), "utf8");
+    const tools = await readFile(new URL("src/features/ai/execution/agent-native-run-tools.ts", root), "utf8");
     expect(tools).toContain("canAgentAccessPage");
     expect(tools).toContain("canAgentAccessDatabase");
     expect(tools).toContain("canAgentSnapshotAccessPage");
@@ -50,7 +50,7 @@ describe("standalone Custom Agent migration boundary", () => {
   });
 
   it("conversation entrypoint checks the shared-user role", async () => {
-    const conversation = await readFile(new URL("src/features/ai/agents/agent-conversation-service.ts", root), "utf8");
+    const conversation = await readFile(new URL("src/features/ai/conversations/agent-conversation-service.ts", root), "utf8");
     expect(conversation).toContain('requireAgentProfileRole({ ...input, minimum: "user" })');
   });
 
@@ -62,7 +62,7 @@ describe("standalone Custom Agent migration boundary", () => {
   });
 
   it("bounds each queued run by its captured permissions and current revocations", async () => {
-    const runs = await readFile(new URL("src/features/ai/agents/agent-run-service.ts", root), "utf8");
+    const runs = await readFile(new URL("src/features/ai/execution/agent-run-service.ts", root), "utf8");
     expect(runs).toContain("readPermissionSnapshot(run.permissionSnapshot)");
     expect(runs).toContain("liveResources.some((resource) => resource.eligibleEditorCount === 0)");
   });
@@ -91,7 +91,7 @@ describe("standalone Custom Agent migration boundary", () => {
 
   it("reconciles trigger registrations transactionally with every immutable revision", async () => {
     const revisions = await readFile(new URL("src/features/ai/agents/agent-revision-service.ts", root), "utf8");
-    const conversation = await readFile(new URL("src/features/ai/agents/agent-conversation-service.ts", root), "utf8");
+    const conversation = await readFile(new URL("src/features/ai/conversations/agent-conversation-service.ts", root), "utf8");
     expect(revisions).toContain("synchronizeMaterializedTriggers");
     expect(revisions).toContain("desiredTriggers");
     expect(revisions).toContain("webhookSecretId");
@@ -104,7 +104,7 @@ describe("standalone Custom Agent migration boundary", () => {
   });
 
   it("exposes durable manual runs and scoped approval handling", async () => {
-    const routes = await readFile(new URL("src/features/ai/agents/agent-profile-routes.ts", root), "utf8");
+    const routes = await readFile(new URL("src/features/ai/agents/routes.ts", root), "utf8");
     expect(routes).toContain('post("/agents/:agentId/runs"');
     expect(routes).toContain('get("/agents/:agentId/runs/:runId/approvals"');
     expect(routes).toContain('actions/:actionId/approve"');

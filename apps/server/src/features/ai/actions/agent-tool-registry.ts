@@ -12,8 +12,8 @@ import { buildPageEditTools } from "../tools/ask-ai-page-tools";
 import { buildWorkspaceActionTools } from "../tools/ask-ai-workspace-action-tools";
 import { buildWorkspaceReadTools } from "../tools/ask-ai-workspace-tools";
 import { requestAgentActionApproval } from "./agent-approvals";
-import type { AgentProgressPublisher } from "../chat/agent-progress";
-import { buildMcpMaterializationTools } from "../mcp/materialization";
+import type { AgentProgressPublisher } from "../conversations/agent-progress";
+import { buildMcpMaterializationTools } from "../mcp/connections/materialization";
 
 export type AgentToolRegistryContext = {
   agentProfileId?: string | null;

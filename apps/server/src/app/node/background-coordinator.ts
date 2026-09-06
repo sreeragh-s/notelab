@@ -2,7 +2,7 @@ import { eq, inArray, min, sql } from "drizzle-orm";
 
 import { AI_JOB_HANDLERS } from "../../features/ai/jobs/ai-job-handlers";
 import { runAiJobBatch } from "../../features/ai/jobs/ai-jobs";
-import { drainAgentRuns } from "../../features/ai/agents/agent-run-service";
+import { drainAgentRuns } from "../../features/ai/execution/agent-run-service";
 import { drainDatabaseAutomationEventWindows } from "../../features/databases/automations/triggers/event-evaluator";
 import { drainDatabaseAutomationRuns } from "../../features/databases/automations/execution/run-engine";
 import { drainDatabaseRealtimeOutbox } from "../../features/databases/realtime/outbox";

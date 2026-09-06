@@ -21,7 +21,7 @@ const externalAiConversationModule =
   process.env.ZILOBASE_WEB_AI_CONVERSATION_MODULE?.trim();
 const aiConversationModule = externalAiConversationModule
   ? resolve(externalAiConversationModule)
-  : `${srcDir}/features/ai/conversation/use-agent-conversation.ts`;
+  : `${srcDir}/features/ai/conversations/use-agent-conversation.ts`;
 const adapterWebSocketPaths = readAdapterWebSocketPaths(
   process.env.ZILOBASE_WEB_ADAPTER_WEBSOCKET_PATHS,
 );

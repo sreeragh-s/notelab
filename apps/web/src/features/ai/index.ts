@@ -1,1 +1,1 @@
-export { useAiChatThreadState } from "./conversation/use-ai-chat-thread-state";
+export { useAiChatThreadState } from "./conversations/use-ai-chat-thread-state";

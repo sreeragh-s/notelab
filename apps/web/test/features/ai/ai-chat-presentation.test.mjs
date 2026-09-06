@@ -3,7 +3,7 @@ import { readChatbotSource } from "./ai-chatbot-source.mjs"
 export function register({ readSource, assert, test }) {
   test("Ask AI supports persistent docked and floating desktop modes", async () => {
     const layoutSource = await readSource("/src/app/shell/content/app-layout.tsx")
-    const sidebarSource = await readSource("/src/features/ai/components/chat-sidebar.tsx")
+    const sidebarSource = await readSource("/src/features/ai/conversations/components/chat-sidebar.tsx")
 
     assert.match(
       layoutSource,
@@ -28,7 +28,7 @@ export function register({ readSource, assert, test }) {
 
   test("mobile Ask AI hides desktop-only floating and pin controls", async () => {
     const layoutSource = await readSource("/src/app/shell/content/app-layout.tsx")
-    const historySource = await readSource("/src/features/ai/components/elements/ai-chat-history-list.tsx")
+    const historySource = await readSource("/src/features/ai/conversations/components/elements/ai-chat-history-list.tsx")
 
     assert.match(
       layoutSource,
@@ -40,8 +40,8 @@ export function register({ readSource, assert, test }) {
   })
 
   test("full-page Ask AI uses the page viewport and hides the duplicate launcher", async () => {
-    const aiPageSource = await readSource("/src/features/ai/pages/ai.tsx")
-    const workspaceSource = await readSource("/src/features/ai/components/agent-chat-workspace.tsx")
+    const aiPageSource = await readSource("/src/features/ai/screens/ai.tsx")
+    const workspaceSource = await readSource("/src/features/ai/conversations/components/agent-chat-workspace.tsx")
     const chatbotSource = await readChatbotSource(readSource)
     const layoutSource = await readSource("/src/app/shell/content/app-layout.tsx")
     const headerSource = await readSource("/src/app/shell/content/app-header.tsx")
@@ -61,9 +61,9 @@ export function register({ readSource, assert, test }) {
   })
 
   test("Universal Ask AI uses the standard side-pane controls without an agent rail", async () => {
-    const workspaceSource = await readSource("/src/features/ai/components/agent-chat-workspace.tsx")
-    const settingsSource = await readSource("/src/features/ai/components/ai-settings-panel.tsx")
-    const agentSettingsSource = await readSource("/src/features/ai/components/settings/agent-settings-page.tsx")
+    const workspaceSource = await readSource("/src/features/ai/conversations/components/agent-chat-workspace.tsx")
+    const settingsSource = await readSource("/src/features/ai/settings/components/ai-settings-panel.tsx")
+    const agentSettingsSource = await readSource("/src/features/ai/settings/components/agent-settings-page.tsx")
     const headerSource = await readSource("/src/app/shell/content/app-header.tsx")
     const paneHeaderSource = await readSource("/src/features/pages/pane/page-pane-header.tsx")
 
@@ -82,8 +82,8 @@ export function register({ readSource, assert, test }) {
   })
 
   test("Custom Agents reuse the full-height page side-pane workspace", async () => {
-    const agentPageSource = await readSource("/src/features/ai/pages/custom-agent.tsx")
-    const agentHeaderSource = await readSource("/src/features/ai/components/custom-agent-header-actions.tsx")
+    const agentPageSource = await readSource("/src/features/ai/screens/custom-agent.tsx")
+    const agentHeaderSource = await readSource("/src/features/ai/screens/custom-agent-header-actions.tsx")
     const layoutSource = await readSource("/src/app/shell/content/app-layout.tsx")
     const pageMetadataSource = await readSource("/src/features/databases/components/page-metadata.tsx")
 
@@ -116,8 +116,8 @@ export function register({ readSource, assert, test }) {
   })
 
   test("Ask AI and Custom Agents share route-driven side pane behavior", async () => {
-    const workspaceSource = await readSource("/src/features/ai/components/agent-chat-workspace.tsx")
-    const agentPageSource = await readSource("/src/features/ai/pages/custom-agent.tsx")
+    const workspaceSource = await readSource("/src/features/ai/conversations/components/agent-chat-workspace.tsx")
+    const agentPageSource = await readSource("/src/features/ai/screens/custom-agent.tsx")
     const headerSource = await readSource("/src/app/shell/content/app-header.tsx")
 
     assert.match(workspaceSource, /routeSearch\.get\("panel"\) === "settings"/)
@@ -130,7 +130,7 @@ export function register({ readSource, assert, test }) {
   })
 
   test("Instruction and skill menus distinguish creating from adding", async () => {
-    const menuSource = await readSource("/src/features/ai/components/settings/zilobase-ai-create-menu.tsx")
+    const menuSource = await readSource("/src/features/ai/settings/components/zilobase-ai-create-menu.tsx")
 
     assert.match(menuSource, /addItemLabel: "Add instruction"/)
     assert.match(menuSource, /createItemLabel: "Create instruction"/)
@@ -140,9 +140,9 @@ export function register({ readSource, assert, test }) {
   })
 
   test("Ask AI and custom agents edit isolated instruction drafts", async () => {
-    const settingsSource = await readSource("/src/features/ai/components/ai-settings-panel.tsx")
-    const pageSource = await readSource("/src/features/ai/components/settings/agent-settings-page.tsx")
-    const workspaceSource = await readSource("/src/features/ai/components/agent-chat-workspace.tsx")
+    const settingsSource = await readSource("/src/features/ai/settings/components/ai-settings-panel.tsx")
+    const pageSource = await readSource("/src/features/ai/settings/components/agent-settings-page.tsx")
+    const workspaceSource = await readSource("/src/features/ai/conversations/components/agent-chat-workspace.tsx")
     assert.match(settingsSource, /<AgentSettingsPage/)
     assert.match(pageSource, /<PageEditorPane/)
     assert.match(pageSource, /<SavedInstructionPicker/)
@@ -151,9 +151,9 @@ export function register({ readSource, assert, test }) {
     assert.doesNotMatch(workspaceSource, /<PageEditorPane/)
   })
   test("agent profile controls share the settings draft and use page controls", async () => {
-    const chat = await readSource("/src/features/ai/pages/custom-agent.tsx")
-    const pane = await readSource("/src/features/ai/components/settings/agent-settings-page.tsx")
-    const connectors = await readSource("/src/features/ai/components/settings/settings-connectors.tsx")
+    const chat = await readSource("/src/features/ai/screens/custom-agent.tsx")
+    const pane = await readSource("/src/features/ai/settings/components/agent-settings-page.tsx")
+    const connectors = await readSource("/src/features/ai/settings/components/settings-connectors.tsx")
     for (const field of ["Title", "Description", "Icon", "Cover", "IconPosition"]) {
       assert.ok(chat.includes(`on${field}Change=`))
     }
@@ -166,10 +166,10 @@ export function register({ readSource, assert, test }) {
   })
 
   test("agent sharing stays in the Share popover and stages the shared draft", async () => {
-    const actions = await readSource("/src/features/ai/components/custom-agent-header-actions.tsx")
-    const sharing = await readSource("/src/features/ai/components/settings/agent-sharing.tsx")
-    const pane = await readSource("/src/features/ai/components/settings/agent-settings-page.tsx")
-    const chat = await readSource("/src/features/ai/pages/custom-agent.tsx")
+    const actions = await readSource("/src/features/ai/screens/custom-agent-header-actions.tsx")
+    const sharing = await readSource("/src/features/ai/settings/components/agent-sharing.tsx")
+    const pane = await readSource("/src/features/ai/settings/components/agent-settings-page.tsx")
+    const chat = await readSource("/src/features/ai/screens/custom-agent.tsx")
     assert.match(actions, /"agent-share"/)
     assert.match(chat, /<AgentSharePopover/)
     assert.match(sharing, /<PopoverAnchor/)
@@ -180,7 +180,7 @@ export function register({ readSource, assert, test }) {
   })
 
   test("agent metadata preserves agent labels and opt-in descriptions", async () => {
-    const chat = await readSource("/src/features/ai/pages/custom-agent.tsx")
+    const chat = await readSource("/src/features/ai/screens/custom-agent.tsx")
     const metadata = await readSource("/src/features/databases/components/page-metadata.tsx")
     assert.match(chat, /headingLabel="Agent"/)
     assert.match(chat, /titlePlaceholder="Untitled agent"/)
@@ -189,8 +189,8 @@ export function register({ readSource, assert, test }) {
     assert.doesNotMatch(chat, /How can I help\?/)
   })
   test("both chats keep the composer outside their scrolling history", async () => {
-    const chat = await readSource("/src/features/ai/pages/custom-agent.tsx")
-    const personal = await readSource("/src/features/ai/components/elements/chatbot.tsx")
+    const chat = await readSource("/src/features/ai/screens/custom-agent.tsx")
+    const personal = await readSource("/src/features/ai/conversations/components/elements/chatbot.tsx")
     for (const source of [chat, personal]) {
       assert.match(source, /data-ai-scroll-shell[\s\S]*?overflow-y-auto/)
       assert.match(source, /<\/AgentChatLayout>\s*<\/div>\s*<AgentChatLayout[^>]*>\s*\{beforeComposer\}\s*<ChatbotComposer/)
@@ -198,8 +198,8 @@ export function register({ readSource, assert, test }) {
   })
 
   test("instruction editing enables slash blocks, titles and saved page selection", async () => {
-    const pane = await readSource("/src/features/ai/components/settings/agent-settings-page.tsx")
-    const picker = await readSource("/src/features/ai/components/settings/saved-instruction-picker.tsx")
+    const pane = await readSource("/src/features/ai/settings/components/agent-settings-page.tsx")
+    const picker = await readSource("/src/features/ai/settings/components/saved-instruction-picker.tsx")
     const header = await readSource("/src/app/shell/content/app-header.tsx")
     assert.match(pane, /<PageEditorPane/)
     assert.match(pane, /showCollaborationPresence/)
@@ -213,8 +213,8 @@ export function register({ readSource, assert, test }) {
   })
 
   test("agent settings review opens the panel and uses editor diffs with the merged tab order", async () => {
-    const pane = await readSource("/src/features/ai/components/settings/agent-settings-page.tsx")
-    const actions = await readSource("/src/features/ai/components/settings/settings-draft-actions.tsx")
+    const pane = await readSource("/src/features/ai/settings/components/agent-settings-page.tsx")
+    const actions = await readSource("/src/features/ai/settings/components/settings-draft-actions.tsx")
     const editor = await readSource("/src/features/editor/composition/editor.tsx")
     assert.match(pane, /"connectors",[\s\S]*?\["access"\][\s\S]*?"activity",\s*"versions"/)
     assert.match(pane, /Triggers & Access/)

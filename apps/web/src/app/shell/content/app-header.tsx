@@ -14,14 +14,14 @@ import {
 } from "@/features/pages/layout/page-layout-sidebar";
 
 const CustomAgentHeaderActions = lazy(() =>
-  import("@/features/ai/components/custom-agent-header-actions").then(
+  import("@/features/ai/screens/custom-agent-header-actions").then(
     (module) => ({
       default: module.CustomAgentHeaderActions,
     }),
   ),
 )
 const CustomAgentShareHeaderAction = lazy(() =>
-  import("@/features/ai/components/custom-agent-header-actions").then(
+  import("@/features/ai/screens/custom-agent-header-actions").then(
     (module) => ({
       default: module.CustomAgentShareHeaderAction,
     }),

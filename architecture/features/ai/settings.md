@@ -2,7 +2,7 @@
 
 ## Interface
 
-[Settings routes](../../../apps/server/src/features/ai/settings/settings-routes.ts) resolve a SettingsActor from authenticated user, workspace and scope. Scope is personal or an agent profile identifier. Custom-agent routes require their feature configuration. [Shared contracts](../../../packages/features/src/ai-chat/settings-contract.ts) define definitions, drafts, versions and review state.
+[Settings routes](../../../apps/server/src/features/ai/settings/routes.ts) resolve a SettingsActor from authenticated user, workspace and scope. Scope is personal or an agent profile identifier. Custom-agent routes require their feature configuration. [Shared contracts](../../../packages/features/src/ai-chat/settings-contract.ts) define definitions, drafts, versions and review state.
 
 The [settings implementation](../../../apps/server/src/features/ai/settings/settings-service.ts) exposes readSettings, updateSettingsDraft, discardSettingsDraft, settingsVersions and publishSettings. Version-bearing mutations carry baseVersion and draftVersion. Conflict responses are part of the interface; callers must reload rather than overwrite silently.
 

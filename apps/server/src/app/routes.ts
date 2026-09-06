@@ -1,4 +1,4 @@
-import { aiSettingsRoutes } from "../features/ai/settings/settings-routes";
+import { aiSettingsRoutes } from "../features/ai/settings/routes";
 import type { Hono } from "hono";
 
 import { aiAgentProfileRoutes, aiAgentWebhookRoutes, aiMcpRoutes, aiRoutes, aiThreadRoutes } from "../features/ai/routes";

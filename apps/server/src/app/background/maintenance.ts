@@ -4,7 +4,7 @@ import { cleanupExpiredAiAgentData } from "../../features/ai/actions/agent-opera
 import { AI_JOB_HANDLERS } from "../../features/ai/jobs/ai-job-handlers";
 import { runAiJobBatch } from "../../features/ai/jobs/ai-jobs";
 import { enqueueDueAgentSchedules } from "../../features/ai/agents/agent-trigger-service";
-import { drainAgentRuns, expireAgentRunApprovals } from "../../features/ai/agents/agent-run-service";
+import { drainAgentRuns, expireAgentRunApprovals } from "../../features/ai/execution/agent-run-service";
 import { drainDatabaseAutomationEventWindows } from "../../features/databases/automations/triggers/event-evaluator";
 import { cleanupDatabaseAutomationHistory } from "../../features/databases/automations/history/history-maintenance";
 import { drainDatabaseAutomationRuns } from "../../features/databases/automations/execution/run-engine";

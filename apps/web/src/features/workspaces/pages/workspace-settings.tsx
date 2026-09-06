@@ -1,4 +1,4 @@
-import { WorkspaceMcpPolicyPanel } from "@/features/ai/components/settings/workspace-mcp-policy";
+import { WorkspaceMcpPolicyPanel } from "@/features/ai/settings/components/workspace-mcp-policy";
 import * as React from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"

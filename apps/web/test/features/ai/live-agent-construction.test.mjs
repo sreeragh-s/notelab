@@ -3,7 +3,7 @@ import { readChatbotSource } from "./ai-chatbot-source.mjs"
 export function register({ assert, loadModule, readSource, test }) {
   test("pending assistant state stops once visible streamed output arrives", async () => {
     const { shouldShowPendingAssistant } = await loadModule(
-      "/src/features/ai/model/chat-message-visibility.ts",
+      "/src/features/ai/conversations/model/chat-message-visibility.ts",
     )
     const userMessage = {
       id: "user-1",
@@ -24,7 +24,7 @@ export function register({ assert, loadModule, readSource, test }) {
 
   test("streaming database progress can be the final message part", async () => {
     const toolTasks = await readSource(
-      "/src/features/ai/components/elements/agent-tool-task.tsx",
+      "/src/features/ai/conversations/components/elements/agent-tool-task.tsx",
     )
 
     assert.match(
@@ -43,13 +43,13 @@ export function register({ assert, loadModule, readSource, test }) {
       conversation,
       resourceBadges,
     ] = await Promise.all([
-      readSource("/src/features/ai/cache/use-agent-live-effects.ts"),
-      readSource("/src/features/ai/components/elements/agent-live-debugger.tsx"),
+      readSource("/src/features/ai/conversations/effects/use-agent-live-effects.ts"),
+      readSource("/src/features/ai/conversations/components/elements/agent-live-debugger.tsx"),
       readChatbotSource(readSource),
-      readSource("/src/features/ai/components/elements/database-tool-steps.tsx"),
-      readSource("/src/features/ai/components/elements/agent-tool-task.tsx"),
-      readSource("/src/features/ai/conversation/use-agent-conversation.ts"),
-      readSource("/src/features/ai/components/elements/agent-resource-badges.tsx"),
+      readSource("/src/features/ai/conversations/components/elements/database-tool-steps.tsx"),
+      readSource("/src/features/ai/conversations/components/elements/agent-tool-task.tsx"),
+      readSource("/src/features/ai/conversations/use-agent-conversation.ts"),
+      readSource("/src/features/ai/conversations/components/elements/agent-resource-badges.tsx"),
     ])
 
     for (const effectKind of ["page-upsert", "database-seed", "nav-delta"]) {

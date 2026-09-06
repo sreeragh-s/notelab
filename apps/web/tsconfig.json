@@ -13,7 +13,7 @@
     "ignoreDeprecations": "6.0",
     "paths": {
       "@zilobase/ai-conversation-adapter": [
-        "./src/features/ai/conversation/use-agent-conversation.ts"
+        "./src/features/ai/conversations/use-agent-conversation.ts"
       ],
       "@zilobase/edition-web": ["./src/app/edition/community.tsx"],
       "@/*": ["./src/*"],

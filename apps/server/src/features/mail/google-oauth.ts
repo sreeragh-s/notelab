@@ -1,4 +1,4 @@
-import { safeAgentReturnPath } from "../ai/mcp/oauth-return";
+import { safeAgentReturnPath } from "../ai/mcp/connections/oauth-return";
 import { and, eq, gt, isNull } from "drizzle-orm"
 
 import { db, runWithDbEnv } from "../../infrastructure/database"

@@ -9,8 +9,8 @@ import {
   DesktopTabs,
   getDesktopTabTitle,
 } from "@/features/desktop/components/index"
-import { ChatSidebarTrigger } from "@/features/ai/components/chat-sidebar-trigger"
-import type { ChatPresentationMode } from "@/features/ai/components/chat-sidebar"
+import { ChatSidebarTrigger } from "@/features/ai/conversations/components/chat-sidebar-trigger"
+import type { ChatPresentationMode } from "@/features/ai/conversations/components/chat-sidebar"
 import {
   usePageSidePaneState,
   PageSidePaneContext,
@@ -80,7 +80,7 @@ const SettingsDialogSurface = lazy(() =>
   })),
 )
 const ChatSidebarPanel = lazy(() =>
-  import("@/features/ai/components/chat-sidebar").then((module) => ({
+  import("@/features/ai/conversations/components/chat-sidebar").then((module) => ({
     default: module.ChatSidebarPanel,
   })),
 )

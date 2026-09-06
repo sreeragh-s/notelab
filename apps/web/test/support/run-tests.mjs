@@ -127,7 +127,7 @@ function aliasPlugin() {
         () => ({
           path: join(
             srcDir,
-            "features/ai/conversation/use-agent-conversation.ts"
+            "features/ai/conversations/use-agent-conversation.ts"
           ),
         })
       )

@@ -659,23 +659,23 @@
   // Retain complete composable component APIs and namespaced public query types.
   "ignoreExports": [
     {
-      "file": "apps/web/src/features/ai/components/elements/code-block.tsx",
+      "file": "apps/web/src/features/ai/conversations/components/elements/code-block.tsx",
       "exports": ["CodeBlockHeader", "CodeBlockTitle", "CodeBlockFilename", "CodeBlockActions", "CodeBlock", "CodeBlockCopyButton", "CodeBlockLanguageSelector", "CodeBlockLanguageSelectorTrigger", "CodeBlockLanguageSelectorValue", "CodeBlockLanguageSelectorContent", "CodeBlockLanguageSelectorItem"]
     },
     {
-      "file": "apps/web/src/features/ai/components/elements/conversation.tsx",
+      "file": "apps/web/src/features/ai/conversations/components/elements/conversation.tsx",
       "exports": ["ConversationEmptyState", "ConversationScrollButton", "ConversationDownload"]
     },
     {
-      "file": "apps/web/src/features/ai/components/elements/message.tsx",
+      "file": "apps/web/src/features/ai/conversations/components/elements/message.tsx",
       "exports": ["MessageActions", "MessageAction", "MessageBranch", "MessageBranchContent", "MessageBranchSelector", "MessageBranchPrevious", "MessageBranchNext", "MessageBranchPage", "MessageToolbar"]
     },
     {
-      "file": "apps/web/src/features/ai/components/elements/model-selector.tsx",
+      "file": "apps/web/src/features/ai/conversations/components/elements/model-selector.tsx",
       "exports": ["ModelSelectorDialog", "ModelSelectorShortcut", "ModelSelectorSeparator"]
     },
     {
-      "file": "apps/web/src/features/ai/components/elements/prompt-input.tsx",
+      "file": "apps/web/src/features/ai/conversations/components/elements/prompt-input.tsx",
       "exports": ["usePromptInputController", "useProviderAttachments", "PromptInputProvider", "usePromptInputReferencedSources", "PromptInputActionAddAttachments", "PromptInputActionAddScreenshot", "PromptInputBody", "PromptInputHeader", "PromptInputActionMenu", "PromptInputActionMenuTrigger", "PromptInputActionMenuContent", "PromptInputActionMenuItem", "PromptInputSelect", "PromptInputSelectTrigger", "PromptInputSelectContent", "PromptInputSelectItem", "PromptInputSelectValue", "PromptInputHoverCard", "PromptInputHoverCardTrigger", "PromptInputHoverCardContent", "PromptInputTabsList", "PromptInputTab", "PromptInputTabLabel", "PromptInputTabBody", "PromptInputTabItem"]
     },
     {

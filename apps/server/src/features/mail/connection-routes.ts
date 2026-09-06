@@ -1,5 +1,5 @@
 import { gmailChatReturnPath } from "./google-oauth";
-import { mcpOAuthReturnUrl } from "../ai/mcp/oauth-return";
+import { mcpOAuthReturnUrl } from "../ai/mcp/connections/oauth-return";
 import { and, count, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db, runWithDbEnv } from "../../infrastructure/database";

@@ -14,7 +14,7 @@ import {
   canAccessDatabaseInWorkspace,
 } from "../../access";
 import { authorizeSettings, type SettingsActor } from "./settings-service";
-import { MCP_SERVER_CATALOG } from "../mcp/catalog";
+import { MCP_SERVER_CATALOG } from "../mcp/connections/catalog";
 import { activeMembershipCondition } from "../../memberships";
 
 /** Names and identifiers only; instruction editing never implicitly reads resource content. */

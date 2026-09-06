@@ -18,7 +18,7 @@ vi.mock("../../infrastructure/background/telemetry", () => ({
 }));
 vi.mock("../../features/ai/jobs/ai-job-handlers", () => ({ AI_JOB_HANDLERS: {} }));
 vi.mock("../../features/ai/jobs/ai-jobs", () => ({ runAiJobById: vi.fn() }));
-vi.mock("../../features/ai/agents/agent-run-service", () => ({ processAgentRun: vi.fn() }));
+vi.mock("../../features/ai/execution/agent-run-service", () => ({ processAgentRun: vi.fn() }));
 vi.mock("../../features/databases/automations/triggers/event-evaluator", () => ({ processDatabaseAutomationEventWindow: vi.fn() }));
 vi.mock("../../features/databases/automations/execution/run-engine", () => ({ processDatabaseAutomationRun: vi.fn() }));
 vi.mock("../../features/mail/mail-index", () => ({ advanceMailIndex: fake.advance, publishMailIndexUpdate: fake.publish }));

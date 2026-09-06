@@ -3,7 +3,7 @@ import { readChatbotSource } from "./ai-chatbot-source.mjs"
 export function register({ readSource, assert, loadModule, test }) {
   test("AI page citations resolve only local page and database routes", async () => {
     const { getAgentCitationSidePaneTarget } = await loadModule(
-      "/src/features/ai/components/elements/agent-citation-navigation.ts"
+      "/src/features/ai/conversations/components/elements/agent-citation-navigation.ts"
     )
 
     assert.deepEqual(
@@ -40,11 +40,11 @@ export function register({ readSource, assert, loadModule, test }) {
   test("AI resource badges use the shared side-pane controller and renderers", async () => {
     const chatbotSource = await readChatbotSource(readSource)
     const badgeSource = await readSource(
-      "/src/features/ai/components/elements/agent-resource-badges.tsx"
+      "/src/features/ai/conversations/components/elements/agent-resource-badges.tsx"
     )
-    const aiPageSource = await readSource("/src/features/ai/pages/ai.tsx")
+    const aiPageSource = await readSource("/src/features/ai/screens/ai.tsx")
     const workspaceSource = await readSource(
-      "/src/features/ai/components/agent-chat-workspace.tsx"
+      "/src/features/ai/conversations/components/agent-chat-workspace.tsx"
     )
 
     assert.match(badgeSource, /sidePane\.openSidePane\(sidePaneTarget\.id\)/)

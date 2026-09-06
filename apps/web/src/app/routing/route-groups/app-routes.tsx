@@ -8,12 +8,12 @@ export const appRoutes = [
     getParentRoute: () => appRoute,
     path: "/ai",
     validateSearch: validateAiSearch,
-    component: lazyRouteComponent(() => import("@/features/ai/pages/ai")),
+    component: lazyRouteComponent(() => import("@/features/ai/screens/ai")),
   }),
   createRoute({
     getParentRoute: () => appRoute,
     path: "/agents/$agentId",
-    component: lazyRouteComponent(() => import("@/features/ai/pages/custom-agent")),
+    component: lazyRouteComponent(() => import("@/features/ai/screens/custom-agent")),
   }),
   createRoute({
     getParentRoute: () => appRoute,

@@ -28,3 +28,17 @@ Streaming work, draft flushing, tool approvals and queued runs have different li
 Start with [the existing tests or model](../../../apps/server/src/features/ai) and the adjacent tests in the owning modules. Exercise observable outcomes through the owning interface; a source assertion alone does not establish runtime behavior. Run the affected workspace scripts described in [testing and quality](../../setup/testing-and-quality.md).
 
 Update this guide when ownership, interfaces, authorization, persistence or cross-module flows change. [Architecture index](../../README.md).
+
+## Capability map
+
+| Capability | Browser owner | Server owner |
+|---|---|---|
+| Conversation state and presentation | [conversations](../../../apps/web/src/features/ai/conversations): adapters, thread state, models, live effects and components | [conversations](../../../apps/server/src/features/ai/conversations): chat/thread transport, persistence and agent conversation operations |
+| Settings | [settings](../../../apps/web/src/features/ai/settings): draft state and settings components | [settings](../../../apps/server/src/features/ai/settings): actor/context, instruction pages, drafts and publication |
+| Agent profiles and durable runs | [screens](../../../apps/web/src/features/ai/screens) compose custom-agent navigation with settings/conversations | [agents](../../../apps/server/src/features/ai/agents) own profiles, revisions, resources and triggers; [execution](../../../apps/server/src/features/ai/execution) owns run queue, records, leases, checkpoints and native run-tool composition |
+| Context and files | [context](../../../apps/web/src/features/ai/context) derives page context; [files](../../../apps/web/src/features/ai/files) handles uploads and prompt attachments | [context](../../../apps/server/src/features/ai/context) composes page/database/agent context and system instructions; [files](../../../apps/server/src/features/ai/files) owns file transport, storage and extraction |
+| Tools and background work | Conversation elements present tool calls, approvals and results | [tools](../../../apps/server/src/features/ai/tools) and [actions](../../../apps/server/src/features/ai/actions) implement operations/approval contracts; [jobs](../../../apps/server/src/features/ai/jobs) owns queued work, including thread summaries |
+
+MCP is grouped into [connections](../../../apps/server/src/features/ai/mcp/connections) for configuration, credentials, OAuth, catalog and materialization; [execution](../../../apps/server/src/features/ai/mcp/execution) for tool binding, approval and run snapshots; and [transport](../../../apps/server/src/features/ai/mcp/transport) for the client, errors and secure egress. The scope policy stays at the MCP capability root because connection and execution paths both use it. HTTP composition enters through `mcp/routes.ts`.
+
+The [web interface](../../../apps/web/src/features/ai/index.ts) retains `useAiChatThreadState`; routing enters screens explicitly. Existing conversation element interfaces remain intact, including reusable UI primitives. The shared package name and `ai-chat` subpaths remain stable. Vite adapter selection and the web harness resolve the new conversation location explicitly. No HTTP path, SDK tool name, queue kind, settings scope or stored representation changes as part of this grouping.

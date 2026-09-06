@@ -1,2 +1,2 @@
-export * from "./chat/chat-persistence";
-export * from "./chat/chat-service";
+export * from "./conversations/chat-persistence";
+export * from "./conversations/chat-service";

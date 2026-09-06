@@ -41,7 +41,7 @@ import {
   linkDatabaseInPageService,
 } from "../../pages/mutations";
 import { replacePageContent } from "../../collaboration/service";
-import type { AgentProgressPublisher } from "../chat/agent-progress";
+import type { AgentProgressPublisher } from "../conversations/agent-progress";
 import {
   AGENT_CREATABLE_DATABASE_PROPERTY_TYPES,
   AGENT_DATABASE_VIEW_TYPES,

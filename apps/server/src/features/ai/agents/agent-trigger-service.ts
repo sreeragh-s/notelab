@@ -23,7 +23,7 @@ import { encryptAutomationSecret } from "../../databases/automations/actions/sec
 import { computeNextAgentSchedule, normalizeAgentDefinition } from "./agent-definition";
 import { AgentProfileError, requireAgentProfileRole } from "./agent-profile-service";
 import { applyAgentDefinition, getCurrentAgentRevision } from "./agent-revision-service";
-import { enqueueAgentRun } from "./agent-run-queue";
+import { enqueueAgentRun } from "../execution/agent-run-queue";
 
 export async function listAgentTriggers(input: {
   profileId: string;
