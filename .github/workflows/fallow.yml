@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check architecture links and published exports
+        run: npm run test:architecture
+
       - name: Gate newly introduced findings
         if: github.event_name == 'pull_request'
         run: npm run quality:fallow -- --format github-annotations

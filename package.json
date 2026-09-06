@@ -57,7 +57,7 @@
     "test:packages": "npm test --workspace @zilobase/features && npm test --workspace @zilobase/page-context",
     "verify:core": "npm run tokens:check && npm run test:community-boundary && npm run typecheck && npm run test:packages && npm run test:web && npm run build:web && npm run test:server && npm run quality:fallow -- --summary",
     "verify:desktop": "cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml --check && cargo clippy --manifest-path apps/desktop/src-tauri/Cargo.toml --locked --all-targets -- -D warnings && cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --locked",
-    "verify:architecture": "npm run quality:fallow:full",
+    "verify:architecture": "npm run test:architecture && npm run quality:fallow:full",
     "verify": "npm run verify:core && npm run verify:desktop && npm run verify:architecture",
     "test:server": "npm run test:quality --workspace @zilobase/server",
     "db:migrate": "npm run db:migrate --workspace @zilobase/server",
@@ -75,7 +75,8 @@
     "mail:config:check": "dotenvx run --ignore=MISSING_ENV_FILE --quiet -- node scripts/mail/check-gmail-config.mjs",
     "env": "dotenvx",
     "release": "npm run tokens:check && npm run test:community-boundary && node scripts/release/release.mjs",
-    "version:set": "node scripts/release/set-version.mjs"
+    "version:set": "node scripts/release/set-version.mjs",
+    "test:architecture": "node --test scripts/refactor/check-architecture.test.mjs && node scripts/refactor/check-architecture.mjs"
   },
   "dependencies": {
     "@dotenvx/dotenvx": "1.75.1"
