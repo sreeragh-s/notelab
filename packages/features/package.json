@@ -126,7 +126,6 @@
       "types": "./src/teamspaces/index.ts",
       "default": "./src/teamspaces/index.ts"
     },
-
     "./search": {
       "types": "./src/search/index.ts",
       "default": "./src/search/index.ts"
@@ -162,6 +161,7 @@
     "./pages/queries": {
       "types": "./src/pages/queries.ts",
       "default": "./src/pages/queries.ts"
-    }
+    },
+    "./ai-chat/settings-contract": "./src/ai-chat/settings-contract.ts"
   }
 }
