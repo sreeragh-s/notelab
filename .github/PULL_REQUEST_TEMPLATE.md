@@ -2,6 +2,10 @@
 
 <!-- What changed and why? -->
 
+## Architecture
+
+<!-- Link the architecture/ feature, platform or setup guides updated, or explain why this change has no architecture impact. See AGENTS.md. -->
+
 ## Testing
 
 <!-- List the commands you ran and any manual testing performed. -->

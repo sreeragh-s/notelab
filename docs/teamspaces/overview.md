@@ -66,4 +66,4 @@ Recommended smoke test after deployment:
 5. Disable guest/public sharing and verify existing grants no longer bypass the ceiling.
 6. Change the default, archive and restore a non-default teamspace, and recover an ownerless teamspace.
 
-For implementation history and detailed acceptance criteria, see [implementation-plan.md](./implementation-plan.md).
+For current module ownership and source entrypoints, see the [architecture map](../../architecture/README.md).

@@ -101,5 +101,5 @@ deleted by this job.
 8. Monitor normalized failure codes, latency, daily token/upload usage, and the
    scheduled cleanup job.
 
-See the [capability parity audit](./ask-ai-parity-audit.md) for the exact product
-boundary presented to users and models.
+Follow the AI source links in the [architecture map](../../architecture/README.md)
+for current capability enforcement and its tests.

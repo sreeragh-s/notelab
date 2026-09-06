@@ -77,7 +77,7 @@ npm run test:selfhost
 - `packages/page-context`: canonical page/editor conversion and markdown helpers.
 - `packages/markdown-text-splitter`: standalone markdown splitting utilities.
 
-See `ARCHITECTURE.md` for a deeper walkthrough.
+See `architecture/README.md` for a deeper walkthrough.
 
 ## Issues
 

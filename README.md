@@ -98,8 +98,7 @@ file uploads, and create expiring downloadable artifacts. The same conversation
 works in full-page chat and in a persisted docked or floating desktop panel.
 
 Permissions and tool availability are resolved on the server. See the
-[implementation plan](./docs/ai/ask-ai-agent-plan.md),
-[capability parity audit](./docs/ai/ask-ai-parity-audit.md), and
+[architecture map](./architecture/README.md) and
 [operations guide](./docs/ai/ask-ai-operations.md).
 
 ## Development
@@ -189,7 +188,7 @@ zilobase/
 `-- docker-compose.yml
 ```
 
-For a deeper system walkthrough, read [ARCHITECTURE.md](./ARCHITECTURE.md).
+For a deeper system walkthrough, read [architecture/README.md](./architecture/README.md).
 
 ## Deployment Model
 
