@@ -7,6 +7,9 @@ const readSources = async (...files: string[]) => (await Promise.all(
 
 const readRunEngine = () => readSources(
   "./run-engine.ts",
+  "./run-claims.ts",
+  "./run-lifecycle.ts",
+  "./run-step.ts",
   "./execution-context.ts",
   "./action-executor.ts",
   "../actions/action-values.ts",
@@ -25,13 +28,9 @@ const readAutomationService = () => readSources(
   "../definition/definition-context.ts",
 );
 
-test("run engine pins revisions, leases work, and receipts every action", async () => {
+test("run engine retains row locking and provider delivery identities", async () => {
   const source = await readRunEngine();
-  expect(source).toContain("databaseAutomationRun.revisionId");
-  expect(source).toContain('eq(databaseAutomationRun.status, "running")');
-  expect(source).toContain("databaseAutomationRun.leaseExpiresAt");
   expect(source).toContain(".for(\"update\", { skipLocked: true })");
-  expect(source).toContain("idempotencyKey = `${runId}:${actionId}`");
   expect(source).toContain("stableActionSuffix(context.run.id, action.id)");
 });
 

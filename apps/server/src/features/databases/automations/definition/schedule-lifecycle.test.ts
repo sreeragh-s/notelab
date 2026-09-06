@@ -6,7 +6,7 @@ test("schedule lifecycle materializes and clears nextRunAt at every state bounda
     Promise.all(["definition-lifecycle.ts", "definition-catalog.ts", "definition-context.ts"].map((name) =>
       readFile(new URL(`./${name}`, import.meta.url), "utf8")
     )).then((sources) => sources.join("\n")),
-    readFile(new URL("../execution/run-engine.ts", import.meta.url), "utf8"),
+    readFile(new URL("../execution/run-lifecycle.ts", import.meta.url), "utf8"),
   ]);
   expect(service).toContain("nextScheduleRunAt(compilation.definition!, now)");
   expect(service).toContain("nextScheduleRunAt(current.definition, now)");

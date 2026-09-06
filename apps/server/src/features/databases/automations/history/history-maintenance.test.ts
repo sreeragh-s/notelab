@@ -26,7 +26,7 @@ describe("database automation operations", () => {
   });
 
   it("serializes workspace claims and recovers expired leases", async () => {
-    const source = await readFile(new URL("../execution/run-engine.ts", import.meta.url), "utf8");
+    const source = (await Promise.all(["../execution/run-engine.ts", "../execution/run-claims.ts"].map(path => readFile(new URL(path, import.meta.url), "utf8")))).join("\n");
     expect(source).toContain("pg_advisory_xact_lock");
     expect(source).toContain("gt(databaseAutomationRun.leaseExpiresAt, now)");
     expect(source).toContain("lte(databaseAutomationRun.leaseExpiresAt, now)");

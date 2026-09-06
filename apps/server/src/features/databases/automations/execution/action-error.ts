@@ -41,3 +41,7 @@ export function actionFailure(error: unknown, actionId: string | null = null) {
     actionId,
   );
 }
+
+export function isAutomationLeaseLost(error: unknown) {
+  return error instanceof AutomationActionError && error.code === "AUTOMATION_LEASE_LOST";
+}
