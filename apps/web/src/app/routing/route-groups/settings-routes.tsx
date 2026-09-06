@@ -32,7 +32,7 @@ export const settingsRoutes = [
   createRoute({
     getParentRoute: () => appRoute,
     path: "/settings/workspace",
-    component: lazyRouteComponent(() => import("@/features/workspaces/pages/workspace-settings")),
+    component: lazyRouteComponent(() => import("../../shell/content/workspace-settings")),
   }),
   createRoute({
     getParentRoute: () => appRoute,
@@ -43,13 +43,13 @@ export const settingsRoutes = [
     getParentRoute: () => appRoute,
     path: "/settings/team",
     validateSearch: validateTeamSettingsSearch,
-    component: lazyRouteComponent(() => import("@/features/teamspaces/pages/team")),
+    component: lazyRouteComponent(() => import("@/features/workspaces/screens/workspace-members")),
   }),
   createRoute({
     getParentRoute: () => appRoute,
     path: "/settings/teamspaces",
     validateSearch: validateTeamspaceSettingsSearch,
-    component: lazyRouteComponent(() => import("@/features/teamspaces/pages/teamspaces")),
+    component: lazyRouteComponent(() => import("@/features/teamspaces/screens/teamspaces")),
   }),
   createRoute({
     getParentRoute: () => appRoute,

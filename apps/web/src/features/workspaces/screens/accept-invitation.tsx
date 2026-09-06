@@ -1,61 +1,61 @@
-import { Link, useNavigate } from "@tanstack/react-router"
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   AlertCircleIcon,
   CheckCircle2Icon,
   MailCheckIcon,
   SendIcon,
-} from "@/shared/components/icons"
+} from "@/shared/components/icons";
 
-import { Button } from "@/shared/ui/button"
+import { Button } from "@/shared/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/shared/ui/card"
+} from "@/shared/ui/card";
 import {
   Field,
   FieldDescription,
   FieldError,
   FieldGroup,
-} from "@/shared/ui/field"
-import { Spinner } from "@/shared/ui/spinner"
+} from "@/shared/ui/field";
+import { Spinner } from "@/shared/ui/spinner";
 import { useSession } from "@zilobase/features/auth/react";
 import { useAcceptWorkspaceInvitation } from "@zilobase/features/workspaces/react";
-import { getApiErrorMessage } from "@/platform/network/api"
-import { readSingleInvitationId } from "../lib/invitation-link"
+import { getApiErrorMessage } from "@/platform/network/api";
+import { readSingleInvitationId } from "../invitations/invitation-link";
 
 export default function AcceptInvitationPage() {
-  const navigate = useNavigate()
-  const invitationId = readSingleInvitationId(window.location.search)
-  const { data: session, isLoading: isLoadingSession } = useSession()
-  const acceptInvitation = useAcceptWorkspaceInvitation()
-  const isSignedIn = Boolean(session?.user)
-  const hasAccepted = acceptInvitation.isSuccess
+  const navigate = useNavigate();
+  const invitationId = readSingleInvitationId(window.location.search);
+  const { data: session, isLoading: isLoadingSession } = useSession();
+  const acceptInvitation = useAcceptWorkspaceInvitation();
+  const isSignedIn = Boolean(session?.user);
+  const hasAccepted = acceptInvitation.isSuccess;
 
   const accept = () => {
     if (!invitationId) {
-      return
+      return;
     }
 
-    acceptInvitation.mutate(invitationId)
-  }
+    acceptInvitation.mutate(invitationId);
+  };
 
   const signIn = () => {
-    const returnTo = `${window.location.pathname}${window.location.search}`
+    const returnTo = `${window.location.pathname}${window.location.search}`;
     void navigate({
       to: "/login",
       search: { returnTo },
-    })
-  }
+    });
+  };
 
   const createAccountSearch = invitationId
     ? {
         invitation: invitationId,
         returnTo: `${window.location.pathname}${window.location.search}`,
       }
-    : {}
+    : {};
 
   return (
     <main className="flex min-h-svh items-center justify-center bg-surface-canvas p-6">
@@ -90,7 +90,9 @@ export default function AcceptInvitationPage() {
 
             {acceptInvitation.isError ? (
               <Field>
-                <FieldError>{getApiErrorMessage(acceptInvitation.error)}</FieldError>
+                <FieldError>
+                  {getApiErrorMessage(acceptInvitation.error)}
+                </FieldError>
               </Field>
             ) : null}
 
@@ -137,15 +139,15 @@ export default function AcceptInvitationPage() {
         </CardContent>
       </Card>
     </main>
-  )
+  );
 }
 
 function getTitle(hasAccepted: boolean, isSignedIn: boolean) {
   if (hasAccepted) {
-    return "Invitation accepted"
+    return "Invitation accepted";
   }
 
-  return isSignedIn ? "Accept invitation" : "Sign in to accept"
+  return isSignedIn ? "Accept invitation" : "Sign in to accept";
 }
 
 function getDescription({
@@ -154,24 +156,24 @@ function getDescription({
   isSignedIn,
   userEmail,
 }: {
-  hasAccepted: boolean
-  hasInvitationId: boolean
-  isSignedIn: boolean
-  userEmail?: string
+  hasAccepted: boolean;
+  hasInvitationId: boolean;
+  isSignedIn: boolean;
+  userEmail?: string;
 }) {
   if (!hasInvitationId) {
-    return "This invitation link is incomplete."
+    return "This invitation link is incomplete.";
   }
 
   if (hasAccepted) {
-    return "You have joined the workspace."
+    return "You have joined the workspace.";
   }
 
   if (isSignedIn) {
     return userEmail
       ? `Continue as ${userEmail}.`
-      : "Continue with your current account."
+      : "Continue with your current account.";
   }
 
-  return "Use the email address that received the invitation."
+  return "Use the email address that received the invitation.";
 }

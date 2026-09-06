@@ -8,7 +8,7 @@
 
 The [library screen](../../../apps/web/src/features/library/screens/recents.tsx) composes the home/trash queries, active view settings, creation commands and page/database side panes. The [library model](../../../apps/web/src/features/library/model/library-model.ts) converts authorized page/database/meeting/agent results into library rows and a synthetic database payload. It owns source summaries, hierarchy placement, view filtering and teamspace row ordering. These values do not create a second persisted content store.
 
-The [teamspace directory](../../../apps/web/src/features/library/components/teamspace-library-table.tsx) owns expansion and table rendering. The [creation dialog](../../../apps/web/src/features/library/components/create-library-teamspace-dialog.tsx) owns its draft and teamspace mutation feedback. Pure models use the sidebar's [model entrypoint](../../../apps/web/src/features/sidebar/model/index.ts) for view labels and the shared database appearance entrypoint for stored icons; React icons are attached by the screen.
+The [teamspace directory](../../../apps/web/src/features/library/components/teamspace-library-table.tsx) owns expansion and table rendering. The shared teamspace [creation dialog](../../../apps/web/src/features/teamspaces/creation/index.ts) owns its draft and teamspace mutation feedback. Pure models use the sidebar's [model entrypoint](../../../apps/web/src/features/sidebar/model/index.ts) for view labels and the shared database appearance entrypoint for stored icons; React icons are attached by the screen.
 
 ## Authorization and persistence
 

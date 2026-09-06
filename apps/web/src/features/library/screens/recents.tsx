@@ -1,6 +1,6 @@
 import { buildHomepagePayload, buildHomepageRows, isHomepageView, homepageViews as libraryViews, type RecentsMode } from "../model/library-model";
 import { TeamspacesLibraryTable } from "../components/teamspace-library-table";
-import { CreateLibraryTeamspaceDialog } from "../components/create-library-teamspace-dialog";
+import { CreateTeamspaceDialog as CreateLibraryTeamspaceDialog } from "@/features/teamspaces/creation/index";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { BotIcon, ChevronDown, Database, FileText, Loader2, Plus } from "@/shared/components/icons";
@@ -603,7 +603,7 @@ export default function RecentsPage({
         renderedSidePanePageId || renderedSidePaneDatabaseId,
       )}
     />
-    <CreateLibraryTeamspaceDialog
+    <CreateLibraryTeamspaceDialog idPrefix="library-teamspace"
       onOpenChange={setCreateTeamspaceOpen}
       open={createTeamspaceOpen}
       workspaceId={workspaceId}

@@ -8,7 +8,9 @@
 
 ## Main flow
 
-Workspace queries and hooks support workspace selection and invitations. Server routes integrate the authenticated principal with workspace settings and navigation invalidation. App providers coordinate active-workspace selection with authentication.
+Workspace queries and hooks support workspace selection and invitations. The [membership screen](../../../apps/web/src/features/workspaces/screens/workspace-members.tsx) owns the `/settings/team` tabs, with [member commands](../../../apps/web/src/features/workspaces/members/commands) separating invitation/editing state and mutation feedback from member rendering. [Access rules](../../../apps/web/src/features/workspaces/members/model/member-access.ts) preserve temporary-expiration conversion and owner-editing restrictions. [Guest administration](../../../apps/web/src/features/workspaces/guests/components/workspace-guests.tsx) distinguishes page guests from workspace membership and keeps promotion and invitation policy explicit.
+
+The [workspace settings screen](../../../apps/web/src/features/workspaces/screens/workspace-settings.tsx) composes details, mail, import and deletion sections under [settings](../../../apps/web/src/features/workspaces/settings). Form and connection commands own their validation and lifecycle; the [app settings composition](../../../apps/web/src/app/shell/content/workspace-settings.tsx) supplies AI policy presentation for both routes and panes. [Invitation acceptance](../../../apps/web/src/features/workspaces/screens/accept-invitation.tsx) keeps authentication and workspace selection ordering. Pinned instance owners see [registration settings](../../../apps/web/src/features/workspaces/settings/registration-settings.tsx) in membership administration. Server routes integrate the authenticated principal with workspace settings and navigation invalidation. App providers coordinate active-workspace selection with authentication.
 
 ## Authorization and persistence
 
@@ -16,10 +18,10 @@ Workspace and membership records anchor feature ownership. Active-workspace chec
 
 ## Side effects, failures and recovery
 
-Workspace changes invalidate navigation and client queries. Invitation links cross authentication and routing. Follow navigation-realtime outbox behavior when changing hierarchy or membership side effects.
+Workspace changes invalidate navigation and client queries. Invitation links cross authentication and routing. Temporary invitation deadlines use local input converted to ISO; changing to a permanent role clears the submitted deadline. Member removal retains explicit confirmation. Failed settings mutations preserve the draft and expose the server error. Mail disconnection revokes the connection before deleting the cache scoped by API origin, binding, connection, user and workspace, then refreshes connection state. Native OAuth opens through the existing command; browser OAuth redirects. Follow navigation-realtime outbox behavior when changing hierarchy or membership side effects.
 
 ## Verification and change points
 
-Start with [the existing tests or model](../../../packages/features/src/workspaces/active-workspace.test.ts) and the adjacent tests in the owning modules. Exercise observable outcomes through the owning interface; a source assertion alone does not establish runtime behavior. Run the affected workspace scripts described in [testing and quality](../../setup/testing-and-quality.md).
+[Member command tests](../../../apps/web/test/features/workspaces/member-commands.test.mjs) and [settings command tests](../../../apps/web/test/features/workspaces/settings-commands.test.mjs) exercise actual React hooks with controlled mutations and transport. SSR exercises render state and commands; it does not establish mounted effect timing or browser focus behavior. Start with [the existing tests or model](../../../packages/features/src/workspaces/active-workspace.test.ts) and the adjacent tests in the owning modules. Exercise observable outcomes through the owning interface; a source assertion alone does not establish runtime behavior. Run the affected workspace scripts described in [testing and quality](../../setup/testing-and-quality.md).
 
 Update this guide when ownership, interfaces, authorization, persistence or cross-module flows change. [Architecture index](../../README.md).

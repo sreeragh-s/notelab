@@ -6,7 +6,7 @@
 
 ## Main flow
 
-[Membership grants](../../../apps/server/src/features/memberships/membership-grants.ts) implements the existing MembershipService interface, including transactional creation, concurrent-grant recovery, edition integration and default teamspace membership. The temporary-membership module supplies active membership conditions and expiry behavior reused by access and guest workflows.
+[Membership grants](../../../apps/server/src/features/memberships/membership-grants.ts) implements the existing MembershipService interface, including transactional creation, concurrent-grant recovery, edition integration and default teamspace membership. The temporary-membership module supplies active membership conditions and expiry behavior reused by access and guest workflows. Contributor-facing membership administration is owned by the [workspace member commands and presentation](../workspaces/README.md), including invitation deadlines and owner-editing restrictions; teamspace principals remain a distinct capability.
 
 ## Authorization and persistence
 

@@ -6,7 +6,7 @@ const DAY_IN_MS = 24 * 60 * MINUTE_IN_MS;
 export function register({ readSource, assert, loadModule, test }) {
   test("temporary access date helpers round-trip local date-time values", async () => {
     const { isoToLocalDateTime, localDateTimeToIso } = await loadModule(
-      "/src/features/teamspaces/model/team-access.ts",
+      "/src/features/workspaces/members/model/member-access.ts",
     );
     const iso = "2030-04-05T12:34:00.000Z";
 
@@ -22,7 +22,7 @@ export function register({ readSource, assert, loadModule, test }) {
       getMaximumTemporaryExpiration,
       getMinimumTemporaryExpiration,
       localDateTimeToIso,
-    } = await loadModule("/src/features/teamspaces/model/team-access.ts");
+    } = await loadModule("/src/features/workspaces/members/model/member-access.ts");
     const now = Date.parse("2030-01-01T10:00:00.000Z");
     const toTimestamp = (value) => Date.parse(localDateTimeToIso(value));
 
@@ -33,7 +33,7 @@ export function register({ readSource, assert, loadModule, test }) {
 
   test("workspace role normalization recognizes temporary access", async () => {
     const { normalizeWorkspaceRole } = await loadModule(
-      "/src/features/teamspaces/model/team-access.ts",
+      "/src/features/workspaces/members/model/member-access.ts",
     );
 
     assert.equal(normalizeWorkspaceRole("temporary"), "temporary");
@@ -43,7 +43,7 @@ export function register({ readSource, assert, loadModule, test }) {
 
   test("team settings tabs normalize deep links", async () => {
     const { normalizeTeamSettingsTab } = await loadModule(
-      "/src/features/teamspaces/model/team-settings-tabs.ts",
+      "/src/features/workspaces/members/model/member-settings-tabs.ts",
     );
 
     assert.equal(normalizeTeamSettingsTab("team"), "team");
@@ -53,7 +53,7 @@ export function register({ readSource, assert, loadModule, test }) {
   });
 
   test("team settings can open from the settings dialog on any route", async () => {
-    const source = await readSource("/src/features/teamspaces/pages/team.tsx");
+    const source = await readSource("/src/features/workspaces/screens/workspace-members.tsx");
 
     assert.match(source, /useSearch\(\{\s*strict: false,/);
     assert.match(source, /normalizeTeamSettingsTab\(search\.tab\)/);
@@ -62,7 +62,7 @@ export function register({ readSource, assert, loadModule, test }) {
 
   test("team settings tab counts include pending work", async () => {
     const { getTeamSettingsTabCounts } = await loadModule(
-      "/src/features/teamspaces/model/team-settings-tabs.ts",
+      "/src/features/workspaces/members/model/member-settings-tabs.ts",
     );
 
     assert.deepEqual(
@@ -75,4 +75,26 @@ export function register({ readSource, assert, loadModule, test }) {
       { guests: 5, team: 5 },
     );
   });
+  test("membership editing respects owner roles and workspace selection", async () => {
+    const { canEditWorkspaceMember } = await loadModule("/src/features/workspaces/members/model/member-access.ts");
+    const input = { actorRole: "admin", canManage: true, memberRole: "member", workspaceId: "workspace" };
+    assert.equal(canEditWorkspaceMember(input), true);
+    assert.equal(canEditWorkspaceMember({ ...input, memberRole: "owner" }), false);
+    assert.equal(canEditWorkspaceMember({ ...input, memberRole: "owner", actorRole: "owner" }), true);
+    assert.equal(canEditWorkspaceMember({ ...input, canManage: false }), false);
+    assert.equal(canEditWorkspaceMember({ ...input, workspaceId: null }), false);
+  });
+
+  test("temporary membership drafts preserve existing deadlines and clear permanent roles", async () => {
+    const { getRoleDraftExpiration, getRoleAccessExpiration, localDateTimeToIso, isValidInvitationEmail } = await loadModule("/src/features/workspaces/members/model/member-access.ts");
+    const expiration = "2030-04-05T12:34";
+    assert.equal(getRoleDraftExpiration("temporary", expiration), expiration);
+    assert.equal(getRoleDraftExpiration("member", expiration), "");
+    assert.equal(getRoleAccessExpiration("temporary", expiration), localDateTimeToIso(expiration));
+    assert.equal(getRoleAccessExpiration("admin", expiration), null);
+    assert.equal(getRoleAccessExpiration("temporary", "invalid"), null);
+    assert.equal(isValidInvitationEmail("member@example.test"), true);
+    assert.equal(isValidInvitationEmail("not an email"), false);
+  });
+
 }

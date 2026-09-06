@@ -7,8 +7,9 @@ import {
   SecuritySettingsPage,
   type SettingsSection,
 } from "@/features/settings"
-import { TeamSettingsPage, TeamspacesSettingsPage } from "@/features/teamspaces"
-import { WorkspaceSettingsPage } from "@/features/workspaces"
+import { TeamspacesSettingsPage } from "@/features/teamspaces"
+import { TeamSettingsPage } from "@/features/workspaces"
+import WorkspaceSettingsPage from "./workspace-settings"
 
 export function SettingsSectionContent({ section }: { section: SettingsSection }) {
   const editionSection = editionWebModule.settingsSections.find((candidate) => candidate.id === section)

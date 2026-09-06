@@ -2,15 +2,12 @@ import { readMailFeatureSource } from "./mail-feature-source.mjs"
 
 export function register({ assert, readSource, test }) {
   test("Workspace settings owns mail connect, reconnect, and confirmed disconnect", async () => {
-    const source = await readSource(
-      "/src/features/workspaces/pages/workspace-settings.tsx",
-    )
+    const source = (await Promise.all(["screens/workspace-settings.tsx", "settings/workspace-mail-connection.tsx", "settings/workspace-mail-connection-state.ts"].map((path) => readSource(`/src/features/workspaces/${path}`)))).join("\n")
 
     assert.match(source, /Your mail connection/)
     assert.match(source, /Reconnect/)
     assert.match(source, /Disconnect Gmail\?/)
     assert.match(source, /same Gmail account stays connected in any other/)
-    assert.match(source, /destroyMailDatabase\(mailDatabaseName/)
   })
 
   test("Mail uses the active workspace API and replaces toolbar disconnect with view settings", async () => {

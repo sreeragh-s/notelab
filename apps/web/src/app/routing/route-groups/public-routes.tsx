@@ -128,7 +128,7 @@ export const publicRoutes = [
     getParentRoute: () => rootRoute,
     path: "/accept-invitation",
     component: lazyRouteComponent(
-      () => import("@/features/workspaces/pages/accept-invitation"),
+      () => import("@/features/workspaces/screens/accept-invitation"),
     ),
   }),
   createRoute({

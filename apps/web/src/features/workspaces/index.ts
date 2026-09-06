@@ -1,3 +1,4 @@
-export { default as WorkspaceSettingsPage } from "./pages/workspace-settings";
+export { default as WorkspaceSettingsPage } from "./screens/workspace-settings";
 export { PageWorkspaceGate } from "./components/page-workspace-gate";
-export { readSingleInvitationId } from "./lib/invitation-link";
+export { readSingleInvitationId } from "./invitations/invitation-link";
+export { default as TeamSettingsPage } from "./screens/workspace-members";

@@ -19,7 +19,7 @@ export function register({ assert, readSource, readWorkspace, test }) {
 
   test("workspace settings exclusively owns connection removal", async () => {
     const [settings, page] = await Promise.all([
-      readSource("/src/features/workspaces/pages/workspace-settings.tsx"),
+      readSource("/src/features/workspaces/screens/workspace-settings.tsx"),
       readMailFeatureSource(readSource),
     ])
     assert.match(settings, /WorkspaceMailConnectionSection/)

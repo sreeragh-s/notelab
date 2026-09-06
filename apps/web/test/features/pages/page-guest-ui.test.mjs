@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 export function register({ readSource, assert, loadModule, test }) {
   test("invitation links require exactly one non-empty id", async () => {
     const { readSingleInvitationId } = await loadModule(
-      "/src/features/workspaces/lib/invitation-link.ts",
+      "/src/features/workspaces/invitations/invitation-link.ts",
     );
 
     assert.equal(readSingleInvitationId("?id=page-invite-1"), "page-invite-1");
@@ -16,7 +16,7 @@ export function register({ readSource, assert, loadModule, test }) {
     const [acceptance, shareMenu, teamSettings, pageShell, sharedHeader] = await Promise.all([
       readSource("/src/features/pages/screens/accept-page-invitation.tsx"),
       Promise.all([readSource("/src/features/sidebar/components/item-share-dropdown.tsx"), readSource("/src/features/sidebar/commands/use-item-sharing.ts")]).then(parts => parts.join("\n")),
-      readSource("/src/features/teamspaces/pages/team.tsx"),
+      Promise.all([readSource("/src/features/workspaces/screens/workspace-members.tsx"), readSource("/src/features/workspaces/guests/components/workspace-guests.tsx")]).then(parts => parts.join("\n")),
       readSource("/src/features/pages/screens/page.tsx"),
       readSource("/src/features/pages/publication/shared-page-header.tsx"),
     ]);

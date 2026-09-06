@@ -5,7 +5,7 @@ export function register({ readSource, assert, loadModule, test }) {
   const readLibrarySource = async () => (await Promise.all([
     readSource("/src/features/library/screens/recents.tsx"),
     readSource("/src/features/library/components/teamspace-library-table.tsx"),
-    readSource("/src/features/library/components/create-library-teamspace-dialog.tsx"),
+    readSource("/src/features/teamspaces/components/create-teamspace-dialog.tsx"),
   ])).join("\n")
   const readToolbarSource = async () =>
     (await Promise.all([
