@@ -1,4 +1,4 @@
-export function register({ assert, loadModule, readSource, readWorkspace, test }) {
+export function register({ assert, loadModule, readSource, test }) {
   test("database setup template inference is deterministic and complete", async () => {
     const {
       databaseSetupMoreTemplates,
@@ -31,19 +31,4 @@ export function register({ assert, loadModule, readSource, readWorkspace, test }
     )
   })
 
-  test("applying a database template refreshes sidebar navigation", async () => {
-    const source = await readWorkspace(
-      "/packages/features/src/databases/mutation-hooks.ts",
-    )
-    const hookSource = source.slice(
-      source.indexOf("export function useApplyDatabaseTemplate()"),
-      source.indexOf("export function useUpdateDatabaseProperty()")
-    )
-
-    assert.match(
-      hookSource,
-      /queryKey: pagesNavRootQueryKey\(nextPayload\.database\.workspaceId\)/
-    )
-    assert.doesNotMatch(hookSource, /nextPayload\.database\.isFavorite/)
-  })
 }

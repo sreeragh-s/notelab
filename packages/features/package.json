@@ -14,7 +14,8 @@
   "devDependencies": {
     "@tanstack/react-query": "^5.100.14",
     "@types/node": "^25.9.1",
-    "tsx": "^4.22.3"
+    "tsx": "^4.22.3",
+    "react-dom": "19.2.3"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.100.14",

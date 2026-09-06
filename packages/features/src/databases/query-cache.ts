@@ -98,3 +98,14 @@ export function setDatabasePayloadQueryData(
     )
   }
 }
+
+// Capture after cancellation so rollback restores the settled cache, including
+// every database surface currently displaying this data source.
+export async function applyOptimisticDataSourceMutation(
+  queryClient: QueryClient,
+  dataSourceId: string,
+  update: (payload: DatabasePayload) => DatabasePayload,
+) {
+  await cancelDataSourcePayloadQueries(queryClient, dataSourceId)
+  return updateDataSourcePayloadQueryData(queryClient, dataSourceId, update)
+}

@@ -25,6 +25,10 @@ Row/property changes can update realtime outboxes, automations and page navigati
 - [Database mutation and realtime flow](realtime.md)
 - [Database views and properties](views-and-properties.md)
 
+## Client mutation ownership
+
+Shared mutations are grouped into database lifecycle, data sources, views, properties/templates, access and rows. The [legacy mutation entrypoint](../../../packages/features/src/databases/mutation-hooks.ts) preserves public exports; React bindings select the operation modules directly. [Cache policy](../../../packages/features/src/databases/mutation-cache-policy.ts) owns confirmed response application and version-aware rollback. [Query cache](../../../packages/features/src/databases/query-cache.ts) cancels, snapshots and updates every surface showing a data source before row writes. Reorder, move and value mutations restore those snapshots on failure; they receive the active data-source ID even though the legacy input field is named databaseId. [Row-addition cache transactions](../../../packages/features/src/databases/add-row-transaction.ts) own source/target snapshots, optimistic transfer, confirmed response reconciliation and rollback; the hook owns HTTP and subsequent navigation refresh. Favorite and view rollbacks retain their different version/navigation policies.
+
 ## Verification and change points
 
 Start with [the existing tests or model](../../../apps/server/src/features/databases/database-routes.test.ts) and the adjacent tests in the owning modules. Exercise observable outcomes through the owning interface; a source assertion alone does not establish runtime behavior. Run the affected workspace scripts described in [testing and quality](../../setup/testing-and-quality.md).

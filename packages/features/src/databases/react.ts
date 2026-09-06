@@ -2,29 +2,39 @@ export {
   useUpsertDatabaseAccess,
   useDeleteDatabaseAccess,
   useSetDatabasePublished,
+} from "./access-mutations";
+export {
   useCreateDatabase,
   useUpdateDatabase,
+  useDeleteDatabase,
+  useRestoreDatabase,
+  useSetDatabaseFavorite,
+} from "./database-mutations";
+export {
   useUpdateDataSource,
-  useUpdateDatabaseView,
-  useAddDatabaseView,
   useLinkDatabaseDataSource,
   useCreateDatabaseDataSource,
   useReplaceDatabaseViewDataSource,
   useUnlinkDatabaseDataSource,
-  useDeleteDatabase,
-  useRestoreDatabase,
+} from "./data-source-mutations";
+export {
+  useUpdateDatabaseView,
+  useAddDatabaseView,
   useDeleteDatabaseView,
+} from "./view-mutations";
+export {
   useAddDatabaseProperty,
   useApplyDatabaseTemplate,
   useUpdateDatabaseProperty,
   useDeleteDatabaseProperty,
   useDuplicateDatabaseProperty,
+} from "./property-mutations";
+export {
   useAddDatabaseRow,
   useReorderDatabaseRows,
   useMoveDatabaseRow,
   useUpdateDatabasePropertyValue,
-  useSetDatabaseFavorite,
-} from "./mutation-hooks";
+} from "./row-mutations";
 export { useDatabase, useDatabaseAccess } from "./query-hooks";
 export { useDatabaseRealtime } from "./realtime";
 export { useDatabaseIdForRowPage } from "./use-database-id-for-row-page";
