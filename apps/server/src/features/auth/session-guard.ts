@@ -1,10 +1,10 @@
-import type { MiddlewareHandler } from "hono";
+import { createMiddleware } from "hono/factory";
 
 import { sessionMiddleware } from "./session-middleware";
 import type { AppBindings } from "../../shared/types";
 import { isHostedDemoRequest } from "../demo/request";
 
-export const authenticatedSessionMiddleware: MiddlewareHandler<AppBindings> =
+export const authenticatedSessionMiddleware = createMiddleware<AppBindings>(
   async (c, next) => {
     if (isHostedDemoRequest(c.env, c.req.raw.headers)) {
       return sessionMiddleware(c, next);
@@ -26,4 +26,5 @@ export const authenticatedSessionMiddleware: MiddlewareHandler<AppBindings> =
     }
 
     return sessionMiddleware(c, next);
-  };
+  },
+);

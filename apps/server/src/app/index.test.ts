@@ -3,6 +3,7 @@ import { test, vi } from "vitest";
 import { Hono } from "hono";
 
 import { appErrorHandler, createApp, createAppErrorHandler } from "./";
+import { isNodeApiPath } from "../infrastructure/node/api-routing";
 import type { AppBindings } from "../shared/types";
 import type { ZilobaseEditionExtension } from "../shared/types";
 
@@ -32,6 +33,9 @@ test("createApp registers every public feature route group", () => {
     "POST /user-settings/profile/image/uploads",
     "GET /metadata/bookmark",
     "GET /pages",
+    "GET /mail/oauth/google/callback",
+    "POST /mail/google/pubsub",
+    "GET /automation-slack/oauth/callback",
     "POST /pages/:id/convert-to-teamspace",
     "POST /pages/:pageId/guest-invitations",
     "POST /page-guest-invitations/:invitationId/accept",
@@ -49,15 +53,73 @@ test("createApp registers every public feature route group", () => {
   }
 });
 
+test("every registered Hono route is a Node API path", () => {
+  for (const { path } of createApp().routes) {
+    if (path === "/*" || path === "/") continue;
+    const concrete = path.replace(/:[^/]+/g, "id");
+    assert.equal(isNodeApiPath(concrete.startsWith("/") ? concrete : `/${concrete}`), true, path);
+  }
+});
+
 test("createApp keeps global middleware ahead of feature routes", () => {
   const routes = createApp().routes;
   const firstFeatureRoute = routes.findIndex(({ path }) => path !== "/*");
 
-  assert.equal(firstFeatureRoute, 6);
+  assert.ok(firstFeatureRoute >= 6);
   assert.deepEqual(
     routes.slice(0, firstFeatureRoute).map(({ path }) => path),
-    ["/*", "/*", "/*", "/*", "/*", "/*"],
+    Array.from({ length: firstFeatureRoute }, () => "/*"),
   );
+});
+
+test("createApp maps domain HTTP errors instead of a generic 500", async () => {
+  const { ServiceMutationError } = await import(
+    "../shared/errors/service-mutation-error"
+  );
+  const app = new Hono<AppBindings>();
+  app.use("*", async (c, next) => {
+    c.set("requestId", "request-http");
+    await next();
+  });
+  app.get("/missing", () => {
+    throw new ServiceMutationError("Database not found", 404);
+  });
+  app.onError(appErrorHandler);
+
+  const response = await app.request("/missing");
+
+  assert.equal(response.status, 404);
+  assert.deepEqual(await response.json(), { error: "Database not found" });
+});
+
+test("createApp sets API security headers", async () => {
+  const response = await createApp().request("/health");
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(response.headers.get("x-frame-options"), "DENY");
+  assert.equal(response.headers.get("cross-origin-resource-policy"), null);
+});
+
+test("createApp rejects oversized JSON bodies", async () => {
+  const response = await createApp().request("/session", {
+    method: "POST",
+    headers: {
+      "content-length": String(33 * 1024 * 1024),
+      "content-type": "application/json",
+    },
+    body: "x",
+  });
+
+  assert.equal(response.status, 413);
+  assert.deepEqual(await response.json(), { error: "Request body is too large" });
+});
+
+test("createApp returns 405 when a path exists for another method", async () => {
+  const response = await createApp().request("/health", { method: "POST" });
+
+  assert.equal(response.status, 405);
+  assert.match(response.headers.get("allow") ?? "", /GET/i);
 });
 
 test("createApp registers a compile-time edition after public routes", () => {

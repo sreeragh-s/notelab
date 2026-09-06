@@ -91,3 +91,20 @@ test("automation create and update headers pass CORS preflight", async () => {
   assert.match(allowedHeaders, /idempotency-key/i);
   assert.match(allowedHeaders, /if-match/i);
 });
+
+test("CORS preflight allows HEAD because Hono serves it from GET", async () => {
+  const response = await corsApp().request(
+    "http://localhost:3000/",
+    {
+      headers: {
+        "access-control-request-method": "HEAD",
+        origin: "http://localhost:1420",
+      },
+      method: "OPTIONS",
+    },
+    { CLIENT_URL: "http://localhost:1420" },
+  );
+
+  assert.equal(response.status, 204);
+  assert.match(response.headers.get("access-control-allow-methods") ?? "", /HEAD/);
+});

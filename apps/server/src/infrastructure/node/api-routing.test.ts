@@ -7,12 +7,17 @@ test("the combined Node runtime sends discovery, probes, and desktop auth to the
   for (const path of [
     "/.well-known/zilobase",
     "/health",
+    "/health/background",
     "/ready",
     "/api/auth/session",
     "/demo/bootstrap",
     "/desktop",
     "/desktop/authorize",
     "/page-layouts/resolve",
+    "/mail/oauth/google/callback",
+    "/mail/google/pubsub",
+    "/page-guest-invitations/invite-1",
+    "/automation-slack/oauth/callback",
   ]) {
     assert.equal(isNodeApiPath(path), true, path);
   }

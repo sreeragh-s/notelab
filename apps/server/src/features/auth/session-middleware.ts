@@ -1,3 +1,4 @@
+import { createMiddleware } from "hono/factory";
 import type { MiddlewareHandler } from "hono";
 import { eq } from "drizzle-orm";
 import {
@@ -35,7 +36,7 @@ function normalizeAuthSession<TSession extends Record<string, unknown>>(
   };
 }
 
-export const sessionMiddleware: MiddlewareHandler<AppBindings> = async (
+export const sessionMiddleware = createMiddleware<AppBindings>(async (
   c,
   next,
 ) => {
@@ -201,10 +202,12 @@ export const sessionMiddleware: MiddlewareHandler<AppBindings> = async (
     await timed(c, "session_next", next);
   }, {
     onTiming(name, durationMs) {
-      c.get("serverTimings").push(`zilobase_${name};dur=${durationMs}`);
+      const timings = c.get("serverTimings") ?? [];
+      if (!c.get("serverTimings")) c.set("serverTimings", timings);
+      timings.push(`zilobase_${name};dur=${durationMs}`);
     },
   }));
-};
+});
 
 async function timed<T>(
   c: Parameters<MiddlewareHandler<AppBindings>>[0],
@@ -216,7 +219,9 @@ async function timed<T>(
   try {
     return await run();
   } finally {
-    c.get("serverTimings").push(
+    const timings = c.get("serverTimings") ?? [];
+    if (!c.get("serverTimings")) c.set("serverTimings", timings);
+    timings.push(
       `zilobase_${name};dur=${Math.round(performance.now() - startedAt)}`,
     );
   }

@@ -1,4 +1,4 @@
-import type { MiddlewareHandler } from "hono";
+import { createMiddleware } from "hono/factory";
 
 import type { AppBindings } from "../../shared/types";
 
@@ -8,7 +8,7 @@ export const DEMO_READ_ONLY_ERROR =
 
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
-export const demoWriteGuard: MiddlewareHandler<AppBindings> = async (
+export const demoWriteGuard = createMiddleware<AppBindings>(async (
   c,
   next,
 ) => {
@@ -26,4 +26,4 @@ export const demoWriteGuard: MiddlewareHandler<AppBindings> = async (
   }
 
   await next();
-};
+});

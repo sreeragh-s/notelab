@@ -12,6 +12,7 @@ import { canAccessPage, getMembership, getPageRecord } from "../../access";
 import { db, runWithDbEnv } from "../../../infrastructure/database";
 import { getStringEnv } from "../../../shared/config/config";
 import type { AppBindings } from "../../../shared/types";
+import { readJsonBody } from "../../../shared/http/request";
 import { coerceAiChatRequestBody, runAiChatTurn } from "./chat-service";
 import {
   appendCanonicalUserMessage,
@@ -82,7 +83,7 @@ aiRoutes.post("/chat", async (c) => {
     return auth.response;
   }
 
-  const rawBody = await readJsonBody(c);
+  const rawBody = await readJsonBody(c.req);
 
   if (!rawBody || typeof rawBody !== "object") {
     return c.json({ error: "Request body must be valid JSON" }, 400);
@@ -786,14 +787,6 @@ async function parseJson<T extends z.ZodType>(
   }
 
   return { success: true, data: result.data };
-}
-
-async function readJsonBody(c: Context<AppBindings>) {
-  try {
-    return await c.req.json();
-  } catch {
-    return null;
-  }
 }
 
 function readObject(value: unknown) {

@@ -246,19 +246,40 @@ aiAgentProfileRoutes.post("/agents/:agentId/conversation/messages", async (c) =>
 aiAgentProfileRoutes.post("/agents/:agentId/conversation/messages/stream", async c => handle(c, async auth => {
   const body = messageSchema.parse(await c.req.json());
   await requireAgentProfileRole({ ...auth, profileId: c.req.param("agentId"), minimum: "user" });
-  return streamSSE(c, stream => runWithIndependentDbEnv(c.env, async () => {
-    const abort = new AbortController();
-    stream.onAbort(() => abort.abort());
-    try {
-      await submitAgentConversationMessage({ ...auth, ...body, env: c.env, profileId: c.req.param("agentId"), abortSignal: abort.signal,
-        onSettingsEvent: event => stream.writeSSE({ event: "settings", data: JSON.stringify(event) }),
+  return streamSSE(
+    c,
+    (stream) =>
+      runWithIndependentDbEnv(c.env, async () => {
+        const abort = new AbortController();
+        stream.onAbort(() => abort.abort());
+        await submitAgentConversationMessage({
+          ...auth,
+          ...body,
+          env: c.env,
+          profileId: c.req.param("agentId"),
+          abortSignal: abort.signal,
+          onSettingsEvent: (event) =>
+            stream.writeSSE({ event: "settings", data: JSON.stringify(event) }),
+        });
+        await stream.writeSSE({ event: "complete", data: "{}" });
+      }),
+    async (error, stream) => {
+      if (stream.aborted) return;
+      console.error(
+        "Agent conversation request failed:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
+      await stream.writeSSE({
+        event: "error",
+        data: JSON.stringify({
+          error:
+            error instanceof AgentProfileError
+              ? error.message
+              : "Could not complete this request. Please try again.",
+        }),
       });
-      await stream.writeSSE({ event: "complete", data: "{}" });
-    } catch (error) {
-      if (!abort.signal.aborted) console.error("Agent conversation request failed:", error instanceof Error ? error.message : "Unknown error");
-      if (!abort.signal.aborted) await stream.writeSSE({ event: "error", data: JSON.stringify({ error: error instanceof AgentProfileError ? error.message : "Could not complete this request. Please try again." }) });
-    }
-  }));
+    },
+  );
 }));
 
 aiAgentProfileRoutes.get("/agents/:agentId/revisions", async (c) =>
@@ -665,24 +686,7 @@ async function handle(
       404,
     );
   }
-  try {
-    const result = await action({ userId: user.id, workspaceId });
-    if (result instanceof Response) return result;
-    return c.json(result, successStatus);
-  } catch (error) {
-    if (error instanceof AgentProfileError) {
-      return c.json({ code: error.code, error: error.message }, error.status);
-    }
-    if (error instanceof z.ZodError) {
-      return c.json(
-        {
-          code: "VALIDATION_ERROR",
-          error: "Invalid request body",
-          issues: error.issues,
-        },
-        400,
-      );
-    }
-    throw error;
-  }
+  const result = await action({ userId: user.id, workspaceId });
+  if (result instanceof Response) return result;
+  return c.json(result, successStatus);
 }

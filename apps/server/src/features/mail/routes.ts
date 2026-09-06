@@ -21,29 +21,23 @@ export const mailRoutes = new Hono<AppBindings>()
 export const mailProviderRoutes = new Hono<AppBindings>()
 
 mailRoutes.use("*", async (c, next) => {
-  try {
-    if (!isMailFeatureEnabled(c.env) || !workspaceIdFromContext(c)) {
-      return c.json({ message: "Not found." }, 404)
-    }
-    await next()
-  } finally {
-    c.header("Cache-Control", "private, no-store, max-age=0")
-    c.header("Pragma", "no-cache")
-    c.header("Referrer-Policy", "no-referrer")
-    c.header("X-Content-Type-Options", "nosniff")
+  if (!isMailFeatureEnabled(c.env) || !workspaceIdFromContext(c)) {
+    return c.json({ message: "Not found." }, 404)
   }
+  await next()
+  c.header("Cache-Control", "private, no-store, max-age=0")
+  c.header("Pragma", "no-cache")
+  c.header("Referrer-Policy", "no-referrer")
+  c.header("X-Content-Type-Options", "nosniff")
 })
 
 mailProviderRoutes.use("*", async (c, next) => {
-  try {
-    if (!isMailFeatureEnabled(c.env)) return c.json({ message: "Not found." }, 404)
-    await next()
-  } finally {
-    c.header("Cache-Control", "private, no-store, max-age=0")
-    c.header("Pragma", "no-cache")
-    c.header("Referrer-Policy", "no-referrer")
-    c.header("X-Content-Type-Options", "nosniff")
-  }
+  if (!isMailFeatureEnabled(c.env)) return c.json({ message: "Not found." }, 404)
+  await next()
+  c.header("Cache-Control", "private, no-store, max-age=0")
+  c.header("Pragma", "no-cache")
+  c.header("Referrer-Policy", "no-referrer")
+  c.header("X-Content-Type-Options", "nosniff")
 })
 
 mailRoutes.route("/", mailConnectionRoutes)

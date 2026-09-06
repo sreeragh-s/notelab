@@ -3,10 +3,7 @@ import { z } from "zod";
 
 import type { AppBindings } from "../../shared/types";
 import { readJsonBody } from "../../shared/http/request";
-import {
-  TeamspaceManagementError,
-  TeamspaceManagementService,
-} from "./management";
+import { TeamspaceManagementService } from "./management";
 
 export const teamspaceRoutes = new Hono<AppBindings>();
 
@@ -256,22 +253,15 @@ async function handle(
 ) {
   const requestUser = c.get("user");
   if (!requestUser) return c.json({ error: "Unauthorized" }, 401);
-  try {
-    const result = await run(
-      new TeamspaceManagementService(
-        undefined,
-        c.get("editionExtension") ?? undefined,
-        c.env,
-      ),
-      requestUser.id,
-      c.req.param("workspaceId")!,
-    );
-    if (successStatus === 201) return c.json(result as never, 201);
-    return c.json(result as never, 200);
-  } catch (error) {
-    if (error instanceof TeamspaceManagementError) {
-      return c.json({ error: error.message }, error.status);
-    }
-    throw error;
-  }
+  const result = await run(
+    new TeamspaceManagementService(
+      undefined,
+      c.get("editionExtension") ?? undefined,
+      c.env,
+    ),
+    requestUser.id,
+    c.req.param("workspaceId")!,
+  );
+  if (successStatus === 201) return c.json(result as never, 201);
+  return c.json(result as never, 200);
 }
