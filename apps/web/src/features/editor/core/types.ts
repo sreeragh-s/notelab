@@ -118,6 +118,7 @@ export type EditorProps = {
   onTitleChange?: (title: string) => void
   workspaceId?: string | null
   title?: string
+  reviewDiff?: { beforeMarkdown: string; afterMarkdown: string } | null
   pageEditPreviewRef?: MutableRefObject<PageEditPreviewControls | null>
   pageId?: string | null
 }

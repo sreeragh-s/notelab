@@ -98,6 +98,7 @@ type PageEditorPaneProps = {
   onTitleChange?: (title: string) => void;
   readOnly?: boolean;
   showCollaborationPresence?: boolean;
+  reviewDiff?: { beforeMarkdown: string; afterMarkdown: string } | null;
   pageId: string;
 };
 
@@ -391,6 +392,7 @@ export function PageEditorPane({
   onTitleChange,
   readOnly = false,
   showCollaborationPresence = true,
+  reviewDiff,
   pageId,
 }: PageEditorPaneProps) {
   const demoMode = isHostedDemoRuntime();
@@ -1108,6 +1110,7 @@ export function PageEditorPane({
         workspaceId={page.workspaceId}
         title={name}
         pageEditPreviewRef={pageEditPreviewRef}
+        reviewDiff={reviewDiff}
         pageId={page.id}
       />
     </section>
