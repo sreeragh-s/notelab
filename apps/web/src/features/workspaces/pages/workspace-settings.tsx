@@ -1,3 +1,4 @@
+import { WorkspaceMcpPolicyPanel } from "@/features/ai/components/settings/workspace-mcp-policy";
 import * as React from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
@@ -63,6 +64,7 @@ export default function WorkspaceSettingsPage() {
 
       <div className="mx-auto grid w-full max-w-3xl gap-6">
         <WorkspaceDetailsSection workspace={workspace} />
+        <WorkspaceMcpPolicyPanel />
         {isFeatureEnabled("mail") ? (
           <>
             <Separator />

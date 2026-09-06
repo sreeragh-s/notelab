@@ -1,0 +1,24 @@
+/* Page proportions adapt to the available pane, including split views. */
+.agent-chat-content {
+  padding-inline: clamp(20px, calc(20% - 84px), 96px);
+}
+[data-agent-chat-page],
+[data-agent-settings-page] {
+  container-type: inline-size;
+}
+[data-agent-chat-page] [data-page-metadata-content],
+[data-agent-settings-page] .agent-settings-content,
+[data-agent-settings-page] [data-page-metadata-content],
+[data-agent-settings-page] .tiptap-editor {
+  padding-inline: clamp(20px, calc(20cqw - 84px), 96px);
+}
+[data-agent-settings-page] header > * {
+  min-width: 0;
+}
+
+[data-ai-changed="true"],
+.agent-instruction-title-changed [aria-label="Page title"],
+[data-ai-review-name="true"] [aria-label="Agent title"] {
+  background-color: var(--color-feedback-success-subtle);
+  box-shadow: inset 3px 0 0 var(--color-feedback-success-text);
+}
