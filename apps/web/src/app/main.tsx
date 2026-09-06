@@ -1,4 +1,5 @@
 import React from "react";
+import { configureApplicationRequests } from "./runtime/configure-requests";
 import ReactDOM from "react-dom/client";
 import App from "./app";
 import { initializeDesktopAuthToken } from "@/features/desktop/auth/index";
@@ -21,6 +22,7 @@ import { captureProductException } from "@/shared/lib/posthog";
 import "../shared/styles/global.css";
 import "./styles.css";
 
+configureApplicationRequests();
 installDesktopDiagnostics();
 void bootstrap();
 

@@ -4,21 +4,13 @@ import {
   setDesktopAuthToken,
 } from "@/platform/auth/desktop-auth-token"
 import {
-  isDesktopOfflineSupported,
-  isOfflineMode,
-  setConnectivityState,
-} from "@/features/offline/model/index"
-import {
   getSelectedDesktopServer,
   resolveRuntimeApiOrigin,
   resolveRuntimeWebSocketUrl,
   type DesktopServer,
 } from "@/platform/server/desktop-server"
 import { desktopNetworkFetch } from "@/platform/network/index"
-import {
-  applyDemoReadOverlay,
-  interceptDemoMutation,
-} from "@/features/demo/transport"
+import { getRequestPolicy } from "./request-policy"
 
 declare global {
   interface Window {
@@ -69,16 +61,9 @@ export async function apiFetch<T>(
   { auth = true, headers, body, timeoutMs, ...init }: ApiFetchOptions = {},
 ) {
   const method = (init.method ?? "GET").toUpperCase()
-  const demoMutation = interceptDemoMutation<T>(path, method, body)
-  if (demoMutation.handled) return demoMutation.value
-  if (
-    isDesktopOfflineSupported() &&
-    isOfflineMode() &&
-    method !== "GET" &&
-    method !== "HEAD"
-  ) {
-    throw new NetworkUnavailableError()
-  }
+  const policy = getRequestPolicy()
+  const intercepted = policy.intercept(path, method, body)
+  if (intercepted.handled) return intercepted.value as T
 
   const requestHeaders = getApiRequestHeaders(headers)
 
@@ -104,27 +89,13 @@ export async function apiFetch<T>(
       throw error
     }
 
-    if (isDesktopOfflineSupported()) {
-      setConnectivityState(
-        navigator.onLine === false ? "offline" : "service-unavailable",
-      )
-      throw new NetworkUnavailableError(
-        error instanceof Error ? error.message : undefined,
-      )
-    }
+    policy.observe({ type: "network-error", error })
     throw error
   } finally {
     requestTimeout.cleanup()
   }
 
-  if (isDesktopOfflineSupported()) {
-    // Any HTTP response proves the service is reachable. Individual 5xx errors
-    // must not tear down live sockets and put the whole desktop app offline.
-    setConnectivityState("online")
-    if (response.status === 401) {
-      window.dispatchEvent(new Event("zilobase:authentication-required"))
-    }
-  }
+  policy.observe({ type: "response", status: response.status })
 
   const desktopAuthToken = response.headers.get("set-auth-token")
   if (desktopAuthToken) await setDesktopAuthToken(desktopAuthToken)
@@ -136,7 +107,7 @@ export async function apiFetch<T>(
     throw new ApiError(readErrorMessage(data, response.status), response.status, data)
   }
 
-  return applyDemoReadOverlay(path, resolveRuntimeResponse(path, data)) as T
+  return policy.transformResponse(path, resolveRuntimeResponse(path, data)) as T
 }
 
 function resolveRuntimeResponse(path: string, data: unknown) {

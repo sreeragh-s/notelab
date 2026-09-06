@@ -103,8 +103,12 @@
         "patterns": ["apps/web/src/features/tasks/**"]
       },
       {
+        "name": "web-platform",
+        "patterns": ["apps/web/src/platform/**"]
+      },
+      {
         "name": "web-desktop",
-        "patterns": ["apps/web/src/features/desktop/**", "apps/web/src/platform/**"]
+        "patterns": ["apps/web/src/features/desktop/**"]
       },
       {
         "name": "web-offline",
@@ -196,6 +200,7 @@
           "web-notion-import",
           "web-tasks",
           "web-desktop",
+          "web-platform",
           "web-offline"
         ]
       },
@@ -214,6 +219,7 @@
           "web-comments",
           "web-tasks",
           "web-desktop",
+          "web-platform",
           "web-offline"
         ]
       },
@@ -226,6 +232,7 @@
           "web-app",
           "web-auth",
           "web-desktop",
+          "web-platform",
           "web-shared"
         ]
       },
@@ -235,6 +242,7 @@
           "package-features",
           "web-app",
           "web-desktop",
+          "web-platform",
           "web-offline",
           "web-settings",
           "web-pages",
@@ -246,6 +254,7 @@
         "allow": [
           "package-features",
           "web-desktop",
+          "web-platform",
           "web-notion-import",
           "web-settings",
           "web-shared",
@@ -257,6 +266,7 @@
         "allow": [
           "package-features",
           "web-desktop",
+          "web-platform",
           "web-pages",
           "web-settings",
           "web-shared",
@@ -272,6 +282,7 @@
           "web-ai",
           "web-comments",
           "web-desktop",
+          "web-platform",
           "web-meetings",
           "web-offline",
           "web-pages",
@@ -290,6 +301,7 @@
           "web-comments",
           "web-databases",
           "web-desktop",
+          "web-platform",
           "web-editor",
           "web-offline",
           "web-pages",
@@ -303,6 +315,7 @@
           "package-page-context",
           "web-ai",
           "web-desktop",
+          "web-platform",
           "web-databases",
           "web-editor",
           "web-pages",
@@ -320,6 +333,7 @@
           "web-comments",
           "web-databases",
           "web-desktop",
+          "web-platform",
           "web-editor",
           "web-offline",
           "web-pages",
@@ -332,6 +346,7 @@
           "package-features",
           "web-comments",
           "web-desktop",
+          "web-platform",
           "web-shared"
         ]
       },
@@ -344,6 +359,7 @@
         "allow": [
           "package-features",
           "web-desktop",
+          "web-platform",
           "web-library",
           "web-offline",
           "web-databases",
@@ -361,6 +377,7 @@
           "web-app",
           "web-databases",
           "web-desktop",
+          "web-platform",
           "web-editor",
           "web-meetings",
           "web-pages",
@@ -383,12 +400,17 @@
         ]
       },
       {
+        "from": "web-platform",
+        "allow": ["web-platform"]
+      },
+      {
         "from": "web-desktop",
         "allow": [
           "package-features",
           "web-app",
           "web-auth",
           "web-desktop",
+          "web-platform",
           "web-editor",
           "web-meetings",
           "web-offline",
@@ -398,7 +420,7 @@
       },
       {
         "from": "web-offline",
-        "allow": ["web-desktop", "web-offline", "web-shared"]
+        "allow": ["web-desktop", "web-platform", "web-offline", "web-shared"]
       },
       {
         "from": "web-root",
