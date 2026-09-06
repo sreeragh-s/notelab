@@ -131,8 +131,8 @@ export function register({ readSource, assert, loadModule, test }) {
     const [connect, screen, login, signup, router] = await Promise.all([
       readSource("/src/features/desktop/pages/connect.tsx"),
       readSource("/src/features/desktop/auth/desktop-browser-auth-screen.tsx"),
-      readSource("/src/features/auth/pages/login.tsx"),
-      readSource("/src/features/auth/pages/signup.tsx"),
+      readSource("/src/features/auth/screens/login.tsx"),
+      readSource("/src/features/auth/screens/signup.tsx"),
       readSource("/src/app/routing/route-groups/public-routes.tsx"),
     ])
 

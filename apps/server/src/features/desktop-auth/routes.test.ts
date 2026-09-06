@@ -99,7 +99,7 @@ import {
   DESKTOP_AUTH_CLIENT_ID,
   hashDesktopAuthorizationCode,
   parseDesktopAuthorizationRequest,
-} from "./service";
+} from "./authorization";
 
 const env = {
   BETTER_AUTH_SECRET: "desktop-consent-test-secret-with-at-least-32-characters",

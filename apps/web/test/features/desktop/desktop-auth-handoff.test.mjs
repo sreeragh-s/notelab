@@ -13,8 +13,8 @@ export function register({ assert, readSource, readWorkspace, test }) {
   test("desktop signed-out shell is browser-only", async () => {
     const [screen, login, signup, loginForm] = await Promise.all([
       readSource("/src/features/desktop/auth/desktop-browser-auth-screen.tsx"),
-      readSource("/src/features/auth/pages/login.tsx"),
-      readSource("/src/features/auth/pages/signup.tsx"),
+      readSource("/src/features/auth/screens/login.tsx"),
+      readSource("/src/features/auth/screens/signup.tsx"),
       readSource("/src/features/auth/components/login-form.tsx"),
     ])
 

@@ -7,7 +7,7 @@
 
 ## Main flow
 
-Key routes integrate Better Auth key management with request authentication. Header parsing recognizes the existing nl_ key prefix; key metadata can scope a caller to a workspace.
+Key routes integrate Better Auth key management with request authentication. The [API-key settings screen](../../../apps/web/src/features/settings/screens/api-keys.tsx) owns creation/revocation presentation in the settings shell; [key operations](../../../apps/server/src/features/api-keys/api-keys.ts) remain independent of that presentation. Header parsing recognizes the existing nl_ key prefix; key metadata can scope a caller to a workspace.
 
 ## Authorization and persistence
 

@@ -1,3 +1,4 @@
+import { readString, readPositiveInteger, normalizeContentType, sanitizeFilename, getImageObjectKey } from "./image-upload-input";
 import { and, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
@@ -406,61 +407,6 @@ async function readJsonBody<T>(c: Context<AppBindings>) {
   } catch {
     return null;
   }
-}
-
-function readString(value: unknown) {
-  return typeof value === "string" && value.trim().length > 0
-    ? value.trim()
-    : undefined;
-}
-
-function readPositiveInteger(value: unknown) {
-  const numberValue =
-    typeof value === "number"
-      ? value
-      : typeof value === "string"
-        ? Number(value)
-        : NaN;
-
-  return Number.isSafeInteger(numberValue) && numberValue > 0
-    ? numberValue
-    : undefined;
-}
-
-function normalizeContentType(value: string | undefined) {
-  return value?.split(";")[0]?.trim().toLowerCase();
-}
-
-function sanitizeFilename(value: string) {
-  const basename = value.split(/[\\/]/).pop() ?? "image";
-  const safe = basename
-    .normalize("NFKD")
-    .replace(/[^\w.-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 120);
-
-  return safe || "image";
-}
-
-function getImageObjectKey(options: {
-  assetId: string;
-  filename: string;
-  workspaceId: string;
-  pageId: string;
-}) {
-  return [
-    "org",
-    encodeObjectKeySegment(options.workspaceId),
-    "page",
-    encodeObjectKeySegment(options.pageId),
-    "images",
-    options.assetId,
-    options.filename,
-  ].join("/");
-}
-
-function encodeObjectKeySegment(value: string) {
-  return encodeURIComponent(value).replace(/%2F/gi, "-");
 }
 
 async function getActiveImageAsset(id: string) {

@@ -1,3 +1,4 @@
+import { bootstrapInstance } from "../setup/bootstrap-instance";
 import { useState } from "react"
 
 import { Button } from "@/shared/ui/button"
@@ -17,8 +18,6 @@ import {
 } from "@/shared/ui/field"
 import { Input } from "@/shared/ui/input"
 import {
-  apiFetch,
-  authFetch,
   getApiErrorMessage,
 } from "@/platform/network/api"
 
@@ -33,28 +32,9 @@ export default function SetupPage() {
     setIsPending(true)
 
     const form = new FormData(event.currentTarget)
-    const email = String(form.get("email") ?? "").trim().toLowerCase()
-    const password = String(form.get("password") ?? "")
 
     try {
-      await apiFetch("/api/instance/bootstrap", {
-        auth: false,
-        body: JSON.stringify({
-          email,
-          name: String(form.get("name") ?? "").trim(),
-          password,
-          workspaceName: String(form.get("workspaceName") ?? "").trim(),
-        }),
-        headers: {
-          "x-zilobase-bootstrap-token": String(
-            form.get("bootstrapToken") ?? "",
-          ).trim(),
-        },
-        method: "POST",
-      })
-
-      setBootstrapCompleted(true)
-      await authFetch("/sign-in/email", { email, password })
+      await bootstrapInstance(form, () => setBootstrapCompleted(true));
       window.location.assign("/recents")
     } catch (error) {
       setError(error)

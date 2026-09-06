@@ -25,7 +25,7 @@ import {
   parseDesktopTokenRequest,
   verifyDesktopConsentToken,
   type DesktopAuthorizationRequest,
-} from "./service";
+} from "./authorization";
 
 export const desktopAuthRoutes = new Hono<AppBindings>();
 

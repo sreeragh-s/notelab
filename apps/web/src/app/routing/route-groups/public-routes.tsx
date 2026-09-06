@@ -54,7 +54,7 @@ const loginRoute = createRoute({
     const workspaces = await getWorkspaces();
     throw redirect({ to: workspaces.length > 0 ? "/recents" : "/onboarding" });
   },
-  component: lazyRouteComponent(() => import("@/features/auth/pages/login")),
+  component: lazyRouteComponent(() => import("@/features/auth/screens/login")),
 });
 
 const connectRoute = createRoute({
@@ -92,7 +92,7 @@ const signupRoute = createRoute({
     const workspaces = await getWorkspaces();
     throw redirect({ to: workspaces.length > 0 ? "/recents" : "/onboarding" });
   },
-  component: lazyRouteComponent(() => import("@/features/auth/pages/signup")),
+  component: lazyRouteComponent(() => import("@/features/auth/screens/signup")),
 });
 
 const onboardingRoute = createRoute({
@@ -105,7 +105,7 @@ const onboardingRoute = createRoute({
     const workspaces = await getWorkspaces();
     if (workspaces.length > 0) throw redirect({ to: "/recents" });
   },
-  component: lazyRouteComponent(() => import("@/features/auth/pages/onboarding")),
+  component: lazyRouteComponent(() => import("@/features/auth/screens/onboarding")),
 });
 
 const otpRoute = createRoute({
@@ -114,7 +114,7 @@ const otpRoute = createRoute({
   beforeLoad: async () => {
     if (isDesktopApp()) throw redirect({ to: "/login" });
   },
-  component: lazyRouteComponent(() => import("@/features/auth/pages/otp")),
+  component: lazyRouteComponent(() => import("@/features/auth/screens/otp")),
 });
 
 export const publicRoutes = [
@@ -141,6 +141,6 @@ export const publicRoutes = [
   createRoute({
     getParentRoute: () => rootRoute,
     path: "/setup",
-    component: lazyRouteComponent(() => import("@/features/auth/pages/setup")),
+    component: lazyRouteComponent(() => import("@/features/auth/screens/setup")),
   }),
 ];

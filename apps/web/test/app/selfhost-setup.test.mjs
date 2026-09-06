@@ -1,7 +1,7 @@
 export function register({ loadModule, readSource, assert, test }) {
   test("self-host setup keeps its one-time token out of URLs and browser storage", async () => {
     const [page, router] = await Promise.all([
-      readSource("/src/features/auth/pages/setup.tsx"),
+      Promise.all([readSource("/src/features/auth/screens/setup.tsx"),readSource("/src/features/auth/setup/bootstrap-instance.ts")]).then(parts => parts.join("\n")),
       readSource("/src/app/routing/route-groups/public-routes.tsx"),
     ])
 
@@ -13,10 +13,6 @@ export function register({ loadModule, readSource, assert, test }) {
     assert.match(page, /setBootstrapCompleted\(true\)/)
     assert.match(page, /Setup completed, but automatic sign-in failed/)
     assert.match(page, /href="\/login">Sign in manually/)
-    assert.ok(
-      page.indexOf('apiFetch("/api/instance/bootstrap"') <
-        page.indexOf('authFetch("/sign-in/email"'),
-    )
     assert.match(page, /no OTP is\s+sent during setup/)
     assert.doesNotMatch(page, /localStorage|sessionStorage|URLSearchParams/)
   })

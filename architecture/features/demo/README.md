@@ -7,7 +7,7 @@
 
 ## Main flow
 
-The browser demo transport overlays reads and intercepts selected mutations. Server demo modules define request identity, seed data and write guards. App composition selects demo behavior.
+The browser demo transport overlays reads and intercepts selected mutations. Server demo modules define request identity, seed data and write guards. App composition selects demo behavior. The [request classifier](../../../apps/server/src/features/demo/request.ts) requires the configured demo flag and matching header; feature operations consume the resulting auth method. The [demo transport](../../../apps/web/src/features/demo/transport.ts) stays behind app-installed runtime policy rather than selecting itself inside authentication or offline storage.
 
 ## Authorization and persistence
 

@@ -14,7 +14,7 @@ import {
   parseDesktopTokenRequest,
   verifyDesktopConsentToken,
   type DesktopAuthorizationCodeRepository,
-} from "./service";
+} from "./authorization";
 
 const redirectUri = "http://127.0.0.1:43123/oauth/callback";
 const verifier = "a".repeat(64);
