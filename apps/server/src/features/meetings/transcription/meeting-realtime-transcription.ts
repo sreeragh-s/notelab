@@ -1,11 +1,11 @@
-import type { RuntimeEnv } from "../../shared/config/config";
-import { runWithDbEnv } from "../../infrastructure/database";
-import type { MeetingAudioTicketClaims } from "./meeting-audio-ticket";
+import type { RuntimeEnv } from "../../../shared/config/config";
+import { runWithDbEnv } from "../../../infrastructure/database";
+import type { MeetingAudioTicketClaims } from "../audio/meeting-audio-ticket";
 import {
   meetingTranscriptSequence,
   type MeetingAudioSource,
-} from "./meeting-audio-ticket";
-import { appendMeetingTranscriptSegment } from "./meeting-service";
+} from "../audio/meeting-audio-ticket";
+import { appendMeetingTranscriptSegment } from "../lifecycle/meeting-service";
 
 const AUDIO_PACKET_BYTES = 24_000 * 2 / 10;
 const FRAME_BYTES = 480 * 2;

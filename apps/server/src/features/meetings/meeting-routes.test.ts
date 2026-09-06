@@ -20,7 +20,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../api-keys", () => ({
   rejectMismatchedApiKeyWorkspace: () => null,
 }));
-vi.mock("./meeting-service", () => ({
+vi.mock("./lifecycle/meeting-service", () => ({
   claimMeetingRecorder: mocks.claimRecorder,
   createMeeting: mocks.create,
   deleteMeeting: mocks.delete,

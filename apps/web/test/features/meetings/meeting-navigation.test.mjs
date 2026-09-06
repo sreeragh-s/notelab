@@ -43,7 +43,7 @@ export function register({ readSource, assert, loadModule, test }) {
     ] = await Promise.all([
         readSource("/src/features/sidebar/components/nav-meetings.tsx"),
         readSource("/src/features/sidebar/components/sidebar-nav-list.tsx"),
-        readSource("/src/features/meetings/pages/meeting.tsx"),
+        readSource("/src/features/meetings/screens/meeting.tsx"),
         readSource("/src/features/editor/extensions/meeting/meeting-view.tsx"),
         readSource("/src/app/routing/route-groups/content-routes.tsx"),
       ])

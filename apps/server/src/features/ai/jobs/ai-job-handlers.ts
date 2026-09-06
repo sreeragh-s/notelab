@@ -1,6 +1,6 @@
 import type { AiJobHandler } from "./ai-jobs";
 import { extractAiUploadJob } from "../files/ai-file-jobs";
-import { generateMeetingSummary } from "../../meetings/meeting-summary-service";
+import { generateMeetingSummary } from "../../meetings/summary/meeting-summary-service";
 import { PermanentAiJobError } from "./ai-jobs";
 import { compactAiThreadJob } from "./ai-thread-summary-job";
 import { ServiceMutationError } from "../../../shared/errors/service-mutation-error";

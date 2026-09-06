@@ -30,9 +30,9 @@ import {
   releaseMeetingRecorder,
   transitionMeeting,
   updateMeeting,
-} from "./meeting-service";
-import { createMeetingAudioTicket } from "./meeting-audio-ticket";
-import { meetingLifecycleActions } from "./meeting-types";
+} from "./lifecycle/meeting-service";
+import { createMeetingAudioTicket } from "./audio/meeting-audio-ticket";
+import { meetingLifecycleActions } from "./contracts/meeting-types";
 
 const createMeetingSchema = z.object({
   pageId: z.string().min(1),

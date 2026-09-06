@@ -34,7 +34,7 @@ export {
   persistMeetingTranscriptSession,
   validateMeetingRecorderLease,
   type MeetingTranscriptSessionSegment,
-} from "../features/meetings/meeting-service";
+} from "../features/meetings/lifecycle/meeting-service";
 export {
   createMeetingRealtimeTranscriptSink,
   getMeetingOpenAiSafetyIdentifier,
@@ -48,7 +48,7 @@ export {
   type MeetingRealtimeTranscriberCallbacks,
   type RealtimeTranscriptionSocket,
   type RealtimeTranscriptionTurn,
-} from "../features/meetings/meeting-realtime-transcription";
+} from "../features/meetings/transcription/meeting-realtime-transcription";
 export {
   COLLABORATION_WEBSOCKET_PROTOCOL,
   getAuthHeaders,
@@ -124,7 +124,7 @@ export {
   MEETING_AUDIO_PROTOCOL,
   verifyMeetingAudioTicket,
   type MeetingAudioTicketClaims,
-} from "../features/meetings/meeting-audio-ticket";
+} from "../features/meetings/audio/meeting-audio-ticket";
 export {
   drainDatabaseRealtimeOutbox,
   type DatabaseRealtimeMutationEvent,

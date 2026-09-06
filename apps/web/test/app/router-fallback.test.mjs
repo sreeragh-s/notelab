@@ -51,7 +51,7 @@ export function register({ readSource, assert, test }) {
     ).join("\n")
     const pageSource = await readSource("/src/features/pages/screens/page.tsx")
     const databaseSource = await readSource("/src/features/databases/screens/database.tsx")
-    const meetingSource = await readSource("/src/features/meetings/pages/meeting.tsx")
+    const meetingSource = await readSource("/src/features/meetings/screens/meeting.tsx")
 
     for (const source of [pageSource, databaseSource]) {
       assert.match(source, /if \(publishedShare === "public"\)/)

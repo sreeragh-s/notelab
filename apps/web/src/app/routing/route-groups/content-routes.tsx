@@ -27,7 +27,7 @@ export const contentRoutes = [
         (await getFreshSession({ optional: true })).user,
       ),
     }),
-    component: lazyRouteComponent(() => import("@/features/meetings/pages/meeting")),
+    component: lazyRouteComponent(() => import("@/features/meetings/screens/meeting")),
     pendingComponent: PendingPage,
   }),
   createRoute({

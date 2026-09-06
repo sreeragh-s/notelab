@@ -32,7 +32,7 @@ describe("database automation mutation-path audit", () => {
       read("databases/properties/service.ts"),
       read("databases/properties/duplication-service.ts"),
       read("demo/seed.ts"),
-      read("meetings/meeting-service.ts"),
+      read("meetings/lifecycle/meeting-service.ts"),
     ]);
 
     for (const source of files) {

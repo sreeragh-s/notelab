@@ -12,7 +12,7 @@ import {
   MEETING_RECORDER_LEASE_HEARTBEAT_MS,
   transitionMeeting,
   validateMeetingRecorderLease,
-} from "../../features/meetings/meeting-service";
+} from "../../features/meetings/lifecycle/meeting-service";
 import {
   MEETING_AUDIO_AUTH_PROTOCOL_PREFIX,
   MEETING_AUDIO_PROTOCOL,
@@ -22,7 +22,7 @@ import {
   verifyMeetingAudioTicket,
   type MeetingAudioSource,
   type MeetingAudioTicketClaims,
-} from "../../features/meetings/meeting-audio-ticket";
+} from "../../features/meetings/audio/meeting-audio-ticket";
 import {
   createMeetingRealtimeTranscriptSink,
   getMeetingOpenAiSafetyIdentifier,
@@ -33,7 +33,7 @@ import {
   trimAcceptedMeetingAudio,
   type MeetingRealtimeTranscriberCallbacks,
   type RealtimeTranscriptionSocket,
-} from "../../features/meetings/meeting-realtime-transcription";
+} from "../../features/meetings/transcription/meeting-realtime-transcription";
 
 const PCM_FRAME_BYTES = 480 * 2;
 const AUDIO_PACKET_HEADER_BYTES = 9;

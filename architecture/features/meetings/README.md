@@ -25,6 +25,14 @@ Capture devices, transcription sockets and summary generation fail independently
 
 ## Verification and change points
 
-Start with [the existing tests or model](../../../apps/server/src/features/meetings/meeting-state.test.ts) and the adjacent tests in the owning modules. Exercise observable outcomes through the owning interface; a source assertion alone does not establish runtime behavior. Run the affected workspace scripts described in [testing and quality](../../setup/testing-and-quality.md).
+Start with [the existing tests or model](../../../apps/server/src/features/meetings/lifecycle/meeting-state.test.ts) and the adjacent tests in the owning modules. Exercise observable outcomes through the owning interface; a source assertion alone does not establish runtime behavior. Run the affected workspace scripts described in [testing and quality](../../setup/testing-and-quality.md).
 
 Update this guide when ownership, interfaces, authorization, persistence or cross-module flows change. [Architecture index](../../README.md).
+
+## Capability map
+
+Server [lifecycle](../../../apps/server/src/features/meetings/lifecycle) owns access loading, meeting operations, recorder claims and pure status transitions. [Contracts](../../../apps/server/src/features/meetings/contracts) define server type views over the shared meeting representation. [Audio](../../../apps/server/src/features/meetings/audio) signs/verifies transport tickets, [transcription](../../../apps/server/src/features/meetings/transcription) owns realtime provider sessions, and [summary](../../../apps/server/src/features/meetings/summary) owns summary generation and collaborative application. HTTP composition remains at the existing `routes.ts` / `meeting-routes.ts` entrypoints.
+
+The [web screen](../../../apps/web/src/features/meetings/screens/meeting.tsx) composes the meeting's page and controls. [Editor meeting rendering](../../../apps/web/src/features/editor/extensions/meeting/meeting-view.tsx) connects document/UI interactions with meeting commands. [Capture contracts and browser implementation](../../../apps/web/src/features/meetings/capture) remain independent of meeting routes; [desktop integration](../../../apps/web/src/features/desktop/meetings/use-meeting-capture.ts) currently selects browser versus native capture and adapts native events to React state.
+
+The existing native modules already have distinct owners: [audio](../../../apps/desktop/src-tauri/src/meetings/audio.rs) handles signal processing, [capture](../../../apps/desktop/src-tauri/src/meetings/capture.rs) owns native commands/recording, its [devices](../../../apps/desktop/src-tauri/src/meetings/capture/devices.rs) and [transport](../../../apps/desktop/src-tauri/src/meetings/capture/transport.rs) implement capture mechanisms, and [recovery](../../../apps/desktop/src-tauri/src/meetings/recovery.rs) owns local session artifacts. Their command names, serialization and persisted files stay unchanged. Meeting lifecycle persistence, transcript transport and local capture recovery remain separate responsibilities across runtimes.

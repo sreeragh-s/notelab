@@ -5,22 +5,22 @@ import {
   canAccessPageInWorkspace,
   getAccessiblePageIds,
   getMembership,
-} from "../access";
+} from "../../access";
 import {
   appendMeetingTranscript,
-} from "../collaboration/service";
-import type { RuntimeEnv } from "../../shared/config/config";
-import { db } from "../../infrastructure/database";
+} from "../../collaboration/service";
+import type { RuntimeEnv } from "../../../shared/config/config";
+import { db } from "../../../infrastructure/database";
 import {
   meeting,
   meetingCollaborationDocument,
   meetingConsentEvent,
   meetingTranscriptSegment,
   page,
-} from "../../infrastructure/database/schema";
-import { upsertPageItemPlacement } from "../pages/placements";
-import { ServiceMutationError } from "../../shared/errors/service-mutation-error";
-import { getRuntimeAdapter } from "../../infrastructure/runtime/runtime-adapter";
+} from "../../../infrastructure/database/schema";
+import { upsertPageItemPlacement } from "../../pages/placements";
+import { ServiceMutationError } from "../../../shared/errors/service-mutation-error";
+import { getRuntimeAdapter } from "../../../infrastructure/runtime/runtime-adapter";
 import {
   clampMeetingDuration,
   getNextMeetingStatus,
@@ -30,7 +30,7 @@ import type {
   MeetingLifecycleAction,
   MeetingPatch,
   MeetingStatus,
-} from "./meeting-types";
+} from "../contracts/meeting-types";
 
 const EMPTY_NOTES_CONTENT = {
   content: [{ type: "paragraph" }],

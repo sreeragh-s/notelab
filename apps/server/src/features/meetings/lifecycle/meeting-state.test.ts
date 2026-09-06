@@ -6,7 +6,7 @@ import {
   getNextMeetingStatus,
   isMeetingRecordingActive,
 } from "./meeting-state";
-import { MEETING_MAX_DURATION_MS } from "./meeting-types";
+import { MEETING_MAX_DURATION_MS } from "../contracts/meeting-types";
 
 test("meeting lifecycle only allows explicit transitions", () => {
   assert.equal(getNextMeetingStatus("idle", "start"), "recording");

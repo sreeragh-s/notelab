@@ -22,7 +22,7 @@ const transcriptSink = vi.hoisted(() => ({
   onDelta: vi.fn((_turn: TranscriptTurn) => undefined),
 }));
 
-vi.mock("../../features/meetings/meeting-service", () => ({
+vi.mock("../../features/meetings/lifecycle/meeting-service", () => ({
   ...meetingService,
   MEETING_RECORDER_LEASE_HEARTBEAT_MS: 30_000,
 }));
@@ -35,8 +35,8 @@ vi.mock("../../infrastructure/database", async (importOriginal) => {
   };
 });
 
-vi.mock("../../features/meetings/meeting-realtime-transcription", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../../features/meetings/meeting-realtime-transcription")>();
+vi.mock("../../features/meetings/transcription/meeting-realtime-transcription", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../features/meetings/transcription/meeting-realtime-transcription")>();
   return {
     ...original,
     createMeetingRealtimeTranscriptSink: vi.fn((_env, _claims, publishDelta) => ({
@@ -54,11 +54,11 @@ import {
   MEETING_AUDIO_AUTH_PROTOCOL_PREFIX,
   MEETING_AUDIO_PROTOCOL,
   type MeetingAudioTicketClaims,
-} from "../../features/meetings/meeting-audio-ticket";
+} from "../../features/meetings/audio/meeting-audio-ticket";
 import type {
   MeetingRealtimeTranscriber,
   MeetingRealtimeTranscriberCallbacks,
-} from "../../features/meetings/meeting-realtime-transcription";
+} from "../../features/meetings/transcription/meeting-realtime-transcription";
 import { attachNodeMeetingAudioRuntime } from "./meeting-audio-runtime";
 
 const env = { COLLABORATION_SECRET: "meeting-audio-runtime-test-secret" };

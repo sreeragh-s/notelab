@@ -65,7 +65,7 @@ describe("standalone Custom Agent migration boundary", () => {
     const triggers = await readFile(new URL("src/features/ai/agents/agent-trigger-service.ts", root), "utf8");
     const commits = await readFile(new URL("src/features/databases/core/commit.ts", root), "utf8");
     const collaboration = await readFile(new URL("src/features/collaboration/service.ts", root), "utf8");
-    const meetings = await readFile(new URL("src/features/meetings/meeting-summary-service.ts", root), "utf8");
+    const meetings = await readFile(new URL("src/features/meetings/summary/meeting-summary-service.ts", root), "utf8");
     expect(triggers).toContain("acceptAgentEvent");
     expect(triggers).toContain("dispatchDatabaseAgentMutationFacts");
     expect(triggers).toContain("dispatchPageCommentAgentTriggers");

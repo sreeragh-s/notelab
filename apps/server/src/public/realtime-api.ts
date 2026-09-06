@@ -8,7 +8,7 @@ export {
 export type { DatabaseRealtimeMutationEvent } from "../features/databases/realtime/delta";
 export type {
   MeetingLifecycleAction,
-} from "../features/meetings/meeting-types";
+} from "../features/meetings/contracts/meeting-types";
 export type { MeetingStatus };
 export { isMailFeatureEnabled } from "../shared/config/config";
 export {
@@ -38,6 +38,6 @@ export {
   verifyMeetingAudioTicket,
   type MeetingAudioSource,
   type MeetingAudioTicketClaims,
-} from "../features/meetings/meeting-audio-ticket";
+} from "../features/meetings/audio/meeting-audio-ticket";
 
-import type { MeetingStatus } from "../features/meetings/meeting-types";
+import type { MeetingStatus } from "../features/meetings/contracts/meeting-types";

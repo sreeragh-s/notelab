@@ -2,7 +2,7 @@ import {
   MEETING_MAX_DURATION_MS,
   type MeetingLifecycleAction,
   type MeetingStatus,
-} from "./meeting-types";
+} from "../contracts/meeting-types";
 
 const transitions: Record<
   MeetingLifecycleAction,

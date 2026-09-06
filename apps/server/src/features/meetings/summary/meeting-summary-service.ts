@@ -2,14 +2,14 @@ import { generateText, Output } from "ai";
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
-import { resolveWorkspaceAiModel, type ResolvedAiModel } from "../ai/providers/ai-provider";
-import { replaceMeetingSummary } from "../collaboration/service";
-import { getRuntimeAdapter } from "../../infrastructure/runtime/runtime-adapter";
-import { db } from "../../infrastructure/database";
-import { meeting, meetingTranscriptSegment } from "../../infrastructure/database/schema";
-import { ServiceMutationError } from "../../shared/errors/service-mutation-error";
-import type { RuntimeEnv } from "../../shared/config/config";
-import { getMeetingForUser } from "./meeting-service";
+import { resolveWorkspaceAiModel, type ResolvedAiModel } from "../../ai/providers/ai-provider";
+import { replaceMeetingSummary } from "../../collaboration/service";
+import { getRuntimeAdapter } from "../../../infrastructure/runtime/runtime-adapter";
+import { db } from "../../../infrastructure/database";
+import { meeting, meetingTranscriptSegment } from "../../../infrastructure/database/schema";
+import { ServiceMutationError } from "../../../shared/errors/service-mutation-error";
+import type { RuntimeEnv } from "../../../shared/config/config";
+import { getMeetingForUser } from "../lifecycle/meeting-service";
 
 const MAX_TRANSCRIPT_CHUNK_CHARS = 60_000;
 
@@ -116,7 +116,7 @@ export async function generateMeetingSummary(input: {
     .returning();
   if (updated?.status === "completed") {
     try {
-      const { dispatchMeetingCompletedAgentTriggers } = await import("../ai/agents/agent-trigger-service");
+      const { dispatchMeetingCompletedAgentTriggers } = await import("../../ai/agents/agent-trigger-service");
       await dispatchMeetingCompletedAgentTriggers(input.env, {
         meetingId: record.id,
         occurrenceKey: updated.summaryGeneratedAt?.toISOString() ?? updated.updatedAt.toISOString(),
