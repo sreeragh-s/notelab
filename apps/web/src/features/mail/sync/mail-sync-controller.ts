@@ -1,19 +1,8 @@
+import { synchronizeMailCache } from "./mail-cache-sync"
+import { isDefiniteMailMutationFailure, runMailThreadMutation, runMailMessageMutation } from "./mail-mutations"
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
-import type {
-  MailFilterExpression,
-  MailConnection,
-  MailLabelRecord,
-  MailLabelWriteRequest,
-  MailMessageRecord,
-  MailMessageMutationResponse,
-  MailModifyRequest,
-  MailSyncRequest,
-  MailSyncResponse,
-  MailThreadSummary,
-  MailThreadMutationResponse,
-  MailView,
-} from "@zilobase/features/mail"
+import type { MailFilterExpression, MailConnection, MailLabelRecord, MailLabelWriteRequest, MailMessageRecord, MailMessageMutationResponse, MailModifyRequest, MailThreadSummary, MailThreadMutationResponse, MailView } from "@zilobase/features/mail";
 import {
   evaluateMailFilterExpression,
   mailApiBasePath,
@@ -24,21 +13,7 @@ import { ApiError, apiFetch, getApiRequestHeaders, toApiUrl } from "@/platform/n
 import { desktopNetworkFetch } from "@/platform/network"
 import { describeDesktopError, recordDesktopDiagnostic } from "@/features/desktop/diagnostics/index"
 import { getConnectivityState, subscribeConnectivity } from "@/features/offline/model"
-import {
-  applyMailSyncResponse,
-  clearMailReconciliation,
-  deleteMailLabelFromCache,
-  deleteMailMessageFromCache,
-  deleteMailThreadFromCache,
-  openMailDatabase,
-  optimisticallyModifyMessage,
-  optimisticallyModifyThread,
-  queueMailReconciliation,
-  reconcileMailMessage,
-  restoreMailMutation,
-  upsertFullMailThread,
-  type MailDatabase,
-} from "../storage/mail-database"
+import { clearMailReconciliation, deleteMailLabelFromCache, deleteMailMessageFromCache, deleteMailThreadFromCache, openMailDatabase, optimisticallyModifyThread, queueMailReconciliation, reconcileMailMessage, restoreMailMutation, upsertFullMailThread, type MailDatabase } from "../storage/mail-database";
 import { safeMailDownloadFilename } from "../messages/mail-attachment"
 import { loadMailThreadOnce } from "../messages/mail-thread-loader"
 
@@ -115,29 +90,7 @@ export function useMailController(input: {
     setSyncing(true)
     setError(null)
     try {
-      const state = await database.syncState.get("primary")
-      const isSearch = Boolean(options.search?.trim())
-      const loaded = state?.loadedViews?.[input.view] === true
-      const request: MailSyncRequest = {
-        connectionId: input.connection.connectionId,
-        historyId: !options.loadMore && !isSearch && loaded ? state?.historyId ?? undefined : undefined,
-        pageToken: options.loadMore ? state?.pageTokens[input.view] : undefined,
-        query: isSearch ? options.search!.trim() : undefined,
-        view: input.view,
-      }
-      if (request.historyId) {
-        const [messages, threads] = await Promise.all([
-          database.messages.toCollection().primaryKeys(),
-          database.threads.toCollection().primaryKeys(),
-        ])
-        request.knownMessageIds = messages.map(String)
-        request.knownThreadIds = threads.map(String)
-      }
-      const response = await apiFetch<MailSyncResponse>(`${mailBasePath}/sync`, {
-        body: JSON.stringify(request),
-        method: "POST",
-      })
-      await applyMailSyncResponse(database, response, input.view, { markViewLoaded: !isSearch })
+      const { response, isSearch } = await synchronizeMailCache({ database, mailBasePath, connectionId: input.connection.connectionId, view: input.view }, apiFetch, options)
       setSearchResultIds(isSearch ? response.threads.map((thread) => thread.id) : null)
       return response
     } catch (syncError) {
@@ -239,18 +192,14 @@ export function useMailController(input: {
   const modifyThread = useCallback(async (threadId: string, modification: MailModifyRequest) => {
     if (!database || !online) throw new Error("Reconnect to organize mail.")
     setMutating(true)
-    let snapshot: Awaited<ReturnType<typeof optimisticallyModifyThread>> | null = null
     try {
-      snapshot = await optimisticallyModifyThread(database, threadId, modification)
-      const response = await apiFetch<MailThreadMutationResponse>(
-        `${mailBasePath}/threads/${encodeURIComponent(threadId)}/modify`,
-        { body: JSON.stringify(modification), method: "POST" },
-      )
-      await upsertFullMailThread(database, response)
-    } catch (mutationError) {
-      if (snapshot && isDefiniteMailMutationFailure(mutationError)) await restoreMailMutation(database, snapshot)
-      await queueMailReconciliation(database, { threadIds: [threadId] })
-      throw mutationError
+      await runMailThreadMutation({
+        database, threadId, modification,
+        request: () => apiFetch<MailThreadMutationResponse>(
+          `${mailBasePath}/threads/${encodeURIComponent(threadId)}/modify`,
+          { body: JSON.stringify(modification), method: "POST" },
+        ),
+      })
     } finally {
       setMutating(false)
     }
@@ -287,18 +236,14 @@ export function useMailController(input: {
       ? { addLabelIds: ["TRASH"], removeLabelIds: ["INBOX"] }
       : { removeLabelIds: ["TRASH"] }
     setMutating(true)
-    let snapshot: Awaited<ReturnType<typeof optimisticallyModifyThread>> | null = null
     try {
-      snapshot = await optimisticallyModifyThread(database, threadId, modification)
-      const response = await apiFetch<MailThreadMutationResponse>(
-        `${mailBasePath}/threads/${encodeURIComponent(threadId)}/action`,
-        { body: JSON.stringify({ action }), method: "POST" },
-      )
-      await upsertFullMailThread(database, response)
-    } catch (mutationError) {
-      if (snapshot && isDefiniteMailMutationFailure(mutationError)) await restoreMailMutation(database, snapshot)
-      await queueMailReconciliation(database, { threadIds: [threadId] })
-      throw mutationError
+      await runMailThreadMutation({
+        database, threadId, modification,
+        request: () => apiFetch<MailThreadMutationResponse>(
+          `${mailBasePath}/threads/${encodeURIComponent(threadId)}/action`,
+          { body: JSON.stringify({ action }), method: "POST" },
+        ),
+      })
     } finally {
       setMutating(false)
     }
@@ -307,18 +252,14 @@ export function useMailController(input: {
   const modifyMessage = useCallback(async (messageId: string, modification: MailModifyRequest) => {
     if (!database || !online) throw new Error("Reconnect to organize mail.")
     setMutating(true)
-    let snapshot: Awaited<ReturnType<typeof optimisticallyModifyMessage>> | null = null
     try {
-      snapshot = await optimisticallyModifyMessage(database, messageId, modification)
-      const response = await apiFetch<MailMessageMutationResponse>(
-        `${mailBasePath}/messages/${encodeURIComponent(messageId)}/modify`,
-        { body: JSON.stringify(modification), method: "POST" },
-      )
-      await reconcileMailMessage(database, response.message)
-    } catch (mutationError) {
-      if (snapshot && isDefiniteMailMutationFailure(mutationError)) await restoreMailMutation(database, snapshot)
-      await queueMailReconciliation(database, { messageIds: [messageId] })
-      throw mutationError
+      await runMailMessageMutation({
+        database, messageId, modification,
+        request: () => apiFetch<MailMessageMutationResponse>(
+          `${mailBasePath}/messages/${encodeURIComponent(messageId)}/modify`,
+          { body: JSON.stringify(modification), method: "POST" },
+        ),
+      })
     } finally {
       setMutating(false)
     }
@@ -330,18 +271,14 @@ export function useMailController(input: {
       ? { addLabelIds: ["TRASH"], removeLabelIds: ["INBOX"] }
       : { removeLabelIds: ["TRASH"] }
     setMutating(true)
-    let snapshot: Awaited<ReturnType<typeof optimisticallyModifyMessage>> | null = null
     try {
-      snapshot = await optimisticallyModifyMessage(database, messageId, modification)
-      const response = await apiFetch<MailMessageMutationResponse>(
-        `${mailBasePath}/messages/${encodeURIComponent(messageId)}/action`,
-        { body: JSON.stringify({ action }), method: "POST" },
-      )
-      await reconcileMailMessage(database, response.message)
-    } catch (mutationError) {
-      if (snapshot && isDefiniteMailMutationFailure(mutationError)) await restoreMailMutation(database, snapshot)
-      await queueMailReconciliation(database, { messageIds: [messageId] })
-      throw mutationError
+      await runMailMessageMutation({
+        database, messageId, modification,
+        request: () => apiFetch<MailMessageMutationResponse>(
+          `${mailBasePath}/messages/${encodeURIComponent(messageId)}/action`,
+          { body: JSON.stringify({ action }), method: "POST" },
+        ),
+      })
     } finally {
       setMutating(false)
     }
@@ -461,9 +398,6 @@ export function useMailController(input: {
   }
 }
 
-function isDefiniteMailMutationFailure(error: unknown) {
-  return error instanceof ApiError && error.status >= 400 && error.status < 500
-}
 
 function threadMatchesView(thread: MailThreadSummary, view: MailView) {
   switch (view) {

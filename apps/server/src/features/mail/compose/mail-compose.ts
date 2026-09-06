@@ -44,35 +44,11 @@ export async function sendGmailComposition(input: {
 }): Promise<MailSendResponse> {
   await cleanupExpiredGmailSendOperations()
   const mime = buildMailMime(input.compose, input.connection.email)
-  let operation = await findOperation(input.compose.clientOperationId)
-  let created = false
-  if (operation && (operation.userId !== input.userId || operation.connectionId !== input.connection.id)) {
-    throw new GmailApiError("The mail operation ID is already in use.", 409, "provider_error")
-  }
-  if (operation?.rfcMessageId !== undefined && operation.rfcMessageId !== mime.rfcMessageId) {
-    throw new GmailApiError("The mail operation cannot be changed after sending starts.", 409, "provider_error")
-  }
-  if (!operation) {
-    const now = new Date()
-    const inserted = await db.insert(gmailSendOperation).values({
-      connectionId: input.connection.id,
-      expiresAt: new Date(now.getTime() + SEND_RECEIPT_TTL_MS),
-      id: input.compose.clientOperationId,
-      rfcMessageId: mime.rfcMessageId,
-      status: "pending",
-      userId: input.userId,
-    }).onConflictDoNothing().returning({ id: gmailSendOperation.id })
-    created = inserted.length > 0
-    operation = await findOperation(input.compose.clientOperationId)
-    if (!operation || operation.userId !== input.userId || operation.connectionId !== input.connection.id) {
-      throw new GmailApiError("The mail operation ID is already in use.", 409, "provider_error")
-    }
-  }
+  const { operation, created } = await reserveSendOperation(input, mime.rfcMessageId)
 
   const previous = await recoverSentMessage(input.gateway, operation.rfcMessageId, operation.gmailMessageId)
   if (previous) {
-    await markOperationSent(operation.id, previous.id!)
-    return { message: normalizeGmailMessage(await input.gateway.getMessage(previous.id!, "full"), true), reused: true }
+    return await completeSend(input.gateway, operation.id, previous.id!, true)
   }
   if (!created && !await claimRetry(operation)) {
     throw new GmailApiError("This message is still being sent. Retry shortly.", 409, "provider_error", true)
@@ -83,14 +59,12 @@ export async function sendGmailComposition(input: {
       ? await input.gateway.sendDraft(input.draftId)
       : await input.gateway.sendMessage(mailResource(mime.raw, input.compose.threadId))
     const id = requireMessageId(sent)
-    await markOperationSent(operation.id, id)
-    return { message: normalizeGmailMessage(await input.gateway.getMessage(id, "full"), true), reused: false }
+    return await completeSend(input.gateway, operation.id, id, false)
   } catch (error) {
     if (isAmbiguousSendFailure(error)) {
       const recovered = await recoverSentMessage(input.gateway, operation.rfcMessageId)
       if (recovered) {
-        await markOperationSent(operation.id, recovered.id!)
-        return { message: normalizeGmailMessage(await input.gateway.getMessage(recovered.id!, "full"), true), reused: true }
+        return await completeSend(input.gateway, operation.id, recovered.id!, true)
       }
       await markOperation(operation.id, "ambiguous")
     } else await markOperation(operation.id, "failed")
@@ -159,4 +133,38 @@ async function claimRetry(operation: typeof gmailSendOperation.$inferSelect) {
     .where(and(...conditions))
     .returning({ id: gmailSendOperation.id })
   return claimed.length > 0
+}
+
+async function reserveSendOperation(input: { compose: MailComposeRequest; connection: GmailConnectionRow; userId: string }, rfcMessageId: string) {
+  let operation = await findOperation(input.compose.clientOperationId)
+  let created = false
+  if (operation && (operation.userId !== input.userId || operation.connectionId !== input.connection.id)) {
+    throw new GmailApiError("The mail operation ID is already in use.", 409, "provider_error")
+  }
+  if (operation?.rfcMessageId !== undefined && operation.rfcMessageId !== rfcMessageId) {
+    throw new GmailApiError("The mail operation cannot be changed after sending starts.", 409, "provider_error")
+  }
+  if (!operation) {
+    const now = new Date()
+    const inserted = await db.insert(gmailSendOperation).values({
+      connectionId: input.connection.id,
+      expiresAt: new Date(now.getTime() + SEND_RECEIPT_TTL_MS),
+      id: input.compose.clientOperationId,
+      rfcMessageId: rfcMessageId,
+      status: "pending",
+      userId: input.userId,
+    }).onConflictDoNothing().returning({ id: gmailSendOperation.id })
+    created = inserted.length > 0
+    operation = await findOperation(input.compose.clientOperationId)
+    if (!operation || operation.userId !== input.userId || operation.connectionId !== input.connection.id) {
+      throw new GmailApiError("The mail operation ID is already in use.", 409, "provider_error")
+    }
+  }
+
+  return { operation, created }
+}
+
+async function completeSend(gateway: GmailGateway, operationId: string, messageId: string, reused: boolean): Promise<MailSendResponse> {
+  await markOperationSent(operationId, messageId)
+  return { message: normalizeGmailMessage(await gateway.getMessage(messageId, "full"), true), reused }
 }
