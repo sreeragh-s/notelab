@@ -5,8 +5,7 @@ import { mutationResponse } from "./core/commit";
 import { createDatabaseRowService } from "./rows/service";
 import { setDatabaseCellValueService } from "./properties/cell-service";
 import { moveDatabaseRowService, reorderDatabaseRowsService } from "./rows/position-service";
-import { ServiceMutationError } from "../../shared/errors/service-mutation-error";
-import { requireDatabaseRouteUser as requireUser, serviceMutationErrorResponse } from "./route-support";
+import { requireDatabaseRouteUser as requireUser } from "./route-support";
 
 export const databaseRowRoutes = new Hono<AppBindings>();
 
@@ -49,7 +48,6 @@ databaseRowRoutes.post("/:id/rows", async (c) => {
     return c.json({ error: "Invalid row input" }, 400);
   }
 
-  try {
     const result = await createDatabaseRowService({
       databaseId: c.req.param("id"),
       env: c.env,
@@ -84,13 +82,6 @@ databaseRowRoutes.post("/:id/rows", async (c) => {
       },
       201,
     );
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 
 databaseRowRoutes.patch("/:id/rows/reorder", async (c) => {
@@ -107,19 +98,13 @@ databaseRowRoutes.patch("/:id/rows/reorder", async (c) => {
   ) {
     return c.json({ error: "rowIds must be an array of strings" }, 400);
   }
-  try {
-    const result = await reorderDatabaseRowsService({
-      databaseId: c.req.param("id"),
-      env: c.env,
-      rowIds: rowIds as string[],
-      userId: user.id,
-    });
-    return c.json(mutationResponse(result.commit));
-  } catch (error) {
-    if (error instanceof ServiceMutationError)
-      return serviceMutationErrorResponse(c, error);
-    throw error;
-  }
+  const result = await reorderDatabaseRowsService({
+    databaseId: c.req.param("id"),
+    env: c.env,
+    rowIds: rowIds as string[],
+    userId: user.id,
+  });
+  return c.json(mutationResponse(result.commit));
 });
 
 databaseRowRoutes.patch("/:id/rows/:rowId/move", async (c) => {
@@ -145,23 +130,17 @@ databaseRowRoutes.patch("/:id/rows/:rowId/move", async (c) => {
   ) {
     return c.json({ error: "Invalid row move input" }, 400);
   }
-  try {
-    const result = await moveDatabaseRowService({
-      databaseId: c.req.param("id"),
-      env: c.env,
-      origin: c.get("authMethod") === "apiKey" ? "api" : "user",
-      groupPropertyId: groupPropertyId as string | undefined,
-      groupValue,
-      rowId: c.req.param("rowId"),
-      rowIds: rowIds as string[],
-      userId: user.id,
-    });
-    return c.json(mutationResponse(result.commit));
-  } catch (error) {
-    if (error instanceof ServiceMutationError)
-      return serviceMutationErrorResponse(c, error);
-    throw error;
-  }
+  const result = await moveDatabaseRowService({
+    databaseId: c.req.param("id"),
+    env: c.env,
+    origin: c.get("authMethod") === "apiKey" ? "api" : "user",
+    groupPropertyId: groupPropertyId as string | undefined,
+    groupValue,
+    rowId: c.req.param("rowId"),
+    rowIds: rowIds as string[],
+    userId: user.id,
+  });
+  return c.json(mutationResponse(result.commit));
 });
 
 databaseRowRoutes.put("/:id/rows/:rowId/properties/:propertyId", async (c) => {
@@ -172,20 +151,14 @@ databaseRowRoutes.put("/:id/rows/:rowId/properties/:propertyId", async (c) => {
     return c.json({ error: "A JSON body is required" }, 400);
   }
   const { value = null } = body as { value?: unknown };
-  try {
-    const result = await setDatabaseCellValueService({
-      databaseId: c.req.param("id"),
-      env: c.env,
-      origin: c.get("authMethod") === "apiKey" ? "api" : "user",
-      pagePropertyId: c.req.param("propertyId"),
-      rowId: c.req.param("rowId"),
-      userId: user.id,
-      value,
-    });
-    return c.json(mutationResponse(result.commit));
-  } catch (error) {
-    if (error instanceof ServiceMutationError)
-      return serviceMutationErrorResponse(c, error);
-    throw error;
-  }
+  const result = await setDatabaseCellValueService({
+    databaseId: c.req.param("id"),
+    env: c.env,
+    origin: c.get("authMethod") === "apiKey" ? "api" : "user",
+    pagePropertyId: c.req.param("propertyId"),
+    rowId: c.req.param("rowId"),
+    userId: user.id,
+    value,
+  });
+  return c.json(mutationResponse(result.commit));
 });

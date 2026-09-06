@@ -33,7 +33,7 @@ Update this guide when ownership, interfaces, authorization, persistence or cros
 
 ## Capability ownership
 
-The server keeps transport in `routes.ts` and `slack-routes.ts`. The explicit [management interface](../../../apps/server/src/features/databases/automations/service.ts) preserves its existing exported operations. Its implementation is grouped by capability:
+The server keeps transport in `routes.ts` and `slack-routes.ts`. Slack OAuth completion is `/automation-slack/oauth/callback` and is a Node API path. The explicit [management interface](../../../apps/server/src/features/databases/automations/service.ts) preserves its existing exported operations. Its implementation is grouped by capability:
 
 - [Definition](../../../apps/server/src/features/databases/automations/definition): management access/context loading, definition reads, lifecycle writes, validation and dependency catalog invalidation.
 - [Compilation](../../../apps/server/src/features/databases/automations/compilation): pure definition compilation and reference traversal.

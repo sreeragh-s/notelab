@@ -16,7 +16,6 @@ import { requireDatabaseRouteUser } from "../route-support";
 import {
   createDatabaseAutomation,
   createDatabaseAutomationSecret,
-  DatabaseAutomationError,
   deleteDatabaseAutomation,
   duplicateDatabaseAutomation,
   exportDatabaseAutomationAudit,
@@ -268,22 +267,8 @@ async function handle(
   callback: () => Promise<object | Response>,
   callbackReturnsResponse = false,
 ): Promise<Response> {
-  try {
-    const result = await callback();
-    return callbackReturnsResponse ? result as Response : c.json(result);
-  } catch (error) {
-    if (error instanceof DatabaseAutomationError) {
-      return c.json(
-        {
-          code: error.code,
-          error: error.message,
-          ...(error.validation ? { validation: error.validation } : {}),
-        },
-        error.status,
-      );
-    }
-    throw error;
-  }
+  const result = await callback();
+  return callbackReturnsResponse ? result as Response : c.json(result);
 }
 
 function invalidBody(c: Context<AppBindings>, issues: Array<{ message: string; path: PropertyKey[] }>) {

@@ -4,7 +4,6 @@ import type { AppBindings } from "../../shared/types";
 import {
   listInProductNotifications,
   markInProductNotificationRead,
-  NotificationError,
 } from "./notification-operations";
 
 export const notificationRoutes = new Hono<AppBindings>();
@@ -30,10 +29,5 @@ notificationRoutes.post("/:workspaceId/notifications/:notificationId/read", asyn
 });
 
 async function handle(c: Context<AppBindings>, action: () => Promise<object>) {
-  try {
-    return c.json(await action());
-  } catch (error) {
-    if (error instanceof NotificationError) return c.json({ error: error.message }, error.status);
-    throw error;
-  }
+  return c.json(await action());
 }

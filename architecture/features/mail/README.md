@@ -10,7 +10,7 @@
 
 ## Main flow
 
-Provider callbacks connect Gmail accounts. Workspace routes expose connection, query, organization, sync, message and realtime operations. Sync/index modules build queryable local state; database synchronization uses its own outbox worker.
+Provider callbacks connect Gmail accounts. Workspace routes expose connection, query, organization, sync, message and realtime operations. Sync/index modules build queryable local state; database synchronization uses its own outbox worker. On the combined Node runtime, `/mail/oauth/google/callback` and `/mail/google/pubsub` are API paths and reach Hono rather than static web assets.
 
 ## Authorization and persistence
 

@@ -43,6 +43,7 @@ vi.mock("./core/service", () => ({
 
 import { databaseRoutes } from "./database-routes";
 import { ServiceMutationError } from "../../shared/errors/service-mutation-error";
+import { attachHttpRouteErrorHandler } from "../../shared/http/route-error";
 
 const user = {
   email: "user@example.com",
@@ -69,6 +70,7 @@ function appWithUser(authMethod: "apiKey" | "session" = "session") {
     await next();
   });
   app.route("/databases", databaseRoutes);
+  attachHttpRouteErrorHandler(app);
   return app;
 }
 

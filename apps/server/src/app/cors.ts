@@ -26,7 +26,7 @@ export function createCorsMiddleware(): MiddlewareHandler<AppBindings> {
       "If-Match",
       "Content-Length",
     ],
-    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowMethods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     exposeHeaders: ["Content-Length", "set-auth-token"],
     maxAge: 600,
     credentials: true,

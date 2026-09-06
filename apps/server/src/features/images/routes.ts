@@ -15,6 +15,7 @@ import {
   resolveImageStorageMode,
 } from "../../infrastructure/storage/image-storage";
 import type { AppBindings } from "../../shared/types";
+import { readJsonBody } from "../../shared/http/request";
 
 export const imageRoutes = new Hono<AppBindings>();
 
@@ -45,7 +46,7 @@ imageRoutes.post("/uploads", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const body = await readJsonBody<CreateUploadBody>(c);
+  const body = (await readJsonBody(c.req)) as CreateUploadBody | null;
 
   if (!body) {
     return c.json({ error: "Request body must be valid JSON" }, 400);
@@ -399,14 +400,6 @@ imageRoutes.delete("/:assetId", async (c) => {
 
 function requireUser(c: Context<AppBindings>) {
   return c.get("user") ?? null;
-}
-
-async function readJsonBody<T>(c: Context<AppBindings>) {
-  try {
-    return (await c.req.json()) as T;
-  } catch {
-    return null;
-  }
 }
 
 async function getActiveImageAsset(id: string) {

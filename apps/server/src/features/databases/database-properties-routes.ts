@@ -7,9 +7,8 @@ import { hasDuplicateValues } from "./core/position-service";
 import { createDatabasePropertyService, updateDatabasePropertyService } from "./properties/service";
 import { deleteDatabasePropertyService, reorderDatabasePropertiesService } from "./properties/structure-service";
 import { duplicateDatabasePropertyService } from "./properties/duplication-service";
-import { ServiceMutationError } from "../../shared/errors/service-mutation-error";
 import { normalizeDatabasePropertyType } from "./properties/types";
-import { requireDatabaseRouteUser as requireUser, serviceMutationErrorResponse } from "./route-support";
+import { requireDatabaseRouteUser as requireUser } from "./route-support";
 
 export const databasePropertyRoutes = new Hono<AppBindings>();
 
@@ -45,7 +44,6 @@ databasePropertyRoutes.post("/:id/properties", async (c) => {
     return c.json({ error: "position must be a non-negative integer" }, 400);
   }
 
-  try {
     const result = await createDatabasePropertyService({
       config,
       databaseId: c.req.param("id"),
@@ -57,13 +55,6 @@ databasePropertyRoutes.post("/:id/properties", async (c) => {
     });
 
     return c.json(mutationResponse(result.commit), 201);
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 
 databasePropertyRoutes.patch("/:id/properties/reorder", async (c) => {
@@ -86,7 +77,6 @@ databasePropertyRoutes.patch("/:id/properties/reorder", async (c) => {
     return c.json({ error: "propertyIds must not contain duplicates" }, 400);
   }
 
-  try {
     const result = await reorderDatabasePropertiesService({
       databaseId: c.req.param("id"),
       env: c.env,
@@ -95,13 +85,6 @@ databasePropertyRoutes.patch("/:id/properties/reorder", async (c) => {
     });
 
     return c.json(mutationResponse(result.commit));
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 
 databasePropertyRoutes.patch("/:id/properties/:databasePropertyId", async (c) => {
@@ -142,7 +125,6 @@ databasePropertyRoutes.patch("/:id/properties/:databasePropertyId", async (c) =>
     }
   }
 
-  try {
     const result = await updateDatabasePropertyService({
       databaseId: c.req.param("id"),
       databasePropertyId: c.req.param("databasePropertyId"),
@@ -157,13 +139,6 @@ databasePropertyRoutes.patch("/:id/properties/:databasePropertyId", async (c) =>
     });
 
     return c.json(mutationResponse(result.commit));
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 
 databasePropertyRoutes.post(
@@ -183,23 +158,15 @@ databasePropertyRoutes.post(
       return c.json({ error: "includeValues must be a boolean" }, 400);
     }
 
-    try {
-      const result = await duplicateDatabasePropertyService({
-        databaseId: c.req.param("id"),
-        databasePropertyId: c.req.param("databasePropertyId"),
-        env: c.env,
-        includeValues,
-        userId: user.id,
-      });
+    const result = await duplicateDatabasePropertyService({
+      databaseId: c.req.param("id"),
+      databasePropertyId: c.req.param("databasePropertyId"),
+      env: c.env,
+      includeValues,
+      userId: user.id,
+    });
 
-      return c.json(mutationResponse(result.commit), 201);
-    } catch (error) {
-      if (error instanceof ServiceMutationError) {
-        return serviceMutationErrorResponse(c, error);
-      }
-
-      throw error;
-    }
+    return c.json(mutationResponse(result.commit), 201);
   },
 );
 
@@ -210,7 +177,6 @@ databasePropertyRoutes.delete("/:id/properties/:databasePropertyId", async (c) =
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  try {
     const result = await deleteDatabasePropertyService({
       databaseId: c.req.param("id"),
       databasePropertyId: c.req.param("databasePropertyId"),
@@ -219,12 +185,5 @@ databasePropertyRoutes.delete("/:id/properties/:databasePropertyId", async (c) =
     });
 
     return c.json(mutationResponse(result.commit));
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 

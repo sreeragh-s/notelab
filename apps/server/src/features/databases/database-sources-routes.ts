@@ -6,10 +6,9 @@ import { mutationResponse } from "./core/commit";
 import { updateDataSourceService } from "./data-sources/data-source-service";
 import { createDatabaseDataSourceService, linkDatabaseDataSourceService, replaceDatabaseViewDataSourceService, unlinkDatabaseDataSourceService } from "./data-sources/database-data-source-service";
 import { applyDatabaseTemplateService } from "./templates/service";
-import { ServiceMutationError } from "../../shared/errors/service-mutation-error";
 import { updateDatabaseService } from "./core/service";
 import { createDatabaseViewService, deleteDatabaseViewService, updateDatabaseViewService } from "./views/service";
-import { requireDatabaseRouteUser as requireUser, serviceMutationErrorResponse } from "./route-support";
+import { requireDatabaseRouteUser as requireUser } from "./route-support";
 
 export const databaseSourceRoutes = new Hono<AppBindings>();
 
@@ -25,7 +24,6 @@ databaseSourceRoutes.patch("/:id", async (c) => {
     }
   }
 
-  try {
     const result = await updateDatabaseService({
       databaseId: c.req.param("id"),
       env: c.env,
@@ -35,13 +33,6 @@ databaseSourceRoutes.patch("/:id", async (c) => {
     });
 
     return c.json(mutationResponse(result.commit));
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 
 databaseSourceRoutes.patch("/data-sources/:dataSourceId", async (c) => {
@@ -53,21 +44,14 @@ databaseSourceRoutes.patch("/data-sources/:dataSourceId", async (c) => {
     return c.json({ error: "name must be a string" }, 400);
   }
 
-  try {
-    const result = await updateDataSourceService({
-      config,
-      dataSourceId: c.req.param("dataSourceId"),
-      env: c.env,
-      ...(typeof name === "string" ? { name } : {}),
-      userId: user.id,
-    });
-    return c.json(mutationResponse(result.commit));
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-    throw error;
-  }
+  const result = await updateDataSourceService({
+    config,
+    dataSourceId: c.req.param("dataSourceId"),
+    env: c.env,
+    ...(typeof name === "string" ? { name } : {}),
+    userId: user.id,
+  });
+  return c.json(mutationResponse(result.commit));
 });
 
 databaseSourceRoutes.patch("/:id/views/:viewId", async (c) => {
@@ -85,25 +69,17 @@ databaseSourceRoutes.patch("/:id/views/:viewId", async (c) => {
     return c.json({ error: "type must be a string" }, 400);
   }
 
-  try {
-    const result = await updateDatabaseViewService({
-      databaseId: c.req.param("id"),
-      env: c.env,
-      userId: user.id,
-      viewId: c.req.param("viewId"),
-      ...(patch.name !== undefined ? { name: patch.name } : {}),
-      ...(patch.config !== undefined ? { config: patch.config } : {}),
-      ...(patch.type !== undefined ? { type: patch.type } : {}),
-    });
+  const result = await updateDatabaseViewService({
+    databaseId: c.req.param("id"),
+    env: c.env,
+    userId: user.id,
+    viewId: c.req.param("viewId"),
+    ...(patch.name !== undefined ? { name: patch.name } : {}),
+    ...(patch.config !== undefined ? { config: patch.config } : {}),
+    ...(patch.type !== undefined ? { type: patch.type } : {}),
+  });
 
-    return c.json(mutationResponse(result.commit));
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
+  return c.json(mutationResponse(result.commit));
 });
 
 databaseSourceRoutes.post("/:id/views", async (c) => {
@@ -133,7 +109,6 @@ databaseSourceRoutes.post("/:id/views", async (c) => {
     return c.json({ error: "dataSourceId is required" }, 400);
   }
 
-  try {
     const result = await createDatabaseViewService({
       config,
       databaseId: c.req.param("id"),
@@ -145,13 +120,6 @@ databaseSourceRoutes.post("/:id/views", async (c) => {
     });
 
     return c.json(mutationResponse(result.commit), 201);
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 
 databaseSourceRoutes.post("/:id/data-sources/new", async (c) => {
@@ -169,23 +137,16 @@ databaseSourceRoutes.post("/:id/data-sources/new", async (c) => {
     return c.json({ error: "viewType must be a string" }, 400);
   }
 
-  try {
-    const result = await createDatabaseDataSourceService({
-      config,
-      databaseId: c.req.param("id"),
-      env: c.env,
-      ...(typeof name === "string" ? { name } : {}),
-      userId: user.id,
-      ...(typeof viewName === "string" ? { viewName } : {}),
-      ...(typeof viewType === "string" ? { viewType } : {}),
-    });
-    return c.json(result.payload, 201);
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-    throw error;
-  }
+  const result = await createDatabaseDataSourceService({
+    config,
+    databaseId: c.req.param("id"),
+    env: c.env,
+    ...(typeof name === "string" ? { name } : {}),
+    userId: user.id,
+    ...(typeof viewName === "string" ? { viewName } : {}),
+    ...(typeof viewType === "string" ? { viewType } : {}),
+  });
+  return c.json(result.payload, 201);
 });
 
 databaseSourceRoutes.post("/:id/data-sources", async (c) => {
@@ -203,23 +164,16 @@ databaseSourceRoutes.post("/:id/data-sources", async (c) => {
     return c.json({ error: "type must be a string" }, 400);
   }
 
-  try {
-    const result = await linkDatabaseDataSourceService({
-      config,
-      databaseId: c.req.param("id"),
-      dataSourceId,
-      env: c.env,
-      ...(typeof name === "string" ? { name } : {}),
-      ...(typeof type === "string" ? { type } : {}),
-      userId: user.id,
-    });
-    return c.json(mutationResponse(result.commit), 201);
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-    throw error;
-  }
+  const result = await linkDatabaseDataSourceService({
+    config,
+    databaseId: c.req.param("id"),
+    dataSourceId,
+    env: c.env,
+    ...(typeof name === "string" ? { name } : {}),
+    ...(typeof type === "string" ? { type } : {}),
+    userId: user.id,
+  });
+  return c.json(mutationResponse(result.commit), 201);
 });
 
 databaseSourceRoutes.put("/:id/views/:viewId/source", async (c) => {
@@ -234,41 +188,27 @@ databaseSourceRoutes.put("/:id/views/:viewId/source", async (c) => {
     return c.json({ error: "dataSourceId must be a string" }, 400);
   }
 
-  try {
-    const result = await replaceDatabaseViewDataSourceService({
-      databaseId: c.req.param("id"),
-      dataSourceId,
-      env: c.env,
-      userId: user.id,
-      viewId: c.req.param("viewId"),
-    });
-    return c.json(mutationResponse(result.commit));
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-    throw error;
-  }
+  const result = await replaceDatabaseViewDataSourceService({
+    databaseId: c.req.param("id"),
+    dataSourceId,
+    env: c.env,
+    userId: user.id,
+    viewId: c.req.param("viewId"),
+  });
+  return c.json(mutationResponse(result.commit));
 });
 
 databaseSourceRoutes.delete("/:id/data-sources/:dataSourceId", async (c) => {
   const user = requireUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
 
-  try {
-    const result = await unlinkDatabaseDataSourceService({
-      databaseId: c.req.param("id"),
-      dataSourceId: c.req.param("dataSourceId"),
-      env: c.env,
-      userId: user.id,
-    });
-    return c.json(mutationResponse(result.commit));
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-    throw error;
-  }
+  const result = await unlinkDatabaseDataSourceService({
+    databaseId: c.req.param("id"),
+    dataSourceId: c.req.param("dataSourceId"),
+    env: c.env,
+    userId: user.id,
+  });
+  return c.json(mutationResponse(result.commit));
 });
 
 databaseSourceRoutes.delete("/:id/views/:viewId", async (c) => {
@@ -278,22 +218,14 @@ databaseSourceRoutes.delete("/:id/views/:viewId", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  try {
-    const result = await deleteDatabaseViewService({
-      databaseId: c.req.param("id"),
-      env: c.env,
-      userId: user.id,
-      viewId: c.req.param("viewId"),
-    });
+  const result = await deleteDatabaseViewService({
+    databaseId: c.req.param("id"),
+    env: c.env,
+    userId: user.id,
+    viewId: c.req.param("viewId"),
+  });
 
-    return c.json(mutationResponse(result.commit));
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
+  return c.json(mutationResponse(result.commit));
 });
 
 databaseSourceRoutes.post("/:id/apply-template", async (c) => {
@@ -344,7 +276,6 @@ databaseSourceRoutes.post("/:id/apply-template", async (c) => {
     return c.json({ error: "Invalid database template input" }, 400);
   }
 
-  try {
     const result = await applyDatabaseTemplateService({
       config: config ?? null,
       databaseId: c.req.param("id"),
@@ -365,12 +296,5 @@ databaseSourceRoutes.post("/:id/apply-template", async (c) => {
     });
 
     return c.json(result.payload);
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 

@@ -5,10 +5,9 @@ import type { AppBindings } from "../../shared/types";
 import { readJsonBody } from "../../shared/http/request";
 import { getDatabasePayload } from "./core/payload";
 import { updateDatabaseFavoriteService } from "./core/favorite-service";
-import { ServiceMutationError } from "../../shared/errors/service-mutation-error";
 import { deleteDatabaseAccessRuleService, deletePublicDatabaseAccessService, listDatabaseAccessRulesService, upsertDatabaseAccessRuleService } from "./sharing/service";
 import { createDatabaseService, deleteDatabaseService, restoreDatabaseService } from "./core/service";
-import { requireDatabaseRouteUser as requireUser, serviceMutationErrorResponse } from "./route-support";
+import { requireDatabaseRouteUser as requireUser } from "./route-support";
 
 export const databaseCoreRoutes = new Hono<AppBindings>();
 export const databaseCreateRoutes = new Hono<AppBindings>();
@@ -61,7 +60,6 @@ databaseCreateRoutes.post("/", async (c) => {
     return c.json({ error: "teamspaceId must be a string or null" }, 400);
   }
 
-  try {
     const created = await createDatabaseService({
       env: c.env,
       name,
@@ -102,13 +100,6 @@ databaseCreateRoutes.post("/", async (c) => {
       },
       201,
     );
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 
 
@@ -116,20 +107,12 @@ databaseCoreRoutes.get("/:id/access", async (c) => {
   const user = requireUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
 
-  try {
     return c.json(
       await listDatabaseAccessRulesService({
         databaseId: c.req.param("id"),
         userId: user.id,
       }),
     );
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 
 databaseCoreRoutes.put("/:id/access", async (c) => {
@@ -137,7 +120,6 @@ databaseCoreRoutes.put("/:id/access", async (c) => {
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   const body = await readJsonBody(c.req);
 
-  try {
     return c.json(
       await upsertDatabaseAccessRuleService({
         body,
@@ -146,20 +128,12 @@ databaseCoreRoutes.put("/:id/access", async (c) => {
         userId: user.id,
       }),
     );
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 
 databaseCoreRoutes.delete("/:id/access/public", async (c) => {
   const user = requireUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
 
-  try {
     return c.json(
       await deletePublicDatabaseAccessService({
         databaseId: c.req.param("id"),
@@ -167,20 +141,12 @@ databaseCoreRoutes.delete("/:id/access/public", async (c) => {
         userId: user.id,
       }),
     );
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 
 databaseCoreRoutes.delete("/:id/access/:ruleId", async (c) => {
   const user = requireUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
 
-  try {
     return c.json(
       await deleteDatabaseAccessRuleService({
         databaseId: c.req.param("id"),
@@ -189,13 +155,6 @@ databaseCoreRoutes.delete("/:id/access/:ruleId", async (c) => {
         userId: user.id,
       }),
     );
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 
 databaseCoreRoutes.put("/:id/favorite", async (c) => {
@@ -205,7 +164,6 @@ databaseCoreRoutes.put("/:id/favorite", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  try {
     return c.json(
       await updateDatabaseFavoriteService({
         databaseId: c.req.param("id"),
@@ -213,13 +171,6 @@ databaseCoreRoutes.put("/:id/favorite", async (c) => {
         userId: user.id,
       }),
     );
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 
 databaseCoreRoutes.delete("/:id", async (c) => {
@@ -229,7 +180,6 @@ databaseCoreRoutes.delete("/:id", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  try {
     return c.json(
       await deleteDatabaseService({
         databaseId: c.req.param("id"),
@@ -237,13 +187,6 @@ databaseCoreRoutes.delete("/:id", async (c) => {
         userId: user.id,
       }),
     );
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 
 databaseCoreRoutes.post("/:id/restore", async (c) => {
@@ -253,7 +196,6 @@ databaseCoreRoutes.post("/:id/restore", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  try {
     return c.json(
       await restoreDatabaseService({
         databaseId: c.req.param("id"),
@@ -261,13 +203,6 @@ databaseCoreRoutes.post("/:id/restore", async (c) => {
         userId: user.id,
       }),
     );
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });
 
 databaseCoreRoutes.delete("/:id/favorite", async (c) => {
@@ -277,7 +212,6 @@ databaseCoreRoutes.delete("/:id/favorite", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  try {
     return c.json(
       await updateDatabaseFavoriteService({
         databaseId: c.req.param("id"),
@@ -285,11 +219,4 @@ databaseCoreRoutes.delete("/:id/favorite", async (c) => {
         userId: user.id,
       }),
     );
-  } catch (error) {
-    if (error instanceof ServiceMutationError) {
-      return serviceMutationErrorResponse(c, error);
-    }
-
-    throw error;
-  }
 });

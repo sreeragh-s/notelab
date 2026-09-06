@@ -460,22 +460,6 @@ async function handle(
       successStatus,
     );
   } catch (error) {
-    const serviceError = toMcpServiceError(error);
-    if (serviceError)
-      return c.json(
-        { code: serviceError.code, error: serviceError.message },
-        serviceError.status,
-      );
-    if (error instanceof z.ZodError) {
-      return c.json(
-        {
-          code: "VALIDATION_ERROR",
-          error: "Invalid request body",
-          issues: error.issues,
-        },
-        400,
-      );
-    }
-    throw error;
+    throw toMcpServiceError(error) ?? error;
   }
 }

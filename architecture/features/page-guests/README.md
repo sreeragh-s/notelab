@@ -7,7 +7,7 @@
 
 ## Main flow
 
-Guest workflows submit invitations or approval requests, approve/reject them, accept invitations, and revoke or promote guests. These operations coordinate membership behavior with page-specific grants.
+Guest workflows submit invitations or approval requests, approve/reject them, accept invitations, and revoke or promote guests. These operations coordinate membership behavior with page-specific grants. Invitation lookup and accept live at `/page-guest-invitations/:invitationId` and are Node API paths.
 
 ## Authorization and persistence
 

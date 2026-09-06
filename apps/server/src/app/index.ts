@@ -1,19 +1,27 @@
 import { Hono, type ErrorHandler } from "hono";
+import { bodyLimit } from "hono/body-limit";
+import { compress } from "hono/compress";
+import { methodNotAllowed } from "hono/method-not-allowed";
+import { requestId } from "hono/request-id";
+import { secureHeaders } from "hono/secure-headers";
 import { createCorsMiddleware } from "./cors";
 import { registerRoutes } from "./routes";
 import { authenticatedSessionMiddleware } from "../features/auth/session-guard";
-import { serverTimingMiddleware } from "./timing";
+import { REQUEST_ID_HEADER, serverTimingMiddleware } from "./timing";
 import {
   DATABASE_UNAVAILABLE_CODE,
   DATABASE_UNAVAILABLE_MESSAGE,
   getDatabaseErrorCode,
   isDatabaseUnavailableError,
 } from "../shared/errors/database-errors";
+import { JSON_BODY_LIMIT_BYTES } from "../shared/http/json";
+import { httpRouteErrorResponse } from "../shared/http/route-error";
 import { registerAppEditionExtension } from "../shared/edition-extension-registry";
 import type { AppBindings, AppErrorReporter } from "../shared/types";
 import type { EditionExtensionOptions } from "../shared/types";
 import { demoWriteGuard } from "../features/demo/write-guard";
 import { runWithBackgroundTraceContext } from "../infrastructure/background/contracts";
+import { isSelfHostedRuntime } from "../infrastructure/runtime/runtime-adapter";
 
 export function createApp(options: EditionExtensionOptions = {}) {
   const app = new Hono<AppBindings>();
@@ -33,6 +41,28 @@ export function createApp(options: EditionExtensionOptions = {}) {
     await next();
   });
   app.use("*", createCorsMiddleware());
+  app.use(
+    "*",
+    secureHeaders({
+      crossOriginOpenerPolicy: false,
+      crossOriginResourcePolicy: false,
+      originAgentCluster: false,
+      referrerPolicy: "no-referrer",
+      xFrameOptions: "DENY",
+    }),
+  );
+  app.use("*", requestId({ headerName: REQUEST_ID_HEADER }));
+  app.use(
+    "*",
+    bodyLimit({
+      maxSize: JSON_BODY_LIMIT_BYTES,
+      onError: (c) => c.json({ error: "Request body is too large" }, 413),
+    }),
+  );
+  if (isSelfHostedRuntime()) {
+    app.use("*", compress({ contentTypeFilter: /^application\/json/i }));
+  }
+  app.use("*", methodNotAllowed({ app }));
   app.use("*", serverTimingMiddleware);
   app.use("*", authenticatedSessionMiddleware);
   app.use("*", demoWriteGuard);
@@ -68,6 +98,9 @@ export function createAppErrorHandler(
         503,
       );
     }
+
+    const routed = httpRouteErrorResponse(c, error);
+    if (routed) return routed;
 
     console.error(
       JSON.stringify({

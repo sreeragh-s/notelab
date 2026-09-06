@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppBindings } from "../../../shared/types";
+import { attachHttpRouteErrorHandler } from "../../../shared/http/route-error";
 import { responseJson } from "../../../test-support/response";
 
 const mocks = vi.hoisted(() => ({
@@ -76,6 +77,7 @@ function app(authenticated = true) {
     });
   }
   application.route("/", databaseAutomationRoutes);
+  attachHttpRouteErrorHandler(application);
   return application;
 }
 
