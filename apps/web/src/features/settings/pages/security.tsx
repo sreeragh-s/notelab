@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { Trash2Icon } from "@/shared/components/icons"
 import { toast } from "sonner"
 
-import { clearApiAuthToken, getApiErrorMessage } from "@/features/desktop/network/api"
+import { clearApiAuthToken, getApiErrorMessage } from "@/platform/network/api"
 import { useAppStore } from "@/features/desktop/state/app-store"
 import { clearAllOfflineData } from "@/features/offline"
 import { queryClient } from "@/app/query-client"

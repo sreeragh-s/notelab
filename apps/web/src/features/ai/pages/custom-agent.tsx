@@ -5,8 +5,8 @@ import {
   defaultUserSettings,
   useUserSettings,
 } from "@zilobase/features/user-settings";
-import { getApiRequestHeaders, toApiUrl } from "@/features/desktop/network/api";
-import { desktopNetworkFetch } from "@/features/desktop/network";
+import { getApiRequestHeaders, toApiUrl } from "@/platform/network/api";
+import { desktopNetworkFetch } from "@/platform/network";
 import * as React from "react";
 import { useParams, useRouter, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";

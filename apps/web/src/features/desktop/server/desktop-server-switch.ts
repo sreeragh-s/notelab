@@ -1,11 +1,11 @@
-import { forgetDesktopAuthCredentials } from "../auth/desktop-auth-token"
-import { beginDesktopServerNetworkShutdown } from "../network/desktop-network"
+import { forgetDesktopAuthCredentials } from "../../../platform/auth/desktop-auth-token"
+import { beginDesktopServerNetworkShutdown } from "../../../platform/network/desktop-network"
 import {
   commitDesktopServerCandidate,
   resolveDesktopServerSwitchPath,
   switchDesktopServerProfile,
   type DesktopServer,
-} from "./desktop-server"
+} from "../../../platform/server/desktop-server"
 import { destroyDesktopOfflineConnections } from "@/features/offline/index"
 import { queryClient } from "@/app/query-client"
 

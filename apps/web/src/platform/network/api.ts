@@ -2,7 +2,7 @@ import {
   clearDesktopAuthToken,
   getDesktopAuthToken,
   setDesktopAuthToken,
-} from "@/features/desktop/auth/desktop-auth-token"
+} from "@/platform/auth/desktop-auth-token"
 import {
   isDesktopOfflineSupported,
   isOfflineMode,
@@ -13,8 +13,8 @@ import {
   resolveRuntimeApiOrigin,
   resolveRuntimeWebSocketUrl,
   type DesktopServer,
-} from "@/features/desktop/server/desktop-server"
-import { desktopNetworkFetch } from "@/features/desktop/network/index"
+} from "@/platform/server/desktop-server"
+import { desktopNetworkFetch } from "@/platform/network/index"
 import {
   applyDemoReadOverlay,
   interceptDemoMutation,

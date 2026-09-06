@@ -8,7 +8,7 @@ import { getDefaultAppPath, getFreshSession, getWorkspaces } from "../guards";
 import { rootRoute } from "../route-roots";
 import { validateLoginSearch, validateSignupSearch } from "../search-validators";
 import { isHostedDemoRuntime } from "@/features/demo";
-import { apiFetch } from "@/features/desktop/network/api";
+import { apiFetch } from "@/platform/network/api";
 
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,

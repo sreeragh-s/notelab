@@ -15,8 +15,8 @@ import {
   nextPaint,
   readStreamError,
 } from "@/packages/editor/commands/editor-ai-utils"
-import { getApiRequestHeaders, toApiUrl } from "@/features/desktop/network/api"
-import { desktopNetworkFetch } from "@/features/desktop/network/index"
+import { getApiRequestHeaders, toApiUrl } from "@/platform/network/api"
+import { desktopNetworkFetch } from "@/platform/network/index"
 import { cn } from "@/shared/lib/utils"
 import type { SelectionAiDiffPreview } from "@/packages/editor/core/types"
 import { useZilobaseAiPages } from "@zilobase/features/pages"

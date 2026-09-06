@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import type { MailLabelRecord, MailLabelWriteRequest, MailThreadSummary } from "@zilobase/features/mail"
 import { toast } from "sonner"
 
-import { getApiErrorMessage } from "@/features/desktop/network/api"
+import { getApiErrorMessage } from "@/platform/network/api"
 import { TagIcon } from "@/shared/components/icons"
 import { Button } from "@/shared/ui/button"
 import {

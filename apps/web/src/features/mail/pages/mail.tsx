@@ -32,7 +32,7 @@ import {
 import type { EmbeddedItemsOpenAs } from "@zilobase/features/pages"
 import { toast } from "sonner"
 
-import { apiFetch, getApiErrorMessage } from "@/features/desktop/network/api"
+import { apiFetch, getApiErrorMessage } from "@/platform/network/api"
 import {
   BanIcon,
   FilePenLineIcon,

@@ -20,8 +20,8 @@ import {
   mailFilterRecordFromThreadSummary,
 } from "@zilobase/features/mail"
 
-import { ApiError, apiFetch, getApiRequestHeaders, toApiUrl } from "@/features/desktop/network/api"
-import { desktopNetworkFetch } from "@/features/desktop/network"
+import { ApiError, apiFetch, getApiRequestHeaders, toApiUrl } from "@/platform/network/api"
+import { desktopNetworkFetch } from "@/platform/network"
 import { describeDesktopError, recordDesktopDiagnostic } from "@/features/desktop/diagnostics/index"
 import { getConnectivityState, subscribeConnectivity } from "@/features/offline/model"
 import {

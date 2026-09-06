@@ -11,18 +11,18 @@ import {
   FieldGroup,
 } from "@/shared/ui/field"
 import { ZilobaseLogo } from "@/shared/components/zilobase-logo"
-import { getApiErrorMessage } from "@/features/desktop/network/api"
-import { reloadDesktopAuthCredentials } from "./desktop-auth-token"
+import { getApiErrorMessage } from "@/platform/network/api"
+import { reloadDesktopAuthCredentials } from "../../../platform/auth/desktop-auth-token"
 import {
   describeDesktopError,
   recordDesktopDiagnostic,
-} from "../diagnostics/desktop-diagnostics"
+} from "../../../platform/diagnostics/desktop-diagnostics"
 import {
   getSelectedDesktopServer,
   isCloudDesktopServer,
   listDesktopServerProfiles,
   type DesktopServerProfile,
-} from "../server/desktop-server"
+} from "../../../platform/server/desktop-server"
 import { executeDesktopServerSwitch } from "../server/desktop-server-switch"
 import {
   cancelDesktopBrowserSignIn,

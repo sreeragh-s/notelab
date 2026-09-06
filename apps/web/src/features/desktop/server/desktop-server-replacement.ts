@@ -1,20 +1,20 @@
-import { getApiRequestHeaders } from "@/features/desktop/network/api";
+import { getApiRequestHeaders } from "@/platform/network/api";
 import {
   forgetDesktopAuthCredentials,
   getDesktopAuthToken,
-} from "../auth/desktop-auth-token";
+} from "../../../platform/auth/desktop-auth-token";
 import { destroyDesktopOfflineConnections } from "@/features/offline/index";
 import {
   beginDesktopServerNetworkShutdown,
   desktopNetworkFetch,
-} from "../network/desktop-network";
+} from "../../../platform/network/desktop-network";
 import { clearDesktopServerIndexedData } from "@/features/offline/index";
 import { queryClient } from "@/app/query-client";
 import {
   commitDesktopServerCandidate,
   getSelectedDesktopServer,
   type DesktopServer,
-} from "./desktop-server";
+} from "../../../platform/server/desktop-server";
 import type {
   DesktopServerReplacementDependencies,
   DesktopServerReplacementRequest,

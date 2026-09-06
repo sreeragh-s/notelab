@@ -5,7 +5,7 @@ import { isToolUIPart, type UIMessage } from "ai";
 import { toast } from "sonner";
 
 import { Button } from "@/shared/ui/button";
-import { apiFetch } from "@/features/desktop/network/api";
+import { apiFetch } from "@/platform/network/api";
 
 type Approval = {
   actionId: string;

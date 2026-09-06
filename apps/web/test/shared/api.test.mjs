@@ -1,6 +1,6 @@
 export function register({ assert, loadModule, test }) {
   test("desktop builds use the hosted API", async () => {
-    const { resolveApiBaseUrl } = await loadModule("/src/features/desktop/network/api.ts")
+    const { resolveApiBaseUrl } = await loadModule("/src/platform/network/api.ts")
 
     assert.equal(
       resolveApiBaseUrl(new URL("tauri://localhost/login")),
@@ -14,7 +14,7 @@ export function register({ assert, loadModule, test }) {
 
   test("hosted demo requests stay on the isolated web origin", async () => {
     const { resolveApiBaseUrl } = await loadModule(
-      "/src/features/desktop/network/api.ts",
+      "/src/platform/network/api.ts",
     )
 
     assert.equal(
@@ -28,7 +28,7 @@ export function register({ assert, loadModule, test }) {
   })
 
   test("desktop requests resolve against the selected runtime server", async () => {
-    const { resolveApiBaseUrl } = await loadModule("/src/features/desktop/network/api.ts")
+    const { resolveApiBaseUrl } = await loadModule("/src/platform/network/api.ts")
     const server = {
       apiOrigin: "http://127.0.0.1:8787",
       displayName: "Local Zilobase",
@@ -52,7 +52,7 @@ export function register({ assert, loadModule, test }) {
   })
 
   test("request cancellation is not treated as a connectivity failure", async () => {
-    const { isRequestAbort } = await loadModule("/src/features/desktop/network/api.ts")
+    const { isRequestAbort } = await loadModule("/src/platform/network/api.ts")
 
     assert.equal(isRequestAbort(new DOMException("Canceled", "AbortError")), true)
     assert.equal(isRequestAbort({ name: "AbortError" }), true)
@@ -61,7 +61,7 @@ export function register({ assert, loadModule, test }) {
 
   test("API requests can fail with a bounded network timeout", async () => {
     const { apiFetch, NetworkUnavailableError } = await loadModule(
-      "/src/features/desktop/network/api.ts",
+      "/src/platform/network/api.ts",
     )
     const originalFetch = globalThis.fetch
 

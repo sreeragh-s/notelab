@@ -61,7 +61,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getApiRequestHeaders,
   resolveApiBaseUrl,
-} from "@/features/desktop/network/api";
+} from "@/platform/network/api";
 import { type UIMessage, isToolUIPart } from "ai";
 import {
   extractPageMarkdownFromContext,

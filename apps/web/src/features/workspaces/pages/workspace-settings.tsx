@@ -34,8 +34,8 @@ import { Input } from "@/shared/ui/input"
 import { Separator } from "@/shared/ui/separator"
 import { Spinner } from "@/shared/ui/spinner"
 import { Textarea } from "@/shared/ui/textarea"
-import { apiFetch, getApiErrorMessage, toApiUrl } from "@/features/desktop/network/api"
-import { isDesktopApp } from "@/features/desktop/platform"
+import { apiFetch, getApiErrorMessage, toApiUrl } from "@/platform/network/api"
+import { isDesktopApp } from "@/platform/environment"
 import { GoogleIcon } from "@/shared/components/google-icon"
 import {
   destroyMailDatabase,

@@ -4,6 +4,7 @@
 | --- | --- | --- |
 | Web composition | Routing, providers, application shell, edition selection | [app](../apps/web/src/app) |
 | Web features | Feature presentation and interaction state | [features](../apps/web/src/features) |
+| Web platform | Transport, credentials, origin resolution and diagnostics | [platform](../apps/web/src/platform) |
 | Shared web code | Reusable UI, configuration and browser utilities | [shared](../apps/web/src/shared) |
 | Server composition | HTTP routing, Node startup, background dispatch | [app](../apps/server/src/app), [entrypoints](../apps/server/src/entrypoints) |
 | Server features | Authorization integration, feature operations and persistence | [features](../apps/server/src/features) |

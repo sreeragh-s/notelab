@@ -16,7 +16,7 @@ import type {
   VerifyEmailOtpInput,
 } from "@zilobase/features/auth"
 
-import { apiFetch, authFetch, clearApiAuthToken } from "@/features/desktop/network/api"
+import { apiFetch, authFetch, clearApiAuthToken } from "@/platform/network/api"
 import {
   describeDesktopError,
   recordDesktopDiagnostic,

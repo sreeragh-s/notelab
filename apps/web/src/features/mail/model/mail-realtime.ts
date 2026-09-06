@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 
-import { apiFetch } from "@/features/desktop/network/api"
+import { apiFetch } from "@/platform/network/api"
 import { recordDesktopDiagnostic } from "@/features/desktop/diagnostics/index"
 import {
   coordinateMailRecovery,

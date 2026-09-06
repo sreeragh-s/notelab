@@ -4,7 +4,7 @@ import type { EmbeddedItemsOpenAs } from "@zilobase/features/pages"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
 
-import { getApiErrorMessage } from "@/features/desktop/network/api"
+import { getApiErrorMessage } from "@/platform/network/api"
 import {
   ArchiveIcon,
   ChevronDown,

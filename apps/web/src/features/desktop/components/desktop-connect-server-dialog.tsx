@@ -19,7 +19,7 @@ import {
   FieldSeparator,
 } from "@/shared/ui/field"
 import { Input } from "@/shared/ui/input"
-import { getApiErrorMessage } from "@/features/desktop/network/api"
+import { getApiErrorMessage } from "@/platform/network/api"
 import {
   desktopCloudConnectUrl,
   desktopServersReferToSameInstance,
@@ -27,7 +27,7 @@ import {
   listDesktopServerProfiles,
   prepareDesktopServerCandidate,
   type DesktopServerProfile,
-} from "../server/desktop-server"
+} from "../../../platform/server/desktop-server"
 import { executeDesktopServerSwitch } from "../server/desktop-server-switch"
 
 export function DesktopConnectServerDialog({

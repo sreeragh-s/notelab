@@ -7,7 +7,7 @@ import {
   type AgentConversationInput,
 } from "@zilobase/features/ai-chat/conversation-adapter";
 
-import { getApiRequestHeaders, toApiUrl } from "@/features/desktop/network/api";
+import { getApiRequestHeaders, toApiUrl } from "@/platform/network/api";
 
 export function useHttpAgentConversation(input: AgentConversationInput) {
   return useChat<UIMessage>({

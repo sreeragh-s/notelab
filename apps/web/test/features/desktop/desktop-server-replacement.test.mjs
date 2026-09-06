@@ -106,7 +106,7 @@ export function register({ readSource, assert, loadModule, test }) {
       beginDesktopServerNetworkShutdown,
       desktopNetworkFetch,
       resetDesktopServerNetworkForTests,
-    } = await loadModule("/src/features/desktop/network/desktop-network.ts");
+    } = await loadModule("/src/platform/network/desktop-network.ts");
     const originalFetch = globalThis.fetch;
     let calls = 0;
     globalThis.fetch = (_input, init) => {

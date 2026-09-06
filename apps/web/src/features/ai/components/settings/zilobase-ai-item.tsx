@@ -2,7 +2,7 @@ import { Loader2Icon, Maximize2, XIcon } from "@/shared/components/icons"
 import * as React from "react"
 import { toast } from "sonner"
 
-import { getApiErrorMessage } from "@/features/desktop/network/api"
+import { getApiErrorMessage } from "@/platform/network/api"
 import { PageEditorPane } from "@/features/pages/pages/index"
 import { PageWorkspaceGate } from "@/features/workspaces"
 import {

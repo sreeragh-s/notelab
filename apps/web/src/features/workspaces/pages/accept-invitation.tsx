@@ -23,7 +23,7 @@ import {
 import { Spinner } from "@/shared/ui/spinner"
 import { useSession } from "@zilobase/features/auth"
 import { useAcceptWorkspaceInvitation } from "@zilobase/features/workspaces"
-import { getApiErrorMessage } from "@/features/desktop/network/api"
+import { getApiErrorMessage } from "@/platform/network/api"
 import { readSingleInvitationId } from "../lib/invitation-link"
 
 export default function AcceptInvitationPage() {

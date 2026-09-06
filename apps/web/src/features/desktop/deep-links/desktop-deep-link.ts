@@ -1,4 +1,4 @@
-import type { DesktopServer } from "../server/desktop-server";
+import type { DesktopServer } from "../../../platform/server/desktop-server";
 
 const DESKTOP_CONNECT_LINK = "zilobase://connect";
 const DESKTOP_OPEN_LINK = "zilobase://open";

@@ -48,7 +48,7 @@ export function register({ assert, readSource, readWorkspace, test }) {
   test("desktop and browser sign-out stay on their own session", async () => {
     const [provider, token, routes] = await Promise.all([
       readSource("/src/app/providers/features-provider.tsx"),
-      readSource("/src/features/desktop/auth/desktop-auth-token.ts"),
+      readSource("/src/platform/auth/desktop-auth-token.ts"),
       readWorkspace("/apps/server/src/features/desktop-auth/routes.ts"),
     ])
 

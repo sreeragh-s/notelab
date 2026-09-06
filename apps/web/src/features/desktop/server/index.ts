@@ -8,11 +8,11 @@ export {
   listDesktopServerProfiles,
   removeDesktopServerProfile,
   updateDesktopServerProfileSnapshot,
-} from "./desktop-server"
+} from "../../../platform/server/desktop-server"
 export type {
   DesktopServer,
   DesktopServerProfile,
-} from "./desktop-server"
+} from "../../../platform/server/desktop-server"
 export {
   requestDesktopServerReplacement,
 } from "./desktop-server-replacement"

@@ -3,14 +3,14 @@ import {
   desktopPersistKey,
   resolveRuntimeApiOrigin,
   type DesktopServer,
-} from "@/features/desktop/server/desktop-server"
+} from "@/platform/server/desktop-server"
 import type {
   PersistedClient,
   Persister,
 } from "@tanstack/react-query-persist-client"
 import type { Query } from "@tanstack/react-query"
 import { del, get, set } from "idb-keyval"
-import { getDesktopAuthOwner, getDesktopAuthToken } from "@/features/desktop/auth/desktop-auth-token"
+import { getDesktopAuthOwner, getDesktopAuthToken } from "@/platform/auth/desktop-auth-token"
 import { prepareMailDatabasesForDeletion } from "@/features/mail/cache/mail-database"
 
 export const OFFLINE_SCHEMA_VERSION = 1

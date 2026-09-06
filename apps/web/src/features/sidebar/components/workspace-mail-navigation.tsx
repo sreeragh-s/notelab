@@ -32,7 +32,7 @@ import { useMailViews } from "@zilobase/features/mail/react"
 import * as React from "react"
 import { toast } from "sonner"
 
-import { apiFetch, getApiErrorMessage } from "@/features/desktop/network/api"
+import { apiFetch, getApiErrorMessage } from "@/platform/network/api"
 import {
   BanIcon,
   ChevronDownIcon,

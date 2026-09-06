@@ -1,7 +1,7 @@
 import { ConnectorSetupCard } from "../settings/settings-connectors";
 "use client";
 
-import { toApiUrl } from "@/features/desktop/network/api";
+import { toApiUrl } from "@/platform/network/api";
 import { useZilobaseFeatures } from "@zilobase/features";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";

@@ -8,14 +8,14 @@ import {
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
 import { toast } from "sonner"
 
-import { toApiUrl } from "@/features/desktop/network/api"
+import { toApiUrl } from "@/platform/network/api"
 import { connectivityStateDuringProbe } from "../model/connectivity-probe"
-import { desktopNetworkFetch } from "@/features/desktop/network/index"
+import { desktopNetworkFetch } from "@/platform/network/index"
 import {
   describeDesktopError,
   recordDesktopDiagnostic,
 } from "@/features/desktop/diagnostics/index"
-import { setDesktopAuthOwner } from "@/features/desktop/auth/desktop-auth-token"
+import { setDesktopAuthOwner } from "@/platform/auth/desktop-auth-token"
 import { syncDirtyOfflinePages } from "../documents/offline-recovery"
 import {
   getConnectivityState,

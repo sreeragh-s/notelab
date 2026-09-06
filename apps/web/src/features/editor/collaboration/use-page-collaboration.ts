@@ -6,7 +6,7 @@ import {
 import type { SessionUser } from "@zilobase/features/auth"
 import * as Y from "yjs"
 
-import { ApiError, apiFetch } from "@/features/desktop/network/api"
+import { ApiError, apiFetch } from "@/platform/network/api"
 import { scheduleRealtimeAfterPagePaint } from "@/shared/lib/deferred-realtime"
 import {
   applyTicketState,

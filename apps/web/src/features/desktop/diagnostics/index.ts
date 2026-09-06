@@ -4,8 +4,8 @@ export {
   markDesktopAppReady,
   markDesktopRootMounted,
   recordDesktopDiagnostic,
-} from "./desktop-diagnostics"
+} from "../../../platform/diagnostics/desktop-diagnostics"
 export {
   exportDesktopDiagnostics,
   openDesktopDiagnosticsFolder,
-} from "./diagnostics-actions"
+} from "../../../platform/diagnostics/diagnostics-actions"

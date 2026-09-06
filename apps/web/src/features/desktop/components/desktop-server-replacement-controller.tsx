@@ -14,18 +14,18 @@ import {
 } from "@/shared/ui/alert-dialog";
 import { Button } from "@/shared/ui/button";
 import { Spinner } from "@/shared/ui/spinner";
-import { getApiErrorMessage } from "@/features/desktop/network/api";
+import { getApiErrorMessage } from "@/platform/network/api";
 import {
   describeDesktopError,
   recordDesktopDiagnostic,
-} from "../diagnostics/desktop-diagnostics";
+} from "../../../platform/diagnostics/desktop-diagnostics";
 import {
   discardDesktopServerCandidate,
   desktopServersReferToSameInstance,
   getSelectedDesktopServer,
   prepareDesktopServerCandidate,
   type PreparedDesktopServer,
-} from "../server/desktop-server";
+} from "../../../platform/server/desktop-server";
 import {
   createDesktopServerReplacementDependencies,
   subscribeDesktopServerReplacement,

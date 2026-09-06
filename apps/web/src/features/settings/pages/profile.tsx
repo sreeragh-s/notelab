@@ -26,12 +26,12 @@ import {
 } from "@/shared/ui/field"
 import { Input } from "@/shared/ui/input"
 import { Spinner } from "@/shared/ui/spinner"
-import { getApiErrorMessage } from "@/features/desktop/network/api"
+import { getApiErrorMessage } from "@/platform/network/api"
 import {
   getUserImageUrl,
   removeProfileImage,
   uploadProfileImage,
-} from "@/features/desktop/network/image-upload"
+} from "@/platform/network/image-upload"
 import {
   clearAllOfflineData,
   getConnectivityState,
@@ -40,7 +40,7 @@ import {
   downloadRecoveryArchive,
   syncDirtyOfflinePages,
 } from "@/features/offline/index"
-import { clearApiAuthToken } from "@/features/desktop/network/api"
+import { clearApiAuthToken } from "@/platform/network/api"
 import { queryClient } from "@/app/query-client"
 import { useAppStore } from "@/features/desktop/state/app-store"
 import { useOfflineManifest } from "@/features/offline/index"

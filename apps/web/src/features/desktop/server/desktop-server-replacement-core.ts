@@ -1,7 +1,7 @@
 import type {
   DesktopServer,
   PreparedDesktopServer,
-} from "./desktop-server";
+} from "../../../platform/server/desktop-server";
 
 export type DesktopServerReplacementRequest = {
   expectedInstanceId?: string;

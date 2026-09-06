@@ -8,7 +8,7 @@ import {
 } from "@zilobase/features/mail"
 import { toast } from "sonner"
 
-import { apiFetch, getApiErrorMessage } from "@/features/desktop/network/api"
+import { apiFetch, getApiErrorMessage } from "@/platform/network/api"
 import { FloatingWidget } from "@/shared/components/floating-widget"
 import { Loader2Icon, Paperclip, SendIcon, TrashIcon, XIcon } from "@/shared/components/icons"
 import { Button } from "@/shared/ui/button"

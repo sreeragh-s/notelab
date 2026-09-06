@@ -104,7 +104,7 @@
       },
       {
         "name": "web-desktop",
-        "patterns": ["apps/web/src/features/desktop/**"]
+        "patterns": ["apps/web/src/features/desktop/**", "apps/web/src/platform/**"]
       },
       {
         "name": "web-offline",
@@ -579,19 +579,19 @@
     "apps/web/src/features/editor/paste/paste.ts",
     "apps/web/src/features/editor/paste/protected-structural-blocks.ts",
     "apps/web/src/features/pages/hooks/use-title-draft.ts",
-    "apps/web/src/features/desktop/network/api.ts",
+    "apps/web/src/platform/network/api.ts",
     "apps/web/src/shared/lib/color-tokens.ts",
     "apps/web/src/features/offline/model/connectivity-probe.ts",
     "apps/web/src/shared/lib/deferred-realtime.ts",
     "apps/web/src/features/desktop/deep-links/desktop-deep-link.ts",
-    "apps/web/src/features/desktop/diagnostics/desktop-diagnostics.ts",
-    "apps/web/src/features/desktop/network/desktop-network.ts",
+    "apps/web/src/platform/diagnostics/desktop-diagnostics.ts",
+    "apps/web/src/platform/network/desktop-network.ts",
     "apps/web/src/features/desktop/server/desktop-server-replacement-core.ts",
-    "apps/web/src/features/desktop/server/desktop-server.ts",
+    "apps/web/src/platform/server/desktop-server.ts",
     "apps/web/src/features/desktop/window/desktop-translucency.ts",
     "apps/web/src/features/pages/icons/favicon.ts",
     "apps/web/src/features/auth/lib/google-auth.ts",
-    "apps/web/src/features/desktop/network/image-upload.ts",
+    "apps/web/src/platform/network/image-upload.ts",
     "apps/web/src/features/workspaces/lib/invitation-link.ts",
     "apps/web/src/features/meetings/model/meeting-navigation.ts",
     "apps/web/src/features/notion-import/lib/notion-html-blocks.ts",

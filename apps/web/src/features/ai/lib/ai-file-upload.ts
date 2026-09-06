@@ -1,7 +1,7 @@
 import type { FileUIPart } from "ai"
 
-import { apiFetch, getApiRequestHeaders, toApiUrl } from "@/features/desktop/network/api"
-import { desktopNetworkFetch } from "@/features/desktop/network/index"
+import { apiFetch, getApiRequestHeaders, toApiUrl } from "@/platform/network/api"
+import { desktopNetworkFetch } from "@/platform/network/index"
 
 export const MAX_AI_FILE_BYTES = 20 * 1024 * 1024
 export const MAX_AI_FILES = 5

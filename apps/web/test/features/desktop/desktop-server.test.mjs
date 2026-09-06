@@ -5,7 +5,7 @@ export function register({ readSource, assert, loadModule, test }) {
       resolveRuntimeWebSocketUrl,
       validateDesktopServer,
     } =
-      await loadModule("/src/features/desktop/server/desktop-server.ts")
+      await loadModule("/src/platform/server/desktop-server.ts")
     const server = validateDesktopServer({
       apiOrigin: "https://notes.example.com",
       displayName: "Team Notes",
@@ -54,7 +54,7 @@ export function register({ readSource, assert, loadModule, test }) {
       desktopDevelopmentApiOrigin,
       desktopServersReferToSameInstance,
       isCloudDesktopServer,
-    } = await loadModule("/src/features/desktop/server/desktop-server.ts")
+    } = await loadModule("/src/platform/server/desktop-server.ts")
     assert.equal(isCloudDesktopServer(CLOUD_DESKTOP_SERVER, false), true)
     assert.equal(isCloudDesktopServer(CLOUD_DESKTOP_SERVER, true), false)
     assert.equal(

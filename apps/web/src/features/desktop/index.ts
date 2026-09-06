@@ -1,1 +1,1 @@
-export { isDesktopApp } from "./platform"
+export { isDesktopApp } from "../../platform/environment"

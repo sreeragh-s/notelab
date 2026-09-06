@@ -3,8 +3,8 @@ import { isTauri } from "@tauri-apps/api/core"
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link"
 
 import { resolveDesktopDeepLinkAction } from "../deep-links/desktop-deep-link"
-import { recordDesktopDiagnostic } from "../diagnostics/desktop-diagnostics"
-import { getSelectedDesktopServer } from "../server/desktop-server"
+import { recordDesktopDiagnostic } from "../../../platform/diagnostics/desktop-diagnostics"
+import { getSelectedDesktopServer } from "../../../platform/server/desktop-server"
 import { requestDesktopServerReplacement } from "../server/desktop-server-replacement"
 
 export function DesktopDeepLinkHandler({

@@ -20,7 +20,7 @@ import {
   apiFetch,
   authFetch,
   getApiErrorMessage,
-} from "@/features/desktop/network/api"
+} from "@/platform/network/api"
 
 export default function SetupPage() {
   const [error, setError] = useState<unknown>(null)

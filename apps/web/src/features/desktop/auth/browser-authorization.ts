@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core"
 
-import { isDesktopApp } from "../platform"
+import { isDesktopApp } from "../../../platform/environment"
 
 type DesktopOAuthFailure = {
   code?: unknown

@@ -12,7 +12,7 @@ import {
   offlineDocumentName,
   patchOfflineItem,
 } from "../model/offline-store"
-import { getDesktopAuthToken } from "@/features/desktop/auth/desktop-auth-token"
+import { getDesktopAuthToken } from "@/platform/auth/desktop-auth-token"
 
 const COLLABORATION_TICKET_REFRESH_BUFFER_MS = 75_000
 const COLLABORATION_WEBSOCKET_PROTOCOL = "zilobase.collaboration.v1"

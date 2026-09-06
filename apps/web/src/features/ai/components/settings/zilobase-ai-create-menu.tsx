@@ -11,7 +11,7 @@ import {
 } from "@/shared/ui/dropdrawer";
 import { Input } from "@/shared/ui/input";
 
-import { getApiErrorMessage } from "@/features/desktop/network/api";
+import { getApiErrorMessage } from "@/platform/network/api";
 import { buildPagePath, PageIcon } from "@/features/pages/index";
 import { useZilobaseFeatures } from "@zilobase/features";
 import {

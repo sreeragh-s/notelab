@@ -71,7 +71,7 @@ import {
 import type { ApiKeyRecord, CreatedApiKeyRecord } from "@zilobase/features/api-keys"
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
 import { useWorkspaces } from "@zilobase/features/workspaces"
-import { getApiErrorMessage } from "@/features/desktop/network/api"
+import { getApiErrorMessage } from "@/platform/network/api"
 
 const expirationOptions = [
   { label: "90 days", value: "7776000" },

@@ -19,7 +19,7 @@ import {
   InputGroupInput,
 } from "@/shared/ui/input-group"
 import { Input } from "@/shared/ui/input"
-import { getApiErrorMessage } from "@/features/desktop/network/api"
+import { getApiErrorMessage } from "@/platform/network/api"
 import { getAuthReturnPath, signInWithGoogle } from "../lib/google-auth"
 import { cn } from "@/shared/lib/utils"
 import {

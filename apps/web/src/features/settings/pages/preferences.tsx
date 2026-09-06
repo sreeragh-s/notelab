@@ -37,7 +37,7 @@ import {
 import { Separator } from "@/shared/ui/separator"
 import { Slider } from "@/shared/ui/slider"
 import { Spinner } from "@/shared/ui/spinner"
-import { getApiErrorMessage } from "@/features/desktop/network/api"
+import { getApiErrorMessage } from "@/platform/network/api"
 import {
   describeDesktopError,
   recordDesktopDiagnostic,

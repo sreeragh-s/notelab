@@ -78,7 +78,7 @@ import type {
   WorkspaceMember,
   WorkspaceRole,
 } from "@zilobase/features/workspaces"
-import { apiFetch } from "@/features/desktop/network/api"
+import { apiFetch } from "@/platform/network/api"
 import {
   getDefaultTemporaryExpiration,
   getMaximumTemporaryExpiration,

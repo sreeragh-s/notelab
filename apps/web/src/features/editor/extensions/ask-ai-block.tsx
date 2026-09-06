@@ -32,8 +32,8 @@ import {
   readStreamError,
   type GeneratedRange,
 } from "@/packages/editor/commands/editor-ai-utils"
-import { getApiRequestHeaders, toApiUrl } from "@/features/desktop/network/api"
-import { desktopNetworkFetch } from "@/features/desktop/network/index"
+import { getApiRequestHeaders, toApiUrl } from "@/platform/network/api"
+import { desktopNetworkFetch } from "@/platform/network/index"
 
 type AskAiBlockOptions = {
   workspaceId?: string | null

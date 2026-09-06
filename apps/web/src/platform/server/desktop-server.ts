@@ -1,5 +1,5 @@
 import { invoke, isTauri } from "@tauri-apps/api/core"
-import packageJson from "../../../../package.json"
+import packageJson from "../../../package.json"
 import { desktopNetworkFetch } from "../network/desktop-network"
 
 export type DesktopServer = {

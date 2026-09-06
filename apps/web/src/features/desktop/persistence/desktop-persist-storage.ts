@@ -1,7 +1,7 @@
 import { isTauri } from "@tauri-apps/api/core"
 import { createJSONStorage, type StateStorage } from "zustand/middleware"
 
-import { desktopPersistKey } from "../server/desktop-server"
+import { desktopPersistKey } from "../../../platform/server/desktop-server"
 
 function createDesktopScopedStorage(): StateStorage {
   return {

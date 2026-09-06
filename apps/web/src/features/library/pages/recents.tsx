@@ -71,7 +71,7 @@ import {
 } from "@zilobase/features/user-settings";
 import { useConnectivity, useOfflineManifest } from "@/features/offline/index";
 import { PageIconDisplay } from "@/features/pages/index";
-import { getApiErrorMessage } from "@/features/desktop/network/api";
+import { getApiErrorMessage } from "@/platform/network/api";
 import { useCreateTeamspace, useTeamspaces, type Teamspace, type TeamspaceAccessMode } from "@zilobase/features/teamspaces";
 import { useAiAgentProfiles, useCreateAiAgentProfile } from "@zilobase/features/ai-chat";
 

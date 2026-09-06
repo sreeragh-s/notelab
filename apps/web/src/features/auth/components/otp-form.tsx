@@ -19,7 +19,7 @@ import {
   InputOTPSlot,
 } from "@/shared/ui/input-otp"
 import { cn } from "@/shared/lib/utils"
-import { getApiErrorMessage } from "@/features/desktop/network/api"
+import { getApiErrorMessage } from "@/platform/network/api"
 import {
   useRequestEmailVerificationOtp,
   useRequestSignInOtp,

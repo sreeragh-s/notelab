@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog"
 import { Button } from "@/shared/ui/button"
-import { getApiErrorMessage } from "@/features/desktop/network/api"
+import { getApiErrorMessage } from "@/platform/network/api"
 import { useZilobaseFeatures } from "@zilobase/features"
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces"
 import {
