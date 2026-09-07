@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test, vi } from "vitest";
 import { Client } from "pg";
 
-import { db, runWithDb, runWithDbClient, runWithIndependentDbEnv } from "./index";
+import { createDbClientForUrl, db, runWithDb, runWithDbClient, runWithIndependentDbEnv } from "./index";
 
 function fakeStandaloneClient(options: { connectError?: Error } = {}) {
   const calls = { connect: 0, end: 0 };
@@ -128,5 +128,17 @@ test("streaming database work survives the parent request scope closing", async 
   } finally {
     connect.mockRestore();
     end.mockRestore();
+  }
+});
+
+
+test("standalone connection errors do not escape as uncaught events", () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    const { client } = createDbClientForUrl("postgres://localhost/test");
+    assert.doesNotThrow(() => client.emit("error", new Error("Connection terminated unexpectedly")));
+    assert.equal(warn.mock.calls.length, 1);
+  } finally {
+    warn.mockRestore();
   }
 });

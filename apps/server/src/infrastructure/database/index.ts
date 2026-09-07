@@ -52,6 +52,15 @@ export function createDbClientForUrl(
       : {}),
   });
 
+  // pg rejects pending operations, but also emits errors when the connection
+  // dies between queries. Handle those events before connect/LISTEN can run.
+  client.on("error", () => {
+    console.warn(JSON.stringify({
+      event: "database.connection",
+      outcome: "failed",
+    }));
+  });
+
   return {
     client,
     db: drizzle(client, { schema }),

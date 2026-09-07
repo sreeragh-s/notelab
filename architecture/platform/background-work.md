@@ -8,6 +8,8 @@ Start at the [entrypoint](../../apps/server/src/app/background/processor.ts); fo
 
 ## Invariants and failure handling
 
+The Node coordinator catches maintenance and lane-timer recalculation failures during startup and periodic reconciliation, logs `background.node_reconcile`, and retries on the existing jittered recovery sweep. Tracking in-flight work handles both promise outcomes without creating an unhandled rejection during cleanup.
+
 Feature implementations own leases, receipts, authorization and durable status. Dispatch success is not equivalent to feature completion. Retries preserve task identity and availableAt semantics; terminal outcomes differ from thrown execution errors.
 
 ## Verification

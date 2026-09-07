@@ -18,6 +18,8 @@ Bulk editing and drag-fill skip equivalent serialized values, collect the change
 
 Row dragging, grouped-row movement, sorted-row confirmation, nested-row rendering and the active cell-fill gesture remain coordinated by the table view. Their existing pure drop/reorder/group rules and mutation adapters remain the decision owners. This allows the view to coordinate visual drop indicators without exposing all its state through a new interface.
 
+The [virtualized table shell](../../../apps/web/src/features/databases/views/table/components/database-table-shell.tsx) owns scroll-driven range updates. Row-key callbacks remain stable while the row array is unchanged so scrolling preserves the virtualizer's measurement cache. Memoized row boundaries reuse retained row content during scrolling; changed rows, indexes or parent render inputs refresh it. The active cell's row remains mounted outside the visible range.
+
 ## Access, persistence and recovery
 
 The controller consumes existing editability and structural-editing gates; server access checks remain authoritative. Column and property callbacks persist through database commands. Selection, hover, drop targets and measurement state are transient. Neither this refactor nor the measurement helpers change schema, URLs or serialized values. Resize observation is disconnected on unmount, and existing gesture listeners are removed by their cleanup paths.
@@ -25,6 +27,8 @@ The controller consumes existing editability and structural-editing gates; serve
 ## Tests
 
 [Table layout tests](../../../apps/web/test/features/databases/table-row-layout.test.mjs) cover coordinate origins, terminal/empty drop boundaries, layout equality and pending column insertion. [History tests](../../../apps/web/test/features/databases/cell-edit-history.test.mjs) cover actual undo/redo writes and intervening edits. Existing [database tests](../../../apps/web/test/features/databases) cover column ordering, selection values, drag targets, groups, nested rows and fill safety. Browser loading complements these checks but does not establish every pointer, touch or concurrent-edit scenario.
+
+[Scroll rendering tests](../../../apps/web/test/features/databases/database-table-scroll-rendering.test.mjs) mount the real shell with simulated DOM dimensions and 10,000 rows. They check immediate viewport coverage during scroll jumps, retained-row reuse, bounded row-key work, parent updates, active-cell retention and reorder refresh. They do not measure browser paint time or network pagination.
 
 See [views and properties](views-and-properties.md) and the [database overview](README.md).
 

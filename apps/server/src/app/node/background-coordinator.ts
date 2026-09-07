@@ -46,7 +46,10 @@ export function createNodeBackgroundCoordinator(env: RuntimeEnv) {
 
   const track = <T>(promise: Promise<T>) => {
     inFlight.add(promise);
-    void promise.finally(() => inFlight.delete(promise));
+    void promise.then(
+      () => inFlight.delete(promise),
+      () => inFlight.delete(promise),
+    );
     return promise;
   };
 
@@ -108,9 +111,19 @@ export function createNodeBackgroundCoordinator(env: RuntimeEnv) {
 
   const reconcile = async () => {
     if (stopping) return;
-    await Promise.allSettled(LANES.map((lane) => drainLane(lane)));
-    await runWithDbEnv(env, () => runDueBackgroundMaintenance({ env, workerId }));
-    await recalculateLaneTimers();
+    try {
+      await Promise.allSettled(LANES.map((lane) => drainLane(lane)));
+      await runWithDbEnv(env, () => runDueBackgroundMaintenance({ env, workerId }));
+      await recalculateLaneTimers();
+    } catch (error) {
+      // A database outage must not terminate startup or a timer callback.
+      // The recovery sweep retries maintenance and recalculates lane timers.
+      console.warn(JSON.stringify({
+        code: boundedErrorCode(error),
+        event: "background.node_reconcile",
+        outcome: "failed",
+      }));
+    }
   };
 
   const recalculateLaneTimers = () => runWithDbEnv(env, async () => {

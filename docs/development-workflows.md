@@ -517,6 +517,16 @@ Stop the owning process or override the affected profile port in the invoking
 shell. The supervisor rejects wildcard listeners as collisions before starting
 a partial workflow.
 
+### PostgreSQL connection timeouts
+
+If both Node background lanes and Worker scheduled events report terminated
+connections, check `npm run dev:status` and the PostgreSQL dependency health.
+Restore the database service before restarting the affected development profile;
+do not reset database volumes for a connection outage. Node maintenance failures
+log `background.node_reconcile` and retry on the recovery sweep without terminating
+the process. Standalone connection errors log `database.connection`; scheduled
+requests can still fail while PostgreSQL is unavailable.
+
 ### A previous terminal was killed
 
 ```sh

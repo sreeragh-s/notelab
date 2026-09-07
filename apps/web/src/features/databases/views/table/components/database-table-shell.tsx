@@ -1,5 +1,6 @@
 import {
   Fragment,
+  memo,
   useCallback,
   useLayoutEffect,
   useRef,
@@ -87,6 +88,7 @@ export function DatabaseVirtualizedTable({
   const tableRef = useRef<HTMLDivElement | null>(null)
   const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null)
   const [scrollMargin, setScrollMargin] = useState(0)
+  const getItemKey = useCallback((index: number) => rows[index]?.id ?? index, [rows])
   const activeCellKey = useActiveDatabaseCellKey()
   const activeRowIndex = activeCellKey
     ? rows.findIndex((row) => activeCellKey.startsWith(`${row.pageId}:`))
@@ -107,7 +109,7 @@ export function DatabaseVirtualizedTable({
     count: rows.length,
     estimateSize: () => 32,
     getScrollElement: () => scrollElement,
-    getItemKey: (index) => rows[index]?.id ?? index,
+    getItemKey,
     overscan: 8,
     rangeExtractor,
     scrollMargin,
@@ -213,11 +215,12 @@ export function DatabaseVirtualizedTable({
                         />
                       </tr>
                     ) : null}
-                    {renderRow(
-                      rows[virtualRow.index],
-                      virtualRow.index,
-                      virtualizer.measureElement
-                    )}
+                    <DatabaseVirtualizedRow
+                      row={rows[virtualRow.index]}
+                      index={virtualRow.index}
+                      measureElement={virtualizer.measureElement}
+                      renderRow={renderRow}
+                    />
                   </Fragment>
                 )
               })
@@ -239,6 +242,26 @@ export function DatabaseVirtualizedTable({
     </div>
   )
 }
+
+// Scroll updates belong to the shell. Retained rows only need rendering when
+// their data/index or the parent's rendering inputs change.
+const DatabaseVirtualizedRow = memo(function DatabaseVirtualizedRow({
+  row,
+  index,
+  measureElement,
+  renderRow,
+}: {
+  row: TableRow
+  index: number
+  measureElement: (node: Element | null) => void
+  renderRow: (
+    row: TableRow,
+    index: number,
+    measureElement: (node: Element | null) => void
+  ) => ReactNode
+}) {
+  return renderRow(row, index, measureElement)
+})
 
 export function useSyncedHorizontalScroll(
   headerRef: RefObject<HTMLElement | null>,
@@ -295,4 +318,3 @@ export function useSyncedHorizontalScroll(
     }
   }, [bodyRef, headerRef, syncVersion])
 }
-

@@ -8,6 +8,8 @@ Start at the [entrypoint](../../apps/server/src/infrastructure/database/index.ts
 
 ## Invariants and failure handling
 
+Standalone PostgreSQL clients attach an error listener before connecting so a disconnect between queries is logged as `database.connection` instead of becoming an uncaught event. Failed connection attempts and queries still reject to their callers; the listener does not retry transactions.
+
 Feature operations own transactions and access decisions. Schema declarations define tables, defaults, indexes and relationships; migration history is append-only. A structural schema move must produce identical metadata and no migration.
 
 ## Verification
