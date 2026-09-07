@@ -16,56 +16,9 @@ import {
 } from "./database-page-drop-target";
 import type { DatabasePageDropPayload } from "../core/types";
 
+import { insertPendingPageEmbed } from "./pending-page-embed";
+
 export { getDropDatabaseElement } from "./database-page-drop-target";
-
-const insertPageBlockAt = (
-  view: EditorView,
-  event: DragEvent,
-  pageId: string,
-  pos: number,
-  onEmbedPage?: (pageId: string) => void | Promise<void>,
-) => {
-  const pageBlockType = view.state.schema.nodes.pageBlock;
-
-  if (!pageBlockType) {
-    return false;
-  }
-
-  const insertPageBlock = () => {
-    if (view.isDestroyed) {
-      return;
-    }
-
-    const pageBlock = pageBlockType.create({ pageId });
-    const insertPos = Math.min(pos, view.state.doc.content.size);
-
-    view.dispatch(view.state.tr.insert(insertPos, pageBlock).scrollIntoView());
-    view.focus();
-  };
-
-  event.preventDefault();
-
-  if (onEmbedPage) {
-    void Promise.resolve(onEmbedPage(pageId)).then(
-      () => {
-        try {
-          insertPageBlock();
-        } catch {
-          // The editor changed before the async embed completed.
-        }
-      },
-      () => {},
-    );
-  } else {
-    try {
-      insertPageBlock();
-    } catch {
-      return false;
-    }
-  }
-
-  return true;
-};
 
 export const insertDraggedDatabasePage = (
   view: EditorView,
@@ -73,8 +26,10 @@ export const insertDraggedDatabasePage = (
   onEmbedPage?: (pageId: string) => void | Promise<void>,
   currentPageId?: string | null,
   onSelfDrop?: () => void,
+  onError: (error: unknown) => void = () => {},
 ) => {
-  const pageId = getNativeDatabasePageDragPayload(event.dataTransfer)?.pageId;
+  const payload = getNativeDatabasePageDragPayload(event.dataTransfer);
+  const pageId = payload?.pageId;
   if (!pageId) return false;
 
   if (pageId === currentPageId) {
@@ -89,7 +44,13 @@ export const insertDraggedDatabasePage = (
   const target = getEditorInsertDropTarget(view, event);
   if (!target) return false;
 
-  return insertPageBlockAt(view, event, pageId, target.pos, onEmbedPage);
+  if (!view.state.schema.nodes.pageBlock || !view.editable) return false;
+  event.preventDefault();
+  insertPendingPageEmbed(
+    view, target.pos, pageId, payload?.title ?? "Untitled",
+    () => onEmbedPage?.(pageId), onError,
+  );
+  return true;
 };
 
 const getDraggedPageBlockPayload = (

@@ -1,3 +1,4 @@
+import { PendingPageEmbeds } from "../drag-drop/pending-page-embed"
 import CharacterCount from "@tiptap/extension-character-count"
 import {
   Details,
@@ -131,6 +132,7 @@ export const createBaseExtensions = ({
   })
     ? [OfflineStructureGuard]
     : []),
+  PendingPageEmbeds,
   CommentExtension.configure({
     HTMLAttributes: { class: "editor-comment-anchor" },
   }),

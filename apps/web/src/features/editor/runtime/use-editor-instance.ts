@@ -178,6 +178,7 @@ export const useEditorInstance = ({
             (embeddedPageId) => onEmbedPageRef.current?.(embeddedPageId),
             pageIdRef.current,
             () => toast.error("You can't embed a page inside itself."),
+            (error) => toast.error(error instanceof Error ? error.message : "Could not embed page."),
           ),
         isDraggingPage: isDraggingPageToEditor,
         isOverDatabaseDrop: (event) => Boolean(getDropDatabaseElement(event)),
