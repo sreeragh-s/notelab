@@ -8,6 +8,7 @@ import type { TableRow } from "../../../src/features/databases/views/table/model
 export function mountScrollTable(container: HTMLElement, count: number) {
   const renders = new Map<number, number>()
   let keyReads = 0
+  let renderedRangeNotifications = 0
   let rows = Array.from({ length: count }, (_, index) => ({
     get id() { keyReads++; return `row-${index}` },
     pageId: `page-${index}`,
@@ -25,6 +26,7 @@ export function mountScrollTable(container: HTMLElement, count: number) {
         columnKeys: ["name"], columnWidths: { name: 250 },
         measurementKey: "test", tableMinWidth: 250,
         virtualizationEnabled: true,
+        onRowsRendered: () => { renderedRangeNotifications += 1 },
         rows,
         renderRow: (row, index, measureElement) => {
           renders.set(index, (renders.get(index) ?? 0) + 1)
@@ -38,6 +40,7 @@ export function mountScrollTable(container: HTMLElement, count: number) {
     renders,
     reset: () => { renders.clear(); keyReads = 0 },
     getKeyReads: () => keyReads,
+    getRenderedRangeNotifications: () => renderedRangeNotifications,
     update: () => render("Updated"),
     reverse: () => { rows = [...rows].reverse(); render("Reversed") },
     activate: (key: string | null) => flushSync(() => setActive(key)),

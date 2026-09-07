@@ -8,6 +8,7 @@ export function measureTableRowLayout(
   const centers: Record<string, number> = {}
   const dropTops: number[] = []
   const heights: Record<string, number> = {}
+  const rowIds: string[] = []
 
   rowElements.forEach((rowElement, index) => {
     const rect = rowElement.getBoundingClientRect()
@@ -18,6 +19,7 @@ export function measureTableRowLayout(
     if (rowId) {
       centers[rowId] = top + height / 2
       heights[rowId] = height
+      rowIds.push(rowId)
     }
 
     dropTops[index] = top
@@ -38,7 +40,7 @@ export function measureTableRowLayout(
     }
   }
 
-  const nextLayout = { centers, dropTops, heights }
+  const nextLayout = { centers, dropTops, heights, rowIds }
   return nextLayout
 }
 
@@ -60,6 +62,13 @@ export function areRowLayoutsEqual(left: RowLayout, right: RowLayout) {
   }
 
   if (left.dropTops.length !== right.dropTops.length) {
+    return false
+  }
+
+  if (
+    left.rowIds.length !== right.rowIds.length ||
+    left.rowIds.some((rowId, index) => rowId !== right.rowIds[index])
+  ) {
     return false
   }
 

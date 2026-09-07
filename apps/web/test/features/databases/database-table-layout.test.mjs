@@ -1,5 +1,5 @@
 export function register({ readSource, assert, loadModule, test }) {
-  test("database table columns use fixed defaults and a flexible trailing filler", async () => {
+  test("database table columns share one explicit sizing model", async () => {
     const {
       databaseAddPropertyColumnDefaultWidth,
       databaseColumnDefaultWidth,
@@ -8,11 +8,15 @@ export function register({ readSource, assert, loadModule, test }) {
       "/src/features/databases/views/model/column-dimensions.ts"
     )
     const tableSource = await readSource("/src/features/databases/views/table/components/database-table-shell.tsx")
+    const tableViewSource = await readSource("/src/features/databases/views/table/components/database-table-view.tsx")
 
     assert.equal(databaseColumnDefaultWidth, 200)
     assert.equal(databaseNameColumnDefaultWidth, databaseColumnDefaultWidth * 1.25)
     assert.equal(databaseAddPropertyColumnDefaultWidth, databaseColumnDefaultWidth)
-    assert.match(tableSource, /key === ADD_PROPERTY_COLUMN_ID\s*\? undefined\s*:\s*\{ width: getColumnWidth/)
+    assert.match(tableSource, /style=\{\{ width: getColumnWidth\(columnWidths, key\) \}\}/)
+    assert.doesNotMatch(tableSource, /key === ADD_PROPERTY_COLUMN_ID\s*\? undefined/)
+    assert.match(tableSource, /\{header\}\s*<tbody>/)
+    assert.match(tableViewSource, /header=\{renderTableHeader\("table"\)\}/)
   })
 
   test("add-property menu opens below the property insertion point", async () => {

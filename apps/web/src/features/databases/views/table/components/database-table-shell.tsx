@@ -3,6 +3,7 @@ import {
   memo,
   useCallback,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -18,7 +19,7 @@ import { getColorToken } from "@/shared/lib/color-tokens"
 import { getDatabaseHorizontalScrollSync } from "../../../interactions/database-wheel-scroll"
 import { isVerticalScrollContainer, shouldRenderVirtualizedDatabaseRows } from "../../controller/database-view-scroll"
 import { useActiveDatabaseCellKey } from "../../state/database-cell-state"
-import { ADD_PROPERTY_COLUMN_ID, getColumnWidth, type TableRow } from "../model/database-table-model";
+import { getColumnWidth, type TableRow } from "../model/database-table-model";
 
 export function getConditionalColorClassName(color?: string) {
   return color ? getColorToken(color).backgroundClass : undefined
@@ -46,27 +47,42 @@ export function DatabaseTable({
       className="database-table"
       style={getTableMinWidthStyle(tableMinWidth)}
     >
-      <colgroup>
-        {columnKeys.map((key) => (
-          <col
-            data-column-id={key}
-            key={key}
-            style={key === ADD_PROPERTY_COLUMN_ID
-              ? undefined
-              : { width: getColumnWidth(columnWidths, key) }}
-          />
-        ))}
-      </colgroup>
+      <DatabaseTableColumns
+        columnKeys={columnKeys}
+        columnWidths={columnWidths}
+      />
       {children}
     </table>
   )
 }
 
+const DatabaseTableColumns = memo(function DatabaseTableColumns({
+  columnKeys,
+  columnWidths,
+}: {
+  columnKeys: string[]
+  columnWidths: Record<string, number>
+}) {
+  return (
+    <colgroup>
+      {columnKeys.map((key) => (
+        <col
+          data-column-id={key}
+          key={key}
+          style={{ width: getColumnWidth(columnWidths, key) }}
+        />
+      ))}
+    </colgroup>
+  )
+})
+
 export function DatabaseVirtualizedTable({
   columnKeys,
   columnWidths,
   footerRow,
+  header,
   measurementKey,
+  onRowsRendered,
   renderRow,
   rows,
   tableMinWidth,
@@ -75,7 +91,9 @@ export function DatabaseVirtualizedTable({
   columnKeys: string[]
   columnWidths: Record<string, number>
   footerRow?: ReactNode
+  header?: ReactNode
   measurementKey: string
+  onRowsRendered?: () => void
   renderRow: (
     row: TableRow,
     index: number,
@@ -90,8 +108,16 @@ export function DatabaseVirtualizedTable({
   const [scrollMargin, setScrollMargin] = useState(0)
   const getItemKey = useCallback((index: number) => rows[index]?.id ?? index, [rows])
   const activeCellKey = useActiveDatabaseCellKey()
-  const activeRowIndex = activeCellKey
-    ? rows.findIndex((row) => activeCellKey.startsWith(`${row.pageId}:`))
+  const rowIndexByPageId = useMemo(
+    () => new Map(rows.map((row, index) => [row.pageId, index])),
+    [rows]
+  )
+  const activeCellSeparatorIndex = activeCellKey?.indexOf(":") ?? -1
+  const activePageId = activeCellKey && activeCellSeparatorIndex > -1
+    ? activeCellKey.slice(0, activeCellSeparatorIndex)
+    : null
+  const activeRowIndex = activePageId
+    ? rowIndexByPageId.get(activePageId) ?? -1
     : -1
   const rangeExtractor = useCallback(
     (range: Range) => {
@@ -154,8 +180,10 @@ export function DatabaseVirtualizedTable({
       const scrollRect = nextScrollElement?.getBoundingClientRect()
       const scrollTop = nextScrollElement?.scrollTop ?? window.scrollY
 
-      setScrollMargin(
+      const nextScrollMargin =
         elementRect.top - (scrollRect?.top ?? 0) + scrollTop
+      setScrollMargin((current) =>
+        current === nextScrollMargin ? current : nextScrollMargin
       )
     }
 
@@ -179,6 +207,14 @@ export function DatabaseVirtualizedTable({
     virtualRowCount: virtualRows.length,
     virtualizationEnabled,
   })
+  const renderedVirtualRowKey = virtualRows
+    .map((virtualRow) => virtualRow.key)
+    .join("|")
+
+  useLayoutEffect(() => {
+    if (renderVirtualRows) onRowsRendered?.()
+  }, [onRowsRendered, renderVirtualRows, renderedVirtualRowKey])
+
   const getLocalVirtualStart = (start: number) => start - scrollMargin
   const getLocalVirtualEnd = (end: number) => end - scrollMargin
   const paddingBottom =
@@ -194,6 +230,7 @@ export function DatabaseVirtualizedTable({
         columnWidths={columnWidths}
         tableMinWidth={tableMinWidth}
       >
+        {header}
         <tbody>
           {renderVirtualRows
             ? virtualRows.map((virtualRow, virtualIndex) => {

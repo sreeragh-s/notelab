@@ -968,6 +968,19 @@
     display: none;
   }
 
+  .database-table-scroll .database-table > thead > tr > th {
+    @apply sticky top-0 z-50 bg-surface-canvas;
+  }
+
+  :is([data-page-side-pane-panel], [data-page-dialog-panel])
+    .database-table-scroll
+    .database-table
+    > thead
+    > tr
+    > th {
+    @apply dark:bg-surface-navigation;
+  }
+
   .database-table-groups {
     @apply flex min-w-0 flex-col gap-5;
   }

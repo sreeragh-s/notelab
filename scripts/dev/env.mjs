@@ -24,7 +24,6 @@ const optionalCredentialKeys = [
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
   "OPENAI_API_KEY",
-  "TOOLKIT_API_KEY",
   "SLACK_CLIENT_ID",
   "SLACK_CLIENT_SECRET",
 ];

@@ -44,6 +44,8 @@ use `npm run dev` inside the adapter only when the clients are already running.
 
 ## Requirements
 
+Configure external AI connectors through MCP and the provider-specific OAuth credentials described in the [Ask AI operations guide](ai/ask-ai-operations.md). Use the repository environment examples for supported development credentials.
+
 The normal source loop requires:
 
 - Node.js 24 or newer

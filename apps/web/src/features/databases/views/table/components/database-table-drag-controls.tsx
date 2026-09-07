@@ -75,8 +75,8 @@ export function DatabaseRowDragControls({
   onSelectedRowChange,
   rowDragTitle,
   rowLayout,
+  rowsById,
   selectedRowIds,
-  visibleRows,
 }: {
   canReorderRows: boolean
   draggedRowId: string | null
@@ -88,14 +88,17 @@ export function DatabaseRowDragControls({
   onSelectedRowChange: (rowId: string, selected: boolean) => void
   rowDragTitle: string
   rowLayout: RowLayout
+  rowsById: ReadonlyMap<string, TableRow>
   selectedRowIds: Set<string>
-  visibleRows: TableRow[]
 }) {
   if (!editable) return null
 
   return (
     <div className="database-row-drag-rail">
-      {visibleRows.map((row) => {
+      {rowLayout.rowIds.map((rowId) => {
+        const row = rowsById.get(rowId)
+        if (!row) return null
+
         const rowCenter = rowLayout.centers[row.id]
         if (rowCenter === undefined) return null
 

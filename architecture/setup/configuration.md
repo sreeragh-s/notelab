@@ -6,6 +6,8 @@ Browser feature flags affect bundled presentation. Authentication, workspace aut
 
 ## Ownership
 
+External AI connectors use the [MCP connection configuration](../features/ai/execution-and-mcp.md) and provider-specific OAuth credentials. Development templates and runtime secret allowlists follow the credentials consumed by those implementations.
+
 - [Entrypoint/configuration](../../apps/server/src/shared/config/config.ts)
 - [Implementation](../../scripts/dev/env.mjs)
 - [Contributor guide or operational runbook](../../docs/development-workflows.md)
