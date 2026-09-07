@@ -49,6 +49,23 @@ export async function getZilobaseDiscoveryDocument(
       authorizationEndpoint: new URL("/desktop/authorize", apiOrigin).toString(),
       tokenEndpoint: new URL("/api/auth/desktop/token", apiOrigin).toString(),
     },
+    oauthAuthorization: {
+      authorizationEndpoint: new URL(
+        "/api/auth/oauth2/authorize",
+        apiOrigin,
+      ).toString(),
+      introspectionEndpoint: new URL(
+        "/api/auth/oauth2/introspect",
+        apiOrigin,
+      ).toString(),
+      issuer: apiOrigin,
+      jwksUri: new URL("/api/auth/jwks", apiOrigin).toString(),
+      revocationEndpoint: new URL(
+        "/api/auth/oauth2/revoke",
+        apiOrigin,
+      ).toString(),
+      tokenEndpoint: new URL("/api/auth/oauth2/token", apiOrigin).toString(),
+    },
     ...(options.editionExtension
       ? {
           capabilities: [...options.editionExtension.capabilities],

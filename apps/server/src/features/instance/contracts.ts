@@ -19,6 +19,14 @@ export type ZilobaseDiscoveryDocument = DesktopServer & {
     tokenEndpoint: string;
   };
   edition?: string;
+  oauthAuthorization: {
+    authorizationEndpoint: string;
+    introspectionEndpoint: string;
+    issuer: string;
+    jwksUri: string;
+    revocationEndpoint: string;
+    tokenEndpoint: string;
+  };
 };
 
 export type InstanceSettingsRecord = {
