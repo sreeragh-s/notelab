@@ -41,6 +41,20 @@ export const settingsRoutes = [
   }),
   createRoute({
     getParentRoute: () => appRoute,
+    path: "/settings/connected-apps",
+    component: lazyRouteComponent(
+      () => import("@/features/settings/screens/connected-apps"),
+    ),
+  }),
+  createRoute({
+    getParentRoute: () => appRoute,
+    path: "/settings/oauth-apps",
+    component: lazyRouteComponent(
+      () => import("@/features/settings/screens/oauth-apps"),
+    ),
+  }),
+  createRoute({
+    getParentRoute: () => appRoute,
     path: "/settings/team",
     validateSearch: validateTeamSettingsSearch,
     component: lazyRouteComponent(() => import("@/features/workspaces/screens/workspace-members")),
