@@ -419,7 +419,7 @@ function SidebarMenuAction({
       data-slot="sidebar-menu-action"
       data-sidebar="menu-action"
       className={cn(
-        "absolute top-1.5 right-1 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-content-primary ring-action-focus-ring outline-hidden transition-transform after:absolute after:-inset-2 peer-hover/menu-button:text-action-on-neutral hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:ring-2 active:bg-action-neutral-pressed active:text-action-on-neutral md:after:hidden [&>svg]:size-4 [&>svg]:shrink-0",
+        "absolute top-1/2 right-1 flex aspect-square w-5 -translate-y-1/2 items-center justify-center rounded-md p-0 text-content-primary ring-action-focus-ring outline-hidden transition-transform after:absolute after:-inset-2 peer-hover/menu-button:text-action-on-neutral hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:ring-2 active:bg-action-neutral-pressed active:text-action-on-neutral md:after:hidden [&>svg]:size-4 [&>svg]:shrink-0",
         showOnHover &&
           "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 peer-data-active/menu-button:text-action-on-neutral peer-data-active/menu-button:peer-hover/menu-button:text-action-on-neutral aria-expanded:opacity-100 md:opacity-0",
         className,
