@@ -50,9 +50,9 @@ export default function OAuthConsentPage() {
   const scopes = parseRequestedScopes(
     typeof search.scope === "string" ? search.scope : null,
   )
-  const selectedWorkspaceId =
-    workspaceId ?? activeWorkspaceId ?? workspacesQuery.data?.[0]?.id ?? null
-  const selectedWorkspace = workspacesQuery.data?.find(
+  const workspaces = workspacesQuery.data ?? []
+  const selectedWorkspaceId = selectWorkspaceId(workspaceId, activeWorkspaceId, workspaces)
+  const selectedWorkspace = workspaces.find(
     (workspace) => workspace.id === selectedWorkspaceId,
   )
 
@@ -129,25 +129,12 @@ export default function OAuthConsentPage() {
         <FieldGroup className="mt-4">
           <Field>
             <FieldLabel>Workspace</FieldLabel>
-            {workspacesQuery.isLoading ? (
-              <Spinner className="size-4" />
-            ) : (
-              <Select
-                onValueChange={setWorkspaceId}
-                value={selectedWorkspaceId ?? undefined}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a workspace" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(workspacesQuery.data ?? []).map((workspace) => (
-                    <SelectItem key={workspace.id} value={workspace.id}>
-                      {workspace.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <WorkspacePicker
+              loading={workspacesQuery.isLoading}
+              workspaces={workspaces}
+              value={selectedWorkspaceId}
+              onChange={setWorkspaceId}
+            />
           </Field>
         </FieldGroup>
 
@@ -186,5 +173,31 @@ export default function OAuthConsentPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+
+type WorkspaceOption = { id: string; name: string }
+
+function selectWorkspaceId(selected: string | null, active: string | null | undefined, workspaces: WorkspaceOption[]) {
+  return selected ?? active ?? workspaces[0]?.id ?? null
+}
+
+function WorkspacePicker({ loading, workspaces, value, onChange }: {
+  loading: boolean
+  workspaces: WorkspaceOption[]
+  value: string | null
+  onChange: (value: string) => void
+}) {
+  if (loading) return <Spinner className="size-4" />
+  return (
+    <Select onValueChange={onChange} value={value ?? undefined}>
+      <SelectTrigger><SelectValue placeholder="Select a workspace" /></SelectTrigger>
+      <SelectContent>
+        {workspaces.map((workspace) => (
+          <SelectItem key={workspace.id} value={workspace.id}>{workspace.name}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }

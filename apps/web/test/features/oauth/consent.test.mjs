@@ -3,7 +3,7 @@ export function register({ assert, loadModule, readSource, test }) {
     const { labelForScope, parseRequestedScopes } = await loadModule(
       "/src/features/oauth/lib/scope-labels.ts",
     )
-    const { isOAuthLoginSearch, oauthQueryFromSearch, pickOAuthSearch } =
+    const { isOAuthLoginSearch, readOAuthQuery, pickOAuthSearch } =
       await loadModule("/src/features/oauth/lib/oauth-query.ts")
 
     assert.deepEqual(parseRequestedScopes("openid+clips.write"), [
@@ -14,7 +14,7 @@ export function register({ assert, loadModule, readSource, test }) {
     assert.equal(isOAuthLoginSearch({ client_id: "zilobase-web-clipper" }), true)
     assert.equal(isOAuthLoginSearch({ error: "invalid" }), false)
     assert.equal(
-      oauthQueryFromSearch({ client_id: "abc", scope: "openid" }),
+      readOAuthQuery("?client_id=abc&scope=openid"),
       "client_id=abc&scope=openid",
     )
     assert.deepEqual(pickOAuthSearch({ client_id: "abc", returnTo: "/recents" }), {

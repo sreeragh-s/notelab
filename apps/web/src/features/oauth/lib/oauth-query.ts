@@ -49,13 +49,3 @@ export function pickOAuthSearch(search: Record<string, unknown>) {
   return next
 }
 
-export function oauthQueryFromSearch(search: Record<string, unknown>) {
-  if (typeof search.oauth_query === "string" && search.oauth_query.length > 0) {
-    return search.oauth_query
-  }
-
-  const picked = pickOAuthSearch(search)
-  return Object.keys(picked).length > 0
-    ? new URLSearchParams(picked).toString()
-    : null
-}
