@@ -37,6 +37,24 @@ export function OptionsApp() {
     })()
   }, [])
 
+  const connectWithOAuth = async () => {
+    const origin = instanceUrl.trim().replace(/\/$/, "")
+    if (!origin) {
+      setStatus("Enter your Zilobase server URL.")
+      return
+    }
+    setStatus("Opening Zilobase…")
+    const result = (await browser.runtime.sendMessage({
+      instanceUrl: origin,
+      type: "CLIPPER_OAUTH_START",
+    })) as { error?: string; ok?: boolean } | undefined
+    if (result && result.ok === false) {
+      setStatus(result.error ?? "Connect failed")
+      return
+    }
+    setStatus("Finish signing in in the opened tab.")
+  }
+
   const save = async () => {
     await writeSession({
       instanceUrl: instanceUrl.trim().replace(/\/$/, ""),
@@ -60,7 +78,8 @@ export function OptionsApp() {
         <div className="flex flex-col">
           <h1 className="text-xl font-semibold tracking-normal">Web Clipper</h1>
           <p className="text-sm text-content-secondary">
-            Connect a workspace-scoped API key from Zilobase Settings.
+            Connect with Zilobase to clip pages into a workspace. API keys
+            remain available as an advanced option.
           </p>
         </div>
         <section className="grid gap-4">
@@ -73,36 +92,46 @@ export function OptionsApp() {
                 value={instanceUrl}
               />
             </Field>
-            <Field>
-              <FieldLabel>Workspace ID</FieldLabel>
-              <Input
-                onChange={(event) => setWorkspaceId(event.target.value)}
-                value={workspaceId}
-              />
-            </Field>
-            <Field>
-              <FieldLabel>Workspace name</FieldLabel>
-              <Input
-                onChange={(event) => setWorkspaceName(event.target.value)}
-                value={workspaceName}
-              />
-            </Field>
-            <Field>
-              <FieldLabel>API key</FieldLabel>
-              <Input
-                onChange={(event) => setToken(event.target.value)}
-                placeholder="nl_…"
-                type="password"
-                value={token}
-              />
-              <FieldDescription>
-                Create a key in Settings → API Keys. It is stored only in this
-                browser.
-              </FieldDescription>
-            </Field>
+            <details className="grid gap-4">
+              <summary className="cursor-pointer text-sm font-medium">
+                Advanced: API key
+              </summary>
+              <Field>
+                <FieldLabel>Workspace ID</FieldLabel>
+                <Input
+                  onChange={(event) => setWorkspaceId(event.target.value)}
+                  value={workspaceId}
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Workspace name</FieldLabel>
+                <Input
+                  onChange={(event) => setWorkspaceName(event.target.value)}
+                  value={workspaceName}
+                />
+              </Field>
+              <Field>
+                <FieldLabel>API key</FieldLabel>
+                <Input
+                  onChange={(event) => setToken(event.target.value)}
+                  placeholder="nl_…"
+                  type="password"
+                  value={token}
+                />
+                <FieldDescription>
+                  Create a key in Settings → API Keys. It is stored only in this
+                  browser.
+                </FieldDescription>
+              </Field>
+              <Button onClick={() => void save()} variant="outline">
+                Save API key
+              </Button>
+            </details>
           </FieldGroup>
           <div className="flex gap-2">
-            <Button onClick={() => void save()}>Save connection</Button>
+            <Button onClick={() => void connectWithOAuth()}>
+              Connect with Zilobase
+            </Button>
             <Button onClick={() => void disconnect()} variant="outline">
               Disconnect
             </Button>

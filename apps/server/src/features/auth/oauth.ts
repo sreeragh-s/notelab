@@ -44,6 +44,7 @@ export function createOAuthProviderPlugin(
     scopes: [...OAUTH_SCOPES],
     allowDynamicClientRegistration: false,
     allowPublicClientPrelogin: true,
+    cachedTrustedClients: new Set(["zilobase-web-clipper"]),
     accessTokenExpiresIn: OAUTH_ACCESS_TOKEN_TTL_SECONDS,
     refreshTokenReuseInterval: OAUTH_REFRESH_TOKEN_REUSE_INTERVAL_SECONDS,
     enforcePerClientResources: false,

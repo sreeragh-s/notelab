@@ -5,7 +5,9 @@ import {
 import { Hono, type Context } from "hono";
 import { getAuthHeaders } from "../../shared/security/auth-headers";
 import { createAuth, type Auth } from "./auth";
-import { runWithDbEnv } from "../../infrastructure/database";
+import { db, runWithDbEnv } from "../../infrastructure/database";
+import { getPrimaryClientOrigin } from "../../shared/config/config";
+import { ensureOfficialClipperClient } from "./oauth-clients";
 import {
   getInstanceAdministrationSettings,
   SELF_HOSTED_INVITATION_COOKIE,
@@ -244,6 +246,7 @@ function serveOAuthMetadata(
   createHandler: (auth: Auth) => (request: Request) => Promise<Response>,
 ) {
   return runWithDbEnv(c.env, async () => {
+    await ensureOfficialClipperClient(db, getPrimaryClientOrigin(c.env));
     const auth = createAuth(c.env, c.req.raw, undefined, {
       editionExtension: c.get("editionExtension") ?? undefined,
     });
