@@ -7,7 +7,17 @@ export {
   verification,
   apikey,
   rateLimit,
+  jwks,
 } from "./schema/authentication";
+export {
+  oauthClient,
+  oauthResource,
+  oauthClientResource,
+  oauthRefreshToken,
+  oauthAccessToken,
+  oauthConsent,
+  oauthClientAssertion,
+} from "./schema/oauth";
 export {
   workspace,
   member,

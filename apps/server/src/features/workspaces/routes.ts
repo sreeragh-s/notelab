@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { z } from "zod";
 import { getAuthenticatedUser as requireUser } from "../../shared/http/auth";
+import { getPinnedWorkspaceId, rejectMismatchedPinnedWorkspace, requireOAuthScope } from "../auth/oauth-access";
 import { getMembership, getWorkspaceRealtimeAccessExpiration, isPrivilegedOrgRole } from "../access";
 import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
 import { db } from "../../infrastructure/database";
@@ -37,6 +38,60 @@ import {
 } from "../../shared/security/navigation-realtime-ticket";
 
 export const workspaceRoutes = new Hono<AppBindings>();
+
+workspaceRoutes.use("*", async (c, next) => {
+  if (c.get("authMethod") !== "oauth") {
+    await next();
+    return;
+  }
+
+  if (c.req.method !== "GET" && c.req.method !== "HEAD") {
+    return c.json(
+      {
+        error: "insufficient_scope",
+        error_description: "OAuth tokens cannot change workspace membership.",
+      },
+      403,
+    );
+  }
+
+  const denied = requireOAuthScope(c, "workspaces.read");
+  if (denied) {
+    return denied;
+  }
+
+  await next();
+});
+
+workspaceRoutes.get("/", async (c) => {
+  const requestUser = requireUser(c);
+  if (!requestUser) return c.json({ error: "Unauthorized" }, 401);
+  const pinnedWorkspaceId = getPinnedWorkspaceId(c);
+  const records = await db
+    .select({ workspace })
+    .from(workspace)
+    .innerJoin(member, eq(member.organizationId, workspace.id))
+    .where(and(
+      eq(member.userId, requestUser.id),
+      activeMembershipCondition(),
+      pinnedWorkspaceId ? eq(workspace.id, pinnedWorkspaceId) : undefined,
+    ))
+    .orderBy(asc(workspace.name));
+  return c.json({ workspaces: records.map(({ workspace: record }) => record) });
+});
+
+workspaceRoutes.get("/:workspaceId", async (c) => {
+  const requestUser = requireUser(c);
+  if (!requestUser) return c.json({ error: "Unauthorized" }, 401);
+  const workspaceId = c.req.param("workspaceId");
+  const denied = rejectMismatchedPinnedWorkspace(c, workspaceId);
+  if (denied) return denied;
+  if (!(await getMembership(workspaceId, requestUser.id))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+  const [record] = await db.select().from(workspace).where(eq(workspace.id, workspaceId)).limit(1);
+  return record ? c.json({ workspace: record }) : c.json({ error: "Workspace not found" }, 404);
+});
 
 workspaceRoutes.post("/:workspaceId/navigation-realtime-ticket", async (c) => {
   const requestUser = c.get("user") ?? null;

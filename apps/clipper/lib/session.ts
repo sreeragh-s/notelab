@@ -2,7 +2,9 @@ import { browser } from "wxt/browser"
 
 export type ClipperSession = {
   instanceUrl: string
+  refreshToken?: string
   token: string
+  webOrigin?: string
   workspaceId: string
   workspaceName: string
 }

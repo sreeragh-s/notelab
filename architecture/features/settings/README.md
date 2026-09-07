@@ -12,7 +12,7 @@ User settings routes persist page/layout and profile preferences. Web route scre
 
 ## Authorization and persistence
 
-Preferences belong to the authenticated user. Workspace and teamspace administration remain in their feature modules, even when the same settings shell displays them.
+Preferences belong to the authenticated user. OAuth apps settings registers and deletes user-owned clients through Better Auth. Connected apps settings lists and deletes the user’s workspace consents; the OAuth provider checks persisted consent before issuing or refreshing tokens. Already-issued access tokens expire normally. Workspace and teamspace administration remain in their feature modules, even when the same settings shell displays them.
 
 ## Side effects, failures and recovery
 

@@ -14,6 +14,8 @@ test("createApp registers every public feature route group", () => {
 
   for (const expected of [
     "GET /.well-known/zilobase",
+    "GET /.well-known/oauth-authorization-server",
+    "GET /.well-known/openid-configuration",
     "GET /health",
     "GET /ready",
     "GET /desktop",

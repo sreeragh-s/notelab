@@ -1,3 +1,5 @@
+import { getDataSourceRecord } from "./access/data-source-access";
+import { pinnedResourceMiddleware } from "../auth/pinned-resource-middleware";
 import { readAuthenticatedJson } from "../../shared/http/auth";
 import { Hono } from "hono";
 import type { AppBindings } from "../../shared/types";
@@ -11,8 +13,10 @@ import { normalizeDatabasePropertyType } from "./properties/types";
 import { requireDatabaseRouteUser as requireUser } from "./route-support";
 
 export const databasePropertyRoutes = new Hono<AppBindings>();
+const resourceWorkspace = pinnedResourceMiddleware((id) => getDataSourceRecord(id, { includeDeleted: true }));
 
-databasePropertyRoutes.post("/:id/properties", async (c) => {
+
+databasePropertyRoutes.post("/:id/properties", resourceWorkspace, async (c) => {
   const user = requireUser(c);
 
   if (!user) {
@@ -57,7 +61,7 @@ databasePropertyRoutes.post("/:id/properties", async (c) => {
     return c.json(mutationResponse(result.commit), 201);
 });
 
-databasePropertyRoutes.patch("/:id/properties/reorder", async (c) => {
+databasePropertyRoutes.patch("/:id/properties/reorder", resourceWorkspace, async (c) => {
   const request = await readAuthenticatedJson(c);
   if (!request.ok) return request.response;
   const { user, body } = request;
@@ -87,7 +91,7 @@ databasePropertyRoutes.patch("/:id/properties/reorder", async (c) => {
     return c.json(mutationResponse(result.commit));
 });
 
-databasePropertyRoutes.patch("/:id/properties/:databasePropertyId", async (c) => {
+databasePropertyRoutes.patch("/:id/properties/:databasePropertyId", resourceWorkspace, async (c) => {
   const request = await readAuthenticatedJson(c);
   if (!request.ok) return request.response;
   const { user, body } = request;
@@ -143,7 +147,7 @@ databasePropertyRoutes.patch("/:id/properties/:databasePropertyId", async (c) =>
 
 databasePropertyRoutes.post(
   "/:id/properties/:databasePropertyId/duplicate",
-  async (c) => {
+  resourceWorkspace, async (c) => {
     const user = requireUser(c);
 
     if (!user) {
@@ -170,7 +174,7 @@ databasePropertyRoutes.post(
   },
 );
 
-databasePropertyRoutes.delete("/:id/properties/:databasePropertyId", async (c) => {
+databasePropertyRoutes.delete("/:id/properties/:databasePropertyId", resourceWorkspace, async (c) => {
   const user = requireUser(c);
 
   if (!user) {

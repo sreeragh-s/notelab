@@ -2,6 +2,8 @@ import { editionWebModule } from "@zilobase/edition-web"
 
 import {
   ApiKeysSettingsPage,
+  ConnectedAppsSettingsPage,
+  OAuthAppsSettingsPage,
   PreferencesSettingsPage,
   ProfileSettingsPage,
   SecuritySettingsPage,
@@ -23,6 +25,8 @@ export function SettingsSectionContent({ section }: { section: SettingsSection }
     case "workspace": return <WorkspaceSettingsPage />
     case "security": return <SecuritySettingsPage />
     case "api-keys": return <ApiKeysSettingsPage />
+    case "connected-apps": return <ConnectedAppsSettingsPage />
+    case "oauth-apps": return <OAuthAppsSettingsPage />
     case "team": return <TeamSettingsPage />
     case "teamspaces": return <TeamspacesSettingsPage />
     case "profile":

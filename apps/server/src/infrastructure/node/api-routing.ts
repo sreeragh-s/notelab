@@ -1,6 +1,7 @@
 const apiPathPrefixes = [
   "/.well-known",
   "/api",
+  "/clips",
   "/agents",
   "/automation-slack",
   "/session",

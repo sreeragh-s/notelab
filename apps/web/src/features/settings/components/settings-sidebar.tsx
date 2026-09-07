@@ -1,6 +1,8 @@
 import {
   Building2Icon,
+  Code as CodeIcon,
   KeyRoundIcon,
+  Link2,
   SlidersHorizontalIcon,
   UserIcon,
   UsersIcon,
@@ -33,6 +35,8 @@ export type CoreSettingsSection =
   | "security"
   | "workspace"
   | "api-keys"
+  | "connected-apps"
+  | "oauth-apps"
   | "team"
   | "teamspaces"
 export type SettingsSection = CoreSettingsSection | string
@@ -51,6 +55,8 @@ const settingsItems: Array<{
   },
   { title: "Workspace", section: "workspace", icon: Building2Icon },
   { title: "API Keys", section: "api-keys", icon: KeyRoundIcon },
+  { title: "Connected apps", section: "connected-apps", icon: Link2 },
+  { title: "OAuth apps", section: "oauth-apps", icon: CodeIcon },
   { title: "Team", section: "team", icon: UsersIcon },
   { title: "Teamspaces", section: "teamspaces", icon: Layers3Icon },
   ...editionWebModule.settingsSections.map((section) => ({

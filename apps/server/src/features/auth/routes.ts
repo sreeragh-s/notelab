@@ -1,7 +1,13 @@
-import { Hono } from "hono";
+import {
+  oauthProviderAuthServerMetadata,
+  oauthProviderOpenIdConfigMetadata,
+} from "@better-auth/oauth-provider";
+import { Hono, type Context } from "hono";
 import { getAuthHeaders } from "../../shared/security/auth-headers";
-import { createAuth } from "./auth";
-import { runWithDbEnv } from "../../infrastructure/database";
+import { createAuth, type Auth } from "./auth";
+import { db, runWithDbEnv } from "../../infrastructure/database";
+import { getPrimaryClientOrigin } from "../../shared/config/config";
+import { ensureOfficialClipperClient } from "./oauth-clients";
 import {
   getInstanceAdministrationSettings,
   SELF_HOSTED_INVITATION_COOKIE,
@@ -131,6 +137,19 @@ function renameOrganizationFields(value: unknown): unknown {
   return next;
 }
 
+authRoutes.get("/.well-known/oauth-authorization-server", (c) =>
+  serveOAuthMetadata(c, oauthProviderAuthServerMetadata),
+);
+authRoutes.get("/.well-known/oauth-authorization-server/*", (c) =>
+  serveOAuthMetadata(c, oauthProviderAuthServerMetadata),
+);
+authRoutes.get("/.well-known/openid-configuration", (c) =>
+  serveOAuthMetadata(c, oauthProviderOpenIdConfigMetadata),
+);
+authRoutes.get("/.well-known/openid-configuration/*", (c) =>
+  serveOAuthMetadata(c, oauthProviderOpenIdConfigMetadata),
+);
+
 authRoutes.post("/api/auth/set-password", async (c) => {
   const body = await readJsonBody(c.req);
   return runWithDbEnv(c.env, async () => {
@@ -220,6 +239,20 @@ async function prepareSocialRegistration(
   }
 
   return validateSelfHostedInvitationCandidate(env, invitationId);
+}
+
+function serveOAuthMetadata(
+  c: Context<AppBindings>,
+  createHandler: (auth: Auth) => (request: Request) => Promise<Response>,
+) {
+  return runWithDbEnv(c.env, async () => {
+    await ensureOfficialClipperClient(db, getPrimaryClientOrigin(c.env));
+    const auth = createAuth(c.env, c.req.raw, undefined, {
+      editionExtension: c.get("editionExtension") ?? undefined,
+    });
+
+    return createHandler(auth)(c.req.raw);
+  });
 }
 
 function applySocialInvitationCookie(

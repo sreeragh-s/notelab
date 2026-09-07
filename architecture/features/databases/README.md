@@ -16,6 +16,8 @@ Database JSON routes use shared authenticated input parsing, retaining each oper
 
 ## Authorization and persistence
 
+OAuth database routes require `databases.read` or `databases.write` and bind the requested resource to the granted workspace before existing ACL checks. Database routes load the database; row, property, template and direct data-source routes load the data source, whose ID is still exposed as `:id` on legacy routes. Creation validates the body workspace. [Token resource middleware](../../../apps/server/src/features/auth/pinned-resource-middleware.ts) is attached per endpoint so Hono composition cannot apply a database loader to a later data-source route. [Route regression tests](../../../apps/server/src/features/databases/database-routes.test.ts) exercise both identifier kinds.
+
 A database is page-backed; data sources, rows, views and property values are separate persisted concepts. Resource and data-source access checks constrain mutations. Formula and value rules also have shared implementations.
 
 ## Side effects, failures and recovery

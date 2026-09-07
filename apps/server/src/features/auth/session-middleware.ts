@@ -15,6 +15,17 @@ import type { AppBindings } from "../../shared/types";
 import { expireTemporaryMemberships } from "../memberships";
 import { DEMO_IDS } from "../demo/constants";
 import { isHostedDemoRequest } from "../demo/request";
+import {
+  isLikelyJwt,
+  readBearerToken,
+  resolveOAuthBearer,
+  rejectUnsupportedOAuthRoute,
+} from "./oauth-access";
+import {
+  getCanonicalApiOrigin,
+  isLocalDevelopmentHost,
+  resolvePublicRequestUrl,
+} from "../../shared/config/config";
 
 function normalizeAuthSession<TSession extends Record<string, unknown>>(
   session: TSession | null | undefined,
@@ -43,6 +54,7 @@ export const sessionMiddleware = createMiddleware<AppBindings>(async (
   return await timed(c, "session_db", () => runWithDbEnv(c.env, async () => {
     c.set("apiKey", null);
     c.set("authMethod", null);
+    c.set("oauthScopes", null);
 
     if (isHostedDemoRequest(c.env, c.req.raw.headers)) {
       const [demoUser] = await db
@@ -164,6 +176,47 @@ export const sessionMiddleware = createMiddleware<AppBindings>(async (
       });
       c.set("authMethod", "apiKey");
 
+      await timed(c, "session_next", next);
+      return;
+    }
+
+    const bearerToken = readBearerToken(c.req.header("authorization"));
+    if (bearerToken && isLikelyJwt(bearerToken)) {
+      const requestUrl = resolvePublicRequestUrl(c.req.raw, c.env);
+      const apiOrigin = isLocalDevelopmentHost(requestUrl.hostname)
+        ? requestUrl.origin
+        : getCanonicalApiOrigin(c.env);
+      const oauthAccess = await timed(c, "session_oauth_verify", () =>
+        resolveOAuthBearer({
+          apiOrigin,
+          requestedWorkspaceId:
+            c.req.header("x-zilobase-workspace-id")?.trim() || null,
+          token: bearerToken,
+        }),
+      );
+
+      if ("status" in oauthAccess) {
+        return c.json(oauthAccess.body, oauthAccess.status);
+      }
+
+      const now = new Date();
+      c.set("user", oauthAccess.user);
+      c.set("session", {
+        activeTeamId: null,
+        activeWorkspaceId: oauthAccess.workspaceId,
+        createdAt: now,
+        expiresAt: new Date(now.getTime() + 60 * 60 * 1000),
+        id: oauthAccess.sessionId ?? `oauth:${oauthAccess.user.id}`,
+        ipAddress: null,
+        token: "",
+        updatedAt: now,
+        userAgent: null,
+        userId: oauthAccess.user.id,
+      });
+      c.set("authMethod", "oauth");
+      c.set("oauthScopes", oauthAccess.scopes);
+      const unsupported = rejectUnsupportedOAuthRoute(c);
+      if (unsupported) return unsupported;
       await timed(c, "session_next", next);
       return;
     }

@@ -14,7 +14,7 @@ export const authenticatedSessionMiddleware = createMiddleware<AppBindings>(
       c.req.path === "/" ||
       c.req.path === "/health" ||
       c.req.path === "/ready" ||
-      c.req.path === "/.well-known/zilobase" ||
+      c.req.path.startsWith("/.well-known/") ||
       c.req.path === "/desktop" ||
       c.req.path === "/api/instance/bootstrap" ||
       c.req.path === "/mail/oauth/google/callback" ||

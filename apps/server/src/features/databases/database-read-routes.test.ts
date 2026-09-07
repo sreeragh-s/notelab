@@ -164,3 +164,20 @@ test("published route reports missing and published databases", async () => {
   const response = await databaseReadRoutes.request("/database-1/published");
   assert.deepEqual(await response.json(), { published: true });
 });
+
+
+test("OAuth database workspace binding retains the existing ACL", async () => {
+  const app = new Hono<AppBindings>();
+  app.use("*", async (c, next) => {
+    c.set("user", user as never);
+    c.set("authMethod", "oauth");
+    c.set("session", { activeWorkspaceId: record.workspaceId } as never);
+    await next();
+  });
+  app.route("/", databaseReadRoutes);
+  mocks.access.mockResolvedValue(false);
+  assert.equal((await app.request("/database-1")).status, 403);
+  assert.equal(mocks.payload.mock.calls.length, 0);
+  mocks.access.mockResolvedValue(true);
+  assert.equal((await app.request("/database-1")).status, 200);
+});

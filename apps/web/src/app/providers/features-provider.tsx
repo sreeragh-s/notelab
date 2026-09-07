@@ -29,6 +29,16 @@ import {
   requestDemoGuard,
 } from "@/features/demo"
 import posthog from "@/shared/lib/posthog"
+import { readOAuthQuery } from "@/features/oauth/lib/oauth-query"
+
+function withOAuthQuery<T extends Record<string, unknown>>(input: T) {
+  if (typeof window === "undefined") {
+    return input
+  }
+
+  const oauthQuery = readOAuthQuery()
+  return oauthQuery ? { ...input, oauth_query: oauthQuery } : input
+}
 
 export const webAuthClient: ZilobaseAuthClient = {
   getSession: async () => {
@@ -66,11 +76,17 @@ export const webAuthClient: ZilobaseAuthClient = {
   signInWithOtp: (input: SignInWithOtpInput) =>
     isHostedDemoRuntime()
       ? rejectDemoAction()
-      : authFetch<{ token: string; user: unknown }>("/sign-in/email-otp", input),
+      : authFetch<{ token: string; user: unknown }>(
+          "/sign-in/email-otp",
+          withOAuthQuery({ ...input }),
+        ),
   signInWithPassword: (input: SignInWithPasswordInput) =>
     isHostedDemoRuntime()
       ? rejectDemoAction()
-      : authFetch<{ token: string; user: unknown }>("/sign-in/email", input),
+      : authFetch<{ token: string; user: unknown }>(
+          "/sign-in/email",
+          withOAuthQuery({ ...input }),
+        ),
   signUp: (input: SignUpInput) =>
     isHostedDemoRuntime()
       ? rejectDemoAction()

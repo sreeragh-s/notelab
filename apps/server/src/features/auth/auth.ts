@@ -3,6 +3,7 @@ import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { jwt } from "better-auth/plugins/jwt";
 import {
   bearer,
   emailOTP,
@@ -37,6 +38,7 @@ import {
   TemporaryMembershipValidationError,
 } from "../memberships";
 import { TeamspaceService } from "../teamspaces";
+import { createOAuthProviderPlugin } from "./oauth";
 
 type AuthEnv = Record<string, unknown>;
 
@@ -66,6 +68,7 @@ function createAuthInstance(
     baseURL: getBaseURL(env, requestUrl),
     secret: getRequiredStringEnv(env, "BETTER_AUTH_SECRET"),
     trustedOrigins: getTrustedOrigins(env, requestUrl.origin),
+    disabledPaths: ["/token"],
     database: drizzleAdapter(database, {
       provider: "pg",
       schema,
@@ -83,6 +86,8 @@ function sharedAuthOptions(
   const googleClientId = getStringEnv(env, "GOOGLE_CLIENT_ID");
   const googleClientSecret = getStringEnv(env, "GOOGLE_CLIENT_SECRET");
   const isHosted = getPrimaryClientOrigin(env) === "https://app.zilobase.com";
+  const requestUrl = resolvePublicRequestUrl(request, env);
+  const apiOrigin = getBaseURL(env, requestUrl);
 
   return {
     advanced: isHosted
@@ -235,7 +240,6 @@ function sharedAuthOptions(
           member: {
             additionalFields: {
               accessExpiresAt: {
-                fieldName: "access_expires_at",
                 input: false,
                 required: false,
                 type: "date",
@@ -245,7 +249,6 @@ function sharedAuthOptions(
           invitation: {
             additionalFields: {
               membershipExpiresAt: {
-                fieldName: "membership_expires_at",
                 input: false,
                 required: false,
                 type: "date",
@@ -388,6 +391,11 @@ function sharedAuthOptions(
           });
         },
       }),
+      jwt({
+        disableSettingJwtHeader: true,
+        jwt: { issuer: apiOrigin },
+      }),
+      createOAuthProviderPlugin(env, apiOrigin),
       ...(options.editionExtension?.authPlugins ?? []),
     ],
   };

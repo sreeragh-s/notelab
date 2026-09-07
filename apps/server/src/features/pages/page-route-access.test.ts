@@ -32,11 +32,13 @@ vi.mock("../access", async (original) => ({
 }));
 vi.mock("./page-route-support", async (original) => ({
   ...(await original<typeof import("./page-route-support")>()),
+  getPageIncludingDeleted: async () => state.record,
   getPagePropertyPayload: async () => {
     state.calls.push("payload");
     return { properties: [] };
   },
 }));
+import { pageRoutes } from "./page-routes";
 import { pageContentRoutes } from "./page-content-routes";
 import { pageSharingRoutes } from "./page-sharing-routes";
 
@@ -87,4 +89,33 @@ test("page routes preserve identity, existence, permission and workspace-check o
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { properties: [] });
   assert.deepEqual(state.calls, ["page", "access", "workspace", "payload"]);
+});
+
+
+test("OAuth page routes bind IDs, list queries and creation bodies to the granted workspace", async () => {
+  const oauth = new Hono<AppBindings>();
+  oauth.use("*", async (c, next) => {
+    c.set("user", { id: "user" } as never);
+    c.set("authMethod", "oauth");
+    c.set("oauthScopes", ["pages.read", "pages.write"]);
+    c.set("session", { activeWorkspaceId: "granted" } as never);
+    await next();
+  });
+  oauth.route("/pages", pageRoutes);
+  state.access = "full";
+  state.mismatch = false;
+  state.record = { id: "page", workspaceId: "other" };
+  for (const path of ["/pages/page", "/pages/page/published", "/pages/page/properties"]) {
+    assert.equal((await oauth.request(path)).status, 403);
+  }
+  assert.equal((await oauth.request("/pages?workspaceId=other")).status, 403);
+  assert.equal((await oauth.request("/pages", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ workspaceId: "other" }),
+  })).status, 403);
+  state.record.workspaceId = "granted";
+  state.access = "none";
+  assert.equal((await oauth.request("/pages/page/properties")).status, 403);
+  state.access = "full";
+  assert.equal((await oauth.request("/pages/page/properties")).status, 200);
 });

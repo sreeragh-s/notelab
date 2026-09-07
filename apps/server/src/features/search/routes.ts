@@ -5,6 +5,10 @@ import {
   getMembership,
 } from "../access";
 import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
+import {
+  rejectMismatchedPinnedWorkspace,
+  requireOAuthScope,
+} from "../auth/oauth-access";
 import type { AppBindings } from "../../shared/types";
 import { searchWorkspaceItems } from "./workspace-search";
 
@@ -13,6 +17,11 @@ export const searchRoutes = new Hono<AppBindings>();
 const maxSearchResults = 50;
 
 searchRoutes.get("/", async (c) => {
+  const denied = requireOAuthScope(c, "search.read");
+  if (denied) {
+    return denied;
+  }
+
   const user = requireUser(c);
 
   if (!user) {
@@ -25,7 +34,9 @@ searchRoutes.get("/", async (c) => {
     return c.json({ error: "workspaceId is required" }, 400);
   }
 
-  const mismatch = rejectMismatchedApiKeyWorkspace(c, workspaceId);
+  const mismatch =
+    rejectMismatchedApiKeyWorkspace(c, workspaceId) ??
+    rejectMismatchedPinnedWorkspace(c, workspaceId);
 
   if (mismatch) {
     return mismatch;

@@ -1,3 +1,5 @@
+import { pinnedResourceMiddleware } from "../../auth/pinned-resource-middleware";
+import { getDatabaseRecord } from "../access/database-access";
 import { and, eq } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 
@@ -12,9 +14,11 @@ import { getDatabaseAutomationCatalog, invalidateDatabaseAutomationDependencies 
 import { beginSlackOauth, completeSlackOauth, listSlackChannels, SlackProviderError } from "./actions/slack-provider";
 
 export const automationSlackRoutes = new Hono<AppBindings>();
+const resourceWorkspace = pinnedResourceMiddleware((id) => getDatabaseRecord(id, { includeDeleted: true }), "databaseId");
+
 export const automationSlackProviderRoutes = new Hono<AppBindings>();
 
-automationSlackRoutes.post("/:databaseId/automation-slack/oauth/start", async (c) => {
+automationSlackRoutes.post("/:databaseId/automation-slack/oauth/start", resourceWorkspace, async (c) => {
   const user = requireDatabaseRouteUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   const body = await readJsonBody(c.req) as { dataSourceId?: unknown } | null;
@@ -34,7 +38,7 @@ automationSlackRoutes.post("/:databaseId/automation-slack/oauth/start", async (c
   }
 });
 
-automationSlackRoutes.get("/:databaseId/automation-slack/connections/:connectionId/channels", async (c) => {
+automationSlackRoutes.get("/:databaseId/automation-slack/connections/:connectionId/channels", resourceWorkspace, async (c) => {
   const user = requireDatabaseRouteUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   const dataSourceId = c.req.query("dataSourceId");
@@ -66,7 +70,7 @@ automationSlackRoutes.get("/:databaseId/automation-slack/connections/:connection
   }
 });
 
-automationSlackRoutes.delete("/:databaseId/automation-slack/connections/:connectionId", async (c) => {
+automationSlackRoutes.delete("/:databaseId/automation-slack/connections/:connectionId", resourceWorkspace, async (c) => {
   const user = requireDatabaseRouteUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   const dataSourceId = c.req.query("dataSourceId");

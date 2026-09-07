@@ -21,12 +21,24 @@ test("public root and auth paths bypass session resolution", async () => {
   app.get("/", (c) => c.text("root"));
   app.get("/desktop", (c) => c.text("desktop"));
   app.get("/api/auth/callback", (c) => c.text("callback"));
+  app.get("/.well-known/oauth-authorization-server", (c) => c.text("oauth"));
+  app.get("/.well-known/openid-configuration", (c) => c.text("oidc"));
 
   assert.equal(await (await app.request("/")).text(), "root");
   assert.equal(await (await app.request("/desktop")).text(), "desktop");
   assert.equal(
     await (await app.request("/api/auth/callback")).text(),
     "callback",
+  );
+  assert.equal(
+    await (
+      await app.request("/.well-known/oauth-authorization-server")
+    ).text(),
+    "oauth",
+  );
+  assert.equal(
+    await (await app.request("/.well-known/openid-configuration")).text(),
+    "oidc",
   );
   assert.equal(sessionMiddleware.mock.calls.length, 0);
 });

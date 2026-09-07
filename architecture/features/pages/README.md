@@ -12,6 +12,8 @@ The page route composition mounts browse, visit, hierarchy, sharing, content and
 
 ## Authorization and persistence
 
+OAuth page routes require `pages.read` or `pages.write`. [Token resource middleware](../../../apps/server/src/features/auth/pinned-resource-middleware.ts) binds every page ID, including published and deleted-page reads, to the granted workspace before existing ACL checks. List queries, creation and visit bodies enforce the same workspace binding. [Route regression tests](../../../apps/server/src/features/pages/page-route-access.test.ts) cover cross-workspace denials and retained ACL enforcement.
+
 Pages, placements, access grants and collaboration documents represent different concerns. The [authenticated route guard](../../../apps/server/src/features/pages/page-route-access.ts) resolves identity, page existence, effective access and active workspace in that order, returning the authorized record and access level. Content and sharing handlers use it without changing their distinct required access. Deleted-page, guest and public loading retain separate paths. [Route tests](../../../apps/server/src/features/pages/page-route-access.test.ts) verify denial and workspace-check ordering. Page lock and layout preferences also influence presentation and permitted editing.
 
 ## Side effects, failures and recovery

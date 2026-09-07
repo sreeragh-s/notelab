@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, index, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, check, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { user } from "./authentication";
 import { timestampColumns } from "./columns";
 
@@ -99,6 +99,7 @@ export const team = pgTable(
   {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
+    memberCount: integer("member_count").notNull().default(0),
     organizationId: text("workspace_id")
       .notNull()
       .references(() => workspace.id, { onDelete: "cascade" }),
@@ -112,6 +113,7 @@ export const teamMember = pgTable(
   "teamMember",
   {
     id: text("id").primaryKey(),
+    membershipKey: text("membership_key").unique(),
     teamId: text("team_id")
       .notNull()
       .references(() => team.id, { onDelete: "cascade" }),

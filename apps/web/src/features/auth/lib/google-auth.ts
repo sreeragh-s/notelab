@@ -1,4 +1,5 @@
 import { authFetch } from "@/platform/network/api"
+import { readOAuthQuery } from "@/features/oauth/lib/oauth-query"
 
 const CLOUD_API_URL = "https://api.zilobase.com"
 
@@ -11,6 +12,7 @@ export async function signInWithGoogle(
   callbackURL: string,
   invitationId?: string | null,
 ) {
+  const oauthQuery = readOAuthQuery()
   const response = await authFetch<SocialSignInResponse>("/sign-in/social", {
     provider: "google",
     callbackURL: new URL(callbackURL, window.location.origin).toString(),
@@ -20,6 +22,7 @@ export async function signInWithGoogle(
     ).toString(),
     disableRedirect: true,
     ...(invitationId ? { invitationId } : {}),
+    ...(oauthQuery ? { oauth_query: oauthQuery } : {}),
   })
 
   if (!response.url) {

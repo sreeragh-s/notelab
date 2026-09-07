@@ -6,6 +6,10 @@ import {
 } from "@zilobase/features/clips"
 
 import { rejectMismatchedApiKeyWorkspace } from "../api-keys"
+import {
+  rejectMismatchedPinnedWorkspace,
+  requireOAuthScope,
+} from "../auth/oauth-access"
 import { getAuthenticatedUser, readAuthenticatedJson } from "../../shared/http/auth"
 import type { AppBindings } from "../../shared/types"
 import { ServiceMutationError } from "../../shared/errors/service-mutation-error"
@@ -14,6 +18,8 @@ import { createClipService, findDuplicateClip } from "./create-clip-service"
 export const clipRoutes = new Hono<AppBindings>()
 
 clipRoutes.post("/", async (c) => {
+  const denied = requireOAuthScope(c, "clips.write")
+  if (denied) return denied
   const request = await readAuthenticatedJson(c)
   if (!request.ok) return request.response
   const parsed = parseCreateClipRequest(request.body as Record<string, unknown>)
@@ -21,7 +27,9 @@ clipRoutes.post("/", async (c) => {
     return c.json({ error: parsed.error }, 400)
   }
 
-  const mismatch = rejectMismatchedApiKeyWorkspace(c, parsed.value.workspaceId)
+  const mismatch =
+    rejectMismatchedApiKeyWorkspace(c, parsed.value.workspaceId) ??
+    rejectMismatchedPinnedWorkspace(c, parsed.value.workspaceId)
   if (mismatch) return mismatch
 
   try {
@@ -40,6 +48,8 @@ clipRoutes.post("/", async (c) => {
 })
 
 clipRoutes.get("/duplicates", async (c) => {
+  const denied = requireOAuthScope(c, "clips.write")
+  if (denied) return denied
   const user = getAuthenticatedUser(c)
   if (!user) return c.json({ error: "Unauthorized" }, 401)
 
@@ -49,7 +59,9 @@ clipRoutes.get("/duplicates", async (c) => {
     return c.json({ error: "workspaceId and url are required" }, 400)
   }
 
-  const mismatch = rejectMismatchedApiKeyWorkspace(c, workspaceId)
+  const mismatch =
+    rejectMismatchedApiKeyWorkspace(c, workspaceId) ??
+    rejectMismatchedPinnedWorkspace(c, workspaceId)
   if (mismatch) return mismatch
 
   const duplicate = await findDuplicateClip({

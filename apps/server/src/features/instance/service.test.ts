@@ -39,6 +39,14 @@ test("discovery publishes canonical identity, versions, and desktop endpoints", 
       authorizationEndpoint: "https://api.example.com/desktop/authorize",
       tokenEndpoint: "https://api.example.com/api/auth/desktop/token",
     },
+    oauthAuthorization: {
+      authorizationEndpoint: "https://api.example.com/api/auth/oauth2/authorize",
+      introspectionEndpoint: "https://api.example.com/api/auth/oauth2/introspect",
+      issuer: "https://api.example.com",
+      jwksUri: "https://api.example.com/api/auth/jwks",
+      revocationEndpoint: "https://api.example.com/api/auth/oauth2/revoke",
+      tokenEndpoint: "https://api.example.com/api/auth/oauth2/token",
+    },
   });
 });
 
