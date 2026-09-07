@@ -9,6 +9,7 @@ import { useTableSelection } from "../controller/use-table-selection"
 import { createCellEditHistoryAction } from "../../../interactions/cell-edit-history"
 import {
   Fragment,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -120,6 +121,7 @@ import {
   getInsertPropertyColumnKey,
   getRowDragTitle,
   getRowTitle,
+  getVisibleNestedTableRows,
   requireDatabaseId,
   type CellFillDrag,
   type GroupRowDropTarget,
@@ -356,6 +358,7 @@ export function DatabaseTableView() {
     rowLayoutRef,
     getRowLayoutElement,
     measureRows,
+    scheduleMeasureRows,
   } = useTableRowLayout({
     tableWrapRef,
     tableScrollRef,
@@ -385,24 +388,11 @@ export function DatabaseTableView() {
   )
 
   const nestedVisibleRows = useMemo(() => {
-    if (!isSubItemsNested || collapsedSubItemRowIds.size === 0) {
-      return sortedRows
-    }
-
-    return sortedRows.filter((row) => {
-      const seen = new Set<string>()
-      const pending = [...(subItemParentRowIdsByRowId[row.id] ?? [])]
-
-      while (pending.length > 0) {
-        const parentRowId = pending.shift()!
-        if (seen.has(parentRowId)) continue
-        if (collapsedSubItemRowIds.has(parentRowId)) return false
-
-        seen.add(parentRowId)
-        pending.push(...(subItemParentRowIdsByRowId[parentRowId] ?? []))
-      }
-
-      return true
+    return getVisibleNestedTableRows({
+      collapsedRowIds: collapsedSubItemRowIds,
+      nested: isSubItemsNested,
+      parentRowIdsByRowId: subItemParentRowIdsByRowId,
+      rows: sortedRows,
     })
   }, [
     collapsedSubItemRowIds,
@@ -840,7 +830,11 @@ export function DatabaseTableView() {
       { propertyColors: Record<string, string>; rowColor?: string }
     >()
 
-    for (const row of sortedRows) {
+    if (activeConditionalColors.length === 0) {
+      return colorsByRowId
+    }
+
+    for (const row of visibleRows) {
       const propertyColors: Record<string, string> = {}
       let rowColor: string | undefined
 
@@ -873,7 +867,7 @@ export function DatabaseTableView() {
     personOptionsById,
     properties,
     propertyValuesByKey,
-    sortedRows,
+    visibleRows,
   ])
 
   useEffect(() => {
@@ -1151,33 +1145,34 @@ export function DatabaseTableView() {
     setViewGroupProperty(isGrouped ? null : propertyId)
   }
 
-  const startCellFill = (
-    row: TableRow,
-    propertyId: string,
-    propertyType: string,
-    sourceValue: string | string[],
-    event: ReactPointerEvent<HTMLButtonElement>
-  ) => {
-    if (event.button !== 0) {
-      return
-    }
+  const startCellFill = useCallback(
+    (
+      row: TableRow,
+      propertyId: string,
+      propertyType: string,
+      sourceValue: string | string[],
+      event: ReactPointerEvent<HTMLButtonElement>
+    ) => {
+      if (event.button !== 0) return
 
-    event.preventDefault()
-    event.stopPropagation()
+      event.preventDefault()
+      event.stopPropagation()
 
-    const nextDrag = {
-      propertyId,
-      propertyType,
-      sourceRowId: row.id,
-      sourceValue: Array.isArray(sourceValue)
-        ? [...sourceValue]
-        : sourceValue,
-      targetRowId: row.id,
-    }
+      const nextDrag = {
+        propertyId,
+        propertyType,
+        sourceRowId: row.id,
+        sourceValue: Array.isArray(sourceValue)
+          ? [...sourceValue]
+          : sourceValue,
+        targetRowId: row.id,
+      }
 
-    cellFillDragRef.current = nextDrag
-    setCellFillDrag(nextDrag)
-  }
+      cellFillDragRef.current = nextDrag
+      setCellFillDrag(nextDrag)
+    },
+    []
+  )
 
   const startRowDrag = (
     row: TableRow,
@@ -1272,12 +1267,15 @@ export function DatabaseTableView() {
     </th>
   )
 
-  const renderInsertPropertyCell = (insertKey: string) => (
-    <td
-      aria-hidden="true"
-      className="database-value-cell database-insert-property-placeholder"
-      key={insertKey}
-    />
+  const renderInsertPropertyCell = useCallback(
+    (insertKey: string) => (
+      <td
+        aria-hidden="true"
+        className="database-value-cell database-insert-property-placeholder"
+        key={insertKey}
+      />
+    ),
+    []
   )
   const renderTableHeader = (headerScope = "default") => (
     <thead>
@@ -1532,11 +1530,12 @@ export function DatabaseTableView() {
     </thead>
   )
 
-  const renderTableRow = (
-    row: TableRow,
-    index: number,
-    measureElement: (node: Element | null) => void
-  ) => {
+  const renderTableRow = useCallback(
+    (
+      row: TableRow,
+      index: number,
+      measureElement: (node: Element | null) => void
+    ) => {
         const conditionalColors = conditionalColorsByRowId.get(row.id) ?? {
           propertyColors: {},
           rowColor: undefined,
@@ -1811,7 +1810,41 @@ export function DatabaseTableView() {
             ))}
           </Fragment>
         )
-  }
+    },
+    [
+      addDatabaseRow,
+      cellFillDrag?.propertyId,
+      columnKeys.length,
+      conditionalColorsByRowId,
+      databaseId,
+      editable,
+      expandedEmptySubItemRowIds,
+      fillTargetRowIds,
+      isAddingDatabaseRow,
+      isSubItemsNested,
+      nameColumnLabel,
+      nameColumnShowPageIcon,
+      nameColumnWrapContent,
+      onOpenPage,
+      pendingInsertPropertyKey,
+      personOptions,
+      properties,
+      propertiesById,
+      propertyValuesByKey,
+      renderInsertPropertyCell,
+      renderedColumnIds,
+      savePropertyValue,
+      selectedCellKey,
+      selectedRowIds,
+      sidePane?.sidePanePageId,
+      startCellFill,
+      subItemChildRowIdsByParentId,
+      subItemCreateRowIdsByAfterRowId,
+      subItemDepthByRowId,
+      collapsedSubItemRowIds,
+      updateDatabasePropertyConfig,
+    ]
+  )
 
   return (
     <>
@@ -1971,27 +2004,29 @@ export function DatabaseTableView() {
             onSelectedRowChange={toggleSelectedRow}
             rowDragTitle={rowDragTitle}
             rowLayout={rowLayout}
+            rowsById={rowsById}
             selectedRowIds={selectedRowIds}
-            visibleRows={visibleRows}
           />
         ) : null}
         {!isInlineTableScrollEnabled ? (
           <DatabaseRowDropLine depth={rowDropLineDepth} top={rowDropLineTop} />
         ) : null}
-        <div
-          className="database-table-sticky-header database-inline-scroll"
-          ref={stickyHeaderScrollRef}
-        >
-          <div className="database-table-scroll-content database-inline-scroll-content">
-            <DatabaseTable
-              columnKeys={columnKeys}
-              columnWidths={columnWidths}
-              tableMinWidth={tableMinWidth}
-            >
-              {renderTableHeader("sticky")}
-            </DatabaseTable>
+        {isTableGrouped ? (
+          <div
+            className="database-table-sticky-header database-inline-scroll"
+            ref={stickyHeaderScrollRef}
+          >
+            <div className="database-table-scroll-content database-inline-scroll-content">
+              <DatabaseTable
+                columnKeys={columnKeys}
+                columnWidths={columnWidths}
+                tableMinWidth={tableMinWidth}
+              >
+                {renderTableHeader("sticky")}
+              </DatabaseTable>
+            </div>
           </div>
-        </div>
+        ) : null}
         <div
           className="database-table-scroll database-inline-scroll"
           ref={tableScrollRef}
@@ -2009,8 +2044,8 @@ export function DatabaseTableView() {
             onSelectedRowChange={toggleSelectedRow}
             rowDragTitle={rowDragTitle}
             rowLayout={rowLayout}
+            rowsById={rowsById}
             selectedRowIds={selectedRowIds}
-            visibleRows={visibleRows}
           />
         ) : null}
             {isInlineTableScrollEnabled ? (
@@ -2044,6 +2079,7 @@ export function DatabaseTableView() {
                           ) : undefined
                         }
                         measurementKey={tableMeasurementKey}
+                        onRowsRendered={scheduleMeasureRows}
                         renderRow={renderTableRow}
                         rows={section.rows}
                         tableMinWidth={tableMinWidth}
@@ -2107,7 +2143,9 @@ export function DatabaseTableView() {
                     />
                   ) : undefined
                 }
+                header={renderTableHeader("table")}
                 measurementKey={tableMeasurementKey}
+                onRowsRendered={scheduleMeasureRows}
                 renderRow={renderTableRow}
                 rows={visibleRows}
                 tableMinWidth={tableMinWidth}

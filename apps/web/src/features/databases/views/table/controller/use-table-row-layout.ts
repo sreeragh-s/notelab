@@ -18,8 +18,10 @@ export function useTableRowLayout({
     centers: {},
     dropTops: [],
     heights: {},
+    rowIds: [],
   })
   const rowLayoutRef = useRef(rowLayout)
+  const measurementFrameRef = useRef<number | null>(null)
   rowLayoutRef.current = rowLayout
   const getRowElements = useCallback(() => {
     return Array.from(
@@ -45,7 +47,7 @@ export function useTableRowLayout({
     const layoutElement = getRowLayoutElement()
 
     if (!layoutElement) {
-      const emptyLayout = { centers: {}, dropTops: [], heights: {} }
+      const emptyLayout = { centers: {}, dropTops: [], heights: {}, rowIds: [] }
       rowLayoutRef.current = emptyLayout
       return emptyLayout
     }
@@ -59,9 +61,17 @@ export function useTableRowLayout({
 
     return nextLayout
   }, [getRowElements, getRowLayoutElement])
+  const scheduleMeasureRows = useCallback(() => {
+    if (measurementFrameRef.current !== null) return
+
+    measurementFrameRef.current = window.requestAnimationFrame(() => {
+      measurementFrameRef.current = null
+      measureRows()
+    })
+  }, [measureRows])
   useEffect(() => {
-    window.addEventListener("resize", measureRows)
-    const resizeObserver = new ResizeObserver(() => measureRows())
+    window.addEventListener("resize", scheduleMeasureRows)
+    const resizeObserver = new ResizeObserver(scheduleMeasureRows)
     const wrapperElement = tableWrapRef.current
 
     if (wrapperElement) {
@@ -69,14 +79,19 @@ export function useTableRowLayout({
     }
 
     return () => {
+      if (measurementFrameRef.current !== null) {
+        window.cancelAnimationFrame(measurementFrameRef.current)
+        measurementFrameRef.current = null
+      }
       resizeObserver.disconnect()
-      window.removeEventListener("resize", measureRows)
+      window.removeEventListener("resize", scheduleMeasureRows)
     }
-  }, [measureRows])
+  }, [scheduleMeasureRows])
   return {
     rowLayout,
     rowLayoutRef,
     getRowLayoutElement,
     measureRows,
+    scheduleMeasureRows,
   }
 }

@@ -24,9 +24,11 @@ export function register({ assert, loadModule, test }) {
       const mounted = () => [...document.querySelectorAll("tr[data-index]")].map(row => Number(row.dataset.index))
       const retained = mounted()
       table.reset()
+      const initialRangeNotifications = table.getRenderedRangeNotifications()
       scroll.scrollTop = 32
       scroll.dispatchEvent(new window.Event("scroll"))
       assert.ok(mounted().includes(10), "incoming visible row must be committed during scrolling")
+      assert.ok(table.getRenderedRangeNotifications() > initialRangeNotifications, "virtual range changes must notify row-layout owners")
       const repeated = retained.filter(index => table.renders.has(index))
       assert.equal(repeated.length, 0, `scroll rebuilt ${repeated.length} retained rows`)
       assert.ok(table.getKeyReads() < 200, `scroll visited ${table.getKeyReads()} row keys`)

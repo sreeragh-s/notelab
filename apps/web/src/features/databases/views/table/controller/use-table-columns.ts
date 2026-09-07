@@ -152,14 +152,22 @@ export function useTableColumns({
         activeInsertProperty.side
       )
     : null
-  const columnKeys = getTableColumnKeys({
-    canEditStructure,
-    columnIds: renderedColumnIds,
-    pendingInsert: activeInsertProperty,
-  })
-  const tableMinWidth = columnKeys.reduce(
-    (width, key) => width + getColumnWidth(columnWidths, key),
-    0
+  const columnKeys = useMemo(
+    () =>
+      getTableColumnKeys({
+        canEditStructure,
+        columnIds: renderedColumnIds,
+        pendingInsert: activeInsertProperty,
+      }),
+    [activeInsertProperty, canEditStructure, renderedColumnIds]
+  )
+  const tableMinWidth = useMemo(
+    () =>
+      columnKeys.reduce(
+        (width, key) => width + getColumnWidth(columnWidths, key),
+        0
+      ),
+    [columnKeys, columnWidths]
   )
   const getInlineTableContentWidth = useCallback(
     () => tableMinWidth,
