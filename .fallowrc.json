@@ -25,6 +25,7 @@
     "patterns": [
       "apps/*",
       "packages/features",
+      "packages/html-to-page",
       "packages/markdown-text-splitter",
       "packages/page-context",
       "packages/tiptap-comment-extension"
@@ -187,6 +188,14 @@
       {
         "name": "package-comment-extension",
         "patterns": ["packages/tiptap-comment-extension/src/**"]
+      },
+      {
+        "name": "package-html-to-page",
+        "patterns": ["packages/html-to-page/src/**"]
+      },
+      {
+        "name": "web-extension",
+        "patterns": ["apps/clipper/**"]
       }
     ],
     "rules": [
@@ -521,6 +530,7 @@
           "server-infrastructure",
           "package-features",
           "package-page-context",
+          "package-html-to-page",
           "server-runtime-contract",
           "server-shared"
         ]
@@ -558,6 +568,19 @@
       {
         "from": "package-comment-extension",
         "allow": ["package-comment-extension"]
+      },
+      {
+        "from": "package-html-to-page",
+        "allow": ["package-html-to-page"]
+      },
+      {
+        "from": "web-extension",
+        "allow": [
+          "web-extension",
+          "web-shared",
+          "package-features",
+          "package-html-to-page"
+        ]
       }
     ]
   },

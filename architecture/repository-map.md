@@ -14,6 +14,7 @@
 | Native host | Authentication, server selection, recording and diagnostics | [Rust modules](../apps/desktop/src-tauri/src) |
 | Shared features | Contracts, pure rules, queries and React bindings | [features package](../packages/features/src) |
 | Page context | Structural page content and markdown conversion | [page-context](../packages/page-context/src) |
+| HTML to page | Webpage HTML sanitization and Tiptap JSON conversion for clips | [html-to-page](../packages/html-to-page/src) |
 | Editor utilities | Markdown splitting and comment extension | [splitter](../packages/markdown-text-splitter), [comments](../packages/tiptap-comment-extension) |
 | Setup and operations | Development, deployment and release tooling | [scripts](../scripts), [deploy](../deploy), [docker](../docker) |
 

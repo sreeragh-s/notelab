@@ -12,6 +12,8 @@ dist
 dist-ssr
 coverage
 .vite
+.output
+.wxt
 target
 *.local
 

@@ -63,6 +63,7 @@
     "@opentelemetry/sdk-node": "^0.221.0",
     "@tiptap/pm": "^3.23.6",
     "@zilobase/features": "file:../../packages/features",
+    "@zilobase/html-to-page": "file:../../packages/html-to-page",
     "@zilobase/page-context": "file:../../packages/page-context",
     "ai": "^6.0.193",
     "better-auth": "^1.6.25",

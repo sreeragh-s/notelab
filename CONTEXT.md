@@ -13,3 +13,7 @@ A Database is a page-backed collection of pages with properties, rows, views, an
 ### Page
 
 A Page is the page item represented by a Database row and opened from the editor.
+
+### Clip
+
+A Clip is a webpage captured by the Web Clipper into a Page. It stores the source URL on page metadata, optional database properties, and Tiptap body content converted from sanitized HTML.

@@ -37,6 +37,10 @@ export const appConfig = {
       import.meta.env.VITE_FEATURE_NOTION_IMPORT,
       false,
     ),
+    webClipper: readBooleanFeatureFlag(
+      import.meta.env.VITE_FEATURE_WEB_CLIPPER,
+      false,
+    ),
     teamspaces: readBooleanFeatureFlag(
       import.meta.env.VITE_FEATURE_TEAMSPACES,
       true,

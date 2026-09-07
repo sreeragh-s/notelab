@@ -31,6 +31,14 @@
       "types": "./src/api-keys/index.ts",
       "default": "./src/api-keys/index.ts"
     },
+    "./clips": {
+      "types": "./src/clips/index.ts",
+      "default": "./src/clips/index.ts"
+    },
+    "./clips/contracts": {
+      "types": "./src/clips/contracts.ts",
+      "default": "./src/clips/contracts.ts"
+    },
     "./auth": {
       "types": "./src/auth/index.ts",
       "default": "./src/auth/index.ts"

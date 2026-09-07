@@ -9,7 +9,15 @@ export type EmbeddedItemsOpenAs = "dialog" | "sidepanel";
 
 export type PageIconPosition = "inline" | "top";
 
+export type PageClipMetadata = {
+  capturedAt?: string | null;
+  captureMode?: string | null;
+  canonicalUrl?: string | null;
+  sourceUrl?: string | null;
+};
+
 export type PageMetadata = {
+  clip?: PageClipMetadata | null;
   cover?: string | null;
   emoji?: string | null;
   embeddedItemsOpenAs?: EmbeddedItemsOpenAs | null;

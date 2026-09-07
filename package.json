@@ -11,6 +11,7 @@
   "workspaces": [
     "apps/*",
     "packages/features",
+    "packages/html-to-page",
     "packages/markdown-text-splitter",
     "packages/page-context",
     "packages/tiptap-comment-extension"
@@ -19,6 +20,8 @@
     "dev": "npm run dev:web",
     "build": "npm run build:web",
     "dev:web": "npm run dev --workspace @zilobase/web",
+    "dev:clipper": "npm run dev --workspace @zilobase/clipper",
+    "build:clipper": "npm run build --workspace @zilobase/clipper",
     "build:web": "npm run build --workspace @zilobase/web",
     "test:web": "npm run test --workspace @zilobase/web",
     "test:update-local": "node scripts/desktop/test-update.mjs",
@@ -54,7 +57,7 @@
     "quality:fallow:full": "npm run quality:fallow:dead && npm run quality:fallow:dupes && npm run quality:fallow:health",
     "quality:web-bundle": "node scripts/web/check-bundle-budget.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test:packages": "npm test --workspace @zilobase/features && npm test --workspace @zilobase/page-context",
+    "test:packages": "npm test --workspace @zilobase/features && npm test --workspace @zilobase/page-context && npm test --workspace @zilobase/html-to-page",
     "verify:core": "npm run tokens:check && npm run test:tooling && npm run test:community-boundary && npm run typecheck && npm run test:packages && npm run test:web && npm run build:web && npm run test:server && npm run quality:fallow -- --summary",
     "verify:desktop": "cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml --check && cargo clippy --manifest-path apps/desktop/src-tauri/Cargo.toml --locked --all-targets -- -D warnings && cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --locked",
     "verify:architecture": "npm run test:architecture && npm run quality:fallow:full",
