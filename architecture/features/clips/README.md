@@ -10,7 +10,7 @@
 
 The Web Clipper posts sanitized HTML (or Tiptap JSON) to `POST /clips`. The [clip content builder](../../../apps/server/src/features/clips/build-clip-content.ts) converts HTML through `@zilobase/html-to-page`, prepends a bookmark block, and the [create service](../../../apps/server/src/features/clips/create-clip-service.ts) persists a page via `createPageService`. Optional `databaseId` may be a parent database id (as returned by search) or a data-source id; the service resolves the active data source before `createDatabaseRowService`. Duplicate URLs are stored on `page.metadata.clip.sourceUrl` and queried by `GET /clips/duplicates`.
 
-Browser extension origins are allowlisted through `CLIPPER_EXTENSION_ORIGINS` (chrome-extension, moz-extension, safari-web-extension). API-key callers must match their pinned workspace.
+Browser extension origins are allowlisted through `CLIPPER_EXTENSION_ORIGINS` (chrome-extension, moz-extension, safari-web-extension). API-key and OAuth callers must match their pinned workspace. The extension uses discovery, authorization-code PKCE and the web callback to connect; OAuth access requires `clips.write`. Expired access tokens refresh before retrying a save.
 
 ## Authorization and persistence
 

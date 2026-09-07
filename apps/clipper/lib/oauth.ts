@@ -2,8 +2,8 @@ import { browser } from "wxt/browser"
 
 import { writeSession, type ClipperSession } from "./session"
 
-export const CLIPPER_CLIENT_ID = "zilobase-web-clipper"
-export const CLIPPER_OAUTH_SCOPES = [
+const CLIPPER_CLIENT_ID = "zilobase-web-clipper"
+const CLIPPER_OAUTH_SCOPES = [
   "openid",
   "profile",
   "email",
@@ -70,6 +70,8 @@ export async function completeClipperOAuth(callbackUrl: string) {
     return null
   }
 
+  if (url.searchParams.get("state") !== pending.state) return null
+
   const error = url.searchParams.get("error")
   if (error) {
     await browser.storage.local.remove(pendingKey)
@@ -77,8 +79,7 @@ export async function completeClipperOAuth(callbackUrl: string) {
   }
 
   const code = url.searchParams.get("code")
-  const state = url.searchParams.get("state")
-  if (!code || state !== pending.state) {
+  if (!code) {
     return null
   }
 
