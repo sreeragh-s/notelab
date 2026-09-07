@@ -6,6 +6,8 @@ import type { AppBindings } from "../../shared/types";
 import { responseJson } from "../../test-support/response";
 
 const mocks = vi.hoisted(() => ({
+  databaseRecord: vi.fn(),
+  sourceRecord: vi.fn(),
   cell: vi.fn(),
   createProperty: vi.fn(),
   createDatabase: vi.fn(),
@@ -17,6 +19,14 @@ const mocks = vi.hoisted(() => ({
   updateDatabase: vi.fn(),
 }));
 
+vi.mock("./access/database-access", async (original) => ({
+  ...(await original<typeof import("./access/database-access")>()),
+  getDatabaseRecord: mocks.databaseRecord,
+}));
+vi.mock("./access/data-source-access", async (original) => ({
+  ...(await original<typeof import("./access/data-source-access")>()),
+  getDataSourceRecord: mocks.sourceRecord,
+}));
 vi.mock("./properties/cell-service", () => ({
   setDatabaseCellValueService: mocks.cell,
 }));
@@ -259,4 +269,44 @@ test("database template route validates and applies the whole template once", as
     env: undefined,
     userId: "user-1",
   });
+});
+
+
+test("OAuth database routes bind database and data-source IDs to the granted workspace", async () => {
+  const app = new Hono<AppBindings>();
+  app.use("*", async (c, next) => {
+    c.set("user", user as never);
+    c.set("authMethod", "oauth");
+    c.set("session", { activeWorkspaceId: "granted" } as never);
+    c.set("oauthScopes", ["databases.read", "databases.write"]);
+    await next();
+  });
+  app.route("/databases", databaseRoutes);
+  mocks.databaseRecord.mockResolvedValue({ workspaceId: "other" });
+  mocks.sourceRecord.mockResolvedValue({ workspaceId: "other" });
+  for (const [method, path] of [
+    ["GET", "/databases/database-1"],
+    ["GET", "/databases/database-1/published"],
+    ["DELETE", "/databases/database-1"],
+    ["PATCH", "/databases/data-sources/source-1"],
+    ["POST", "/databases/source-1/properties"],
+    ["POST", "/databases/source-1/rows"],
+    ["POST", "/databases/source-1/apply-template"],
+    ["GET", "/databases/database-1/automations"],
+  ]) {
+    assert.equal((await app.request(path!, { method })).status, 403, path);
+  }
+  assert.equal(mocks.cell.mock.calls.length, 0);
+  assert.equal(mocks.deleteDatabase.mock.calls.length, 0);
+  assert.equal((await app.request("/databases", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ workspaceId: "other" }),
+  })).status, 403);
+  mocks.sourceRecord.mockResolvedValue({ workspaceId: "granted" });
+  mocks.cell.mockResolvedValue({ commit });
+  assert.equal((await app.request("/databases/source-1/rows/row-1/properties/property-1", {
+    method: "PUT", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ value: "Done" }),
+  })).status, 200);
+  assert.equal(mocks.cell.mock.calls.length, 1);
 });

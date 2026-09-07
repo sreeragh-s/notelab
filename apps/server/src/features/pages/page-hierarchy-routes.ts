@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { getAuthenticatedUser as requireUser } from "../../shared/http/auth";
 import { hasPageBodyContent } from "@zilobase/features/pages/content-state";
 import { canAccessDatabaseInWorkspace, canAccessPageInWorkspace, getEffectiveTeamspaceAccessInWorkspace, getMembership, hasAccess } from "../access";
-import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
+import { rejectMismatchedPinnedWorkspace } from "../auth/oauth-access";
 import { db } from "../../infrastructure/database";
 import { database, databaseRow, favorite, page, pageCollaborationDocument, pageItemPlacement } from "../../infrastructure/database/schema";
 import type { AppBindings } from "../../shared/types";
@@ -47,7 +47,7 @@ pageHierarchyRoutes.post("/", async (c) => {
     return c.json({ error: "workspaceId is required" }, 400);
   }
 
-  const mismatch = rejectMismatchedApiKeyWorkspace(c, workspaceId);
+  const mismatch = rejectMismatchedPinnedWorkspace(c, workspaceId);
 
   if (mismatch) {
     return mismatch;

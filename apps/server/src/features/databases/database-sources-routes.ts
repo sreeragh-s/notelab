@@ -1,3 +1,6 @@
+import { pinnedResourceMiddleware } from "../auth/pinned-resource-middleware";
+import { getDatabaseRecord } from "./access/database-access";
+import { getDataSourceRecord } from "./access/data-source-access";
 import { readAuthenticatedJson } from "../../shared/http/auth";
 import { Hono } from "hono";
 import type { AppBindings } from "../../shared/types";
@@ -12,7 +15,11 @@ import { requireDatabaseRouteUser as requireUser } from "./route-support";
 
 export const databaseSourceRoutes = new Hono<AppBindings>();
 
-databaseSourceRoutes.patch("/:id", async (c) => {
+const databaseWorkspace = pinnedResourceMiddleware(getDatabaseRecord);
+const sourceWorkspace = pinnedResourceMiddleware(getDataSourceRecord);
+
+
+databaseSourceRoutes.patch("/:id", databaseWorkspace, async (c) => {
   const request = await readAuthenticatedJson(c);
   if (!request.ok) return request.response;
   const { user, body } = request;
@@ -35,7 +42,7 @@ databaseSourceRoutes.patch("/:id", async (c) => {
     return c.json(mutationResponse(result.commit));
 });
 
-databaseSourceRoutes.patch("/data-sources/:dataSourceId", async (c) => {
+databaseSourceRoutes.patch("/data-sources/:dataSourceId", pinnedResourceMiddleware(getDataSourceRecord, "dataSourceId"), async (c) => {
   const request = await readAuthenticatedJson(c);
   if (!request.ok) return request.response;
   const { user, body } = request;
@@ -54,7 +61,7 @@ databaseSourceRoutes.patch("/data-sources/:dataSourceId", async (c) => {
   return c.json(mutationResponse(result.commit));
 });
 
-databaseSourceRoutes.patch("/:id/views/:viewId", async (c) => {
+databaseSourceRoutes.patch("/:id/views/:viewId", databaseWorkspace, async (c) => {
   const request = await readAuthenticatedJson(c);
   if (!request.ok) return request.response;
   const { user, body } = request;
@@ -82,7 +89,7 @@ databaseSourceRoutes.patch("/:id/views/:viewId", async (c) => {
   return c.json(mutationResponse(result.commit));
 });
 
-databaseSourceRoutes.post("/:id/views", async (c) => {
+databaseSourceRoutes.post("/:id/views", databaseWorkspace, async (c) => {
   const user = requireUser(c);
 
   if (!user) {
@@ -122,7 +129,7 @@ databaseSourceRoutes.post("/:id/views", async (c) => {
     return c.json(mutationResponse(result.commit), 201);
 });
 
-databaseSourceRoutes.post("/:id/data-sources/new", async (c) => {
+databaseSourceRoutes.post("/:id/data-sources/new", databaseWorkspace, async (c) => {
   const request = await readAuthenticatedJson(c);
   if (!request.ok) return request.response;
   const { user, body } = request;
@@ -149,7 +156,7 @@ databaseSourceRoutes.post("/:id/data-sources/new", async (c) => {
   return c.json(result.payload, 201);
 });
 
-databaseSourceRoutes.post("/:id/data-sources", async (c) => {
+databaseSourceRoutes.post("/:id/data-sources", databaseWorkspace, async (c) => {
   const request = await readAuthenticatedJson(c);
   if (!request.ok) return request.response;
   const { user, body } = request;
@@ -176,7 +183,7 @@ databaseSourceRoutes.post("/:id/data-sources", async (c) => {
   return c.json(mutationResponse(result.commit), 201);
 });
 
-databaseSourceRoutes.put("/:id/views/:viewId/source", async (c) => {
+databaseSourceRoutes.put("/:id/views/:viewId/source", databaseWorkspace, async (c) => {
   const user = requireUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   const body = await readJsonBody(c.req);
@@ -198,7 +205,7 @@ databaseSourceRoutes.put("/:id/views/:viewId/source", async (c) => {
   return c.json(mutationResponse(result.commit));
 });
 
-databaseSourceRoutes.delete("/:id/data-sources/:dataSourceId", async (c) => {
+databaseSourceRoutes.delete("/:id/data-sources/:dataSourceId", databaseWorkspace, async (c) => {
   const user = requireUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
 
@@ -211,7 +218,7 @@ databaseSourceRoutes.delete("/:id/data-sources/:dataSourceId", async (c) => {
   return c.json(mutationResponse(result.commit));
 });
 
-databaseSourceRoutes.delete("/:id/views/:viewId", async (c) => {
+databaseSourceRoutes.delete("/:id/views/:viewId", databaseWorkspace, async (c) => {
   const user = requireUser(c);
 
   if (!user) {
@@ -228,7 +235,7 @@ databaseSourceRoutes.delete("/:id/views/:viewId", async (c) => {
   return c.json(mutationResponse(result.commit));
 });
 
-databaseSourceRoutes.post("/:id/apply-template", async (c) => {
+databaseSourceRoutes.post("/:id/apply-template", sourceWorkspace, async (c) => {
   const request = await readAuthenticatedJson(c);
   if (!request.ok) return request.response;
   const { user, body } = request;

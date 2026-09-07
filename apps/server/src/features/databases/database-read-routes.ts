@@ -1,3 +1,4 @@
+import { pinnedResourceMiddleware } from "../auth/pinned-resource-middleware";
 import { Hono } from "hono";
 
 import {
@@ -23,8 +24,10 @@ import type { AppBindings } from "../../shared/types";
 import { readJsonBody } from "../../shared/http/request";
 
 export const databaseReadRoutes = new Hono<AppBindings>();
+const resourceWorkspace = pinnedResourceMiddleware((id) => getDatabaseRecord(id, { includeDeleted: true }));
 
-databaseReadRoutes.get("/:id", async (c) => {
+
+databaseReadRoutes.get("/:id", resourceWorkspace, async (c) => {
   const user = c.get("user") ?? null;
   const includeDeleted = c.req.query("includeDeleted") === "1";
   const record = await getDatabaseRecord(c.req.param("id"), {
@@ -79,7 +82,7 @@ databaseReadRoutes.get("/:id", async (c) => {
   });
 });
 
-databaseReadRoutes.post("/:id/realtime-ticket", async (c) => {
+databaseReadRoutes.post("/:id/realtime-ticket", resourceWorkspace, async (c) => {
   const user = c.get("user") ?? null;
 
   if (!user || c.get("authMethod") !== "session") {
@@ -153,7 +156,7 @@ databaseReadRoutes.post("/:id/realtime-ticket", async (c) => {
   });
 });
 
-databaseReadRoutes.get("/:id/published", async (c) => {
+databaseReadRoutes.get("/:id/published", resourceWorkspace, async (c) => {
   const record = await getDatabaseRecord(c.req.param("id"));
   if (!record) return c.json({ published: false }, 404);
 

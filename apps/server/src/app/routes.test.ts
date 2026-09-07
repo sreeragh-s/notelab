@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { Hono } from "hono";
+import { PgDialect } from "drizzle-orm/pg-core";
+import type { SQL } from "drizzle-orm";
 import { beforeEach, test, vi } from "vitest";
 import {
   defaultSidebarConfig,
@@ -14,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   membership: vi.fn(),
   privileged: vi.fn(),
   selectResults: [] as unknown[][],
+  whereQueries: [] as SQL[],
   selfHosted: vi.fn(),
 }));
 
@@ -38,7 +41,7 @@ vi.mock("../infrastructure/database", () => ({
       const builder = {
         from() { return builder; },
         innerJoin() { return builder; },
-        where() { return builder; },
+        where(query: SQL) { mocks.whereQueries.push(query); return builder; },
         orderBy() { return builder; },
         async limit() { return rows; },
         then(resolve: (value: unknown[]) => unknown) {
@@ -80,6 +83,7 @@ beforeEach(() => {
   mocks.privileged.mockReturnValue(true);
   mocks.insertResults.length = 0;
   mocks.selectResults.length = 0;
+  mocks.whereQueries.length = 0;
   mocks.selfHosted.mockReset();
   mocks.selfHosted.mockReturnValue(false);
 });
@@ -364,4 +368,32 @@ test("API key list filters records to the requested workspace", async () => {
   const body = await responseJson<{ keys: Array<{ id: string }> }>(response);
   assert.equal(response.status, 200);
   assert.deepEqual(body.keys.map((key) => key.id), ["key-1"]);
+});
+
+
+test("workspace discovery keeps OAuth reads within the grant and checks membership", async () => {
+  const app = new Hono<AppBindings>();
+  app.use("*", async (c, next) => {
+    c.set("user", user as never);
+    c.set("session", { activeWorkspaceId: "workspace-1" } as never);
+    c.set("authMethod", "oauth");
+    c.set("oauthScopes", ["workspaces.read"]);
+    await next();
+  });
+  app.route("/workspaces", workspaceRoutes);
+  const record = { id: "workspace-1", name: "Granted" };
+  mocks.selectResults.push([{ workspace: record }]);
+  const listing = await app.request("/workspaces");
+  assert.equal(listing.status, 200);
+  assert.deepEqual(await listing.json(), { workspaces: [record] });
+  const query = new PgDialect().sqlToQuery(mocks.whereQueries[0]!);
+  assert.ok(query.params.includes("workspace-1"));
+  assert.ok(query.params.includes(user.id));
+  assert.equal((await app.request("/workspaces/other")).status, 403);
+  assert.equal(mocks.membership.mock.calls.length, 0);
+  mocks.membership.mockResolvedValue(null);
+  assert.equal((await app.request("/workspaces/workspace-1")).status, 403);
+  mocks.membership.mockResolvedValue({ role: "member" });
+  mocks.selectResults.push([record]);
+  assert.deepEqual(await (await app.request("/workspaces/workspace-1")).json(), { workspace: record });
 });

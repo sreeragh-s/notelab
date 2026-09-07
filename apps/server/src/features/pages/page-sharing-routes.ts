@@ -4,7 +4,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { canAccessDatabaseInWorkspace, canAccessPageInWorkspace, getEffectivePageAccessForUsers, getMembership, hasAccess, normalizeAccessLevel } from "../access";
-import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
+import { rejectMismatchedPinnedWorkspace } from "../auth/oauth-access";
 import { db } from "../../infrastructure/database";
 import {
   aiAgentProfile,
@@ -54,7 +54,7 @@ pageVisitRoutes.post("/item-visits", async (c) => {
     return c.json({ error: "itemId is required" }, 400);
   }
 
-  const mismatch = rejectMismatchedApiKeyWorkspace(c, workspaceId);
+  const mismatch = rejectMismatchedPinnedWorkspace(c, workspaceId);
 
   if (mismatch) {
     return mismatch;

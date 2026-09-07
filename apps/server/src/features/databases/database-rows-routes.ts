@@ -1,6 +1,9 @@
+import { getDataSourceRecord } from "./access/data-source-access";
+import { pinnedResourceMiddleware } from "../auth/pinned-resource-middleware";
 import { Hono } from "hono";
 import type { AppBindings } from "../../shared/types";
 import { readJsonBody } from "../../shared/http/request";
+import { readAuthenticatedJson } from "../../shared/http/auth";
 import { mutationResponse } from "./core/commit";
 import { createDatabaseRowService } from "./rows/service";
 import { setDatabaseCellValueService } from "./properties/cell-service";
@@ -8,8 +11,10 @@ import { moveDatabaseRowService, reorderDatabaseRowsService } from "./rows/posit
 import { requireDatabaseRouteUser as requireUser } from "./route-support";
 
 export const databaseRowRoutes = new Hono<AppBindings>();
+const resourceWorkspace = pinnedResourceMiddleware((id) => getDataSourceRecord(id, { includeDeleted: true }));
 
-databaseRowRoutes.post("/:id/rows", async (c) => {
+
+databaseRowRoutes.post("/:id/rows", resourceWorkspace, async (c) => {
   const user = requireUser(c);
 
   if (!user) {
@@ -84,13 +89,10 @@ databaseRowRoutes.post("/:id/rows", async (c) => {
     );
 });
 
-databaseRowRoutes.patch("/:id/rows/reorder", async (c) => {
-  const user = requireUser(c);
-  if (!user) return c.json({ error: "Unauthorized" }, 401);
-  const body = await readJsonBody(c.req);
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "A JSON body is required" }, 400);
-  }
+databaseRowRoutes.patch("/:id/rows/reorder", resourceWorkspace, async (c) => {
+  const request = await readAuthenticatedJson(c);
+  if (!request.ok) return request.response;
+  const { user, body } = request;
   const { rowIds } = body as { rowIds?: unknown };
   if (
     !Array.isArray(rowIds) ||
@@ -107,13 +109,10 @@ databaseRowRoutes.patch("/:id/rows/reorder", async (c) => {
   return c.json(mutationResponse(result.commit));
 });
 
-databaseRowRoutes.patch("/:id/rows/:rowId/move", async (c) => {
-  const user = requireUser(c);
-  if (!user) return c.json({ error: "Unauthorized" }, 401);
-  const body = await readJsonBody(c.req);
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "A JSON body is required" }, 400);
-  }
+databaseRowRoutes.patch("/:id/rows/:rowId/move", resourceWorkspace, async (c) => {
+  const request = await readAuthenticatedJson(c);
+  if (!request.ok) return request.response;
+  const { user, body } = request;
   const {
     groupPropertyId,
     groupValue = null,
@@ -143,13 +142,10 @@ databaseRowRoutes.patch("/:id/rows/:rowId/move", async (c) => {
   return c.json(mutationResponse(result.commit));
 });
 
-databaseRowRoutes.put("/:id/rows/:rowId/properties/:propertyId", async (c) => {
-  const user = requireUser(c);
-  if (!user) return c.json({ error: "Unauthorized" }, 401);
-  const body = await readJsonBody(c.req);
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "A JSON body is required" }, 400);
-  }
+databaseRowRoutes.put("/:id/rows/:rowId/properties/:propertyId", resourceWorkspace, async (c) => {
+  const request = await readAuthenticatedJson(c);
+  if (!request.ok) return request.response;
+  const { user, body } = request;
   const { value = null } = body as { value?: unknown };
   const result = await setDatabaseCellValueService({
     databaseId: c.req.param("id"),

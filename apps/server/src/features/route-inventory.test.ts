@@ -4,7 +4,7 @@ import { databaseRoutes } from "./databases/database-routes";
 import { pageRoutes } from "./pages/page-routes";
 
 const inventory = (routes: typeof pageRoutes) =>
-  routes.routes.map(({ method, path }) => `${method} ${path}`);
+  [...new Set(routes.routes.filter(({ method }) => method !== "ALL").map(({ method, path }) => `${method} ${path}`))];
 
 describe("feature route composition", () => {
   it("preserves every page endpoint and its registration order", () => {

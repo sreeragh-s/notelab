@@ -1,6 +1,8 @@
+import { getDatabaseRecord } from "./access/database-access";
+import { pinnedResourceMiddleware } from "../auth/pinned-resource-middleware";
 import { readAuthenticatedJson } from "../../shared/http/auth";
 import { Hono } from "hono";
-import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
+import { rejectMismatchedPinnedWorkspace } from "../auth/oauth-access";
 import type { AppBindings } from "../../shared/types";
 import { readJsonBody } from "../../shared/http/request";
 import { getDatabasePayload } from "./core/payload";
@@ -10,6 +12,8 @@ import { createDatabaseService, deleteDatabaseService, restoreDatabaseService } 
 import { requireDatabaseRouteUser as requireUser } from "./route-support";
 
 export const databaseCoreRoutes = new Hono<AppBindings>();
+const resourceWorkspace = pinnedResourceMiddleware((id) => getDatabaseRecord(id, { includeDeleted: true }));
+
 export const databaseCreateRoutes = new Hono<AppBindings>();
 
 databaseCreateRoutes.post("/", async (c) => {
@@ -35,7 +39,7 @@ databaseCreateRoutes.post("/", async (c) => {
     return c.json({ error: "workspaceId is required" }, 400);
   }
 
-  const mismatch = rejectMismatchedApiKeyWorkspace(c, workspaceId);
+  const mismatch = rejectMismatchedPinnedWorkspace(c, workspaceId);
 
   if (mismatch) {
     return mismatch;
@@ -103,7 +107,7 @@ databaseCreateRoutes.post("/", async (c) => {
 });
 
 
-databaseCoreRoutes.get("/:id/access", async (c) => {
+databaseCoreRoutes.get("/:id/access", resourceWorkspace, async (c) => {
   const user = requireUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
 
@@ -115,7 +119,7 @@ databaseCoreRoutes.get("/:id/access", async (c) => {
     );
 });
 
-databaseCoreRoutes.put("/:id/access", async (c) => {
+databaseCoreRoutes.put("/:id/access", resourceWorkspace, async (c) => {
   const user = requireUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   const body = await readJsonBody(c.req);
@@ -130,7 +134,7 @@ databaseCoreRoutes.put("/:id/access", async (c) => {
     );
 });
 
-databaseCoreRoutes.delete("/:id/access/public", async (c) => {
+databaseCoreRoutes.delete("/:id/access/public", resourceWorkspace, async (c) => {
   const user = requireUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
 
@@ -143,7 +147,7 @@ databaseCoreRoutes.delete("/:id/access/public", async (c) => {
     );
 });
 
-databaseCoreRoutes.delete("/:id/access/:ruleId", async (c) => {
+databaseCoreRoutes.delete("/:id/access/:ruleId", resourceWorkspace, async (c) => {
   const user = requireUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
 
@@ -157,7 +161,7 @@ databaseCoreRoutes.delete("/:id/access/:ruleId", async (c) => {
     );
 });
 
-databaseCoreRoutes.put("/:id/favorite", async (c) => {
+databaseCoreRoutes.put("/:id/favorite", resourceWorkspace, async (c) => {
   const user = requireUser(c);
 
   if (!user) {
@@ -173,7 +177,7 @@ databaseCoreRoutes.put("/:id/favorite", async (c) => {
     );
 });
 
-databaseCoreRoutes.delete("/:id", async (c) => {
+databaseCoreRoutes.delete("/:id", resourceWorkspace, async (c) => {
   const user = requireUser(c);
 
   if (!user) {
@@ -189,7 +193,7 @@ databaseCoreRoutes.delete("/:id", async (c) => {
     );
 });
 
-databaseCoreRoutes.post("/:id/restore", async (c) => {
+databaseCoreRoutes.post("/:id/restore", resourceWorkspace, async (c) => {
   const user = requireUser(c);
 
   if (!user) {
@@ -205,7 +209,7 @@ databaseCoreRoutes.post("/:id/restore", async (c) => {
     );
 });
 
-databaseCoreRoutes.delete("/:id/favorite", async (c) => {
+databaseCoreRoutes.delete("/:id/favorite", resourceWorkspace, async (c) => {
   const user = requireUser(c);
 
   if (!user) {

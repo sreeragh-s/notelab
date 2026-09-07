@@ -1,3 +1,5 @@
+import { pinnedResourceMiddleware } from "../../auth/pinned-resource-middleware";
+import { getDatabaseRecord } from "../access/database-access";
 import { Hono, type Context } from "hono";
 
 import {
@@ -32,8 +34,10 @@ import {
 } from "./history/run-history";
 
 export const databaseAutomationRoutes = new Hono<AppBindings>();
+const resourceWorkspace = pinnedResourceMiddleware((id) => getDatabaseRecord(id, { includeDeleted: true }), "databaseId");
 
-databaseAutomationRoutes.get("/:databaseId/automation-capability", async (c) => {
+
+databaseAutomationRoutes.get("/:databaseId/automation-capability", resourceWorkspace, async (c) => {
   const user = requireDatabaseRouteUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   const workspaceId = c.req.query("workspaceId")?.trim();
@@ -46,7 +50,7 @@ databaseAutomationRoutes.get("/:databaseId/automation-capability", async (c) => 
   });
 });
 
-databaseAutomationRoutes.get("/:databaseId/automations", async (c) => {
+databaseAutomationRoutes.get("/:databaseId/automations", resourceWorkspace, async (c) => {
   const source = requireAutomationSource(c);
   if (!source.ok) return source.response;
   const { user, dataSourceId } = source;
@@ -58,7 +62,7 @@ databaseAutomationRoutes.get("/:databaseId/automations", async (c) => {
   }));
 });
 
-databaseAutomationRoutes.post("/:databaseId/automations/validate", async (c) => {
+databaseAutomationRoutes.post("/:databaseId/automations/validate", resourceWorkspace, async (c) => {
   const user = requireDatabaseRouteUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   const parsed = validateDatabaseAutomationRequestSchema.safeParse(await readJsonBody(c.req));
@@ -76,7 +80,7 @@ databaseAutomationRoutes.post("/:databaseId/automations/validate", async (c) => 
   }));
 });
 
-databaseAutomationRoutes.post("/:databaseId/automation-secrets", async (c) => {
+databaseAutomationRoutes.post("/:databaseId/automation-secrets", resourceWorkspace, async (c) => {
   const user = requireDatabaseRouteUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   const parsed = createDatabaseAutomationSecretRequestSchema.safeParse(await readJsonBody(c.req));
@@ -90,7 +94,7 @@ databaseAutomationRoutes.post("/:databaseId/automation-secrets", async (c) => {
   }));
 });
 
-databaseAutomationRoutes.post("/:databaseId/automations", async (c) => {
+databaseAutomationRoutes.post("/:databaseId/automations", resourceWorkspace, async (c) => {
   const user = requireDatabaseRouteUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   const parsed = createDatabaseAutomationRequestSchema.safeParse(await readJsonBody(c.req));
@@ -113,7 +117,7 @@ databaseAutomationRoutes.post("/:databaseId/automations", async (c) => {
   }, true);
 });
 
-databaseAutomationRoutes.get("/:databaseId/automations/audit", async (c) => {
+databaseAutomationRoutes.get("/:databaseId/automations/audit", resourceWorkspace, async (c) => {
   const source = requireAutomationSource(c);
   if (!source.ok) return source.response;
   const { user, dataSourceId } = source;
@@ -122,7 +126,7 @@ databaseAutomationRoutes.get("/:databaseId/automations/audit", async (c) => {
   }));
 });
 
-databaseAutomationRoutes.get("/:databaseId/automations/:automationId", async (c) => {
+databaseAutomationRoutes.get("/:databaseId/automations/:automationId", resourceWorkspace, async (c) => {
   const user = requireDatabaseRouteUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   return handle(c, () => getDatabaseAutomation({
@@ -132,7 +136,7 @@ databaseAutomationRoutes.get("/:databaseId/automations/:automationId", async (c)
   }));
 });
 
-databaseAutomationRoutes.get("/:databaseId/automations/:automationId/runs", async (c) => {
+databaseAutomationRoutes.get("/:databaseId/automations/:automationId/runs", resourceWorkspace, async (c) => {
   const user = requireDatabaseRouteUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   const requestedLimit = Number(c.req.query("limit") ?? 50);
@@ -144,7 +148,7 @@ databaseAutomationRoutes.get("/:databaseId/automations/:automationId/runs", asyn
   }));
 });
 
-databaseAutomationRoutes.get("/:databaseId/automations/:automationId/runs/:runId", async (c) => {
+databaseAutomationRoutes.get("/:databaseId/automations/:automationId/runs/:runId", resourceWorkspace, async (c) => {
   const user = requireDatabaseRouteUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   return handle(c, () => getDatabaseAutomationRun({
@@ -155,7 +159,7 @@ databaseAutomationRoutes.get("/:databaseId/automations/:automationId/runs/:runId
   }));
 });
 
-databaseAutomationRoutes.patch("/:databaseId/automations/:automationId", async (c) => {
+databaseAutomationRoutes.patch("/:databaseId/automations/:automationId", resourceWorkspace, async (c) => {
   const user = requireDatabaseRouteUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   const expectedVersion = parseIfMatch(c.req.header("If-Match"));
@@ -179,7 +183,7 @@ databaseAutomationRoutes.patch("/:databaseId/automations/:automationId", async (
 });
 
 for (const [path, paused] of [["pause", true], ["resume", false]] as const) {
-  databaseAutomationRoutes.post(`/:databaseId/automations/:automationId/${path}`, async (c) => {
+  databaseAutomationRoutes.post(`/:databaseId/automations/:automationId/${path}`, resourceWorkspace, async (c) => {
     const user = requireDatabaseRouteUser(c);
     if (!user) return c.json({ error: "Unauthorized" }, 401);
     return handle(c, () => setDatabaseAutomationPaused({
@@ -196,7 +200,7 @@ for (const [path, paused] of [["pause", true], ["resume", false]] as const) {
   });
 }
 
-databaseAutomationRoutes.post("/:databaseId/automations/:automationId/duplicate", async (c) => {
+databaseAutomationRoutes.post("/:databaseId/automations/:automationId/duplicate", resourceWorkspace, async (c) => {
   const user = requireDatabaseRouteUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   const idempotencyKey = c.req.header("Idempotency-Key")?.trim();
@@ -219,7 +223,7 @@ databaseAutomationRoutes.post("/:databaseId/automations/:automationId/duplicate"
   }, true);
 });
 
-databaseAutomationRoutes.delete("/:databaseId/automations/:automationId", async (c) => {
+databaseAutomationRoutes.delete("/:databaseId/automations/:automationId", resourceWorkspace, async (c) => {
   const user = requireDatabaseRouteUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   return handle(c, () => deleteDatabaseAutomation({
@@ -230,7 +234,7 @@ databaseAutomationRoutes.delete("/:databaseId/automations/:automationId", async 
   }));
 });
 
-databaseAutomationRoutes.get("/:databaseId/automation-catalog", async (c) => {
+databaseAutomationRoutes.get("/:databaseId/automation-catalog", resourceWorkspace, async (c) => {
   const source = requireAutomationSource(c);
   if (!source.ok) return source.response;
   const { user, dataSourceId } = source;

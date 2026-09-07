@@ -2,7 +2,7 @@ import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import { getAuthenticatedUser as requireUser } from "../../shared/http/auth";
 import { canAccessDatabaseInWorkspace, getAccessiblePageIds, getEffectivePageAccessInWorkspace, getMembership, getWorkspacePrincipalKind, hasAccess, isPagePublishedInWorkspace, type AccessLevel } from "../access";
-import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
+import { rejectMismatchedPinnedWorkspace } from "../auth/oauth-access";
 import { db } from "../../infrastructure/database";
 import { database, dataSource, databaseDataSource, databaseRow, databaseView, favorite, itemVisit, user as userTable, page, pageAccess, pageItemPlacement, pageSettings } from "../../infrastructure/database/schema";
 import type { AppBindings } from "../../shared/types";
@@ -26,7 +26,7 @@ pageBrowseRoutes.get("/", async (c) => {
     return c.json({ error: "workspaceId is required" }, 400);
   }
 
-  const mismatch = rejectMismatchedApiKeyWorkspace(c, workspaceId);
+  const mismatch = rejectMismatchedPinnedWorkspace(c, workspaceId);
 
   if (mismatch) {
     return mismatch;

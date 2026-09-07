@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import { pinnedResourceMiddleware } from "../auth/pinned-resource-middleware";
+import { getPageIncludingDeleted } from "./page-route-support";
 
 import {
   oauthScopeMiddleware,
@@ -23,6 +25,7 @@ pageRoutes.use(
 
 pageRoutes.route("/", pageBrowseRoutes);
 pageRoutes.route("/", pageVisitRoutes);
+pageRoutes.use("/:id/*", pinnedResourceMiddleware(getPageIncludingDeleted));
 pageRoutes.route("/", pageHierarchyRoutes);
 pageRoutes.route("/", pageBrowseDetailRoutes);
 pageRoutes.route("/", pageSharingRoutes);
