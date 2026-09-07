@@ -1,5 +1,9 @@
 import { Hono } from "hono";
 
+import {
+  oauthScopeMiddleware,
+  scopeForReadWrite,
+} from "../auth/oauth-access";
 import type { AppBindings } from "../../shared/types";
 import { databaseAutomationRoutes } from "./automations/routes";
 import { automationSlackRoutes } from "./automations/slack-routes";
@@ -13,6 +17,13 @@ import { databaseRowRoutes } from "./database-rows-routes";
 import { databaseSourceRoutes } from "./database-sources-routes";
 
 export const databaseRoutes = new Hono<AppBindings>();
+
+databaseRoutes.use(
+  "*",
+  oauthScopeMiddleware(
+    scopeForReadWrite("databases.read", "databases.write"),
+  ),
+);
 
 databaseRoutes.route("/", databaseCreateRoutes);
 databaseRoutes.route("/", databaseReadRoutes);

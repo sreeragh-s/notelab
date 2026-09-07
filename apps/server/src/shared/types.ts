@@ -165,7 +165,8 @@ export type AppBindings = {
   };
   Variables: {
     apiKey: ApiKeyContext | null;
-    authMethod: "apiKey" | "demo" | "session" | null;
+    authMethod: "apiKey" | "demo" | "oauth" | "session" | null;
+    oauthScopes: string[] | null;
     requestId: string;
     editionExtension: ZilobaseEditionExtension | null;
     serverTimings: string[];

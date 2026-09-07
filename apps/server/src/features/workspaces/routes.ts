@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { z } from "zod";
 import { getAuthenticatedUser as requireUser } from "../../shared/http/auth";
+import { requireOAuthScope } from "../auth/oauth-access";
 import { getMembership, getWorkspaceRealtimeAccessExpiration, isPrivilegedOrgRole } from "../access";
 import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
 import { db } from "../../infrastructure/database";
@@ -37,6 +38,30 @@ import {
 } from "../../shared/security/navigation-realtime-ticket";
 
 export const workspaceRoutes = new Hono<AppBindings>();
+
+workspaceRoutes.use("*", async (c, next) => {
+  if (c.get("authMethod") !== "oauth") {
+    await next();
+    return;
+  }
+
+  if (c.req.method !== "GET" && c.req.method !== "HEAD") {
+    return c.json(
+      {
+        error: "insufficient_scope",
+        error_description: "OAuth tokens cannot change workspace membership.",
+      },
+      403,
+    );
+  }
+
+  const denied = requireOAuthScope(c, "workspaces.read");
+  if (denied) {
+    return denied;
+  }
+
+  await next();
+});
 
 workspaceRoutes.post("/:workspaceId/navigation-realtime-ticket", async (c) => {
   const requestUser = c.get("user") ?? null;

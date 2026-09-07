@@ -1,5 +1,9 @@
 import { Hono } from "hono";
 
+import {
+  oauthScopeMiddleware,
+  scopeForReadWrite,
+} from "../auth/oauth-access";
 import type { AppBindings } from "../../shared/types";
 import {
   pageBrowseDetailRoutes,
@@ -11,6 +15,11 @@ import { pageLifecycleRoutes } from "./page-lifecycle-routes";
 import { pageSharingRoutes, pageVisitRoutes } from "./page-sharing-routes";
 
 export const pageRoutes = new Hono<AppBindings>();
+
+pageRoutes.use(
+  "*",
+  oauthScopeMiddleware(scopeForReadWrite("pages.read", "pages.write")),
+);
 
 pageRoutes.route("/", pageBrowseRoutes);
 pageRoutes.route("/", pageVisitRoutes);

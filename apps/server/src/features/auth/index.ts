@@ -4,3 +4,7 @@ export {
   OAUTH_SCOPES,
   createOAuthProviderPlugin,
 } from "./oauth";
+export {
+  requireOAuthScope,
+  rejectMismatchedPinnedWorkspace,
+} from "./oauth-access";
