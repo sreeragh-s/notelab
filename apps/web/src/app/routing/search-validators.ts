@@ -10,7 +10,41 @@ export function validateLoginSearch(search: Record<string, unknown>) {
     ...(typeof search.returnTo === "string"
       ? { returnTo: search.returnTo }
       : {}),
+    ...pickOAuthLoginSearch(search),
   };
+}
+
+function pickOAuthLoginSearch(search: Record<string, unknown>) {
+  const keys = [
+    "client_id",
+    "scope",
+    "redirect_uri",
+    "state",
+    "code_challenge",
+    "code_challenge_method",
+    "resource",
+    "response_type",
+    "nonce",
+    "prompt",
+    "claims",
+    "oauth_query",
+    "sig",
+    "exp",
+  ] as const
+  const next: Record<string, string> = {}
+
+  for (const key of keys) {
+    const value = search[key]
+    if (typeof value === "string" && value.length > 0 && value.length < 4000) {
+      next[key] = value
+    }
+  }
+
+  return next
+}
+
+export function validateOAuthConsentSearch(search: Record<string, unknown>) {
+  return pickOAuthLoginSearch(search)
 }
 
 export function validateSignupSearch(search: Record<string, unknown>) {

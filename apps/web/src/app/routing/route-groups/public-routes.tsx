@@ -6,7 +6,12 @@ import { isBootstrapRequiredAuthError } from "@/features/auth/lib/bootstrap-redi
 import { getConnectivityState } from "@/features/offline/index";
 import { getDefaultAppPath, getFreshSession, getWorkspaces } from "../guards";
 import { rootRoute } from "../route-roots";
-import { validateLoginSearch, validateSignupSearch } from "../search-validators";
+import { isOAuthLoginSearch, pickOAuthSearch } from "@/features/oauth/lib/oauth-query";
+import {
+  validateLoginSearch,
+  validateOAuthConsentSearch,
+  validateSignupSearch,
+} from "../search-validators";
 import { isHostedDemoRuntime } from "@/features/demo";
 import { apiFetch } from "@/platform/network/api";
 
@@ -41,6 +46,13 @@ const loginRoute = createRoute({
 
     const session = await getFreshSession({ optional: true });
     if (!session.user) return;
+
+    if (isOAuthLoginSearch(search)) {
+      throw redirect({
+        search: pickOAuthSearch(search),
+        to: "/oauth/consent",
+      });
+    }
 
     if (search.returnTo) {
       throw redirect({
@@ -117,6 +129,28 @@ const otpRoute = createRoute({
   component: lazyRouteComponent(() => import("@/features/auth/screens/otp")),
 });
 
+const oauthConsentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/oauth/consent",
+  validateSearch: validateOAuthConsentSearch,
+  beforeLoad: async ({ search }) => {
+    const session = await getFreshSession({ optional: true });
+    if (!session.user) {
+      throw redirect({
+        search: pickOAuthSearch(search),
+        to: "/login",
+      });
+    }
+  },
+  component: lazyRouteComponent(() => import("@/features/oauth/screens/consent")),
+});
+
+const oauthCallbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/oauth/callback",
+  component: lazyRouteComponent(() => import("@/features/oauth/screens/callback")),
+});
+
 export const publicRoutes = [
   indexRoute,
   connectRoute,
@@ -124,6 +158,8 @@ export const publicRoutes = [
   signupRoute,
   onboardingRoute,
   otpRoute,
+  oauthConsentRoute,
+  oauthCallbackRoute,
   createRoute({
     getParentRoute: () => rootRoute,
     path: "/accept-invitation",

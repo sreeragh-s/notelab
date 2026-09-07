@@ -32,6 +32,9 @@ export const OAUTH_REFRESH_TOKEN_REUSE_INTERVAL_SECONDS = 30;
 export function createOAuthProviderPlugin(
   env: Record<string, unknown>,
   apiOrigin: string,
+  options?: {
+    getActiveWorkspaceId?: (userId: string) => Promise<string | null>;
+  },
 ) {
   const webOrigin = getPrimaryClientOrigin(env);
 
@@ -52,11 +55,19 @@ export function createOAuthProviderPlugin(
         allowedScopes: [...OAUTH_API_RESOURCE_SCOPES],
       },
     ],
-    customAccessTokenClaims: ({ metadata }) => ({
-      auth_method: "oauth",
-      ...(typeof metadata?.workspace_id === "string"
-        ? { workspace_id: metadata.workspace_id }
-        : {}),
-    }),
+    customAccessTokenClaims: async ({ metadata, user }) => {
+      const workspaceId =
+        (typeof metadata?.workspace_id === "string"
+          ? metadata.workspace_id
+          : null) ??
+        (user?.id && options?.getActiveWorkspaceId
+          ? await options.getActiveWorkspaceId(user.id)
+          : null);
+
+      return {
+        auth_method: "oauth",
+        ...(workspaceId ? { workspace_id: workspaceId } : {}),
+      };
+    },
   });
 }

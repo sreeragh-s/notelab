@@ -21,6 +21,7 @@ import {
 import { Input } from "@/shared/ui/input"
 import { getApiErrorMessage } from "@/platform/network/api"
 import { getAuthReturnPath, signInWithGoogle } from "../lib/google-auth"
+import { readOAuthQuery } from "@/features/oauth/lib/oauth-query"
 import { cn } from "@/shared/lib/utils"
 import { useRequestSignInOtp, useSignInWithPassword } from "@zilobase/features/auth/react";
 import { useAuthFlowStore } from "../state/auth-flow-store"
@@ -66,12 +67,21 @@ export function LoginForm({
     const returnTo = getAuthReturnPath("/recents")
 
     try {
-      await signInWithPassword.mutateAsync({
+      const result = await signInWithPassword.mutateAsync({
         email: submittedEmail,
         password,
       })
       posthog?.capture("signed_in", { method: "password" })
-      window.location.assign(returnTo)
+      const redirectUrl =
+        result &&
+        typeof result === "object" &&
+        "url" in result &&
+        typeof result.url === "string"
+          ? result.url
+          : readOAuthQuery()
+            ? `/oauth/consent${window.location.search}`
+            : returnTo
+      window.location.assign(redirectUrl)
     } catch {
       // React Query owns the visible error state.
     }

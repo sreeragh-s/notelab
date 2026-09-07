@@ -14,7 +14,7 @@ import {
   defaultRoles,
   memberAc,
 } from "better-auth/plugins/organization/access";
-import { and, eq, ne } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { API_KEY_PREFIX } from "../api-keys";
 import { db, type Database } from "../../infrastructure/database";
 import * as schema from "../../infrastructure/database/schema";
@@ -394,7 +394,18 @@ function sharedAuthOptions(
       jwt({
         disableSettingJwtHeader: true,
       }),
-      createOAuthProviderPlugin(env, apiOrigin),
+      createOAuthProviderPlugin(env, apiOrigin, {
+        async getActiveWorkspaceId(userId) {
+          const [row] = await database
+            .select({ workspaceId: schema.session.activeWorkspaceId })
+            .from(schema.session)
+            .where(eq(schema.session.userId, userId))
+            .orderBy(desc(schema.session.updatedAt))
+            .limit(1);
+
+          return row?.workspaceId ?? null;
+        },
+      }),
       ...(options.editionExtension?.authPlugins ?? []),
     ],
   };
