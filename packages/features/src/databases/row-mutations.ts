@@ -125,7 +125,9 @@ export function useAddDatabaseRow() {
         throw error;
       }
       if (shouldInvalidatePages) {
-        await queryClient.invalidateQueries({ queryKey: pagesQueryKey(payload.database.workspaceId) });
+        void queryClient.invalidateQueries({ queryKey: pagesQueryKey(payload.database.workspaceId) }).catch(() => {
+          // Navigation refresh must not delay or reject an already committed row.
+        });
       }
       return payload;
     },

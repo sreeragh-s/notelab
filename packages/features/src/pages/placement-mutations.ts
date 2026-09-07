@@ -77,9 +77,12 @@ export function useEmbedPageItem() {
           body: JSON.stringify({ itemId, kind }),
         },
       ),
-    onSuccess: async (result) => {
-      await queryClient.invalidateQueries({
+    onSuccess: (result) => {
+      // The embed is saved. Refresh navigation without delaying editor updates.
+      void queryClient.invalidateQueries({
         queryKey: pagesQueryKey(result.host.workspaceId),
+      }).catch(() => {
+        // A failed refresh must not turn a committed embed into a failed mutation.
       });
     },
   });

@@ -54,3 +54,41 @@ test("adding a row restores both source and target after a failed transfer", asy
     assert.deepEqual(queryClient.getQueryData(databaseQueryKey("database-2")), target);
   } finally { queryClient.clear(); }
 });
+
+for (const refreshFails of [false, true]) {
+  test(`adding a favorite row completes before navigation refresh (${refreshFails ? "failed" : "successful"} refresh)`, async () => {
+    const original = createTestDatabasePayload();
+    const refresh = Promise.withResolvers<void>();
+    const response = {
+      databaseId: "database-1", dataSourceId: "data-source-1", pageId: "page-3",
+      rowId: "row-3", position: 2, title: "Added", isFavorite: true,
+      createdAt: "2026-09-08T00:00:00.000Z", updatedAt: "2026-09-08T00:00:00.000Z",
+      mutationId: "mutation-add", version: 1, delta: {}, changed: ["rows"],
+      committedAt: "2026-09-08T00:00:00.000Z",
+    };
+    const { mutation, queryClient } = createMutationTestRuntime(useAddDatabaseRow, async <T>() => response as T);
+    queryClient.setQueryData(databaseQueryKey("database-1"), original);
+    const invalidate = queryClient.invalidateQueries.bind(queryClient);
+    let navigationRefreshes = 0;
+    queryClient.invalidateQueries = (filters, options) => {
+      if (filters?.queryKey?.[0] === "pages") {
+        navigationRefreshes++;
+        return refresh.promise;
+      }
+      return invalidate(filters, options);
+    };
+    let settled = false;
+    const completion = mutation.mutateAsync({ databaseId: "data-source-1", pageId: "page-3", title: "Added" })
+      .then(result => { settled = true; return result; });
+    try {
+      await new Promise(resolve => setImmediate(resolve));
+      const settledBeforeRefresh = settled;
+      if (refreshFails) refresh.reject(new Error("Navigation unavailable"));
+      else refresh.resolve();
+      const result = await completion;
+      assert.equal(navigationRefreshes, 1);
+      assert.equal(settledBeforeRefresh, true);
+      assert.equal(result.rows.find(row => row.id === "row-3")?.pageId, "page-3");
+    } finally { refresh.resolve(); queryClient.clear(); }
+  });
+}
