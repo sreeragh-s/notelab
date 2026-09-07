@@ -65,6 +65,19 @@ export function requireOAuthScope(c: Context<AppBindings>, scope: string) {
   );
 }
 
+// Only APIs with explicit OAuth scope and workspace checks accept delegated tokens.
+export function rejectUnsupportedOAuthRoute(c: Context<AppBindings>) {
+  if (c.get("authMethod") !== "oauth") return null;
+  const path = c.req.path.replace(/\/$/, "");
+  if (
+    /^\/(pages|databases)(\/|$)/.test(path) ||
+    (path === "/clips" || path === "/clips/duplicates") ||
+    path === "/search" ||
+    /^\/workspaces(?:\/[^/]+)?$/.test(path)
+  ) return null;
+  return c.json({ error: "insufficient_scope", error_description: "This API does not accept OAuth tokens." }, 403);
+}
+
 export function oauthScopeMiddleware(scopeFor: (c: Context<AppBindings>) => string) {
   return createMiddleware<AppBindings>(async (c, next) => {
     const denied = requireOAuthScope(c, scopeFor(c));
@@ -222,14 +235,14 @@ const localJwksCacheKey = {};
 
 async function loadLocalJwks(): Promise<JSONWebKeySet> {
   const rows = await db
-    .select({ publicKey: jwksTable.publicKey })
+    .select({ id: jwksTable.id, publicKey: jwksTable.publicKey })
     .from(jwksTable);
 
   return {
     keys: rows.flatMap((row) => {
       try {
         const parsed = JSON.parse(row.publicKey) as JWK;
-        return parsed && typeof parsed === "object" ? [parsed] : [];
+        return parsed && typeof parsed === "object" ? [{ ...parsed, kid: row.id }] : [];
       } catch {
         return [];
       }

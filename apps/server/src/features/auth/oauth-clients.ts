@@ -40,5 +40,5 @@ export async function ensureOfficialClipperClient(
     scopes: [...OAUTH_SCOPES],
     skipConsent: false,
     tokenEndpointAuthMethod: "none",
-  });
+  }).onConflictDoNothing({ target: oauthClient.clientId });
 }

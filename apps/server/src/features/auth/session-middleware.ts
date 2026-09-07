@@ -19,6 +19,7 @@ import {
   isLikelyJwt,
   readBearerToken,
   resolveOAuthBearer,
+  rejectUnsupportedOAuthRoute,
 } from "./oauth-access";
 import {
   getCanonicalApiOrigin,
@@ -214,6 +215,8 @@ export const sessionMiddleware = createMiddleware<AppBindings>(async (
       });
       c.set("authMethod", "oauth");
       c.set("oauthScopes", oauthAccess.scopes);
+      const unsupported = rejectUnsupportedOAuthRoute(c);
+      if (unsupported) return unsupported;
       await timed(c, "session_next", next);
       return;
     }

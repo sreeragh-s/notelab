@@ -1,4 +1,5 @@
-import { describe, expect, test } from "vitest";
+import type { OAuthClaimExtensionInput } from "@better-auth/oauth-provider";
+import { describe, expect, test, vi } from "vitest";
 
 import {
   OAUTH_API_RESOURCE_SCOPES,
@@ -49,4 +50,64 @@ describe("oauth provider configuration", () => {
     expect(plugin.endpoints.getOAuthServerConfig).toBeDefined();
     expect(plugin.endpoints.getOpenIdConfig).toBeDefined();
   });
+});
+
+
+test("workspace claims retain consent binding after switching workspaces", async () => {
+  const { options } = createOAuthProviderPlugin(authEnv, "https://api.example.com");
+  const user = {
+    id: "user-1", name: "User", email: "user@example.com", emailVerified: true,
+    createdAt: new Date(), updatedAt: new Date(),
+  };
+  const session = {
+    id: "session-1", userId: user.id, token: "session", expiresAt: new Date(),
+    createdAt: new Date(), updatedAt: new Date(), activeOrganizationId: "workspace-a",
+  };
+  const referenceId = await options.postLogin!.consentReferenceId({
+    user, session, scopes: ["pages.read"],
+  });
+  expect(referenceId).toBe("workspace-a");
+
+  session.activeOrganizationId = "workspace-b";
+  const claims = await options.customAccessTokenClaims!({
+    user,
+    scopes: ["pages.read"],
+    referenceId,
+    metadata: { workspace_id: "attacker-controlled-workspace" },
+  });
+  expect(claims).toEqual({ auth_method: "oauth", workspace_id: "workspace-a" });
+  await expect(options.customAccessTokenClaims!({
+    user, scopes: ["pages.read"], metadata: { workspace_id: "workspace-b" },
+  })).rejects.toThrow();
+});
+
+
+test("revoked consent prevents refresh issuance and reduced scopes cannot be regained", async () => {
+  const { options } = createOAuthProviderPlugin(authEnv, "https://api.example.com");
+  const checkConsent = options.extensions![0].claims!.accessToken!;
+  const findOne = vi.fn().mockResolvedValue({
+    scopes: ["pages.read"], resources: ["https://api.example.com"],
+  });
+  const input = {
+    ctx: { context: { adapter: { findOne } } },
+    client: { clientId: "client-1" },
+    user: { id: "user-1" },
+    referenceId: "workspace-a",
+    scopes: ["pages.read"],
+    resources: ["https://api.example.com"],
+    grantType: "refresh_token",
+  } as unknown as OAuthClaimExtensionInput;
+  await expect(checkConsent(input)).resolves.toEqual({});
+  expect(findOne).toHaveBeenCalledWith({
+    model: "oauthConsent",
+    where: [
+      { field: "clientId", value: "client-1" },
+      { field: "userId", value: "user-1" },
+      { field: "referenceId", value: "workspace-a" },
+    ],
+  });
+  await expect(checkConsent({ ...input, scopes: ["pages.write"] })).rejects.toThrow();
+  await expect(checkConsent({ ...input, resources: ["https://other.example.com"] })).rejects.toThrow();
+  findOne.mockResolvedValue(null);
+  await expect(checkConsent(input)).rejects.toThrow();
 });
