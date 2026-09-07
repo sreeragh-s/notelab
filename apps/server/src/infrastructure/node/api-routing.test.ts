@@ -6,6 +6,9 @@ import { isNodeApiPath } from "./api-routing";
 test("the combined Node runtime sends discovery, probes, and desktop auth to the API", () => {
   for (const path of [
     "/.well-known/zilobase",
+    "/.well-known/oauth-authorization-server",
+    "/.well-known/openid-configuration",
+    "/clips",
     "/health",
     "/health/background",
     "/ready",

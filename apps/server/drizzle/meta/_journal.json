@@ -589,6 +589,20 @@
       "when": 1788660000000,
       "tag": "0083_agent_settings_review",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1788742800000,
+      "tag": "0084_better_auth_team_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1788800000000,
+      "tag": "0085_oauth_provider",
+      "breakpoints": true
     }
   ]
 }
