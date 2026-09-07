@@ -1,4 +1,4 @@
-import { db } from "../../infrastructure/database";
+import { db, runWithDbEnv } from "../../infrastructure/database";
 import { getCanonicalApiOrigin, getCanonicalWebOrigin, getStringEnv, type RuntimeEnv } from "../../shared/config/config";
 import { ensureOfficialClipperClient } from "../auth/oauth-clients";
 import { SERVER_VERSION } from "../../shared/version";
@@ -7,13 +7,13 @@ import { DESKTOP_PROTOCOL_VERSION, type InstanceSettingsRecord, type ZilobaseDis
 import { ensureInstanceSettings } from "./instance-settings";
 import { assertSemanticVersion } from "./desktop-version";
 type DiscoveryDependencies = {
-  ensureOfficialClients?(webOrigin: string): Promise<void>;
+  ensureOfficialClients?(webOrigin: string, env: RuntimeEnv): Promise<void>;
   getInstanceSettings(env: RuntimeEnv): Promise<InstanceSettingsRecord>;
 };
 
 const defaultDiscoveryDependencies: DiscoveryDependencies = {
-  ensureOfficialClients(webOrigin) {
-    return ensureOfficialClipperClient(db, webOrigin);
+  ensureOfficialClients(webOrigin, env) {
+    return runWithDbEnv(env, () => ensureOfficialClipperClient(db, webOrigin));
   },
   getInstanceSettings(env) {
     return ensureInstanceSettings(env);
@@ -27,7 +27,7 @@ export async function getZilobaseDiscoveryDocument(
 ): Promise<ZilobaseDiscoveryDocument> {
   const apiOrigin = getCanonicalApiOrigin(env);
   const webOrigin = getCanonicalWebOrigin(env);
-  await dependencies.ensureOfficialClients?.(webOrigin);
+  await dependencies.ensureOfficialClients?.(webOrigin, env);
   const minimumDesktopVersion =
     getStringEnv(env, "ZILOBASE_MINIMUM_DESKTOP_VERSION") ?? SERVER_VERSION;
 

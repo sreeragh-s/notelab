@@ -136,7 +136,9 @@ export async function refreshClipperAccessToken(session: ClipperSession) {
 async function fetchDiscovery(apiOrigin: string) {
   const response = await fetch(new URL("/.well-known/zilobase", apiOrigin))
   if (!response.ok) {
-    throw new Error("Could not read Zilobase discovery metadata.")
+    throw new Error(
+      `Could not read Zilobase discovery metadata (${response.status}). Use the API origin as Server URL (Node: http://localhost:3000).`,
+    )
   }
   const body = (await response.json()) as { webOrigin?: string }
   if (!body.webOrigin) {
