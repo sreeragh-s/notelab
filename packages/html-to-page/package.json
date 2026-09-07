@@ -1,0 +1,36 @@
+{
+  "name": "@zilobase/html-to-page",
+  "type": "module",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "linkedom": "^0.18.12",
+    "@tiptap/core": "^3.23.6",
+    "@tiptap/extension-link": "^3.23.6",
+    "@tiptap/extension-table": "^3.23.6",
+    "@tiptap/extension-table-cell": "^3.23.6",
+    "@tiptap/extension-table-header": "^3.23.6",
+    "@tiptap/extension-table-row": "^3.23.6",
+    "@tiptap/extension-task-item": "^3.23.6",
+    "@tiptap/extension-task-list": "^3.23.6",
+    "@tiptap/starter-kit": "^3.23.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "vitest": "^4.1.10"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./extract-clip-metadata": {
+      "types": "./src/extract-clip-metadata.ts",
+      "default": "./src/extract-clip-metadata.ts"
+    }
+  }
+}

@@ -2,9 +2,9 @@
 
 ## Interface and flow
 
-Shared feature modules contain contracts, pure transformations, client queries and React bindings. Page-context supplies structural page/markdown conversion; the splitter and comment extension retain focused editor responsibilities.
+Shared feature modules contain contracts, pure transformations, client queries and React bindings. Page-context supplies structural page/markdown conversion; html-to-page converts sanitized webpage HTML into Tiptap JSON for clips; the splitter and comment extension retain focused editor responsibilities.
 
-Start at the [entrypoint](../../packages/features/package.json); follow the [implementation](../../packages/features/src) and [related modules](../../packages/page-context/src).
+Start at the [entrypoint](../../packages/features/package.json); follow the [implementation](../../packages/features/src), [page-context](../../packages/page-context/src) and [html-to-page](../../packages/html-to-page/src).
 
 ## Invariants and failure handling
 

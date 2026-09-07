@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ESNext", "DOM"],
+    "jsx": "react-jsx",
+    "types": ["node"],
+    "paths": {
+      "@/shared/*": ["../web/src/shared/*"]
+    }
+  },
+  "include": ["entrypoints", "lib", "components", "wxt.config.ts", "wxt-env.d.ts"]
+}

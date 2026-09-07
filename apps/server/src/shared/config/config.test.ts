@@ -164,6 +164,22 @@ test("allowed origins include configured clients and local Expo development", ()
   assert.equal(isAllowedClientOrigin(env, "https://localhost"), false);
 });
 
+test("clipper extension origins are allowed when configured", () => {
+  const env = {
+    CLIENT_URL: "https://app.example.com",
+    CLIPPER_EXTENSION_ORIGINS: "chrome-extension://abcdefghijklmnop",
+  };
+
+  assert.equal(
+    isAllowedClientOrigin(env, "chrome-extension://abcdefghijklmnop"),
+    true,
+  );
+  assert.equal(
+    isAllowedClientOrigin(env, "chrome-extension://attacker"),
+    false,
+  );
+});
+
 test("trusted origins add development clients only for local requests", () => {
   const env = {
     CLIENT_URL: "https://app.example.com,https://app.example.com",

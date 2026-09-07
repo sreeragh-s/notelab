@@ -31,6 +31,7 @@ Each guide follows a capability through its web, shared-package, server and nati
 - [User settings](features/settings/README.md)
 - [Canvas](features/canvas/README.md)
 - [Notion import](features/notion-import/README.md)
+- [Clips](features/clips/README.md)
 - [Offline documents](features/offline/README.md)
 - [Desktop integration](features/desktop/README.md)
 - [Hosted demo](features/demo/README.md)

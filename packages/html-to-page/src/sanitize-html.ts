@@ -1,0 +1,110 @@
+import { isAllowedEmbedSrc, isAllowedHttpUrl, isAllowedImageUrl } from "./safe-url"
+
+const removedTags = new Set([
+  "script",
+  "style",
+  "noscript",
+  "template",
+  "link",
+  "meta",
+  "iframe",
+  "object",
+  "embed",
+  "form",
+  "input",
+  "button",
+  "textarea",
+  "select",
+])
+
+const allowedIframeTags = new Set(["iframe"])
+
+export function sanitizeHtml(html: string) {
+  const parser = new DOMParser()
+  const document = parser.parseFromString(
+    `<!doctype html><html><body>${html}</body></html>`,
+    "text/html",
+  )
+  const body = document.body
+  if (!body) return ""
+  sanitizeElement(body)
+  return body.innerHTML.trim()
+}
+
+function sanitizeElement(root: Element) {
+  const walker = Array.from(root.querySelectorAll("*"))
+
+  for (const element of walker) {
+    const tagName = element.tagName.toLowerCase()
+
+    if (tagName === "iframe") {
+      const src = element.getAttribute("src")
+      if (!isAllowedEmbedSrc(src)) {
+        element.remove()
+        continue
+      }
+      stripEventHandlers(element)
+      keepAttributes(element, ["src", "title", "width", "height", "allowfullscreen"])
+      continue
+    }
+
+    if (removedTags.has(tagName) && !allowedIframeTags.has(tagName)) {
+      element.remove()
+      continue
+    }
+
+    stripEventHandlers(element)
+
+    if (tagName === "a") {
+      const href = element.getAttribute("href")
+      if (!isAllowedHttpUrl(href)) {
+        unwrap(element)
+      }
+      continue
+    }
+
+    if (tagName === "img") {
+      const src = element.getAttribute("src")
+      if (!isAllowedImageUrl(src)) {
+        element.remove()
+      }
+      continue
+    }
+
+    if (tagName === "video") {
+      const src = element.getAttribute("src")
+      if (!isAllowedHttpUrl(src)) {
+        element.remove()
+      }
+    }
+  }
+}
+
+function stripEventHandlers(element: Element) {
+  for (const attribute of Array.from(element.attributes)) {
+    if (attribute.name.startsWith("on") || attribute.name === "srcdoc") {
+      element.removeAttribute(attribute.name)
+    }
+  }
+}
+
+function keepAttributes(element: Element, names: string[]) {
+  const allowed = new Set(names)
+  for (const attribute of Array.from(element.attributes)) {
+    if (!allowed.has(attribute.name)) {
+      element.removeAttribute(attribute.name)
+    }
+  }
+}
+
+function unwrap(element: Element) {
+  const parent = element.parentNode
+  if (!parent) {
+    element.remove()
+    return
+  }
+  while (element.firstChild) {
+    parent.insertBefore(element.firstChild, element)
+  }
+  element.remove()
+}

@@ -64,6 +64,32 @@ export function getClientOrigins(env: RuntimeEnv) {
     .filter(Boolean);
 }
 
+const clipperOriginSchemes = [
+  "chrome-extension:",
+  "moz-extension:",
+  "safari-web-extension:",
+] as const
+
+export function getClipperExtensionOrigins(env: RuntimeEnv) {
+  return (getStringEnv(env, "CLIPPER_EXTENSION_ORIGINS") ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter((origin) => {
+      const url = parseUrl(origin)
+      return Boolean(
+        url &&
+          clipperOriginSchemes.includes(
+            url.protocol as (typeof clipperOriginSchemes)[number],
+          ) &&
+          (url.pathname === "/" || url.pathname === "") &&
+          !url.username &&
+          !url.password &&
+          !url.search &&
+          !url.hash,
+      )
+    })
+}
+
 export function getPrimaryClientOrigin(env: RuntimeEnv) {
   const [origin] = getClientOrigins(env);
 
@@ -198,6 +224,7 @@ export function isAllowedClientOrigin(env: RuntimeEnv, origin: string | null) {
 
   if (
     getClientOrigins(env).includes(origin) ||
+    getClipperExtensionOrigins(env).includes(origin) ||
     DESKTOP_CLIENT_ORIGINS.includes(
       origin as (typeof DESKTOP_CLIENT_ORIGINS)[number],
     )
@@ -235,6 +262,7 @@ export function getTrustedOrigins(env: RuntimeEnv, requestOrigin: string) {
       requestOrigin,
       ...readCanonicalApiOrigin(env),
       ...getClientOrigins(env),
+      ...getClipperExtensionOrigins(env),
       ...DESKTOP_CLIENT_ORIGINS,
       "mobile://",
       "mobile://*",

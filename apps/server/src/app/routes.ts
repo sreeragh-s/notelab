@@ -3,6 +3,7 @@ import type { Hono } from "hono";
 
 import { aiAgentProfileRoutes, aiAgentWebhookRoutes, aiMcpRoutes, aiRoutes, aiThreadRoutes } from "../features/ai/routes";
 import { apiKeyRoutes } from "../features/api-keys/routes";
+import { clipRoutes } from "../features/clips";
 import { authRoutes } from "../features/auth/routes";
 import { sessionRoutes } from "../features/auth/session-routes";
 import { databaseRoutes } from "../features/databases/database-routes";
@@ -36,6 +37,7 @@ export function registerRoutes(app: Hono<AppBindings>) {
   app.route("/api/ai", aiAgentWebhookRoutes);
   app.route("/api/ai", aiMcpRoutes);
   app.route("/api/keys", apiKeyRoutes);
+  app.route("/clips", clipRoutes);
   app.route("/", desktopAuthRoutes);
   app.route("/", authRoutes);
   app.route("/databases", databaseRoutes);
