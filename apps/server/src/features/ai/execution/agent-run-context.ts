@@ -1,3 +1,4 @@
+import { isLocalRuntime } from "../../../infrastructure/runtime/runtime-adapter";
 import { and, eq } from "drizzle-orm";
 import { RESOURCE_EDITOR_PAUSE_REASON } from "./agent-run-queue";
 
@@ -128,6 +129,7 @@ export async function prepareAgentRun(
     env,
     "chat",
   );
+  if (isLocalRuntime() && !model.catalog.supportsTools) throw new Error("The selected local model has not passed tool-call compatibility checks.");
   const prompt = readRunPrompt(run.input);
   const mcpTools = await buildMcpAgentRunTools({
     env,
@@ -147,10 +149,10 @@ export async function prepareAgentRun(
       runId: run.id,
       workspaceId: run.workspaceId,
     }),
-    connectAccount: buildAgentConnectionTool({
+    ...(isLocalRuntime() ? {} : { connectAccount: buildAgentConnectionTool({
       profileId: run.profileId,
       authorUserId: run.initiatedByUserId ?? profile.ownerUserId,
-    }),
+    }) }),
   };
   return { definition, profile, model, prompt, mcpTools, nativeTools };
 }

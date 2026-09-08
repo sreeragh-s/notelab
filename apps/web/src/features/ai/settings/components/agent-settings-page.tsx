@@ -1,3 +1,4 @@
+import { hasRuntimeCapability, LocalFeatureUnavailable } from "@/platform/runtime/capabilities";
 import { canSaveSettingsTrigger, applySettingsTriggerDraft, settingsTriggerTargetInput } from "../model/trigger-draft";
 import { settingsActionsBusy, settingsProgressLabel } from "../model/draft-actions";
 import { useNavigate } from "@tanstack/react-router";
@@ -101,7 +102,7 @@ function ScopedAgentSettingsPage({
   function renderSettingsHeader() {
   const tabs: AgentSettingsTab[] = [
     "instructions",
-    "connectors",
+    ...(hasRuntimeCapability("integrations") ? ["connectors" as const] : []),
     ...(scope === "personal" ? [] : (["access"] as AgentSettingsTab[])),
     "activity",
     "versions",
@@ -235,10 +236,11 @@ function ScopedAgentSettingsPage({
 
   function renderSettingsContent() {
     if (!d) return null;
+    if (tab === "connectors" && !hasRuntimeCapability("integrations")) return <LocalFeatureUnavailable />;
     switch (tab) {
       case "instructions": return renderInstructionPane();
       case "connectors": return <div className="px-5 py-6"><SettingsConnectors review={review} scope={scope} definition={d} onChange={draft.patch} disabled={disabled} /></div>;
-      case "activity": return <div className="px-5 py-6">{agent ? <><SettingsRunActivity agentId={agent.id} /><AgentMcpActivity agent={agent} /></> : <PersonalMcpActivity />}</div>;
+      case "activity": return <div className="px-5 py-6">{agent ? <><SettingsRunActivity agentId={agent.id} />{hasRuntimeCapability("integrations") && <AgentMcpActivity agent={agent} />}</> : hasRuntimeCapability("integrations") ? <PersonalMcpActivity /> : null}</div>;
       case "versions": return renderVersionHistory();
       case "access": return scope !== "personal" ? <><SettingsTriggers review={review} scope={scope} definition={d} onChange={draft.patch} disabled={disabled} /><SettingsAccess review={review} definition={d} onChange={draft.patch} disabled={disabled} /></> : null;
     }
@@ -392,7 +394,7 @@ function SettingsTriggers({
             <SelectItem value="comment">Page comment</SelectItem>
             <SelectItem value="mention">Agent mention</SelectItem>
             <SelectItem value="meeting">Meeting completion</SelectItem>
-            <SelectItem value="webhook">Webhook</SelectItem>
+            {hasRuntimeCapability("integrations") && <SelectItem value="webhook">Webhook</SelectItem>}
           </SelectContent>
         </Select>
       </label>

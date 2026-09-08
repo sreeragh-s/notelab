@@ -1,3 +1,4 @@
+import { isLocalRuntime } from "../../../infrastructure/runtime/runtime-adapter";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../../../infrastructure/database";
 import {
@@ -95,15 +96,15 @@ export async function settingsEditContext(a: SettingsActor) {
   ).filter(Boolean);
   return {
     resources,
-    members,
-    teams,
-    catalog: MCP_SERVER_CATALOG.map(({ id, label, available }) => ({
+    members: isLocalRuntime() ? [] : members,
+    teams: isLocalRuntime() ? [] : teams,
+    catalog: (isLocalRuntime() ? [] : MCP_SERVER_CATALOG).map(({ id, label, available }) => ({
       id,
       label,
       available,
     })),
     connectors: await Promise.all(
-      connections.map(async (c) => ({
+      (isLocalRuntime() ? [] : connections).map(async (c) => ({
         connectionId: c.id,
         name: c.serverLabel,
         state: c.state,

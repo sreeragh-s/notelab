@@ -1,3 +1,6 @@
+import { isLocalRuntime } from "../../../infrastructure/runtime/runtime-adapter";
+import { readLocalServices, writeLocalServices, localServicesSchema } from "../../../infrastructure/local/services";
+import { listLocalModels, verifyLocalModel } from "../../ai/providers/ollama";
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 
@@ -26,7 +29,7 @@ workspaceSettingsRoutes.get("/ai", async (c) => {
     return auth.response;
   }
 
-  return c.json({ providers: await listAiProviderConfigs(auth.workspaceId) });
+  return c.json({ providers: isLocalRuntime() ? [] : await listAiProviderConfigs(auth.workspaceId) });
 });
 
 workspaceSettingsRoutes.get("/ai/models", async (c) => {
@@ -36,6 +39,12 @@ workspaceSettingsRoutes.get("/ai/models", async (c) => {
     return auth.response;
   }
 
+  if (isLocalRuntime()) {
+    try {
+      const installed = await listLocalModels(await readLocalServices());
+      return c.json({ models: installed.map(model => ({ chef: "Ollama", chefSlug: "ollama", description: "Installed on this Mac", gatewayId: `ollama:${model.name}`, id: `ollama:${model.name}`, name: model.name, providers: ["ollama"] })) });
+    } catch { return c.json({ models: [], serviceUnavailable: true }); }
+  }
   const providers = await listAiProviderConfigs(auth.workspaceId);
 
   return c.json({
@@ -172,5 +181,25 @@ workspaceSettingsRoutes.put("/ai/providers/:providerId", async (c) => {
     });
   }
 
-  return c.json({ providers: await listAiProviderConfigs(auth.workspaceId) });
+  return c.json({ providers: isLocalRuntime() ? [] : await listAiProviderConfigs(auth.workspaceId) });
+});
+
+workspaceSettingsRoutes.get("/ai/local", async c => {
+  const auth = await requireActiveWorkspace(c);
+  if ("response" in auth) return auth.response;
+  if (!isLocalRuntime()) return c.notFound();
+  const config = await readLocalServices();
+  try { return c.json({ config, models: await listLocalModels(config), ready: true }); }
+  catch { return c.json({ config, models: [], ready: false }); }
+});
+workspaceSettingsRoutes.put("/ai/local", async c => {
+  const auth = await requireActiveWorkspace(c);
+  if ("response" in auth) return auth.response;
+  if (!isLocalRuntime()) return c.notFound();
+  try {
+    const config = localServicesSchema.parse(await c.req.json());
+    const compatibility = config.model ? await verifyLocalModel(config, config.model) : null;
+    await writeLocalServices(config);
+    return c.json({ config, compatibility });
+  } catch (error) { return c.json({ error: error instanceof Error ? error.message : "Local service setup failed" }, 400); }
 });

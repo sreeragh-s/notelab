@@ -1,3 +1,4 @@
+import { isLocalRuntime } from "../../../infrastructure/runtime/runtime-adapter";
 import { settingsEditContext } from "./settings-context";
 import { generateText, Output, tool } from "ai";
 import * as z from "zod";
@@ -48,6 +49,7 @@ export async function proposeSettings(
     env,
     "chat",
   );
+  if (isLocalRuntime() && !model.catalog.supportsStructuredOutput) throw new Error("The local model has not passed structured-answer checks.");
   const result = await generateText({
     model: model.model,
     providerOptions: model.providerOptions,

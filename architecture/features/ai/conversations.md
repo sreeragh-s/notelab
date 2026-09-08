@@ -43,3 +43,15 @@ Completed database tool results pass through [cache synchronization](../../../ap
 [Database embed preparation](../../../apps/web/src/features/ai/conversations/effects/use-database-embed-auto-apply.ts) distinguishes completed embed results from editor application. Missing/read-only editors and rejected writes remain retryable when the registry changes. Successful insertion or an already-matching embed marks the call handled. [Controlled editor tests](../../../apps/web/test/features/ai/database-embed-auto-apply.test.mjs) exercise those retries and output-over-input title visibility with the real structural-content converter.
 
 [Conversation route tests](../../../apps/server/src/features/ai/conversations/chat-routes.test.ts) cover legacy-protocol retirement, workspace validation, approval replay/expiration/claim conflicts, connector outcomes and editor skill serialization. Provider and execution adapters are controlled; tests do not contact external services.
+
+### Local model resolution
+
+The workspace model resolver checks runtime mode before resolving hosted credentials.
+[Ollama](../../../apps/server/src/features/ai/providers/ollama.ts) discovers installed
+models and rejects cloud-backed entries, then uses the existing chat SDK with a
+loopback-only fetch boundary. Compatibility probes gate tools and structured output
+independently; the initial adapter accepts text/page context, not file inputs.
+[Local service configuration](../../../apps/server/src/infrastructure/local/services.ts)
+persists only ports and a model identifier in the installation. Authenticated workspace
+settings expose discovery and verification. External services and model files remain
+user-managed; see the [setup guide](../../../docs/desktop/local-ai.md).

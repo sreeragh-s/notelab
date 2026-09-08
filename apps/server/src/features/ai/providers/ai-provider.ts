@@ -1,3 +1,5 @@
+import { isLocalRuntime } from "../../../infrastructure/runtime/runtime-adapter";
+import { resolveLocalAiModel } from "./ollama";
 import { createOpenAI } from "@ai-sdk/openai";
 import { and, eq } from "drizzle-orm";
 
@@ -32,6 +34,7 @@ export async function resolveWorkspaceAiModel(
   envOrApiKey?: RuntimeEnv | string,
   workload: AiWorkload = "chat",
 ) {
+  if (isLocalRuntime()) return resolveLocalAiModel(selectedModelId, workload);
   const env = typeof envOrApiKey === "string"
     ? { OPENAI_API_KEY: envOrApiKey }
     : envOrApiKey ?? {};
@@ -145,6 +148,7 @@ export function resolveOpenAiChatModel(
   openAiApiKey?: string,
   selectedModelId?: string,
 ) {
+  if (isLocalRuntime()) throw new AiProviderConfigError("Use the local model resolver.", 403);
   const modelId = parseSelectedModelId(selectedModelId, "chat").modelId ??
     DEFAULT_OPENAI_CHAT_MODEL;
   const apiKey = normalizeApiKey(openAiApiKey);
@@ -204,7 +208,7 @@ export function validateAiProviderBaseUrl(
 
 export type ResolvedAiModel = {
   catalog: AiModelCatalogItem;
-  credentialSource: "managed" | "workspace";
+  credentialSource: "managed" | "workspace" | "local";
   model:
     | ReturnType<ReturnType<typeof createOpenAI>["chat"]>
     | ReturnType<ReturnType<typeof createOpenAI>["responses"]>;
@@ -213,7 +217,7 @@ export type ResolvedAiModel = {
       reasoningEffort: NonNullable<AiModelCatalogItem["reasoningEffort"]>;
     };
   };
-  providerId: "openai";
+  providerId: "openai" | "ollama";
 };
 
 function normalizeApiKey(apiKey?: string) {

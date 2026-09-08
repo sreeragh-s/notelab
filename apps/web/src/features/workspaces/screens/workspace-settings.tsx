@@ -32,7 +32,7 @@ export default function WorkspaceSettingsPage({
 
       <div className="mx-auto grid w-full max-w-3xl gap-6">
         <WorkspaceDetailsSection workspace={workspace} />
-        {hasRuntimeCapability("integrations") && policySettings}
+        {policySettings}
         {hasRuntimeCapability("integrations") && isFeatureEnabled("mail") ? (
           <>
             <Separator />

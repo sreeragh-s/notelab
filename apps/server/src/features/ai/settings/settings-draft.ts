@@ -1,3 +1,4 @@
+import { isLocalRuntime } from "../../../infrastructure/runtime/runtime-adapter";
 import type { SettingsTransaction } from "./settings-versioning";
 import { loadLockedSettingsDraft } from "./settings-versioning";
 import {
@@ -48,6 +49,9 @@ export async function updateSettingsDraft(
   env?: RuntimeEnv,
   createInstruction = false,
 ) {
+  if (isLocalRuntime() && ((input.patch.grants?.length ?? 0) > 0 || (input.patch.connectors?.length ?? 0) > 0 || input.patch.triggers?.some(trigger => ["webhook", "connector", "slack"].includes(trigger.kind)))) {
+    throw new AgentProfileError("FEATURE_UNAVAILABLE_LOCAL", "Sharing and external connections are unavailable in local mode.", 403);
+  }
   await authorizeSettings(a, true);
   const settings = await ensureSettingsBaseline(a);
   const proposalBase = input.origin === "ai" ? await readSettings(a) : null;

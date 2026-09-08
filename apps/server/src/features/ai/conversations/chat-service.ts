@@ -1,3 +1,4 @@
+import { isLocalRuntime } from "../../../infrastructure/runtime/runtime-adapter";
 import { buildSettingsTools } from "../settings/settings-tools";
 import {
   convertToModelMessages,
@@ -254,6 +255,7 @@ export async function runAiChatTurn(input: {
       ])),
       input.withDb(() => getAiChatThreadSummary(auth.threadId)),
     ]);
+    if (isLocalRuntime() && !resolvedModel.catalog.supportsFiles && requestBody.attachmentIds.length > 0) throw new Error("The selected local model does not support file attachments. Paste text or attach a local page instead.");
     const [experienceInstruction, mentionedPeopleInstruction] =
       contextInstructions;
     const editablePageIds = referencedPageAccess
@@ -295,7 +297,7 @@ export async function runAiChatTurn(input: {
     };
 
     const model = resolvedModel.model;
-    const hasTools = Object.keys(tools).length > 0;
+    const hasTools = (!isLocalRuntime() || resolvedModel.catalog.supportsTools) && Object.keys(tools).length > 0;
     const pageContextInstruction = buildPageContextInstruction(
       requestBody.pageContext,
     );

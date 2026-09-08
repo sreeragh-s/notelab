@@ -11,7 +11,7 @@ export type AiModelCatalogItem = {
   id: string;
   maxOutputTokens: number;
   name: string;
-  providerId: "openai";
+  providerId: "openai" | "ollama";
   reasoningEffort?: "none" | "low" | "medium" | "high" | "xhigh" | "max";
   supportsFiles: boolean;
   supportsStructuredOutput: boolean;
