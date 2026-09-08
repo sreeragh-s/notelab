@@ -15,3 +15,24 @@ Features receive the provider interface; routing and provider ordering belong to
 See [tests or test configuration](../../apps/web/test/shared/api.test.mjs) and [testing and quality](../setup/testing-and-quality.md). [Architecture index](../README.md).
 
 Transport, runtime detection, server-origin resolution, credentials and diagnostics live under [platform](../../apps/web/src/platform). Desktop feature entrypoints temporarily re-export the existing interface. [Application request composition](../../apps/web/src/app/runtime/configure-requests.ts) installs offline and demo policy before startup. The transport captures one policy per request; interception runs before network checks, observations run only after transport outcomes, and overlays run after successful response parsing. Timeouts and cancellation bypass connectivity failure handling. Platform code imports no feature implementations.
+
+## Shared menu presentation
+
+[Menu styles](../../apps/web/src/shared/ui/menu-styles.ts) owns the View Settings
+visual baseline for [dropdown menus](../../apps/web/src/shared/ui/dropdown-menu.tsx),
+[context menus](../../apps/web/src/shared/ui/context-menu.tsx) and
+[select lists](../../apps/web/src/shared/ui/select.tsx). Feature-specific widths and
+rich content remain caller-owned. [Popover](../../apps/web/src/shared/ui/popover.tsx)
+opts searchable custom pickers into the same shell with `variant="menu"`; generic
+popovers and editor command/suggestion surfaces retain their own presentation.
+
+DropdownMenu exposes `defaultSubDisplayMode` at the root and `displayMode` on each
+Sub: `inline` navigates within the popup, while `nested` preserves Radix flyouts.
+Separate flyouts render in portals so scrolling parent menus cannot clip them.
+Inline panels have Back/title/Close controls and reset on dismissal. Regular,
+checkbox and radio items expose `closeOnSelect`, defaulting to persistence inside
+inline panels and dismissal at the root. [DropDrawer](../../apps/web/src/shared/ui/dropdrawer.tsx)
+adapts these menus to mobile drawers with larger touch targets and subpages.
+The [manual checklist](../../docs/testing/dropdown-menus.md) maps consumers to
+application areas. Navigation behavior is covered by
+[dropdown tests](../../apps/web/test/shared/dropdown-navigation.test.mjs).
