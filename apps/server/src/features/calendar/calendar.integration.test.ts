@@ -98,3 +98,21 @@ test.skipIf(!enabled)("creates deduplicate and uncertain delivery reconciles wit
   const conflict = { ...input, action: "update" as const, eventId: first.event!.eventId, write: { ...input.write, operationId: randomUUID(), etag: "old" } };
   await expect(runWithDb(database!, () => mutateCalendarEvent({}, conflict, gateway))).rejects.toThrow("event_changed"); expect(sends).toBe(2);
 });
+
+test.skipIf(!enabled)("a split recovers a committed successor after response loss without duplicate invitations", async () => {
+  const [binding] = (await database!.select().from(schema.calendarBinding)).filter(row => row.accountId === secondAccount);
+  const master = { id: "series", etag: "m1", summary: "Weekly", start: { date: "2026-09-01" }, end: { date: "2026-09-02" }, recurrence: ["RRULE:FREQ=WEEKLY"], organizer: { self: true, email: "owner@example.test" } };
+  const occurrence = { ...master, id: "instance", etag: "i1", recurringEventId: "series", recurrence: undefined, originalStartTime: { date: "2026-09-08" }, start: { date: "2026-09-08" }, end: { date: "2026-09-09" } };
+  const store = new Map<string, unknown>([[master.id, master], [occurrence.id, occurrence]]); let inserts = 0, updates = 0;
+  const gateway = new CalendarGateway("fixture", async (url, options) => {
+    const id = decodeURIComponent(new URL(String(url)).pathname.split("/").at(-1)!);
+    if (options?.method === "PUT") { updates++; const body = JSON.parse(String(options.body)); store.set(id, { ...body, etag: "m2" }); return Response.json(store.get(id)) }
+    if (options?.method === "POST") { inserts++; const body = JSON.parse(String(options.body)); store.set(body.id, { ...body, etag: "t1" }); throw new TypeError("response lost after insert") }
+    return store.has(id) ? Response.json(store.get(id)) : Response.json({}, { status: 404 });
+  });
+  const input = { userId, workspaceId, bindingId: binding!.id, calendarId: "primary", eventId: "instance", action: "update" as const, write: { operationId: randomUUID(), etag: "i1", sendUpdates: "all" as const, recurrenceScope: "following" as const, event: { title: "Later meetings" } } };
+  expect((await runWithDb(database!, () => mutateCalendarEvent({}, input, gateway))).status).toBe("ambiguous");
+  const result = await runWithDb(database!, () => reconcileCalendarOperation({}, { userId, workspaceId, operationId: input.write.operationId }, gateway));
+  expect(result?.status).toBe("succeeded"); expect(inserts).toBe(1); expect(updates).toBe(1);
+  expect(await runWithDb(database!, () => mutateCalendarEvent({}, input, gateway))).toEqual(result);
+});

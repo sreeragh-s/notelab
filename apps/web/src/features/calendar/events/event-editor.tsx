@@ -1,3 +1,4 @@
+import { RecurrenceControls, RecurrenceScope } from "./recurrence-controls";
 import { useState } from "react";
 import { calendarDate, dayInstant, addCalendarDays, wallTime, type CalendarEvent, type CalendarRecord, type CalendarEventWriteRequest } from "@zilobase/features/calendar";
 import { Button } from "@/shared/ui/button";
@@ -21,6 +22,7 @@ export function EventEditor({ event, calendars, database, online, isNew, onSaved
   const [calendarId, setCalendarId] = useState(event.calendarId), [colorId, setColorId] = useState(event.colorId ?? "default"), [busy, setBusy] = useState(event.transparency), [visibility, setVisibility] = useState(event.visibility === "confidential" ? "private" : event.visibility);
   const [defaultReminders, setDefaultReminders] = useState(event.reminders.useDefault), [reminder, setReminder] = useState(event.reminders.overrides?.[0]?.minutes ?? 10), [meet, setMeet] = useState(false);
   const [error, setError] = useState<unknown>(), [pending, setPending] = useState(false), [uncertain, setUncertain] = useState(false);
+  const [recurrence, setRecurrence] = useState<string[] | undefined>(), [scope, setScope] = useState<"occurrence" | "following" | "series">("occurrence");
   const save = async () => {
     if (!online) return; setPending(true); setError(undefined);
     try {
@@ -28,7 +30,7 @@ export function EventEditor({ event, calendars, database, online, isNew, onSaved
       const end = allDay ? { date: addCalendarDays(endDate, 1) } : { dateTime: wallTime(endDate, endTime, timeZone, disambiguation), timeZone };
       if (Date.parse(end.date ?? end.dateTime!) <= Date.parse(start.date ?? start.dateTime!)) throw new Error("End must be after start.");
       const emails = [...new Set(guests.split(",").map(s => s.trim()).filter(Boolean))];
-      const write: CalendarEventWriteRequest = { operationId: crypto.randomUUID(), etag: isNew ? undefined : event.etag, sendUpdates, createMeet: meet, event: { title, description, location, start, end, colorId: colorId === "default" ? null : colorId, transparency: busy, visibility: visibility as CalendarEvent["visibility"], attendees: emails.map(email => event.attendees.find(a => a.email === email) ?? { email, responseStatus: "needsAction" }), reminders: defaultReminders ? { useDefault: true } : { useDefault: false, overrides: [{ method: "popup", minutes: reminder }] } } };
+      const write: CalendarEventWriteRequest = { operationId: crypto.randomUUID(), etag: isNew ? undefined : event.etag, sendUpdates, recurrenceScope: event.recurringEventId ? scope : undefined, createMeet: meet, event: { ...(recurrence && (!event.recurringEventId || scope !== "occurrence") ? { recurrence: allDay ? recurrence.map(rule => rule.replace(/T235959Z/g, "")) : recurrence } : {}), title, description, location, start, end, colorId: colorId === "default" ? null : colorId, transparency: busy, visibility: visibility as CalendarEvent["visibility"], attendees: emails.map(email => event.attendees.find(a => a.email === email) ?? { email, responseStatus: "needsAction" }), reminders: defaultReminders ? { useDefault: true } : { useDefault: false, overrides: [{ method: "popup", minutes: reminder }] } } };
       const result = await runCalendarMutation({ database, event: { ...event, calendarId }, action: isNew ? "create" : "update", write });
       if (result.status === "succeeded") onSaved(); else { setUncertain(true); setError(new Error("Delivery is being checked. Do not create another copy.")) }
     } catch (cause) { setError(cause); setUncertain(await database.pending.count() > 0) } finally { setPending(false) }
@@ -40,6 +42,8 @@ export function EventEditor({ event, calendars, database, online, isNew, onSaved
       <Label className="flex items-center gap-2"><Checkbox checked={allDay} onCheckedChange={v => setAllDay(v === true)} />All day</Label>
       <div className="grid grid-cols-2 gap-2"><Label>Start date<Input type="date" required value={startDate} onChange={e => setStartDate(e.target.value)} /></Label><Label>End date<Input type="date" required value={endDate} onChange={e => setEndDate(e.target.value)} /></Label>{!allDay && <><TimePicker aria-label="Start time" value={startTime} onValueChange={setStartTime} /><TimePicker aria-label="End time" value={endTime} onValueChange={setEndTime} /></>}</div>
       {!allDay && <><Label>Time zone<Input value={timeZone} onChange={e => setTimeZone(e.target.value)} /></Label><Label>Repeated clock time<Select value={disambiguation} onValueChange={v => setDisambiguation(v as typeof disambiguation)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="reject">Ask when ambiguous</SelectItem><SelectItem value="earlier">Earlier offset</SelectItem><SelectItem value="later">Later offset</SelectItem></SelectContent></Select></Label></>}
+      {event.recurringEventId && <RecurrenceScope value={scope} onChange={setScope} />}
+      {(!event.recurringEventId || scope !== "occurrence") && <RecurrenceControls initial={event.recurrence ?? (event.recurringEventId ? ["preserve"] : undefined)} onChange={setRecurrence} />}
       <Label>Guests<Input value={guests} onChange={e => setGuests(e.target.value)} placeholder="Emails separated by commas" /></Label>
       <Label>Location<Input value={location} onChange={e => setLocation(e.target.value)} /></Label>
       <Label>Description<Textarea value={description} onChange={e => setDescription(e.target.value)} /></Label>

@@ -45,3 +45,7 @@ The Calendar schedule composes account cache subscriptions into day/week grids, 
 ## Editing and optimistic recovery
 
 The event editor uses shared controls and explicit guest-update settings. Calendar writes require connectivity. [Browser mutations](../../../apps/web/src/features/calendar/events/calendar-mutations.ts) persist optimistic snapshots before transport; definite rejection rolls back, while ambiguous delivery remains pending for operation-status reconciliation. Event creation and deletion update range membership transactionally. An online controller periodically reconciles persisted operations.
+
+## Recurrence
+
+[Series operations](../../../apps/server/src/features/calendar/events/series-split.ts) persist the original series ETag and deterministic successor before modifying Google. Status reconciliation reads operation markers, resumes missing steps, and never repeats a successful insert. Following-occurrence edits truncate the original rule and reset later exceptions, matching Google's split model. Single-RRULE count limits are adjusted using provider instances; complex imported rule sets remain unchanged and reject splitting. Whole-series changes translate the edited occurrence's wall-clock delta back to the master in its IANA zone. The editor preserves imported recurrence unless the user explicitly replaces it.

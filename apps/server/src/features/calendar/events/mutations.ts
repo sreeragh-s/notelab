@@ -7,15 +7,43 @@ import { sha256Hex } from "../../../shared/crypto/sha256";
 import { requireCalendarBinding } from "../connections/ownership";
 import { CalendarGateway, CalendarProviderError, googleEventSchema, normalizeEvent } from "../provider/gateway";
 import { createCalendarGateway } from "../provider/oauth";
+import { shiftSeriesTime } from "./recurrence";
+import { prepareSeriesSplit, resumeSeriesSplit } from "./series-split";
+import type { CalendarEventTime } from "@zilobase/features/calendar";
 import { providerEventPatch, validateEventInterval, type CalendarWrite, type CalendarMutationAction } from "./input";
 export type CalendarMutationInput = { userId: string; workspaceId: string; bindingId: string; calendarId: string; eventId?: string; action: CalendarMutationAction; write: CalendarWrite; destination?: string; responseStatus?: "accepted" | "declined" | "tentative" };
 export async function mutateCalendarEvent(env: RuntimeEnv, input: CalendarMutationInput, supplied?: CalendarGateway): Promise<CalendarMutationResponse> {
   const { account, binding } = await requireCalendarBinding(input.userId, input.workspaceId, input.bindingId);
+  const hash = await sha256Hex(JSON.stringify(input));
+  const [prior] = await db.select().from(calendarMutationReceipt).where(eq(calendarMutationReceipt.id, input.write.operationId));
+  if (prior) {
+    if (prior.bindingId !== binding.id || prior.requestHash !== hash) throw new CalendarProviderError(409, "operation_identity_conflict");
+    return prior.result ?? { operationId: prior.id, status: prior.status as "pending" | "ambiguous" };
+  }
+  if (input.write.recurrenceScope === "following") {
+    const gateway = supplied ?? await createCalendarGateway(env, account);
+    await prepareSeriesSplit(input, account.id, gateway, hash);
+    const [receipt] = await db.select().from(calendarMutationReceipt).where(eq(calendarMutationReceipt.id, input.write.operationId));
+    const result = await resumeSeriesSplit(receipt!, input.workspaceId, gateway);
+    if (result.status === "succeeded") await completeCalendarMutation(account.id, input.calendarId, result);
+    return result;
+  }
+  if (input.write.recurrenceScope === "series" && input.eventId) {
+    const gateway = supplied ?? await createCalendarGateway(env, account), path = `/calendars/${encodeURIComponent(input.calendarId)}/events`;
+    const occurrence = googleEventSchema.parse(await gateway.request(`${path}/${encodeURIComponent(input.eventId)}`));
+    if (occurrence.etag !== input.write.etag) throw new CalendarProviderError(412, "event_changed");
+    if (occurrence.recurringEventId) {
+      const master = googleEventSchema.parse(await gateway.request(`${path}/${encodeURIComponent(occurrence.recurringEventId)}`));
+      const event = { ...input.write.event };
+      if (event.start) event.start = shiftSeriesTime(master.start as CalendarEventTime, occurrence.start as CalendarEventTime, event.start);
+      if (event.end) event.end = shiftSeriesTime(master.end as CalendarEventTime, occurrence.end as CalendarEventTime, event.end);
+      input = { ...input, eventId: master.id, write: { ...input.write, etag: master.etag, event } };
+    }
+    supplied = gateway;
+  }
   const operationId = input.write.operationId, creating = input.action === "create" || input.action === "duplicate";
   const eventId = creating ? `cb${await sha256Hex(`${binding.id}:${operationId}`)}` : input.eventId;
   if (!eventId) throw new CalendarProviderError(400, "event_required");
-  if (input.write.recurrenceScope === "following") throw new CalendarProviderError(400, "series_split_required");
-  const hash = await sha256Hex(JSON.stringify(input));
   const existing = await db.transaction(async tx => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`calendar-write:${account.id}:${input.calendarId}:${eventId}`}))`);
     const [receipt] = await tx.select().from(calendarMutationReceipt).where(eq(calendarMutationReceipt.id, operationId));
@@ -90,6 +118,11 @@ export async function reconcileCalendarOperation(env: RuntimeEnv, input: { userI
   if (["succeeded", "failed"].includes(receipt.status)) return receipt.result;
   if (receipt.status === "pending" && Date.now() - receipt.updatedAt.getTime() < 60_000) return { operationId: receipt.id, status: "pending" };
   const gateway = supplied ?? await createCalendarGateway(env, account), destination = typeof receipt.steps.destination === "string" ? receipt.steps.destination : undefined;
+  if (receipt.steps.action === "split") {
+    const result = await resumeSeriesSplit(receipt, binding.workspaceId, gateway);
+    if (result.status === "succeeded") await completeCalendarMutation(account.id, receipt.calendarId, result);
+    return result;
+  }
   try {
     const raw = googleEventSchema.parse(await gateway.request(`/calendars/${encodeURIComponent(destination ?? receipt.calendarId)}/events/${encodeURIComponent(receipt.eventId)}`));
     const marker = raw.extendedProperties as { private?: { zilobaseOperationId?: string } } | undefined;
