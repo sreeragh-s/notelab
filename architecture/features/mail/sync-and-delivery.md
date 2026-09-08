@@ -35,3 +35,5 @@ replayed; definite failures can be claimed again. Successful responses include
 removes at most 500 expired terminal receipts per sweep; uncertain receipts remain.
 
 Reply seeds exclude the connected sender and preserve the last 100 threading references. Composer addresses round-trip quoted display names. Forwarding includes ordinary attachments, resolved in transient memory before opening the unchanged composer; Bcc is never copied into a reply or forward.
+
+The provider hydrates external text/HTML body parts before full-message normalization, respects MIME charsets, and decodes encoded headers. Embedded file parts use transient part-path download identifiers; body parts are not classified as attachments, and incomplete bodies are not marked fully cached.

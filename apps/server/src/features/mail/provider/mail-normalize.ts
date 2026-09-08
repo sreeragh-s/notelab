@@ -1,3 +1,4 @@
+import { isMailBodyPart, decodeMailBody, decodeMailHeader } from "./mail-content"
 import type {
   MailAddress,
   MailAttachmentMetadata,
@@ -14,7 +15,7 @@ export function normalizeGmailMessage(message: GmailMessage, includeBody: boolea
   const headers = new Map(
     (message.payload?.headers ?? [])
       .filter((header) => header.name && header.value !== undefined)
-      .map((header) => [header.name!.toLowerCase(), header.value!] as const),
+      .map((header) => [header.name!.toLowerCase(), decodeMailHeader(header.value!)] as const),
   )
   const content = collectMessageContent(message.payload, id, includeBody)
   return {
@@ -27,7 +28,7 @@ export function normalizeGmailMessage(message: GmailMessage, includeBody: boolea
     date: headers.get("date") ?? null,
     draftId: null,
     from: parseMailAddresses(headers.get("from"))[0] ?? null,
-    hasFullBody: includeBody,
+    hasFullBody: includeBody && content.complete,
     historyId: message.historyId ?? "0",
     id,
     inReplyTo: headers.get("in-reply-to") ?? null,
@@ -101,15 +102,23 @@ export function parseMailAddresses(value?: string): MailAddress[] {
 
 function collectMessageContent(part: GmailPart | undefined, messageId: string, includeBody: boolean) {
   const attachments: MailAttachmentMetadata[] = []
+  let complete = true
   let html: string | null = null
   let text: string | null = null
-  const walk = (current?: GmailPart) => {
+  const walk = (current?: GmailPart, path = "0") => {
     if (!current) return
     const filename = current.filename?.trim() ?? ""
-    if (current.body?.attachmentId) {
+    if (isMailBodyPart(current)) {
+      if (current.body?.attachmentId && current.body.data === undefined) complete = false
+      if (includeBody && current.body?.data !== undefined) {
+        const decoded = decodeMailBody(current)
+        if (current.mimeType === "text/html" && html === null) html = decoded
+        if (current.mimeType === "text/plain" && text === null) text = decoded
+      }
+    } else if (current.body?.attachmentId || (current.body?.data !== undefined && (filename || headerValue(current, "content-disposition") || headerValue(current, "content-id")))) {
       const contentId = headerValue(current, "content-id")?.replace(/^<|>$/g, "") ?? null
       attachments.push({
-        attachmentId: current.body.attachmentId,
+        attachmentId: current.body.attachmentId ?? `local_part_${path}`,
         contentId,
         filename: filename || "attachment",
         inline: Boolean(contentId) || headerValue(current, "content-disposition")?.toLowerCase().startsWith("inline") === true,
@@ -117,25 +126,16 @@ function collectMessageContent(part: GmailPart | undefined, messageId: string, i
         mimeType: current.mimeType ?? "application/octet-stream",
         size: current.body.size ?? 0,
       })
-    } else if (includeBody && current.body?.data) {
-      const decoded = decodeBase64Url(current.body.data)
-      if (current.mimeType === "text/html" && html === null) html = decoded
-      if (current.mimeType === "text/plain" && text === null) text = decoded
     }
-    for (const child of current.parts ?? []) walk(child)
+    for (const [index, child] of (current.parts ?? []).entries()) walk(child, `${path}_${index}`)
   }
+
   walk(part)
-  return { attachments, html, text }
+  return { attachments, html, text, complete }
 }
 
 function headerValue(part: GmailPart, name: string) {
   return part.headers?.find((header) => header.name?.toLowerCase() === name)?.value
-}
-
-function decodeBase64Url(value: string) {
-  const normalized = value.replace(/-/g, "+").replace(/_/g, "/")
-  const binary = atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="))
-  return new TextDecoder().decode(Uint8Array.from(binary, (character) => character.charCodeAt(0)))
 }
 
 function splitAddressList(value: string) {
