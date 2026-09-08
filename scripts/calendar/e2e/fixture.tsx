@@ -1,0 +1,16 @@
+import { setConnectivityState } from "@/features/offline/model";
+import { createRoot } from "react-dom/client";
+import { createRootRoute, createRoute, createRouter, RouterProvider, Outlet, createMemoryHistory } from "@tanstack/react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { CalendarSchedule } from "@/features/calendar/views/calendar-schedule";
+import { defaultCalendarPreferences } from "@zilobase/features/calendar";
+import "@/shared/styles/global.css";
+import "@/app/styles.css";
+setConnectivityState("online");
+const preferences = defaultCalendarPreferences("Asia/Kolkata");
+const connections = [{ workspaceId: "workspace", bindingId: "binding", accountId: "account", email: "calendar@example.test", status: "connected" as const, pushAvailable: false }];
+const root = createRootRoute({ component: () => <main style={{ height: "100vh" }} className="flex bg-surface-canvas text-content-primary"><Outlet /></main> });
+const app = createRoute({ getParentRoute: () => root, id: "app", component: Outlet });
+const calendar = createRoute({ getParentRoute: () => app, path: "/calendar", validateSearch: (s: Record<string, unknown>) => s, component: () => <CalendarSchedule connections={connections} userId="user" preferences={preferences} /> });
+const router = createRouter({ routeTree: root.addChildren([app.addChildren([calendar])]), history: createMemoryHistory({ initialEntries: ["/calendar?date=2026-09-09&view=week"] }) });
+createRoot(document.getElementById("root")!).render(<QueryClientProvider client={new QueryClient()}><RouterProvider router={router} /></QueryClientProvider>);
