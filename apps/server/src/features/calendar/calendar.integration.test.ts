@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { beforeAll, afterAll, test, expect } from "vitest";
+import { beforeAll, afterAll, test, expect, vi } from "vitest";
 import * as schema from "../../infrastructure/database/schema";
 import { runWithDb } from "../../infrastructure/database";
 import { disconnectCalendarBinding, requireCalendarBinding } from "./connections/ownership";
@@ -30,4 +30,22 @@ test.skipIf(!enabled)("disconnect removes only its own binding and last account"
   const rows = await database!.select().from(schema.calendarAccount);
   expect(rows.some(row => row.id === accountId)).toBe(false);
   expect(rows.some(row => row.id === secondAccount)).toBe(true);
+});
+
+import { beginCalendarOAuth, completeCalendarOAuth, CALENDAR_SCOPES } from "./provider/oauth";
+import * as identityVerifier from "../../shared/security/google-id-token";
+test.skipIf(!enabled)("OAuth commits verified accounts, rejects replay and missing scopes", async () => {
+  const env = { CALENDAR_ENABLED: "true", CALENDAR_ENABLED_WORKSPACE_IDS: workspaceId, CALENDAR_GOOGLE_CLIENT_ID: "fixture", CALENDAR_GOOGLE_CLIENT_SECRET: "fixture", CALENDAR_TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 5).toString("base64"), BETTER_AUTH_URL: "http://localhost:3000", CLIENT_URL: "http://localhost:1420" };
+  const verified = vi.spyOn(identityVerifier, "verifyGoogleIdToken").mockResolvedValue({ subject: "oauth-fixture", email: "oauth@example.test" });
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ access_token: "access", refresh_token: "refresh", id_token: "identity", scope: CALENDAR_SCOPES.join(" ") })));
+  try {
+    const url = new URL(await runWithDb(database!, () => beginCalendarOAuth(env, { userId, workspaceId, clientKind: "web" })));
+    expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+    const state = url.searchParams.get("state")!;
+    await runWithDb(database!, () => completeCalendarOAuth(env, state, "code"));
+    await expect(runWithDb(database!, () => completeCalendarOAuth(env, state, "code"))).rejects.toThrow("expired_oauth_attempt");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ access_token: "access", refresh_token: "refresh", id_token: "identity", scope: "openid email" })));
+    const denied = new URL(await runWithDb(database!, () => beginCalendarOAuth(env, { userId, workspaceId, clientKind: "web" })));
+    await expect(runWithDb(database!, () => completeCalendarOAuth(env, denied.searchParams.get("state")!, "code"))).rejects.toThrow("missing_calendar_scopes");
+  } finally { verified.mockRestore(); vi.unstubAllGlobals() }
 });

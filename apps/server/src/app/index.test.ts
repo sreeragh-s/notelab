@@ -36,6 +36,8 @@ test("createApp registers every public feature route group", () => {
     "GET /metadata/bookmark",
     "GET /pages",
     "GET /mail/oauth/google/callback",
+    "GET /calendar/oauth/google/callback",
+    "GET /workspaces/:workspaceId/calendar/connections",
     "POST /mail/google/pubsub",
     "GET /automation-slack/oauth/callback",
     "POST /pages/:id/convert-to-teamspace",
@@ -56,8 +58,8 @@ test("createApp registers every public feature route group", () => {
 });
 
 test("every registered Hono route is a Node API path", () => {
-  for (const { path } of createApp().routes) {
-    if (path === "/*" || path === "/") continue;
+  for (const { path, method } of createApp().routes) {
+    if (path === "/*" || path === "/" || (method === "ALL" && path.endsWith("/*"))) continue;
     const concrete = path.replace(/:[^/]+/g, "id");
     assert.equal(isNodeApiPath(concrete.startsWith("/") ? concrete : `/${concrete}`), true, path);
   }
