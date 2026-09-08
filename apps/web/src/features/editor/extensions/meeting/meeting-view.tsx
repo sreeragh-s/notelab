@@ -1,3 +1,5 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
+import { LocalTranscriptionProgress } from "@/features/desktop/local/local-transcription-progress";
 import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
@@ -426,6 +428,7 @@ export function MeetingView({
       )}
       contentEditable={false}
     >
+      {hasRuntimeCapability("local-transcription") && <LocalTranscriptionProgress meetingId={meetingId} />}
       <div className="database-toolbar-section meeting-block-header">
       <div className="database-toolbar">
         {showMeetingTitle ? (

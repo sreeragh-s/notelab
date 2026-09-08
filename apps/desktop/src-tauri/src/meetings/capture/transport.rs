@@ -457,6 +457,8 @@ pub(super) fn spawn_transport_worker(
     app: AppHandle,
     meeting_id: String,
     mut transport: MeetingAudioTransport,
+    capture_paused: Arc<AtomicBool>,
+    status: Arc<Mutex<MeetingCaptureStatus>>,
 ) -> TransportWorker {
     let (commands, receiver) = mpsc::sync_channel(TRANSPORT_CHANNEL_CAPACITY);
     let (control, control_receiver) = mpsc::channel();
@@ -522,6 +524,12 @@ pub(super) fn spawn_transport_worker(
                         source,
                     } => {
                         if let Ok(events) = transport.send_frame(source, sequence, &samples) {
+                            if let Some(event) = events.iter().find(|event| event.kind == "recording.storage-blocked") {
+                                capture_paused.store(true, Ordering::Release);
+                                paused = true;
+                                update_phase(&app, &status, CapturePhase::Paused);
+                                push_warning(&app, &status, event.message.clone().unwrap_or_else(|| "Local audio storage is full. Free space and restart to recover pending audio.".into()));
+                            }
                             emit_transport_events(&app, &meeting_id, events);
                         }
                     }

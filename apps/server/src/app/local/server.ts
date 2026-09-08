@@ -1,3 +1,4 @@
+import { initializeLocalTranscription } from "../../features/meetings/transcription/local-whisper";
 import { localFeatureGuard } from "./policy";
 import { Hono } from "hono";
 import { LocalFileStorage } from "../../infrastructure/storage/local/filesystem-storage";
@@ -33,5 +34,6 @@ export async function startLocalServer(afterMigrate?: () => Promise<void>) {
   await runtime.migrate();
   await afterMigrate?.();
   await runtime.start();
-  return runtime;
+  const stopTranscription = await initializeLocalTranscription(process.env);
+  return { ...runtime, async close() { await stopTranscription(); await runtime.close(); } };
 }

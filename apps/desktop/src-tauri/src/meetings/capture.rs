@@ -607,7 +607,13 @@ fn run_capture(
     };
     let transport_tx = transport.map(|mut transport| {
         transport.active_sources = capture_streams.active_sources.clone();
-        spawn_transport_worker(app.clone(), config.meeting_id.clone(), transport)
+        spawn_transport_worker(
+            app.clone(),
+            config.meeting_id.clone(),
+            transport,
+            paused.clone(),
+            status.clone(),
+        )
     });
     if let Ok(mut current) = status.lock() {
         current.active_sources = capture_streams.active_sources.clone();

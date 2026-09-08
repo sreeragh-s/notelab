@@ -1,3 +1,5 @@
+import { isLocalRuntime } from "../../infrastructure/runtime/runtime-adapter";
+import { connectLocalWhisper } from "../../features/meetings/transcription/local-whisper";
 import { Buffer } from "node:buffer";
 import type { IncomingMessage, Server as HttpServer } from "node:http";
 import type { Duplex } from "node:stream";
@@ -50,7 +52,7 @@ type Attachment = {
   phase: "paused" | "recording" | "stopped";
   readySources: Set<MeetingAudioSource>;
   segmentCount: number;
-  transcribers: Map<MeetingAudioSource, Promise<MeetingRealtimeTranscriber>>;
+  transcribers: Map<MeetingAudioSource, Promise<Pick<MeetingRealtimeTranscriber, "appendAudio" | "finish">>>;
   transcriberGenerations: Record<MeetingAudioSource, number>;
 };
 
@@ -59,7 +61,8 @@ type RuntimeOptions = {
     env: RuntimeEnv,
     callbacks: MeetingRealtimeTranscriberCallbacks,
     claims: MeetingAudioTicketClaims,
-  ) => Promise<MeetingRealtimeTranscriber>;
+    source?: MeetingAudioSource,
+  ) => Promise<Pick<MeetingRealtimeTranscriber, "appendAudio" | "finish">>;
 };
 
 type AudioWatermark = {
@@ -82,7 +85,7 @@ export function attachNodeMeetingAudioRuntime(
   const leaseTasks = new Map<string, Promise<void>>();
   const peersByLease = new Map<string, Peer>();
   const watermarks = new Map<string, AudioWatermark>();
-  const connect = options.connect ?? connectOpenAiRealtimeTranscriber;
+  const connect = options.connect ?? (isLocalRuntime() ? ((_env, callbacks, claims, source) => connectLocalWhisper(callbacks, claims, source ?? "microphone")) : connectOpenAiRealtimeTranscriber);
   const websocket = crossws({
     idleTimeout: 45,
     serverOptions: { maxPayload: MAX_AUDIO_FRAME_BYTES },
@@ -210,6 +213,7 @@ export function attachNodeMeetingAudioRuntime(
           )
           .catch((error) => {
             logRuntimeError(error);
+            if (isLocalRuntime()) peer.send(JSON.stringify({ type: "recording.storage-blocked", message: error instanceof Error ? error.message : "Local audio storage failed. Pause and restart after freeing space." }));
             peer.close(1011, "Meeting transcription failed");
           });
       },
@@ -356,7 +360,7 @@ function startSourceTranscriber(
         attachment.readySources.add(source);
         announceReady(peer, attachment);
       },
-    }, attachment.claims);
+    }, attachment.claims, source);
   });
   attachment.transcribers.set(source, transcriber);
   void transcriber.catch((error) => {

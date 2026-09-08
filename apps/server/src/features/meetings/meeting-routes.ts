@@ -1,3 +1,5 @@
+import { isLocalRuntime } from "../../infrastructure/runtime/runtime-adapter";
+import { localMeetingBacklog } from "./transcription/local-whisper";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { z } from "zod";
@@ -364,4 +366,12 @@ meetingRoutes.delete("/:id", async (c) => {
   } catch (error) {
     return serviceError(c, error);
   }
+});
+
+meetingRoutes.get("/:id/local-transcription", async c => {
+  const user = requireUser(c);
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+  if (!isLocalRuntime()) return c.notFound();
+  await getMeetingForUser(c.req.param("id"), user.id, "view");
+  return c.json(await localMeetingBacklog(c.req.param("id")));
 });

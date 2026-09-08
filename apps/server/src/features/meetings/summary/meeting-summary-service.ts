@@ -1,3 +1,5 @@
+import { isLocalRuntime } from "../../../infrastructure/runtime/runtime-adapter";
+import { localMeetingBacklog } from "../transcription/local-whisper";
 import { generateText, Output } from "ai";
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
@@ -43,6 +45,7 @@ export async function generateMeetingSummary(input: {
       409,
     );
   }
+  if (isLocalRuntime() && (await localMeetingBacklog(input.meetingId)).bytes > 0) throw new ServiceMutationError("Wait for pending local transcription before generating a summary", 409);
   const runtimeState = await getRuntimeAdapter().getMeetingRecorderSession?.({
     env: input.env,
     meetingId: record.id,
@@ -79,6 +82,7 @@ export async function generateMeetingSummary(input: {
     input.env,
     "meeting-summary",
   );
+  if (isLocalRuntime() && !model.catalog.supportsStructuredOutput) throw new ServiceMutationError("Verify a local model with structured-answer support before generating a summary", 409);
   const instructions = record.customInstructions?.trim() ||
     presetInstructions(record.instructionsPreset);
   const chunks = splitTranscript(transcript);

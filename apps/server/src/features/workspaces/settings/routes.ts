@@ -1,3 +1,4 @@
+import { localTranscriptionStatus } from "../../meetings/transcription/local-whisper";
 import { isLocalRuntime } from "../../../infrastructure/runtime/runtime-adapter";
 import { readLocalServices, writeLocalServices, localServicesSchema } from "../../../infrastructure/local/services";
 import { listLocalModels, verifyLocalModel } from "../../ai/providers/ollama";
@@ -189,8 +190,8 @@ workspaceSettingsRoutes.get("/ai/local", async c => {
   if ("response" in auth) return auth.response;
   if (!isLocalRuntime()) return c.notFound();
   const config = await readLocalServices();
-  try { return c.json({ config, models: await listLocalModels(config), ready: true }); }
-  catch { return c.json({ config, models: [], ready: false }); }
+  try { return c.json({ config, models: await listLocalModels(config), ready: true, transcription: localTranscriptionStatus() }); }
+  catch { return c.json({ config, models: [], ready: false, transcription: localTranscriptionStatus() }); }
 });
 workspaceSettingsRoutes.put("/ai/local", async c => {
   const auth = await requireActiveWorkspace(c);

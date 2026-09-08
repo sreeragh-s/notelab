@@ -33,3 +33,20 @@ The Fallow capture zone permits dependencies only within capture. The editor’s
 These controlled checks do not establish real PostgreSQL claim contention, mounted React effect timing, live transcription-provider behavior or physical-device recovery. Browser/native smoke verification complements them. [Meeting block guide](../../../docs/meetings/meeting-block.md) remains the editor-facing operational guide.
 
 [Meetings overview](README.md).
+
+### Local Whisper spool
+
+In local mode the Node audio transport uses a provider-neutral append/finish contract
+implemented by the [local Whisper spool](../../../apps/server/src/features/meetings/transcription/local-whisper.ts).
+The native 24 kHz capture is persisted in source-specific streams under installation
+`recordings`, then converted in process to 16 kHz WAV. Partial files are sealed at
+silence boundaries or 30 seconds and atomically become ready chunks. A single worker
+processes ordered chunks using the configured loopback service, committing transcript
+segments before removing audio. Stable source/lease/sequence identifiers reuse the
+existing duplicate protection. Restart seals partial chunks and resumes pending work;
+provider failure retains files. Quit cancels inference and drains local writes.
+
+The authenticated per-meeting backlog endpoint drives chunk-progress UI and prevents
+summarizing incomplete transcripts. Storage pressure pauses native capture through a
+specific transport event, preserving both the server spool and native recovery data.
+The supported external-service setup is documented in the [local AI guide](../../../docs/desktop/local-ai.md).

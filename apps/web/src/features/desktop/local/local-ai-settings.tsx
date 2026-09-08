@@ -5,7 +5,7 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 
 type Configuration = { version: 1; ollamaPort: number; whisperPort: number; model?: string };
-type Services = { config: Configuration; models: Array<{ name: string }>; ready: boolean };
+type Services = { config: Configuration; models: Array<{ name: string }>; ready: boolean; transcription?: { pendingBytes: number; serviceError: string | null } };
 export function LocalAiSettings() {
   const [services, setServices] = useState<Services>();
   const [config, setConfig] = useState<Configuration>({ version: 1, ollamaPort: 11434, whisperPort: 8080 });
@@ -32,6 +32,10 @@ export function LocalAiSettings() {
     <p className="text-sm text-content-secondary">Install Ollama separately and import an offline model pack. Disable Ollama cloud features. Zilobase never downloads models or starts external services.</p>
     <Label htmlFor="ollama-port">Ollama loopback port</Label>
     <Input id="ollama-port" type="number" min={1} max={65535} value={config.ollamaPort} onChange={event => setConfig({ ...config, ollamaPort: Number(event.target.value), model: undefined })} />
+    <Label htmlFor="whisper-port">Whisper loopback port</Label>
+    <Input id="whisper-port" type="number" min={1} max={65535} value={config.whisperPort} onChange={event => setConfig({ ...config, whisperPort: Number(event.target.value) })} />
+    <p className="text-sm text-content-secondary">Run whisper.cpp separately with an offline model. Transcript updates arrive in chunks. Microphone and system audio are labeled separately; speaker identification is not provided.</p>
+    {services?.transcription && <p role="status">Pending audio: {(services.transcription.pendingBytes / 1024 / 1024).toFixed(1)} MB. {services.transcription.serviceError}</p>}
     <Label htmlFor="local-model">Installed model name</Label>
     <Input id="local-model" list="installed-local-models" value={config.model ?? ""} onChange={event => setConfig({ ...config, model: event.target.value || undefined })} placeholder="Exact model name from Ollama" />
     <datalist id="installed-local-models">{services?.models.map(model => <option key={model.name} value={model.name} />)}</datalist>
