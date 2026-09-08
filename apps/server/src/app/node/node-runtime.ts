@@ -46,8 +46,8 @@ export function createNodeRuntime({
 }: NodeRuntimeOptions) {
   const env = process.env as Record<string, unknown>;
   const processRole = readProcessRole(process.env.ZILOBASE_PROCESS_ROLE);
-  const port = readPort(process.env.PORT) ?? 3000;
-  const hostname = process.env.HOST ?? "0.0.0.0";
+  const port = runtimeAdapter.mode === "local" ? 0 : readPort(process.env.PORT) ?? 3000;
+  const hostname = runtimeAdapter.mode === "local" ? "127.0.0.1" : process.env.HOST ?? "0.0.0.0";
   const server = createServer(async (incoming, outgoing) => {
     try {
       const request = toRequest(incoming, port);
@@ -107,7 +107,7 @@ export function createNodeRuntime({
         ? backgroundCoordinator.dispatch(tasks)
         : publishNodeBackgroundNotification(dispatchEnv, tasks),
   };
-  const backgroundAdminServer = backgroundCoordinator
+  const backgroundAdminServer = backgroundCoordinator && runtimeAdapter.mode !== "local"
     ? createBackgroundAdminServer(env, backgroundCoordinator)
     : null;
 

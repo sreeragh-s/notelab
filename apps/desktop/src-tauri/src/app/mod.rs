@@ -79,6 +79,7 @@ pub fn run() {
     let startup_state = StartupState::default();
     let builder = tauri::Builder::default()
         .manage(startup_state)
+        .manage(crate::local::LocalRuntimeState::default())
         .manage(desktop_server::DesktopServerCandidateState::default())
         .manage(meeting_capture::MeetingCaptureManager::default())
         .manage(oauth::DesktopOAuthState::default());
@@ -186,6 +187,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             greet,
+            crate::local::local_runtime_enabled,
+            crate::local::start_local_runtime,
             keyring::get_auth_token,
             keyring::set_auth_token,
             keyring::get_auth_owner,
@@ -219,8 +222,11 @@ pub fn run() {
             meeting_recovery::meeting_capture_delete_local_file,
             meeting_recovery::meeting_capture_open_local_file
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            if let tauri::RunEvent::Exit = event { app.state::<crate::local::LocalRuntimeState>().stop(); }
+        });
 }
 
 #[cfg(test)]

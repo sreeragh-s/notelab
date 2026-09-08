@@ -157,3 +157,9 @@ This downloads checksum-pinned upstream sources and builds PostgreSQL using Xcod
 command-line tools. Generated resources are ignored by Git. Pass
 `--config src-tauri/tauri.local.conf.json` to Tauri when packaging these resources.
 Local mode remains internally gated until packaged acceptance checks pass.
+
+After resource builds, run `node scripts/desktop/local/verify.mjs` and
+`node scripts/desktop/local/smoke.mjs`. Native local commands are currently gated by
+`ZILOBASE_LOCAL_ENABLED=1`. They use `local-debug` for debug binaries and `local`
+for release data under the application-data directory. Startup errors preserve data;
+do not remove a database lock or initialize over an existing installation to bypass them.

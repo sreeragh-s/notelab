@@ -4,7 +4,7 @@ import { createNodeRuntime } from "../node/node-runtime";
 import { CORE_MIGRATION_SET } from "../../infrastructure/node/migrations";
 import { setRuntimeAdapter } from "../../infrastructure/runtime/runtime-adapter";
 
-export async function startLocalServer() {
+export async function startLocalServer(afterMigrate?: () => Promise<void>) {
   const resourceRoot = process.env.ZILOBASE_LOCAL_RESOURCES;
   if (!resourceRoot || !path.isAbsolute(resourceRoot)) throw new Error("Local resources are required");
   setRuntimeAdapter({ mode: "local" });
@@ -15,6 +15,7 @@ export async function startLocalServer() {
     webDistDir: path.join(resourceRoot, "web"),
   });
   await runtime.migrate();
+  await afterMigrate?.();
   await runtime.start();
   return runtime;
 }

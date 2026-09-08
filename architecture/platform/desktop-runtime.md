@@ -21,3 +21,14 @@ resources and the private desktop backend, with checksums and license notices.
 The optional Tauri local configuration includes these resources. The entrypoint
 requires the internal enable flag and reads configuration from its native parent
 over stdin before loading the server. Hosted entrypoints remain independent.
+
+## Local process ownership
+
+The [native supervisor](../../apps/desktop/src-tauri/src/local/mod.rs) owns an exclusive
+installation lock and the Node child control pipe. The [database process manager](../../apps/server/src/app/local/database-process.ts)
+initializes only empty installations, persists private credentials, starts PostgreSQL
+on a private Unix socket, and separates migration ownership from application DML.
+The local Node entrypoint drains the runtime and stops PostgreSQL on parent EOF.
+The [smoke test](../../scripts/desktop/local/smoke.mjs) exercises real migrations,
+startup, parent EOF, and reopening the same installation. Resource relocation is
+verified separately for ARM and Intel (Rosetta is not a clean Intel machine test).
