@@ -1,3 +1,4 @@
+import { advancePendingCalendars } from "../../features/calendar/sync/sync";
 import { and, asc, eq, isNull, lt, lte, or, sql } from "drizzle-orm";
 
 import { cleanupExpiredAiAgentData } from "../../features/ai/actions/agent-operations";
@@ -33,6 +34,7 @@ export const BACKGROUND_MAINTENANCE_TASKS = {
   "gmail.send_receipt_cleanup": 60 * 60_000,
   "gmail.watch_renewal": 5 * 60_000,
   "mail.index_recovery": 60_000,
+  "calendar.sync_recovery": 60_000,
   "membership.expiry": 60_000,
 } as const;
 
@@ -162,6 +164,7 @@ const MAINTENANCE_TASK_HANDLERS: Record<MaintenanceTaskKey, MaintenanceTaskHandl
   "membership.expiry": async () => {
     await expireTemporaryMemberships();
   },
+  "calendar.sync_recovery": async (env) => { await advancePendingCalendars(env); },
   "mail.index_recovery": async (env) => {
     await advancePendingMailIndexes(env);
   },

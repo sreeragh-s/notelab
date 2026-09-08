@@ -49,3 +49,32 @@ test.skipIf(!enabled)("OAuth commits verified accounts, rejects replay and missi
     await expect(runWithDb(database!, () => completeCalendarOAuth(env, denied.searchParams.get("state")!, "code"))).rejects.toThrow("missing_calendar_scopes");
   } finally { verified.mockRestore(); vi.unstubAllGlobals() }
 });
+
+import { CalendarGateway } from "./provider/gateway";
+import { advanceCalendarSync, refreshCalendarList } from "./sync/sync";
+import { readCalendarRange } from "./sync/ranges";
+test.skipIf(!enabled)("sync advances only final checkpoints and range cursors isolate accounts", async () => {
+  const env = { CALENDAR_ENABLED: "true", CALENDAR_ENABLED_WORKSPACE_IDS: workspaceId };
+  let eventCalls = 0;
+  const gateway = new CalendarGateway("fixture", async url => {
+    if (String(url).includes("calendarList")) return Response.json({ items: [{ id: "primary", accessRole: "owner" }] });
+    eventCalls++;
+    return Response.json({ items: [{ id: `e${eventCalls}`, start: { date: "2026-09-09" }, end: { date: "2026-09-10" } }], ...(eventCalls === 1 ? { nextPageToken: "page2" } : { nextSyncToken: "checkpoint" }) });
+  });
+  const [binding] = (await database!.select().from(schema.calendarBinding)).filter(row => row.accountId === secondAccount);
+  await runWithDb(database!, () => refreshCalendarList(secondAccount, binding!.id, gateway));
+  expect(await runWithDb(database!, () => advanceCalendarSync(env, secondAccount, "primary", gateway))).toBe(true);
+  let [state] = await database!.select().from(schema.calendarProviderCalendar);
+  expect(state!.syncToken).toBeNull(); expect(state!.revision).toBe(0);
+  await runWithDb(database!, () => advanceCalendarSync(env, secondAccount, "primary", gateway));
+  [state] = await database!.select().from(schema.calendarProviderCalendar);
+  expect(state!.syncToken).toBe("checkpoint"); expect(state!.revision).toBe(1);
+  let rangeCalls = 0;
+  const ranges = new CalendarGateway("fixture", async () => { rangeCalls++; return Response.json({ items: [], ...(rangeCalls === 1 ? { nextPageToken: "next" } : {}) }) });
+  const input = { accountId: secondAccount, bindingId: binding!.id, workspaceId, calendarId: "primary", timeZone: "UTC", generation: 1, revision: 1, start: "2026-09-01T00:00:00Z", end: "2026-10-01T00:00:00Z" };
+  const first = await runWithDb(database!, () => readCalendarRange(input, ranges));
+  expect(first.complete).toBe(false);
+  await expect(runWithDb(database!, () => readCalendarRange({ ...input, accountId: "other", pageToken: first.nextPageToken! }, ranges))).rejects.toThrow("expired_range_cursor");
+  const final = await runWithDb(database!, () => readCalendarRange({ ...input, revision: 9, pageToken: first.nextPageToken! }, ranges));
+  expect(final.complete).toBe(true); expect(final.revision).toBe(1);
+});

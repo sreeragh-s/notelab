@@ -617,6 +617,13 @@
       "when": 1788990000000,
       "tag": "0087_calendar_persistence",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1788990000001,
+      "tag": "0088_calendar_range_cursor",
+      "breakpoints": true
     }
   ]
 }

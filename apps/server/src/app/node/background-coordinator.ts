@@ -1,3 +1,4 @@
+import { advancePendingCalendars } from "../../features/calendar/sync/sync";
 import { eq, inArray, min, sql } from "drizzle-orm";
 
 import { AI_JOB_HANDLERS } from "../../features/ai/jobs/ai-job-handlers";

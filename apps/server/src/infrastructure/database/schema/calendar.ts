@@ -33,7 +33,7 @@ export const calendarEventRecord = pgTable("calendar_event_record", {
 export const calendarRangeSnapshot = pgTable("calendar_range_snapshot", {
   id: text("id").primaryKey(), accountId: text("account_id").notNull(), calendarId: text("calendar_id").notNull(), start: text("start").notNull(), end: text("end").notNull(),
   generation: integer("generation").notNull(), revision: integer("revision").notNull(), events: jsonb("events").$type<CalendarEvent[]>().notNull(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  pageToken: text("page_token"), expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 }, t => [foreignKey({ columns: [t.accountId, t.calendarId], foreignColumns: [calendarProviderCalendar.accountId, calendarProviderCalendar.calendarId] }).onDelete("cascade")]);
 export const calendarWatchChannel = pgTable("calendar_watch_channel", {
   id: text("id").primaryKey(), accountId: text("account_id").notNull().references(() => calendarAccount.id, { onDelete: "cascade" }), calendarId: text("calendar_id"),
