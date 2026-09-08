@@ -425,25 +425,8 @@
   }
 
   .database-select-options {
-    @apply flex flex-col gap-0.5 overflow-y-auto pt-1;
+    @apply flex flex-col overflow-y-auto pt-1;
     max-height: 15.5rem;
-  }
-
-  .database-select-option,
-  .database-select-create {
-    @apply flex min-h-7 min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left text-sm text-content-primary outline-none transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral focus-visible:bg-action-neutral-hover focus-visible:text-action-on-neutral active:bg-action-neutral-pressed active:text-action-on-neutral;
-  }
-
-  .database-select-option svg {
-    @apply size-4 shrink-0 text-content-secondary;
-  }
-
-  .database-select-option .database-select-option-check {
-    @apply ml-auto text-content-primary;
-  }
-
-  .database-select-option[data-selected="true"] .database-select-option-check {
-    @apply text-content-primary;
   }
 
   .database-page-link,

@@ -185,7 +185,7 @@ export function register({ readSource, assert, loadModule, test }) {
     assert.match(menu, /defaultSubDisplayMode="inline"/);
     assert.match(
       menu,
-      /className="w-72 max-h-none overflow-visible"/,
+      /className="w-72"/,
     );
     assert.match(settings, /displayMode="nested"[\s\S]*?More settings/);
     assert.match(
@@ -218,7 +218,7 @@ export function register({ readSource, assert, loadModule, test }) {
     );
     assert.match(
       dropdrawerContent,
-      /max-h-\[min\(36rem,calc\(100vh-1rem\)\)\] max-w-\[min\(20rem,calc\(100vw-1rem\)\)\]/,
+      /menuViewportClassName/,
     );
   });
 

@@ -1,6 +1,8 @@
 import type { MailCustomPropertyType, MailPropertyOption, MailPropertyWorkspaceMember, MailThreadPropertyValue } from "@zilobase/features/mail"
 
 import { Input } from "@/shared/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select"
+
 import { Checkbox } from "@/shared/ui/checkbox"
 
 type PropertyValue = MailThreadPropertyValue["value"]
@@ -26,16 +28,19 @@ export function DataSourcePropertyValueControl({
 
   if (type === "select" || type === "status") {
     return (
-      <select
-        aria-label="Property value"
-        className="h-7 min-w-32 rounded-md border border-control-border bg-surface-canvas px-2 text-xs text-content-primary outline-none focus:border-action-focus-ring"
+      <Select
         disabled={disabled}
-        onChange={(event) => onChange(event.target.value || null)}
-        value={typeof value === "string" ? value : ""}
+        onValueChange={(nextValue) => onChange(nextValue === "__empty_property_value__" ? null : nextValue)}
+        value={typeof value === "string" && value ? value : "__empty_property_value__"}
       >
-        <option value="">Empty</option>
-        {options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
-      </select>
+        <SelectTrigger aria-label="Property value" className="min-w-32">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent align="start" position="popper">
+          <SelectItem value="__empty_property_value__">Empty</SelectItem>
+          {options.map((option) => <SelectItem key={option.id} value={option.id}>{option.name}</SelectItem>)}
+        </SelectContent>
+      </Select>
     )
   }
 

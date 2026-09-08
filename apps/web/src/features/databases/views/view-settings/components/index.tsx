@@ -452,7 +452,7 @@ export function DatabaseViewSettingsMenu({
       <DropDrawerTrigger asChild>{trigger}</DropDrawerTrigger>
       <DropDrawerContent
         align="start"
-        className="w-72 max-h-none overflow-visible"
+        className="w-72"
         onCloseAutoFocus={(event) => event.preventDefault()}
       >
         {settingsContent}

@@ -1,3 +1,5 @@
+import { cn } from "@/shared/lib/utils"
+import { menuItemClassName } from "@/shared/ui/menu-styles"
 import { useMemo, useState } from "react"
 import {
   ArrowLeft,
@@ -71,12 +73,13 @@ export function LinkedDataSourcePicker({
         )}
       </PopoverTrigger>
       <PopoverContent
+        variant="menu"
         align="start"
         className={showPicker ? "w-80 overflow-hidden p-0" : "w-72 p-1"}
       >
         {!showPicker ? (
           <button
-            className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-action-neutral-hover"
+            className={cn(menuItemClassName, "w-full text-left hover:bg-action-neutral-hover")}
             onClick={() => setShowPicker(true)}
             type="button"
           >
@@ -124,7 +127,7 @@ export function LinkedDataSourcePicker({
                           : Table2
               return (
                 <button
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-action-neutral-hover"
+                  className={cn(menuItemClassName, "w-full text-left hover:bg-action-neutral-hover")}
                   key={option.id}
                   onClick={() => {
                     onSelect({
@@ -149,7 +152,7 @@ export function LinkedDataSourcePicker({
             }) : <div className="px-3 py-8 text-center text-sm text-content-secondary">No views available.</div>
           ) : databaseOptions.length ? databaseOptions.map((option) => (
               <button
-                className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-action-neutral-hover"
+                className={cn(menuItemClassName, "w-full text-left hover:bg-action-neutral-hover")}
                 key={option.id}
                 onClick={() => { setDatabaseId(option.id); setSearch("") }}
                 type="button"

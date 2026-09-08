@@ -1,3 +1,5 @@
+import { cn } from "@/shared/lib/utils"
+import { menuItemClassName } from "@/shared/ui/menu-styles"
 import { Check, GripVertical } from "@/shared/components/icons"
 import { useState, type ReactNode } from "react"
 
@@ -288,13 +290,13 @@ export function DatabasePropertySelect({
 
           return (
             <button
-              className="database-select-option"
+              className={cn(menuItemClassName, "w-full text-left hover:bg-action-neutral-hover")}
               data-selected={isSelected ? "true" : undefined}
               key={option.id}
               onClick={() => selectOption(optionValue)}
               type="button"
             >
-              <GripVertical />
+              <GripVertical className="text-content-secondary" />
               <DatabaseSelectBadge
                 color={option.color}
                 showDot={showStatusDot}
@@ -303,14 +305,14 @@ export function DatabasePropertySelect({
                 {option.name}
               </DatabaseSelectBadge>
               {isSelected ? (
-                <Check className="database-select-option-check" />
+                <Check className="ml-auto text-content-primary" />
               ) : null}
             </button>
           )
         })}
         {canCreateSelectOption ? (
           <button
-            className="database-select-create"
+            className={cn(menuItemClassName, "w-full text-left hover:bg-action-neutral-hover disabled:pointer-events-none disabled:opacity-50")}
             disabled={isCreating}
             onClick={() => void createSelectOption()}
             type="button"
@@ -332,7 +334,7 @@ export function DatabasePropertySelect({
   return (
     <Popover open={isOpen} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{customTrigger ?? trigger}</PopoverTrigger>
-      <PopoverContent align="start" className="w-72 gap-1 p-1" sideOffset={0}>
+      <PopoverContent align="start" variant="menu">
         {panel}
       </PopoverContent>
     </Popover>
