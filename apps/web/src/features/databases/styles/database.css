@@ -944,7 +944,11 @@
     padding-left: var(--database-inline-scroll-offset, 0px);
   }
 
-  .database-table-wrap[data-inline-scroll="true"] .database-table,
+  .database-table-wrap[data-inline-scroll="true"] .database-table {
+    width: var(--database-table-min-width, max-content);
+    min-width: var(--database-table-min-width, max-content);
+  }
+
   .database-table-wrap[data-inline-scroll="true"] .database-page-create-row {
     width: var(--database-inline-scroll-view-width, 100%);
     min-width: var(--database-inline-scroll-view-width, 100%);

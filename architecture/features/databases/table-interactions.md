@@ -35,3 +35,7 @@ The controller consumes existing editability and structural-editing gates; serve
 See [views and properties](views-and-properties.md) and the [database overview](README.md).
 
 Header rendering keeps separate name-column and property-column menus while sharing insertion positions and drag labels. Row rendering separates name cells from property cells; grouped sections retain their own creation footer. Drop handling resolves the target first, then distinguishes moving an existing row from inserting a dragged page. Sorted moves retain their confirmation step, and drag cleanup follows either operation. These render helpers stay local to the table; they do not introduce component identities or move controller state.
+
+Table elements use the sum of their column widths for both width and minimum width, rather than stretching to the pane width. Opening or resizing a page side pane changes the horizontal scroll viewport without redistributing column widths; manual column resizing still updates that sum. This applies to body and sticky-header tables through the shared database table styles.
+
+Inline-database table sizing also uses the column-width sum, independent of the expanding inline scroll canvas. Generic editor table width rules exclude `.database-table` so embedded and full-page databases share this sizing behavior.

@@ -7,7 +7,7 @@
 
 
 
-  .tiptap-editor table {
+  .tiptap-editor table:not(.database-table) {
     @apply w-full table-fixed border-collapse overflow-hidden;
     min-width: max(100%, var(--table-min-width, 100%));
   }

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react"
+import { useId, useMemo, useRef, useState, type ReactNode, type RefObject } from "react"
 import { Check, ChevronRight, HelpCircle } from "@/shared/components/icons"
 import type { DateRange } from "react-day-picker"
 
@@ -51,6 +51,7 @@ export function DatabasePropertyDate({
   trigger,
   value,
 }: DatabasePropertyDateProps) {
+  const startDateInputRef = useRef<HTMLInputElement | null>(null)
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const [isRange, setIsRange] = useState(Array.isArray(value) && value.length > 1)
   const [draftStartValue, setDraftStartValue] = useState(getStartValue(value))
@@ -181,13 +182,40 @@ export function DatabasePropertyDate({
           </button>
         )}
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-72 gap-1 p-1" sideOffset={0}>
-        <div
-          className={
-            hasTime ? "grid grid-cols-2 gap-1 px-2 pt-1" : "grid gap-1 px-2 pt-1"
-          }
-        >
+      <PopoverContent
+        align="start"
+        className="w-72 gap-1 p-1"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault()
+          const input = startDateInputRef.current
+          input?.focus({ preventScroll: true })
+          input?.setSelectionRange(input.value.length, input.value.length)
+        }}
+        sideOffset={0}
+      >
+        <div className="grid gap-1 px-2 pt-1">
           <DateInput
+            inputRef={startDateInputRef}
+            action={
+              <Button
+                className="h-auto shrink-0 self-stretch active:not-aria-[haspopup]:translate-y-0"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  const today = new Date()
+
+                  commitDate(
+                    today,
+                    isRange,
+                    hasTime ? getTimeValueFromDate(today) : ""
+                  )
+                }}
+                size="xs"
+                type="button"
+                variant="secondary"
+              >
+                Today
+              </Button>
+            }
             fieldLabel={isRange ? "Start date" : "Date"}
             label={`${label} start date`}
             onCommit={(nextValue) => {
@@ -261,24 +289,6 @@ export function DatabasePropertyDate({
           ) : null}
         </div>
         <div className="relative px-2 [--cell-size:calc((18rem-1.5rem)/7)]">
-          <Button
-            className="absolute top-[calc((var(--cell-size)-1.5rem)/2+0.25rem)] right-11 z-10 h-6 active:not-aria-[haspopup]:translate-y-0"
-            onClick={(event) => {
-              event.stopPropagation()
-              const today = new Date()
-
-              commitDate(
-                today,
-                isRange,
-                hasTime ? getTimeValueFromDate(today) : ""
-              )
-            }}
-            size="xs"
-            type="button"
-            variant="secondary"
-          >
-            Today
-          </Button>
           {isRange ? (
             <DateCalendar
               className="w-full py-1"
@@ -381,6 +391,7 @@ function getDateConfigWithFormat(
 
 function DateInput({
   action,
+  inputRef,
   fieldLabel,
   label,
   onCommit,
@@ -389,6 +400,7 @@ function DateInput({
   value,
 }: {
   action?: ReactNode
+  inputRef?: RefObject<HTMLInputElement | null>
   fieldLabel: string
   label: string
   onCommit: (value: string) => void
@@ -396,13 +408,16 @@ function DateInput({
   placeholder: string
   value: string
 }) {
+  const id = useId()
   return (
-    <label className="grid gap-1 text-xs font-medium text-content-secondary">
-      <span className="px-1">{fieldLabel}</span>
-      <span className="relative">
+    <div className="grid gap-1 text-xs font-medium text-content-secondary">
+      <label className="px-1" htmlFor={id}>{fieldLabel}</label>
+      <div className="flex items-stretch gap-1">
         <Input
           aria-label={label}
-          className={action ? "pr-16" : undefined}
+          id={id}
+          ref={inputRef}
+          className="text-content-primary selection:bg-selection-editor selection:text-content-primary"
           onBlur={() => onCommit(value)}
           onChange={(event) => onValueChange(event.target.value)}
           onKeyDown={(event) => {
@@ -416,8 +431,8 @@ function DateInput({
           value={value}
         />
         {action}
-      </span>
-    </label>
+      </div>
+    </div>
   )
 }
 
@@ -439,7 +454,7 @@ function TimeInput({
       <span className="px-1">{fieldLabel}</span>
       <Input
         aria-label={label}
-        className="[&::-webkit-calendar-picker-indicator]:hidden"
+        className="text-content-primary selection:bg-selection-editor selection:text-content-primary [&::-webkit-calendar-picker-indicator]:hidden"
         onBlur={() => onCommit(value)}
         onChange={(event) => onValueChange(event.target.value)}
         onKeyDown={(event) => {

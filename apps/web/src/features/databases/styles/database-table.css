@@ -2,9 +2,10 @@
 
 @layer components {
   .database-table {
-    @apply w-full table-fixed border-collapse overflow-hidden;
+    @apply table-fixed border-collapse overflow-hidden;
     --database-selection-color: var(--zb-color-action-background-selected);
-    min-width: max(100%, var(--database-table-min-width, 100%));
+    width: var(--database-table-min-width, max-content);
+    min-width: var(--database-table-min-width, max-content);
   }
 
   .tiptap-editor .database-table th,
