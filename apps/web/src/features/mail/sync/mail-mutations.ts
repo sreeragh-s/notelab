@@ -27,7 +27,7 @@ export async function runMailThreadMutation(input: {
 }) {
   let snapshot: MailMutationSnapshot | null = null;
   try {
-    snapshot = await optimisticallyModifyThread(
+    if (await input.database.threads.get(input.threadId)) snapshot = await optimisticallyModifyThread(
       input.database,
       input.threadId,
       input.modification,

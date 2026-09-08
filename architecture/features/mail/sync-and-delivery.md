@@ -48,3 +48,5 @@ retry delays suppress further requests; revoked authorization refreshes connecti
 state. Connection responses expose additive `pushAvailable` capability.
 
 Expired history recovery queues cached threads outside the returned folder page for explicit reconciliation; absence in that page is not deletion evidence. Full thread snapshots remove messages no longer present. Initial sync captures its history watermark before listing, preventing changes during listing from being skipped. Ordinary incremental requests no longer enumerate every cached ID.
+
+Cached mailbox reads use an ordered cursor with a bounded result window; offline views page through that cache. Indexed rows seed missing thread summaries so actions work before a body is opened. Every mutation schedules index/list reconciliation, including partial failures. HTML-only drafts and forwards convert their complete body to text for the existing plain-text composer.

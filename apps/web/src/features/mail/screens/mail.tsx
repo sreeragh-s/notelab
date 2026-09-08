@@ -199,7 +199,6 @@ function MailboxController({ connection, userId }: { connection: MailConnection;
     return [...unique.values()]
   }, [indexedMailQuery.data?.pages])
   const customValuesByThread = useMemo(() => new Map(indexedItems.map((indexed) => [indexed.thread.id, indexed.customValues])), [indexedItems])
-  const visibleThreads = indexedThreads
   useEffect(() => {
     if (!persistedViewsQuery.isSuccess || !inboxView) return
     if (activePersistedView || activeSystemFolder) return
@@ -235,6 +234,17 @@ function MailboxController({ connection, userId }: { connection: MailConnection;
     userId,
     view: providerView,
   })
+  const visibleThreads = controller.online ? indexedThreads : controller.threads
+  useEffect(() => {
+    const database = controller.database
+    if (!database || !indexedMailQuery.data) return
+    const threads = indexedMailQuery.data.pages.flatMap((page) => page.threads.map((item) => item.thread))
+    void database.transaction("rw", database.threads, async () => {
+      const existing = await database.threads.bulkGet(threads.map((thread) => thread.id))
+      const missing = threads.filter((_thread, index) => !existing[index])
+      if (missing.length) await database.threads.bulkPut(missing)
+    }).catch(showMailError)
+  }, [controller.database, indexedMailQuery.data])
   useMailRealtime({
     bindingId: connection.bindingId ?? connection.connectionId!,
     connectionId: connection.connectionId!,
@@ -613,7 +623,7 @@ function MailboxController({ connection, userId }: { connection: MailConnection;
                         customValuesByThread={customValuesByThread}
                         fetchingNextPage={indexedMailQuery.isFetchingNextPage}
                         groupedThreads={groupedThreads}
-                        hasNextPage={indexedMailQuery.hasNextPage}
+                        hasNextPage={controller.online ? indexedMailQuery.hasNextPage : controller.hasMore}
                         hoverActions={activePersistedView?.config.hoverActions}
                         labels={controller.labels}
                         loading={indexedMailQuery.isLoading}
@@ -622,7 +632,7 @@ function MailboxController({ connection, userId }: { connection: MailConnection;
                         onBatchSelectionChange={setBatchSelection}
                         onCollapsedGroupsChange={setCollapsedGroups}
                         onHoverAction={runHoverAction}
-                        onLoadMore={() => void indexedMailQuery.fetchNextPage()}
+                        onLoadMore={() => { if (controller.online) void indexedMailQuery.fetchNextPage(); else void controller.loadMore() }}
                         onModifyThread={controller.modifyThread}
                         onMoveThreadToGroup={moveThreadToGroup}
                         onOpenThread={(id) => void openMailboxThread(id)}

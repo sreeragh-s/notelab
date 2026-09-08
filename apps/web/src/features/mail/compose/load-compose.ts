@@ -4,6 +4,12 @@ import { desktopNetworkFetch } from "@/platform/network"
 import { draftSeed, type MailComposeSeed } from "./mail-compose"
 
 export async function loadComposeAttachments(seed: MailComposeSeed, workspaceId?: string | null): Promise<MailComposeSeed> {
+  if (seed.sourceHtml) {
+    const document = new DOMParser().parseFromString(seed.sourceHtml, "text/html")
+    document.querySelectorAll("script,style,noscript").forEach((element) => element.remove())
+    document.querySelectorAll("br,p,div,li,tr").forEach((element) => element.append("\n"))
+    seed = { ...seed, bodyText: (seed.bodyText ?? "") + (document.body.textContent ?? ""), sourceHtml: undefined }
+  }
   const attachments = [...(seed.attachments ?? [])]
   let total = attachments.reduce((sum, item) => sum + item.contentBase64.length * 3 / 4, 0)
   for (const reference of seed.attachmentReferences ?? []) {

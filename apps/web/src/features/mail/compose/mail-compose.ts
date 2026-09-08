@@ -7,6 +7,7 @@ export type MailComposeSeed = {
   attachmentReferences?: MailAttachmentMetadata[]
   bcc?: MailAddress[]
   bodyText?: string
+  sourceHtml?: string
   cc?: MailAddress[]
   inReplyTo?: string
   references?: string[]
@@ -51,8 +52,9 @@ export function replySeed(message: MailMessageRecord, ownEmail: string, replyAll
 export function forwardSeed(message: MailMessageRecord): MailComposeSeed {
   const sender = message.from?.name || message.from?.address || "Unknown sender"
   return {
+    sourceHtml: message.bodyText ? undefined : message.bodyHtml ?? undefined,
     attachmentReferences: (message.attachments ?? []).filter((attachment) => !attachment.inline),
-    bodyText: `\n\n---------- Forwarded message ----------\nFrom: ${sender}\nDate: ${message.date ?? new Date(message.internalDate).toLocaleString()}\nSubject: ${message.subject}\nTo: ${formatComposerAddresses(message.to)}\n\n${message.bodyText || message.snippet}`,
+    bodyText: `\n\n---------- Forwarded message ----------\nFrom: ${sender}\nDate: ${message.date ?? new Date(message.internalDate).toLocaleString()}\nSubject: ${message.subject}\nTo: ${formatComposerAddresses(message.to)}\n\n${message.bodyText || (message.bodyHtml ? "" : message.snippet)}`,
     subject: /^(fwd?|fw):/i.test(message.subject) ? message.subject : `Fwd: ${message.subject}`,
   }
 }
@@ -76,7 +78,7 @@ export function draftSeed(message: MailMessageRecord, draftId: string): MailComp
   return {
     draftId, clientOperationId: operation,
     to: message.to, cc: message.cc, bcc: message.bcc,
-    subject: message.subject, bodyText: message.bodyText ?? message.snippet,
+    subject: message.subject, bodyText: message.bodyText ?? "", sourceHtml: message.bodyText ? undefined : message.bodyHtml ?? undefined,
     threadId: message.threadId,
     inReplyTo: message.inReplyTo ?? undefined, references: message.references,
     attachmentReferences: message.attachments,
