@@ -78,3 +78,23 @@ test.skipIf(!enabled)("sync advances only final checkpoints and range cursors is
   const final = await runWithDb(database!, () => readCalendarRange({ ...input, revision: 9, pageToken: first.nextPageToken! }, ranges));
   expect(final.complete).toBe(true); expect(final.revision).toBe(1);
 });
+
+import { mutateCalendarEvent, reconcileCalendarOperation } from "./events/mutations";
+test.skipIf(!enabled)("creates deduplicate and uncertain delivery reconciles without replay", async () => {
+  const [binding] = (await database!.select().from(schema.calendarBinding)).filter(row => row.accountId === secondAccount);
+  const store = new Map(); let sends = 0, uncertain = false;
+  const gateway = new CalendarGateway("fixture", async (url, options) => {
+    if (options?.method === "POST") { sends++; const body = JSON.parse(String(options.body)); const event = { ...body, etag: "v1" }; store.set(body.id, event); if (uncertain) throw new TypeError("lost response"); return Response.json(event) }
+    const row = store.get(new URL(String(url)).pathname.split("/").at(-1)); return row ? Response.json(row) : Response.json({}, { status: 404 });
+  });
+  const input = { userId, workspaceId, bindingId: binding!.id, calendarId: "primary", action: "create" as const, write: { operationId: randomUUID(), sendUpdates: "all" as const, event: { title: "Fixture event", start: { date: "2026-09-09" }, end: { date: "2026-09-10" } } } };
+  const first = await runWithDb(database!, () => mutateCalendarEvent({}, input, gateway));
+  expect(first.status).toBe("succeeded");
+  expect(await runWithDb(database!, () => mutateCalendarEvent({}, input, gateway))).toEqual(first); expect(sends).toBe(1);
+  await expect(runWithDb(database!, () => mutateCalendarEvent({}, { ...input, write: { ...input.write, event: { ...input.write.event, title: "Changed" } } }, gateway))).rejects.toThrow("operation_identity_conflict");
+  uncertain = true; const next = { ...input, write: { ...input.write, operationId: randomUUID() } };
+  expect((await runWithDb(database!, () => mutateCalendarEvent({}, next, gateway))).status).toBe("ambiguous");
+  expect((await runWithDb(database!, () => reconcileCalendarOperation({}, { userId, workspaceId, operationId: next.write.operationId }, gateway)))?.status).toBe("succeeded"); expect(sends).toBe(2);
+  const conflict = { ...input, action: "update" as const, eventId: first.event!.eventId, write: { ...input.write, operationId: randomUUID(), etag: "old" } };
+  await expect(runWithDb(database!, () => mutateCalendarEvent({}, conflict, gateway))).rejects.toThrow("event_changed"); expect(sends).toBe(2);
+});

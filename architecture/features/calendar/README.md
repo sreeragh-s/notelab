@@ -37,3 +37,7 @@ The lazy `/calendar` screen uses the existing workspace shell and shared control
 ## Views and time
 
 The Calendar schedule composes account cache subscriptions into day/week grids, month cells and an agenda. Date/view and scoped event selection live in route search parameters. Event details render provider descriptions as text. [Time utilities](../../../packages/features/src/calendar/time.ts) use Temporal for IANA conversion, reject ambiguous/nonexistent input unless explicitly disambiguated, and preserve date-only all-day values. Overlap intervals are end-exclusive.
+
+## Event writes
+
+[Mutation services](../../../apps/server/src/features/calendar/events/mutations.ts) reserve request-hashed operation receipts before provider calls. Creates use deterministic provider IDs; existing events require matching ETags. Provider failures distinguish definite rejection from uncertain delivery. Status lookup reconciles private operation markers or confirmed deletion without replaying writes. Permission checks and account ownership precede delivery. Successful receipts and revision invalidations commit together.

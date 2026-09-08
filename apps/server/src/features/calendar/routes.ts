@@ -1,3 +1,4 @@
+import { calendarEventRoutes } from "./events/routes";
 import { calendarSyncRoutes } from "./sync/routes";
 import { calendarPreferenceRoutes } from "./preferences";
 import { Hono } from "hono";
@@ -68,3 +69,5 @@ calendarProviderRoutes.get("/oauth/google/callback", async c => {
 calendarRoutes.route("/", calendarPreferenceRoutes);
 
 calendarRoutes.route("/", calendarSyncRoutes);
+
+calendarRoutes.route("/", calendarEventRoutes);
