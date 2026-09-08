@@ -1,3 +1,6 @@
+import { useQueryClient } from "@tanstack/react-query"
+import { invalidateMailListQueries, mailKeys } from "@zilobase/features/mail"
+import { runMailSyncOnce } from "./sync-queue"
 import { synchronizeMailCache } from "./mail-cache-sync"
 import { isDefiniteMailMutationFailure, runMailThreadMutation, runMailMessageMutation } from "./mail-mutations"
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
@@ -24,6 +27,11 @@ export function useMailController(input: {
   userId: string
   view: MailView
 }) {
+  const queryClient = useQueryClient()
+  const retryAt = useRef(0)
+  const revoked = useRef(false)
+  const latestScope = useRef("")
+  latestScope.current = `${input.connection.bindingId}:${input.view}:${input.query}`
   const mailBasePath = mailApiBasePath(input.connection.workspaceId)
   const [database, setDatabase] = useState<MailDatabase | null>(null)
   const [syncing, setSyncing] = useState(false)
@@ -87,19 +95,36 @@ export function useMailController(input: {
 
   const runSync = useCallback(async (options: { loadMore?: boolean; search?: string } = {}) => {
     if (!database || !input.connection.connectionId || !online) return null
+    if (revoked.current || Date.now() < retryAt.current) return null
+    const scope = latestScope.current
     setSyncing(true)
     setError(null)
     try {
-      const { response, isSearch } = await synchronizeMailCache({ database, mailBasePath, connectionId: input.connection.connectionId, view: input.view }, apiFetch, options)
-      setSearchResultIds(isSearch ? response.threads.map((thread) => thread.id) : null)
+      const { response, isSearch } = await runMailSyncOnce(database.name, JSON.stringify([input.view, options]), async () => {
+        const result = await synchronizeMailCache({ database, mailBasePath, connectionId: input.connection.connectionId!, view: input.view }, apiFetch, options)
+        if (!result.isSearch) {
+          await apiFetch(`${mailBasePath}/index/advance`, { method: "POST" })
+          await invalidateMailListQueries(queryClient, { bindingId: input.connection.bindingId, workspaceId: input.connection.workspaceId })
+        }
+        return result
+      })
+      if (latestScope.current === scope) setSearchResultIds(isSearch ? response.threads.map((thread) => thread.id) : null)
       return response
     } catch (syncError) {
-      setError(syncError)
+      if (syncError instanceof ApiError) {
+        const body = syncError.body as { retryAfterMs?: number; code?: string } | null
+        if (body?.retryAfterMs) retryAt.current = Date.now() + body.retryAfterMs
+        if (body?.code === "authorization_revoked") {
+          revoked.current = true
+          void queryClient.invalidateQueries({ queryKey: mailKeys.connection(input.connection.workspaceId) })
+        }
+      }
+      if (latestScope.current === scope) setError(syncError)
       return null
     } finally {
-      setSyncing(false)
+      if (latestScope.current === scope) setSyncing(false)
     }
-  }, [database, input.connection.connectionId, input.view, online])
+  }, [database, input.connection.connectionId, input.connection.bindingId, input.connection.workspaceId, input.view, online, queryClient])
 
   useEffect(() => {
     if (!database || !online) return

@@ -49,7 +49,7 @@ export async function requireOwnedConnection(c: Context<AppBindings>) {
     .limit(1)
   if (!owned) return c.json({ message: "Connect Gmail to continue." }, 409)
   if (owned.connection.status !== "connected") {
-    return c.json({ message: "Reconnect Gmail to continue." }, 409)
+    return c.json({ message: "Reconnect Gmail to continue.", code: "authorization_revoked" }, 409)
   }
   return {
     bindingId: owned.bindingId,
@@ -116,7 +116,7 @@ export async function runMailOperation(
       ? error.status
       : 500
     return c.json(
-      { message: error instanceof Error ? error.message : "The Gmail operation failed." },
+      { message: error instanceof Error ? error.message : "The Gmail operation failed.", ...(error instanceof GmailApiError ? { code: error.code, retryAfterMs: error.retryAfterMs } : {}) },
       statusCode(status),
     )
   }

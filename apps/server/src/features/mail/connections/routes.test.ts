@@ -107,6 +107,7 @@ test("mail connection status preserves auth, membership and disconnected default
     mailboxReady: false,
     mailboxRevision: 0,
     providerConfigured: true,
+    pushAvailable: false,
     status: "disconnected",
     watchExpiresAt: null,
     workspaceId: "workspace",

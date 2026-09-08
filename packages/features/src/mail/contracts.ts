@@ -83,6 +83,7 @@ export type MailConnection = {
   mailboxReady: boolean
   mailboxRevision: number
   providerConfigured: boolean
+  pushAvailable?: boolean
   status: MailConnectionStatus
   watchExpiresAt: string | null
   workspaceId?: string | null

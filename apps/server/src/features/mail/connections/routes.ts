@@ -46,6 +46,7 @@ mailConnectionRoutes.get("/connection", async (c) => {
     mailboxReady: Boolean(result),
     mailboxRevision: result?.account.mailboxRevision ?? 0,
     providerConfigured: gmailProviderConfigured(c.env),
+    pushAvailable: Boolean(result?.account.watchExpiresAt && result.account.watchExpiresAt.getTime() > Date.now()),
     status: result?.account.status ?? "disconnected",
     watchExpiresAt: result?.account.watchExpiresAt?.toISOString() ?? null,
     workspaceId,

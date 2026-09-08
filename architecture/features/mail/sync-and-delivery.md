@@ -37,3 +37,14 @@ removes at most 500 expired terminal receipts per sweep; uncertain receipts rema
 Reply seeds exclude the connected sender and preserve the last 100 threading references. Composer addresses round-trip quoted display names. Forwarding includes ordinary attachments, resolved in transient memory before opening the unchanged composer; Bcc is never copied into a reply or forward.
 
 The provider hydrates external text/HTML body parts before full-message normalization, respects MIME charsets, and decodes encoded headers. Embedded file parts use transient part-path download identifiers; body parts are not classified as attachments, and incomplete bodies are not marked fully cached.
+
+Visible online clients recover every 60 seconds without push and every five
+minutes with an active push watch/socket, with jitter and failure backoff.
+Recovery shares the revision lock across tabs. A per-cache queue coalesces equal
+requests and serializes views; late responses cannot replace active search state.
+Successful sync advances the server index and invalidates indexed list queries.
+Search/page snapshots cannot advance an existing history checkpoint. Provider
+retry delays suppress further requests; revoked authorization refreshes connection
+state. Connection responses expose additive `pushAvailable` capability.
+
+Expired history recovery queues cached threads outside the returned folder page for explicit reconciliation; absence in that page is not deletion evidence. Full thread snapshots remove messages no longer present. Initial sync captures its history watermark before listing, preventing changes during listing from being skipped. Ordinary incremental requests no longer enumerate every cached ID.

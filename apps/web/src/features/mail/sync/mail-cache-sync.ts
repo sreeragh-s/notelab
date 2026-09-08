@@ -32,20 +32,13 @@ export async function synchronizeMailCache(
     state,
     options,
   );
-  if (syncRequest.historyId) {
-    const [messages, threads] = await Promise.all([
-      database.messages.toCollection().primaryKeys(),
-      database.threads.toCollection().primaryKeys(),
-    ]);
-    syncRequest.knownMessageIds = messages.map(String);
-    syncRequest.knownThreadIds = threads.map(String);
-  }
   const response = await request<MailSyncResponse>(`${mailBasePath}/sync`, {
     body: JSON.stringify(syncRequest),
     method: "POST",
   });
   await applyMailSyncResponse(database, response, view, {
     markViewLoaded: !isSearch,
+    advanceHistory: !isSearch && (Boolean(syncRequest.historyId) || !state?.historyId),
   });
   return { response, isSearch };
 }

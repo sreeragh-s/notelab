@@ -239,6 +239,7 @@ function MailboxController({ connection, userId }: { connection: MailConnection;
     bindingId: connection.bindingId ?? connection.connectionId!,
     connectionId: connection.connectionId!,
     enabled: controller.online && Boolean(controller.database),
+    pushAvailable: connection.pushAvailable,
     onSynchronize: controller.refresh,
     workspaceId: connection.workspaceId!,
   })
