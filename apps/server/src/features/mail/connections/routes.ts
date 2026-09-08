@@ -1,6 +1,6 @@
 import { gmailChatReturnPath } from "../provider/google-oauth";
 import { mcpOAuthReturnUrl } from "../../ai/mcp/connections/oauth-return";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { db, runWithDbEnv } from "../../../infrastructure/database";
 import { gmailAccount, gmailWorkspaceConnection } from "../../../infrastructure/database/schema";
@@ -140,7 +140,9 @@ mailConnectionRoutes.delete("/connection", async (c) => {
   const workspaceId = workspaceIdFromContext(c)!
   const membership = await requireWorkspaceMember(c, workspaceId, user.id)
   if (membership instanceof Response) return membership
-  const [binding] = await db
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${user.id}, 0))`)
+  const [binding] = await tx
     .select({ account: gmailAccount, binding: gmailWorkspaceConnection })
     .from(gmailWorkspaceConnection)
     .innerJoin(
@@ -159,10 +161,10 @@ mailConnectionRoutes.delete("/connection", async (c) => {
       reason: "The automation owner's Gmail account was disconnected",
       workspaceId,
     })
-    await db
+    await tx
       .delete(gmailWorkspaceConnection)
       .where(eq(gmailWorkspaceConnection.id, binding.binding.id))
-    const [remaining] = await db
+    const [remaining] = await tx
       .select({ value: count() })
       .from(gmailWorkspaceConnection)
       .where(eq(gmailWorkspaceConnection.gmailAccountId, binding.account.id))
@@ -174,9 +176,10 @@ mailConnectionRoutes.delete("/connection", async (c) => {
       }
       await revokeGmailConnection(c.env, binding.account)
       clearGmailAccessTokenCache(binding.account.id)
-      await db.delete(gmailAccount).where(eq(gmailAccount.id, binding.account.id))
+      await tx.delete(gmailAccount).where(eq(gmailAccount.id, binding.account.id))
     }
   }
+  })
   return c.json({ success: true })
 })
 

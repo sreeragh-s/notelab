@@ -23,3 +23,5 @@ Server [mailbox synchronization](../../../apps/server/src/features/mail/sync/mai
 The [send tests](../../../apps/server/src/features/mail/compose/mail-compose.test.ts) cover stable-ID deduplication, draft delivery, cross-user/account rejection, fresh versus stale pending receipts, ambiguous recovery and definite provider failure/retry. [Cache recovery tests](../../../apps/web/test/features/mail/mail-mutation-recovery.test.mjs) use real Dexie operations with fake IndexedDB and a controlled transport to cover rollback/reconciliation and cursor/search behavior. They do not prove real provider delivery or PostgreSQL claim contention.
 
 [Mail overview](README.md).
+
+OAuth account credential upsert and workspace binding commit in one transaction. OAuth completion and disconnect serialize per Zilobase user using a PostgreSQL transaction advisory lock, so a concurrent binding cannot race last-binding revocation. Credential ciphertext repaired after an upsert conflict is never visible before commit.

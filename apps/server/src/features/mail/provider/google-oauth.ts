@@ -1,6 +1,6 @@
 import { sha256Hex } from "../../../shared/crypto/sha256";
 import { safeAgentReturnPath } from "../../ai/mcp/connections/oauth-return";
-import { and, eq, gt, isNull } from "drizzle-orm"
+import { and, eq, gt, isNull, sql } from "drizzle-orm"
 
 import { db, runWithDbEnv } from "../../../infrastructure/database"
 import {
@@ -171,6 +171,7 @@ async function completeGmailOauthWithDatabase(
     throw new GmailOauthError("Google did not return reusable Gmail access.", 400)
   }
 
+  const refreshToken = tokens.refresh_token
   const [identity, profile] = await Promise.all([
     verifyGoogleIdToken(
       tokens.id_token,
@@ -183,7 +184,9 @@ async function completeGmailOauthWithDatabase(
     throw new GmailOauthError("Google returned inconsistent Gmail account details.", 400)
   }
 
-  const [existingAccount] = await db
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${attempt.userId}, 0))`)
+  const [existingAccount] = await tx
     .select({ id: gmailAccount.id })
     .from(gmailAccount)
     .where(and(
@@ -192,13 +195,13 @@ async function completeGmailOauthWithDatabase(
     ))
     .limit(1)
   const connectionId = existingAccount?.id ?? crypto.randomUUID()
-  let encrypted = await encryptMailSecret(env, tokens.refresh_token, {
+  let encrypted = await encryptMailSecret(env, refreshToken, {
     connectionId,
     purpose: "refresh_token",
     userId: attempt.userId,
   })
   const now = new Date()
-  const [account] = await db
+  const [account] = await tx
     .insert(gmailAccount)
     .values({
       id: connectionId,
@@ -233,12 +236,12 @@ async function completeGmailOauthWithDatabase(
     .returning({ id: gmailAccount.id })
   if (!account) throw new GmailOauthError("The Gmail account could not be saved.", 500)
   if (account.id !== connectionId) {
-    encrypted = await encryptMailSecret(env, tokens.refresh_token, {
+    encrypted = await encryptMailSecret(env, refreshToken, {
       connectionId: account.id,
       purpose: "refresh_token",
       userId: attempt.userId,
     })
-    await db
+    await tx
       .update(gmailAccount)
       .set({
         refreshTokenCiphertext: encrypted.ciphertext,
@@ -249,11 +252,11 @@ async function completeGmailOauthWithDatabase(
       .where(eq(gmailAccount.id, account.id))
   }
 
-  await db
+  await tx
     .insert(gmailWorkspaceConnection)
     .values({
       id: crypto.randomUUID(),
-      workspaceId: attempt.workspaceId,
+      workspaceId: attempt.workspaceId!,
       userId: attempt.userId,
       gmailAccountId: account.id,
       createdAt: now,
@@ -270,8 +273,9 @@ async function completeGmailOauthWithDatabase(
     clientKind: attempt.clientKind as OAuthClientKind,
     returnTo: safeAgentReturnPath(attempt.returnPath),
     connectionId: account.id,
-    workspaceId: attempt.workspaceId,
+    workspaceId: attempt.workspaceId!,
   }
+  })
 }
 
 export function hasRequiredGmailScopes(scopes: ReadonlySet<string>) {
