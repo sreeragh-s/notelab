@@ -1,6 +1,10 @@
-import type { MailAddress, MailMessageRecord } from "@zilobase/features/mail"
+import type { MailAddress, MailMessageRecord, MailComposeAttachment, MailAttachmentMetadata } from "@zilobase/features/mail"
 
 export type MailComposeSeed = {
+  draftId?: string
+  clientOperationId?: string
+  attachments?: MailComposeAttachment[]
+  attachmentReferences?: MailAttachmentMetadata[]
   bcc?: MailAddress[]
   bodyText?: string
   cc?: MailAddress[]
@@ -60,4 +64,16 @@ function dedupe(addresses: MailAddress[]) {
     seen.add(key)
     return true
   })
+}
+
+export function draftSeed(message: MailMessageRecord, draftId: string): MailComposeSeed {
+  const operation = /^<zilobase\.([A-Za-z0-9_-]{8,128})@/.exec(message.messageIdHeader ?? "")?.[1]
+  return {
+    draftId, clientOperationId: operation,
+    to: message.to, cc: message.cc, bcc: message.bcc,
+    subject: message.subject, bodyText: message.bodyText ?? message.snippet,
+    threadId: message.threadId,
+    inReplyTo: message.inReplyTo ?? undefined, references: message.references,
+    attachmentReferences: message.attachments,
+  }
 }

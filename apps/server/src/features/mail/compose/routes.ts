@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { AppBindings } from "../../../shared/types";
 import { readJsonBody } from "../../../shared/http/request";
 import { GmailApiError } from "../provider/gmail-gateway";
-import { createGmailDraft, sendGmailComposition, updateGmailDraft } from "./mail-compose";
+import { normalizeDraft, createGmailDraft, sendGmailComposition, updateGmailDraft } from "./mail-compose";
 import { normalizeGmailLabels, normalizeGmailMessage, normalizeGmailThread } from "../provider/mail-normalize";
 import { requireOwnedConnection, runMailOperation, safeGmailId, parseCompose, safeUserLabelId, parseMailActionRequest, parseMailBatchModifyRequest, parseMailLabelWriteRequest, parseMailModifyRequest } from "../route-support";
 
@@ -167,6 +167,26 @@ mailMessageRoutes.post("/messages/:messageId/action", async (c) => {
     else await gateway.untrashMessage(messageId)
     return c.json({ message: normalizeGmailMessage(await gateway.getMessage(messageId, "metadata"), false) })
   })
+})
+
+mailMessageRoutes.get("/drafts", async (c) => {
+  const owned = await requireOwnedConnection(c)
+  if (owned instanceof Response) return owned
+  const pageToken = c.req.query("pageToken")
+  if (pageToken && pageToken.length > 2048) return c.json({ message: "Invalid draft cursor." }, 400)
+  return runMailOperation(c, owned.userId, owned.connection, async (gateway) =>
+    c.json(await gateway.listDrafts(pageToken)),
+  )
+})
+
+mailMessageRoutes.get("/drafts/:draftId", async (c) => {
+  const owned = await requireOwnedConnection(c)
+  if (owned instanceof Response) return owned
+  const draftId = safeGmailId(c.req.param("draftId"))
+  if (!draftId) return c.json({ message: "A valid Gmail draft ID is required." }, 400)
+  return runMailOperation(c, owned.userId, owned.connection, async (gateway) =>
+    c.json(normalizeDraft(await gateway.getDraft(draftId))),
+  )
 })
 
 mailMessageRoutes.post("/drafts", async (c) => {

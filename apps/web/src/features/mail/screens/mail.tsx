@@ -54,6 +54,7 @@ import {
 } from "@/features/pages/pane/page-side-pane";
 
 import { MailLabelMenu, showMailError } from "../messages/mail-actions"
+import { loadComposeAttachments, loadDraftForThread } from "../compose/load-compose"
 import { MailComposer } from "../compose/mail-composer"
 import {
   ConversationBody,
@@ -249,6 +250,17 @@ function MailboxController({ connection, userId }: { connection: MailConnection;
     if (!indexedMailQuery.error) return
     toast.error(getApiErrorMessage(indexedMailQuery.error), { id: "mail-index-query-error" })
   }, [indexedMailQuery.error])
+  const beginCompose = async (seed: MailComposeSeed) => {
+    if (composerSeed) { toast.info("Finish or close the current draft first."); return }
+    try { setComposerSeed(await loadComposeAttachments(seed, connection.workspaceId)) }
+    catch (error) { showMailError(error) }
+  }
+  const openMailboxThread = async (threadId: string) => {
+    if (providerView !== "drafts" || !controller.online) { setSelection(threadId); return }
+    if (composerSeed) { toast.info("Finish or close the current draft first."); return }
+    try { setComposerSeed(await loadDraftForThread(threadId, connection.workspaceId)) }
+    catch (error) { showMailError(error) }
+  }
   const displayedThreads = visibleThreads
   const selectedThread = displayedThreads.find((thread) => thread.id === selection) ?? null
   const selectedMessages = useLiveQuery(
@@ -478,7 +490,7 @@ function MailboxController({ connection, userId }: { connection: MailConnection;
     onDownload: controller.downloadAttachment,
     onLoadInlineAttachment: controller.loadInlineAttachment,
     onModeChange: setPresentation,
-    onCompose: setComposerSeed,
+    onCompose: (seed: MailComposeSeed) => { void beginCompose(seed) },
     onModifyMessage: controller.modifyMessage,
     onModifyThread: controller.modifyThread,
     onNext: () => nextId && setSelection(nextId),
@@ -612,7 +624,7 @@ function MailboxController({ connection, userId }: { connection: MailConnection;
                         onLoadMore={() => void indexedMailQuery.fetchNextPage()}
                         onModifyThread={controller.modifyThread}
                         onMoveThreadToGroup={moveThreadToGroup}
-                        onOpenThread={setSelection}
+                        onOpenThread={(id) => void openMailboxThread(id)}
                         onPrefetchThread={(threadId) => void controller.prefetchThread(threadId)}
                         online={controller.online}
                         propertyMembers={propertyMembers}
@@ -675,6 +687,7 @@ function MailboxController({ connection, userId }: { connection: MailConnection;
       {composerSeed ? (
         <MailComposer
           onClose={() => setComposerSeed(null)}
+          onDraftChanged={async () => { await controller.refresh(); await indexedMailQuery.refetch() }}
           onSent={async (_response: MailSendResponse) => { await controller.refresh() }}
           online={controller.online}
           seed={composerSeed}

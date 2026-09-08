@@ -82,7 +82,7 @@ async function requireDraft(gateway: GmailGateway, draft: GmailDraft, fallbackId
   return draft.message?.payload ? { ...draft, id } : gateway.getDraft(id)
 }
 
-function normalizeDraft(draft: GmailDraft): MailDraftResponse {
+export function normalizeDraft(draft: GmailDraft): MailDraftResponse {
   if (!draft.id || !draft.message) throw new GmailApiError("Gmail returned an invalid draft.", 502, "provider_error")
   return {
     draftId: draft.id,

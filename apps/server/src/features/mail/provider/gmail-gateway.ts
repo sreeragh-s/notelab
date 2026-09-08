@@ -299,6 +299,12 @@ export class GmailGateway {
     )
   }
 
+  listDrafts(pageToken?: string) {
+    const query = new URLSearchParams({ maxResults: "100" })
+    if (pageToken) query.set("pageToken", pageToken)
+    return this.json<{ drafts?: GmailDraft[]; nextPageToken?: string }>(`/gmail/v1/users/me/drafts?${query}`)
+  }
+
   getDraft(draftId: string) {
     return this.json<GmailDraft>(`/gmail/v1/users/me/drafts/${encodeURIComponent(draftId)}?format=full`)
   }

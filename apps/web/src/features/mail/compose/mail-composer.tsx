@@ -22,10 +22,13 @@ import {
   type MailComposeSeed,
 } from "./mail-compose"
 
+import { createDraftSession } from "./draft-session"
+
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024
 
-export function MailComposer({ onClose, onSent, online, seed, workspaceId }: {
+export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, workspaceId }: {
   onClose: () => void
+  onDraftChanged?: () => Promise<void> | void
   onSent: (response: MailSendResponse) => Promise<void> | void
   online: boolean
   seed: MailComposeSeed
@@ -37,15 +40,24 @@ export function MailComposer({ onClose, onSent, online, seed, workspaceId }: {
   const [bcc, setBcc] = useState(() => formatComposerAddresses(seed.bcc ?? []))
   const [subject, setSubject] = useState(seed.subject ?? "")
   const [bodyText, setBodyText] = useState(seed.bodyText ?? "")
-  const [attachments, setAttachments] = useState<MailComposeAttachment[]>([])
-  const [draftId, setDraftId] = useState<string | null>(null)
+  const [attachments, setAttachments] = useState<MailComposeAttachment[]>(seed.attachments ?? [])
+  const [draftId, setDraftId] = useState<string | null>(seed.draftId ?? null)
   const [showCopies, setShowCopies] = useState(Boolean(seed.cc?.length || seed.bcc?.length))
   const [saving, setSaving] = useState(false)
   const [sending, setSending] = useState(false)
-  const operationId = useRef(crypto.randomUUID())
+  const operationId = useRef(seed.clientOperationId ?? crypto.randomUUID())
+  const session = useRef<ReturnType<typeof createDraftSession> | null>(null)
+  if (!session.current) session.current = createDraftSession(seed.draftId ?? null, async (id, request) => {
+    const response = await apiFetch<MailDraftResponse>(id ? `${mailBasePath}/drafts/${encodeURIComponent(id)}` : `${mailBasePath}/drafts`, {
+      body: JSON.stringify({ ...request, ...(id ? { draftId: id } : {}) }),
+      method: id ? "PUT" : "POST",
+    })
+    setDraftId(response.draftId)
+    void Promise.resolve(onDraftChanged?.()).catch(() => {})
+    return response.draftId
+  })
+  const busy = useRef(false)
   const lastSaved = useRef("")
-  const draftIdRef = useRef<string | null>(null)
-  const savePromise = useRef<Promise<string | null> | null>(null)
 
   const compose = useMemo<MailComposeRequest>(() => ({
     attachments,
@@ -64,28 +76,25 @@ export function MailComposer({ onClose, onSent, online, seed, workspaceId }: {
   const hasContent = Boolean(to.trim() || cc.trim() || bcc.trim() || subject || bodyText || attachments.length)
 
   const saveDraft = async () => {
-    if (!online || !hasContent || serialized === lastSaved.current) return draftIdRef.current
-    if (savePromise.current) await savePromise.current
-    if (serialized === lastSaved.current) return draftIdRef.current
-    const currentDraftId = draftIdRef.current
-    const request = { ...compose, ...(currentDraftId ? { draftId: currentDraftId } : {}) }
-    const pending = apiFetch<MailDraftResponse>(currentDraftId ? `${mailBasePath}/drafts/${encodeURIComponent(currentDraftId)}` : `${mailBasePath}/drafts`, {
-      body: JSON.stringify(request),
-      method: currentDraftId ? "PUT" : "POST",
-    }).then((response) => {
-      draftIdRef.current = response.draftId
-      setDraftId(response.draftId)
-      lastSaved.current = serialized
-      return response.draftId
-    })
-    savePromise.current = pending
+    if (!online || !hasContent) return draftId
     setSaving(true)
     try {
-      return await pending
-    } finally {
-      if (savePromise.current === pending) savePromise.current = null
-      setSaving(false)
-    }
+      const id = await session.current!.save(compose)
+      lastSaved.current = serialized
+      return id
+    } finally { setSaving(false) }
+  }
+
+  const close = async () => {
+    if (busy.current) return
+    busy.current = true
+    setSending(true)
+    try {
+      if (!online && hasContent && serialized !== lastSaved.current) throw new Error("Reconnect to save this draft before closing.")
+      await saveDraft()
+      onClose()
+    } catch (error) { toast.error(getApiErrorMessage(error)) }
+    finally { busy.current = false; setSending(false) }
   }
 
   useEffect(() => {
@@ -95,7 +104,8 @@ export function MailComposer({ onClose, onSent, online, seed, workspaceId }: {
   }, [hasContent, online, serialized, sending])
 
   const send = async () => {
-    if (!online) return
+    if (!online || busy.current) return
+    busy.current = true
     setSending(true)
     try {
       const currentDraftId = await saveDraft()
@@ -111,20 +121,21 @@ export function MailComposer({ onClose, onSent, online, seed, workspaceId }: {
     } catch (error) {
       toast.error(getApiErrorMessage(error))
     } finally {
+      busy.current = false
       setSending(false)
     }
   }
 
   const discard = async () => {
-    if (draftIdRef.current && online) {
-      try {
-        await apiFetch(`${mailBasePath}/drafts/${encodeURIComponent(draftIdRef.current)}`, { method: "DELETE" })
-      } catch (error) {
-        toast.error(getApiErrorMessage(error))
-        return
-      }
-    }
-    onClose()
+    if (busy.current || !online) return
+    busy.current = true
+    setSending(true)
+    try {
+      await session.current!.discard(async (id) => { await apiFetch(`${mailBasePath}/drafts/${encodeURIComponent(id)}`, { method: "DELETE" }) })
+      void Promise.resolve(onDraftChanged?.()).catch(() => {})
+      onClose()
+    } catch (error) { toast.error(getApiErrorMessage(error)) }
+    finally { busy.current = false; setSending(false) }
   }
 
   const attach = async (files: FileList | null) => {
@@ -148,7 +159,7 @@ export function MailComposer({ onClose, onSent, online, seed, workspaceId }: {
       <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
         <Button
           aria-label="Close mail composer"
-          onClick={onClose}
+          onClick={() => void close()}
           size="icon-sm"
           type="button"
           variant="ghost"

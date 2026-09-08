@@ -25,3 +25,5 @@ The [send tests](../../../apps/server/src/features/mail/compose/mail-compose.tes
 [Mail overview](README.md).
 
 OAuth account credential upsert and workspace binding commit in one transaction. OAuth completion and disconnect serialize per Zilobase user using a PostgreSQL transaction advisory lock, so a concurrent binding cannot race last-binding revocation. Credential ciphertext repaired after an upsert conflict is never visible before commit.
+
+Draft list/detail routes preserve Gmail draft identity. Selecting an online Drafts row resumes the existing composer; attachments are fetched into transient memory. The composer draft session serializes writes and discard, and close waits for a successful save. Draft changes refresh mailbox queries.

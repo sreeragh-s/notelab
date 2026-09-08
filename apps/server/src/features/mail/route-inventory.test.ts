@@ -48,6 +48,8 @@ describe("mail route composition", () => {
       "POST /messages/:messageId/modify",
       "POST /threads/:threadId/action",
       "POST /messages/:messageId/action",
+      "GET /drafts",
+      "GET /drafts/:draftId",
       "POST /drafts",
       "PUT /drafts/:draftId",
       "DELETE /drafts/:draftId",
