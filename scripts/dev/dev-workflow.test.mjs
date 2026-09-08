@@ -12,6 +12,7 @@ import { coreDir, localProfiles } from "./config.mjs";
 import {
   createFromTemplateIfMissing,
   migrateGeneratedNodeEnvironment,
+  migrateGeneratedMailEnvironment,
   profileEnvironment,
 } from "./env.mjs";
 import {
@@ -201,4 +202,16 @@ test("database reset runs drop and create outside a shared transaction", () => {
     () => databaseResetStatements("zilobase_node; DROP DATABASE postgres"),
     /name is invalid/,
   );
+});
+
+test("mail flags belong to the operator rather than generated infrastructure", async () => {
+  for (const profile of Object.values(localProfiles)) {
+    assert.equal(profileEnvironment(profile, {}).MAIL_ENABLED, undefined);
+  }
+  const directory = await mkdtemp(path.join(os.tmpdir(), "zilobase-mail-env-"));
+  const filename = path.join(directory, "node.env");
+  await writeFile(filename, 'MAIL_ENABLED="false"\nDATABASE_URL="preserved"\n');
+  assert.equal(await migrateGeneratedMailEnvironment(filename), true);
+  assert.deepEqual(parse(await readFile(filename, "utf8")), { DATABASE_URL: "preserved" });
+  assert.equal(await migrateGeneratedMailEnvironment(filename), false);
 });

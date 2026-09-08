@@ -14,7 +14,15 @@ try {
       noOps: true,
     })
   }
-  const result = validateGmailDeploymentConfig(process.env)
+  const profile = process.argv.find((argument) => argument.startsWith("--profile="))?.slice("--profile=".length)
+  if (profile && !["node", "worker"].includes(profile)) throw new Error("Profile must be node or worker.")
+  if (profile && envFile) throw new Error("Choose --profile or --env-file, not both.")
+  const env = profile ? await (await import("../dev/env.mjs")).loadProfileEnvironment(profile) : process.env
+  const enabled = (value) => value === "true" || value === "1"
+  console.info(`Mail runtime: ${enabled(env.MAIL_ENABLED) ? "enabled" : "disabled"}`)
+  console.info(`Mail frontend: ${enabled(env.VITE_FEATURE_MAIL) ? "enabled" : "disabled"}`)
+  const result = validateGmailDeploymentConfig(env)
+  if (enabled(env.MAIL_ENABLED) && !result.enabled) throw new Error("Mail is enabled but Gmail OAuth credentials are missing.")
   if (!result.enabled) {
     console.info("Gmail deployment: disabled")
   } else {

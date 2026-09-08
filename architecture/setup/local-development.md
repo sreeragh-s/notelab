@@ -12,3 +12,5 @@ The development CLI coordinates dependency containers and local processes. Node 
 - [Verification](../../scripts/dev/dev-workflow.test.mjs)
 
 Command definitions remain in [package scripts](../../package.json); consult them for the current invocation. [Architecture index](../README.md).
+
+Mail flags are operator-owned in each repository development environment; setup removes legacy generated `MAIL_ENABLED` overrides. The Gmail config checker accepts `--profile=node|worker` to inspect effective configuration.

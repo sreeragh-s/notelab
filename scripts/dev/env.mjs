@@ -69,6 +69,9 @@ export async function ensureDevelopmentEnvironment(options = {}) {
     COMMUNITY_MINIO_PASSWORD: secret(32),
   }), { prune: true });
   await removeGeneratedOptionalCredentials();
+  for (const filename of [generatedEnvironmentFiles.node, generatedEnvironmentFiles.worker]) {
+    await migrateGeneratedMailEnvironment(filename);
+  }
   await migrateGeneratedPortDefaults();
   if (options.reportLegacy && !legacyConflictsReported) {
     await reportLegacyConflicts("node", nodeEnvironment);
@@ -160,7 +163,6 @@ export function profileEnvironment(profile, dependencies) {
     AUTOMATION_WEBHOOKS_ENABLED: "false",
     AUTOMATION_SLACK_ENABLED: "false",
     MEETING_BLOCK_ENABLED: "true",
-    MAIL_ENABLED: "false",
     EMAIL_FROM: "Zilobase <no-reply@zilobase.com>",
     AI_DEV_TOOLS_ENABLED: "true",
     AI_AGENT_DAILY_USAGE_LIMITS_ENABLED: "false",
@@ -197,6 +199,15 @@ export function profileEnvironment(profile, dependencies) {
     SMTP_USER: "",
     SMTP_PASSWORD: "",
   };
+}
+
+export async function migrateGeneratedMailEnvironment(filename) {
+  if (!(await exists(filename))) return false;
+  const values = await readSimpleEnv(filename);
+  if (!("MAIL_ENABLED" in values)) return false;
+  delete values.MAIL_ENABLED;
+  await writeFile(filename, serializeEnv(values), { mode: 0o600 });
+  return true;
 }
 
 export async function migrateGeneratedNodeEnvironment(

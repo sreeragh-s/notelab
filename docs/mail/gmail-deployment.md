@@ -265,3 +265,15 @@ and [security assessment guidance](https://support.google.com/cloud/answer/13465
 The production release owner must record the verification approval, assessment
 status, staging canary evidence, configuration-check output, and watch-health
 dashboard link before enabling Gmail for general users.
+
+## Source development profiles
+
+Put the flags and Gmail credentials in the core `.env.development` for Node,
+or the adjacent cloud adapter `.env.development` for Worker. Generated local
+infrastructure does not override `MAIL_ENABLED`. Set both `MAIL_ENABLED=true`
+and `VITE_FEATURE_MAIL=true`, then run `npm run dev:setup` and
+`npm run dev:local:node` or `npm run dev:local:worker`.
+Validate the effective profile with `npm run mail:config:check -- --profile=node`
+(or `worker`). The checker prints readiness and URLs, never secrets.
+The exact source callbacks are `http://localhost:3000/mail/oauth/google/callback`
+and `http://127.0.0.1:3010/mail/oauth/google/callback` respectively.
