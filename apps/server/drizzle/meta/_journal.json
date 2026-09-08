@@ -610,6 +610,13 @@
       "when": 1788910000000,
       "tag": "0086_mail_send_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1788990000000,
+      "tag": "0087_calendar_persistence",
+      "breakpoints": true
     }
   ]
 }
