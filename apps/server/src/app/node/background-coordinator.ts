@@ -22,7 +22,7 @@ import {
   mailDatabaseSyncOutbox,
   navigationRealtimeOutbox,
 } from "../../infrastructure/database/schema";
-import { getDatabaseUrl } from "../../infrastructure/runtime/runtime-adapter";
+import { getDatabaseUrl, isLocalRuntime } from "../../infrastructure/runtime/runtime-adapter";
 import { runDueBackgroundMaintenance } from "../background/maintenance";
 import { backgroundTaskLane, type BackgroundLane, type BackgroundTaskV1 } from "../../infrastructure/background/contracts";
 import { boundedErrorCode } from "../../infrastructure/background/dispatch";
@@ -54,7 +54,7 @@ export function createNodeBackgroundCoordinator(env: RuntimeEnv) {
   };
 
   const scheduleLane = (lane: BackgroundLane, availableAt = new Date()) => {
-    if (stopping) return;
+    if (stopping || (isLocalRuntime() && lane === "mail")) return;
     const current = timers.get(lane);
     const requestedAt = availableAt.getTime();
     if (current && (timerDueAt.get(lane) ?? Number.POSITIVE_INFINITY) <= requestedAt) return;
@@ -71,7 +71,7 @@ export function createNodeBackgroundCoordinator(env: RuntimeEnv) {
   };
 
   const drainLane = async (lane: BackgroundLane) => {
-    if (stopping) return;
+    if (stopping || (isLocalRuntime() && lane === "mail")) return;
     try {
       await runWithDbEnv(env, async () => {
         const concurrency = laneConcurrency(env, lane);

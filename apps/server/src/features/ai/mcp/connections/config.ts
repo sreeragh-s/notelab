@@ -1,3 +1,4 @@
+import { isLocalRuntime } from "../../../../infrastructure/runtime/runtime-adapter";
 import { getStringEnv, type RuntimeEnv } from "../../../../shared/config/config";
 
 export const MCP_LIMITS = {
@@ -11,6 +12,7 @@ export const MCP_LIMITS = {
 } as const;
 
 export function isMcpEnabled(env: RuntimeEnv) {
+  if (isLocalRuntime()) return false;
   return getStringEnv(env, "AI_MCP_ENABLED")?.trim().toLowerCase() === "true";
 }
 

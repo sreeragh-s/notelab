@@ -23,3 +23,12 @@ See [tests or test configuration](../../apps/server/src/app) and [testing and qu
 [Runtime contracts](../../apps/server/src/infrastructure/runtime/contracts.ts) contain the adapter interface and wire payloads; [runtime context](../../apps/server/src/infrastructure/runtime/runtime-context.ts) owns process fallback and request-scoped selection. The existing runtime-adapter entrypoint re-exports that interface for compatibility and implements capability behavior. Meeting and database realtime wire types live in [shared contracts](../../apps/server/src/shared/contracts), with compatibility type re-exports at the feature entrypoints. Infrastructure no longer imports feature implementations or feature-owned wire declarations.
 
 The [app binding declaration](../../apps/server/src/shared/types.ts) intentionally infers session types from the authentication feature and exposes the canonical Drizzle database type for edition hooks. These are type-only contracts, with a focused `server-bindings` dependency exception; concrete runtime modules do not import authentication implementation code.
+
+## Local feature policy
+
+The local entrypoint installs a [route guard](../../apps/server/src/app/local/policy.ts)
+for collaboration/account/publication and external provider endpoints. Internal editor
+collaboration and personal content APIs remain available. Automation compilation skips
+external URL resolution and disables remote actions; execution rejects those actions
+again before dispatch. MCP availability is false locally. Mail lanes and provider
+maintenance are suppressed independently of persisted queue contents.

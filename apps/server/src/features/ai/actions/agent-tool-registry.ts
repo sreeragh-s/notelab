@@ -1,3 +1,4 @@
+import { isLocalRuntime } from "../../../infrastructure/runtime/runtime-adapter";
 import {
   AGENT_TOOL_DESCRIPTORS,
   getAgentToolDescriptor,
@@ -44,14 +45,14 @@ export function buildRegisteredAgentTools(
       ...context,
       allowedPageIds: new Set(context.editablePageIds),
     }),
-    ...buildMcpMaterializationTools({
+    ...(isLocalRuntime() ? {} : buildMcpMaterializationTools({
       agentProfileId: context.agentProfileId ?? null,
       env: context.env,
       threadId: context.threadId,
       userId: context.userId,
       workspaceId: context.workspaceId,
       withDb: context.withDb,
-    }),
+    })),
     ...(context.editablePageIds.length > 0
       ? buildPageEditTools(context.editablePageIds)
       : {}),

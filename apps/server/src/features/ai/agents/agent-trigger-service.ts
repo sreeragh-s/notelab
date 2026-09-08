@@ -1,3 +1,4 @@
+import { isLocalRuntime } from "../../../infrastructure/runtime/runtime-adapter";
 import type {
   CustomAgentTriggerDefinition,
   CustomAgentTriggerKind,
@@ -47,6 +48,9 @@ export async function upsertAgentTrigger(input: {
   userId: string;
   workspaceId: string;
 }) {
+  if (isLocalRuntime() && ["webhook", "connector", "slack"].includes(input.kind)) {
+    throw new AgentProfileError("FEATURE_UNAVAILABLE_LOCAL", "External triggers are unavailable in local mode.", 403);
+  }
   await requireAgentProfileRole({ ...input, minimum: "editor" });
   const [profile] = await db.select({ currentRevisionId: aiAgentProfile.currentRevisionId })
     .from(aiAgentProfile).where(and(

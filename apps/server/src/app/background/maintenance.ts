@@ -1,3 +1,4 @@
+import { isLocalRuntime } from "../../infrastructure/runtime/runtime-adapter";
 import { and, asc, eq, isNull, lt, lte, or, sql } from "drizzle-orm";
 
 import { cleanupExpiredAiAgentData } from "../../features/ai/actions/agent-operations";
@@ -129,6 +130,7 @@ async function executeMaintenanceTask(
   task: MaintenanceTaskKey,
   workerId: string,
 ) {
+  if (isLocalRuntime() && (task.startsWith("gmail.") || task.startsWith("mail.") || task === "membership.expiry")) return 60 * 60_000;
   return MAINTENANCE_TASK_HANDLERS[task](env, workerId);
 }
 
@@ -153,7 +155,7 @@ const MAINTENANCE_TASK_HANDLERS: Record<MaintenanceTaskKey, MaintenanceTaskHandl
         drainDatabaseRealtimeOutbox(env, { limit: 100 }),
         drainNavigationRealtimeOutbox(env, { limit: 100 }),
         drainInProductNotificationOutbox(env, { limit: 100 }),
-        drainMailDatabaseSyncOutbox(env, { limit: 20, workerId: `${workerId}:mail` }),
+        ...(isLocalRuntime() ? [] : [drainMailDatabaseSyncOutbox(env, { limit: 20, workerId: `${workerId}:mail` })]),
     ]);
   },
   "automation.schedules": async (env) => {

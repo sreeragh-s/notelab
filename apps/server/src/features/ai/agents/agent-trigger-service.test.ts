@@ -1,3 +1,4 @@
+import { runWithRuntimeAdapter } from "../../../infrastructure/runtime/runtime-adapter";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import {
@@ -411,4 +412,10 @@ describe("agent trigger registration and durable delivery", () => {
     ).toEqual({ accepted: 0 });
     document.destroy();
   });
+});
+
+it.each(["webhook", "connector", "slack"] as const)("rejects local %s triggers before writes", async (kind) => {
+  await expect(runWithRuntimeAdapter({ mode: "local" }, () => upsertAgentTrigger({ ...input, kind, config: {}, label: "External" }))).rejects.toMatchObject({ code: "FEATURE_UNAVAILABLE_LOCAL" });
+  expect(state.writes).toEqual([]);
+  expect(state.apply).not.toHaveBeenCalled();
 });

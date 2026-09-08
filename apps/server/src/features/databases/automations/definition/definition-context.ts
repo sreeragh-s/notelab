@@ -1,3 +1,4 @@
+import { isLocalRuntime } from "../../../../infrastructure/runtime/runtime-adapter";
 import { and, asc, eq, gt, inArray, isNull, or } from "drizzle-orm";
 import { databaseAutomationDefinitionSchema, getNextDatabaseAutomationOccurrence, type DatabaseAutomationDefinition, type DatabaseAutomationDependency, type DatabaseAutomationDetail, type DatabaseAutomationSummary, type DatabaseAutomationValidationResult } from "@zilobase/features/databases/automations";
 import { canAccessDatabaseRecord, getMembership } from "../../../access";
@@ -123,7 +124,7 @@ export async function loadCompilationContext(input: {
     }
   }
   const invalidWebhookActionIds = new Set<string>();
-  if (parsed.success && input.webhooksEnabled !== false) {
+  if (parsed.success && !isLocalRuntime() && input.webhooksEnabled !== false) {
     await Promise.all(parsed.data.actions.flatMap((action) => action.type === "send_webhook"
       ? [resolvePublicWebhookTarget(action.url, { allowHttpDomains: input.allowHttpWebhookDomains })
           .catch(() => invalidWebhookActionIds.add(action.id))]
@@ -153,7 +154,7 @@ export async function loadCompilationContext(input: {
   ]);
   return {
     allowHttpWebhookDomains: input.allowHttpWebhookDomains,
-    capabilities: { gmail: input.gmailEnabled !== false, notifications: true, schedules: true, slack: input.slackEnabled !== false, webhooks: input.webhooksEnabled !== false },
+    capabilities: { gmail: !isLocalRuntime() && input.gmailEnabled !== false, notifications: true, schedules: true, slack: !isLocalRuntime() && input.slackEnabled !== false, webhooks: !isLocalRuntime() && input.webhooksEnabled !== false },
     dataSourceIds: targetIds,
     gmailConnectionIds: new Set(gmailConnections.filter(({ status }) => status === "connected").map(({ id }) => id)),
     invalidWebhookActionIds,

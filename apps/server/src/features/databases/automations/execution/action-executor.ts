@@ -1,3 +1,4 @@
+import { isLocalRuntime } from "../../../../infrastructure/runtime/runtime-adapter";
 import { eq } from "drizzle-orm";
 import { type DatabaseAutomationAction } from "@zilobase/features/databases/automations";
 import { type FormulaValue } from "@zilobase/features/databases/formula";
@@ -19,6 +20,9 @@ export async function executeAction(
   action: DatabaseAutomationAction,
   env: RuntimeEnv,
 ): Promise<Record<string, unknown>> {
+  if (isLocalRuntime() && ["send_gmail", "send_webhook", "send_slack"].includes(action.type)) {
+    throw Object.assign(new Error("External actions are unavailable in local mode"), { code: "FEATURE_UNAVAILABLE_LOCAL" });
+  }
   const actorId = requireOwner(context.automation.ownerUserId);
   if (action.type === "define_variables") {
     const variables: Record<string, FormulaValue> = {};
