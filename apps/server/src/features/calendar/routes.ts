@@ -1,3 +1,4 @@
+import { calendarPreferenceRoutes } from "./preferences";
 import { Hono } from "hono";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
@@ -62,3 +63,5 @@ calendarProviderRoutes.get("/oauth/google/callback", async c => {
   }
   return c.redirect(new URL("/calendar?connection=success", getCanonicalWebOrigin(c.env)).toString());
 });
+
+calendarRoutes.route("/", calendarPreferenceRoutes);

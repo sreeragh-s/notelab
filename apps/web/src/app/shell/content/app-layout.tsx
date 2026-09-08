@@ -243,7 +243,7 @@ function AppLayoutContent({
     const query = search.toString()
     router.history.replace(`${pathname}${query ? `?${query}` : ""}${hash}`)
   }, [hash, pathname, router.history, searchStr])
-  const isMailPage = pathname === "/mail"
+  const isMailPage = pathname === "/mail" || pathname === "/calendar"
   const pageId = useRoutePageId(pathname)
   const databaseId = getDatabaseId(pathname)
   const agentId = pathname.match(/^\/agents\/([^/]+)$/)?.[1] ?? null

@@ -1,9 +1,10 @@
 import { createRoute, lazyRouteComponent } from "@tanstack/react-router";
 import { isFeatureEnabled } from "@/shared/config/feature-flags";
 import { appRoute } from "../route-roots";
-import { validateAiSearch, validateLibrarySearch, validateMailSearch } from "../search-validators";
+import { validateCalendarSearch, validateAiSearch, validateLibrarySearch, validateMailSearch } from "../search-validators";
 
 export const appRoutes = [
+  ...(isFeatureEnabled("calendar") ? [createRoute({ getParentRoute: () => appRoute, path: "/calendar", validateSearch: validateCalendarSearch, component: lazyRouteComponent(() => import("@/features/calendar/screens/calendar")) })] : []),
   createRoute({
     getParentRoute: () => appRoute,
     path: "/ai",

@@ -129,3 +129,13 @@ export function validateTeamspaceSettingsSearch(
         : undefined,
   };
 }
+
+export function validateCalendarSearch(search: Record<string, unknown>): { view?: "day" | "week" | "month" | "agenda"; date?: string; binding?: string; calendar?: string; event?: string } {
+  return {
+    view: search.view === "day" || search.view === "week" || search.view === "month" || search.view === "agenda" ? search.view : undefined,
+    date: typeof search.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(search.date) && Number.isFinite(Date.parse(search.date)) ? search.date : undefined,
+    binding: typeof search.binding === "string" ? search.binding : undefined,
+    calendar: typeof search.calendar === "string" ? search.calendar : undefined,
+    event: typeof search.event === "string" ? search.event : undefined,
+  };
+}
