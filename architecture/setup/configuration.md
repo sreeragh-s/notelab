@@ -14,3 +14,5 @@ External AI connectors use the [MCP connection configuration](../features/ai/exe
 - [Verification](../../apps/web/src/shared/config/feature-flags.ts)
 
 Command definitions remain in [package scripts](../../package.json); consult them for the current invocation. [Architecture index](../README.md).
+
+Calendar requires `CALENDAR_ENABLED=true`, `CALENDAR_ENABLED_WORKSPACE_IDS` (comma-separated IDs or `*`), and `VITE_FEATURE_CALENDAR=true` in the web build. Defaults leave Calendar unavailable.

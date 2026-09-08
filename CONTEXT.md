@@ -29,3 +29,11 @@ OAuth consent is the user granting a client specific scopes for one workspace. A
 ### OAuth scope
 
 An OAuth scope is the coarse capability a client requested (`clips.write`, `pages.read`, `search.read`, …). Missing scope returns `403 insufficient_scope` before ACL. Having a scope never bypasses page or workspace access.
+
+### Calendar binding
+
+A private connection between a user, workspace and Google Calendar account. Multiple bindings can coexist in one workspace; membership alone does not expose their events.
+
+### Calendar occurrence
+
+A provider-expanded event in a bounded date range. Recurring occurrences retain the series identifier and original start, even after being moved.

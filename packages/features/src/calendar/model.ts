@@ -1,0 +1,17 @@
+import type { CalendarIdentity, CalendarPreferences, CalendarScope } from "./contracts"
+export function calendarApiBasePath(workspaceId: string) {
+  if (!workspaceId.trim()) throw new Error("A workspace is required")
+  return `/workspaces/${encodeURIComponent(workspaceId)}/calendar`
+}
+export function calendarEventKey(identity: CalendarIdentity) {
+  return JSON.stringify([identity.workspaceId, identity.bindingId, identity.calendarId, identity.eventId])
+}
+export const calendarKeys = {
+  all: ["calendar"] as const,
+  connections: (workspaceId: string) => ["calendar", workspaceId, "connections"] as const,
+  preferences: (workspaceId: string) => ["calendar", workspaceId, "preferences"] as const,
+  calendars: (scope: CalendarScope) => ["calendar", scope.workspaceId, scope.bindingId, "calendars"] as const,
+}
+export function defaultCalendarPreferences(timeZone = "UTC"): CalendarPreferences {
+  return { view: "week", hiddenCalendarKeys: [], defaultCalendarKey: null, weekStartsOn: 1, showWeekends: true, showDeclined: false, showWeekNumbers: false, timeFormat: "24", timeZone, secondaryTimeZones: [], remindersEnabled: false }
+}
