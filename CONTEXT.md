@@ -29,3 +29,8 @@ OAuth consent is the user granting a client specific scopes for one workspace. A
 ### OAuth scope
 
 An OAuth scope is the coarse capability a client requested (`clips.write`, `pages.read`, `search.read`, …). Missing scope returns `403 insufficient_scope` before ACL. Having a scope never bypasses page or workspace access.
+
+### Local installation
+
+A device-owned workspace persisted outside the Mac application bundle. Its runtime
+mode is independent of an edition and its user still has normal membership and access.

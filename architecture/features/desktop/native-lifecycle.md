@@ -23,3 +23,10 @@
 ## Verification
 
 Run `verify:desktop` for Rust formatting, Clippy and tests. The 44 native tests include loopback discovery, configuration migration and round trips, profile removal failure, candidate expiry, OAuth/callback behavior and diagnostic redaction. New snapshot/redaction cases passed before extraction. They use temporary files and controlled transports; they do not establish live keychain, packaged-app, device or browser smoke behavior. Follow [testing and quality](../../setup/testing-and-quality.md) and the existing [desktop E2E entrypoint](../../../apps/desktop/e2e/selfhost.mjs) for those checks.
+
+## Local profile contracts
+
+Configuration version 3 adds a local/remote profile kind. Versions 1 and 2 migrate
+to remote profiles without changing credentials or navigation. Runtime capability
+policy lives in `@zilobase/features/runtime`; provider readiness is separate from
+capability availability. See [the decision](../../decisions/0002-local-desktop-runtime.md).

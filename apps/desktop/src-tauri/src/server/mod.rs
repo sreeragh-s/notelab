@@ -33,7 +33,7 @@ use profile_state::*;
 
 const CONFIG_FILE_NAME: &str = "desktop-server.json";
 const DEV_CONFIG_FILE_NAME: &str = "desktop-server.dev.json";
-const CONFIG_VERSION: u8 = 2;
+const CONFIG_VERSION: u8 = 3;
 const LEGACY_CONFIG_VERSION: u8 = 1;
 const MAX_PROFILE_WORKSPACES: usize = 50;
 const DISCOVERY_PATH: &str = "/.well-known/zilobase";
@@ -409,6 +409,28 @@ mod tests {
     }
 
     #[test]
+    fn migrates_v2_profiles_to_remote_and_round_trips_local_kind() {
+        let mut value =
+            serde_json::to_value(super::single_profile_config(&cloud_server())).unwrap();
+        value["version"] = serde_json::json!(2);
+        value["profiles"][0].as_object_mut().unwrap().remove("kind");
+        let (mut config, migrated) = parse_config(&serde_json::to_vec(&value).unwrap()).unwrap();
+        assert!(migrated);
+        assert_eq!(config.version, super::CONFIG_VERSION);
+        assert_eq!(
+            config.profiles[0].kind,
+            super::contracts::DesktopProfileKind::Remote
+        );
+        config.profiles[0].kind = super::contracts::DesktopProfileKind::Local;
+        let (loaded, migrated) = parse_config(&serde_json::to_vec(&config).unwrap()).unwrap();
+        assert!(!migrated);
+        assert_eq!(
+            loaded.profiles[0].kind,
+            super::contracts::DesktopProfileKind::Local
+        );
+    }
+
+    #[test]
     fn migrates_legacy_single_server_config() {
         let directory = tempfile::tempdir().expect("temporary directory");
         let server = default_server();
@@ -426,7 +448,7 @@ mod tests {
             parse_config(&std::fs::read(config_path(directory.path())).expect("read legacy"))
                 .expect("parse legacy");
         assert!(migrated);
-        assert_eq!(config.version, 2);
+        assert_eq!(config.version, 3);
         assert_eq!(config.profiles.len(), 1);
         assert_eq!(config.profiles[0].server, server);
         assert_eq!(

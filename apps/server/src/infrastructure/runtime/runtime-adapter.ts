@@ -211,3 +211,7 @@ export function getConfiguredImageStorageMode(env: RuntimeEnv) {
 
   throw new Error("IMAGE_STORAGE_MODE must be either 's3' or 'binding'");
 }
+
+export function isLocalRuntime() {
+  return getRuntimeAdapter().mode === "local";
+}

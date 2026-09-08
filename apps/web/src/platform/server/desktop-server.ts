@@ -29,6 +29,7 @@ export type DesktopServerWorkspaceSnapshot = {
 }
 
 export type DesktopServerProfile = {
+  kind?: "remote" | "local"
   active: boolean
   hasCredentials: boolean
   lastActiveWorkspaceId: string | null

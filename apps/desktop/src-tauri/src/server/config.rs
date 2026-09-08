@@ -135,7 +135,7 @@ pub(super) fn parse_config(
         return Ok((single_profile_config(&legacy.server), true));
     }
 
-    if version != u64::from(CONFIG_VERSION) {
+    if version != 2 && version != u64::from(CONFIG_VERSION) {
         return Err(DesktopServerError::configuration(
             "The saved desktop server configuration uses an unsupported version.",
         ));
@@ -156,7 +156,8 @@ pub(super) fn parse_config(
     if active_profile_index(&config).is_none() {
         config.active_instance_id = config.profiles[0].server.instance_id.clone();
     }
-    Ok((config, false))
+    config.version = CONFIG_VERSION;
+    Ok((config, version != u64::from(CONFIG_VERSION)))
 }
 
 pub(super) fn validate_persisted_server(server: &DesktopServer) -> Result<(), DesktopServerError> {
@@ -275,6 +276,7 @@ pub(super) fn profile_list_from_config(config: &DesktopServerConfig) -> DesktopS
             .profiles
             .iter()
             .map(|profile| DesktopServerProfileView {
+                kind: profile.kind,
                 active: servers_refer_to_same_instance(&profile.server, active),
                 has_credentials: server_has_credentials(&profile.server),
                 last_active_workspace_id: profile.last_active_workspace_id.clone(),

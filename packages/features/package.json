@@ -275,6 +275,10 @@
     "./workspaces/react": {
       "types": "./src/workspaces/react.ts",
       "default": "./src/workspaces/react.ts"
+    },
+    "./runtime": {
+      "types": "./src/runtime/index.ts",
+      "default": "./src/runtime/index.ts"
     }
   }
 }

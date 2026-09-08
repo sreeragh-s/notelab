@@ -10,6 +10,7 @@ pub(super) fn single_profile_config(server: &DesktopServer) -> DesktopServerConf
         version: CONFIG_VERSION,
         active_instance_id: server.instance_id.clone(),
         profiles: vec![DesktopServerProfile {
+            kind: Default::default(),
             last_active_workspace_id: None,
             last_path: None,
             last_used_at: None,
@@ -81,6 +82,7 @@ pub(super) fn upsert_and_activate(config: &mut DesktopServerConfig, server: &Des
     }
 
     config.profiles.push(DesktopServerProfile {
+        kind: Default::default(),
         last_active_workspace_id: None,
         last_path: None,
         last_used_at: None,

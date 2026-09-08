@@ -38,6 +38,8 @@ pub(crate) struct DesktopServerWorkspaceSnapshot {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct DesktopServerProfile {
+    #[serde(default)]
+    pub(super) kind: DesktopProfileKind,
     pub(super) server: DesktopServer,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) last_active_workspace_id: Option<String>,
@@ -68,6 +70,7 @@ pub(super) struct LegacyDesktopServerConfig {
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct DesktopServerProfileView {
+    pub kind: DesktopProfileKind,
     pub server: DesktopServer,
     pub last_active_workspace_id: Option<String>,
     pub last_path: Option<String>,
@@ -82,4 +85,26 @@ pub(crate) struct DesktopServerProfileView {
 pub(crate) struct DesktopServerProfileList {
     pub active_instance_id: String,
     pub profiles: Vec<DesktopServerProfileView>,
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum DesktopProfileKind {
+    #[default]
+    Remote,
+    Local,
+}
+
+#[derive(Clone, Copy, Debug, Default, Serialize)]
+#[serde(rename_all = "lowercase")]
+#[allow(dead_code)]
+pub(crate) enum LocalRuntimePhase {
+    #[default]
+    Stopped,
+    Starting,
+    Migrating,
+    Ready,
+    Maintenance,
+    Stopping,
+    Error,
 }

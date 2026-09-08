@@ -19,6 +19,7 @@ export type OutboundEmailMessage = {
 };
 
 export type ServerRuntimeAdapter = {
+  mode?: "remote" | "local";
   fetchMcpRequest?(input: {
     body: string | null;
     headers: Record<string, string>;
