@@ -57,6 +57,7 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
     return response.draftId
   })
   const busy = useRef(false)
+  const sendAttempt = useRef<{ compose: MailComposeRequest; draftId: string | null } | null>(null)
   const lastSaved = useRef("")
 
   const compose = useMemo<MailComposeRequest>(() => ({
@@ -76,7 +77,7 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
   const hasContent = Boolean(to.trim() || cc.trim() || bcc.trim() || subject || bodyText || attachments.length)
 
   const saveDraft = async () => {
-    if (!online || !hasContent) return draftId
+    if (!online || (!hasContent && !draftId) || sendAttempt.current) return draftId
     setSaving(true)
     try {
       const id = await session.current!.save(compose)
@@ -98,7 +99,7 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
   }
 
   useEffect(() => {
-    if (!online || !hasContent || serialized === lastSaved.current || sending) return
+    if (!online || !hasContent || serialized === lastSaved.current || sending || sendAttempt.current) return
     const timer = window.setTimeout(() => void saveDraft().catch((error) => toast.error(getApiErrorMessage(error))), 1_200)
     return () => window.clearTimeout(timer)
   }, [hasContent, online, serialized, sending])
@@ -108,16 +109,17 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
     busy.current = true
     setSending(true)
     try {
-      const currentDraftId = await saveDraft()
+      if (!sendAttempt.current) sendAttempt.current = { compose, draftId: await saveDraft() }
+      const { compose: sendCompose, draftId: currentDraftId } = sendAttempt.current
       const response = await apiFetch<MailSendResponse>(currentDraftId
         ? `${mailBasePath}/drafts/${encodeURIComponent(currentDraftId)}/send`
         : `${mailBasePath}/send`, {
-        body: JSON.stringify({ ...compose, ...(currentDraftId ? { draftId: currentDraftId } : {}) }),
+        body: JSON.stringify({ ...sendCompose, ...(currentDraftId ? { draftId: currentDraftId } : {}) }),
         method: "POST",
       })
       toast.success(response.reused ? "Message was already sent" : "Message sent")
-      await onSent(response)
       onClose()
+      void Promise.resolve(onSent(response)).catch(() => toast.error("Message sent. Refresh the mailbox to update it."))
     } catch (error) {
       toast.error(getApiErrorMessage(error))
     } finally {
@@ -174,15 +176,15 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
           <div className="flex items-center gap-2">
             <Label className="w-8" htmlFor="mail-compose-to">To</Label>
-            <Input autoFocus disabled={!online || sending} id="mail-compose-to" onChange={(event) => setTo(event.target.value)} placeholder="name@example.com" value={to} />
-            <Button disabled={!online || sending} onClick={() => setShowCopies((value) => !value)} size="sm" type="button" variant="ghost">Cc/Bcc</Button>
+            <Input autoFocus disabled={!online || sending || Boolean(sendAttempt.current)} id="mail-compose-to" onChange={(event) => setTo(event.target.value)} placeholder="name@example.com" value={to} />
+            <Button disabled={!online || sending || Boolean(sendAttempt.current)} onClick={() => setShowCopies((value) => !value)} size="sm" type="button" variant="ghost">Cc/Bcc</Button>
           </div>
           {showCopies ? <>
-            <div className="flex items-center gap-2"><Label className="w-8" htmlFor="mail-compose-cc">Cc</Label><Input disabled={!online || sending} id="mail-compose-cc" onChange={(event) => setCc(event.target.value)} value={cc} /></div>
-            <div className="flex items-center gap-2"><Label className="w-8" htmlFor="mail-compose-bcc">Bcc</Label><Input disabled={!online || sending} id="mail-compose-bcc" onChange={(event) => setBcc(event.target.value)} value={bcc} /></div>
+            <div className="flex items-center gap-2"><Label className="w-8" htmlFor="mail-compose-cc">Cc</Label><Input disabled={!online || sending || Boolean(sendAttempt.current)} id="mail-compose-cc" onChange={(event) => setCc(event.target.value)} value={cc} /></div>
+            <div className="flex items-center gap-2"><Label className="w-8" htmlFor="mail-compose-bcc">Bcc</Label><Input disabled={!online || sending || Boolean(sendAttempt.current)} id="mail-compose-bcc" onChange={(event) => setBcc(event.target.value)} value={bcc} /></div>
           </> : null}
-          <Input aria-label="Subject" disabled={!online || sending} onChange={(event) => setSubject(event.target.value)} placeholder="Subject" value={subject} />
-          <Textarea aria-label="Message body" className="min-h-64 flex-1 resize-none" disabled={!online || sending} onChange={(event) => setBodyText(event.target.value)} placeholder="Write a message…" value={bodyText} />
+          <Input aria-label="Subject" disabled={!online || sending || Boolean(sendAttempt.current)} onChange={(event) => setSubject(event.target.value)} placeholder="Subject" value={subject} />
+          <Textarea aria-label="Message body" className="min-h-64 flex-1 resize-none" disabled={!online || sending || Boolean(sendAttempt.current)} onChange={(event) => setBodyText(event.target.value)} placeholder="Write a message…" value={bodyText} />
           {attachments.length ? <div className="flex flex-wrap gap-2">{attachments.map((attachment, index) => (
             <Button disabled={sending} key={`${attachment.filename}-${index}`} onClick={() => setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))} size="sm" type="button" variant="outline">
               <Paperclip /> {attachment.filename} ×
@@ -192,7 +194,7 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
       <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-stroke-default px-4 py-3">
         <Button disabled={sending || (Boolean(draftId) && !online)} onClick={() => void discard()} type="button" variant="ghost"><TrashIcon /> Discard</Button>
         <div className="flex items-center gap-2">
-          <Label className="cursor-pointer"><input className="sr-only" disabled={!online || sending} multiple onChange={(event) => void attach(event.target.files)} type="file" /><span className="inline-flex h-8 items-center gap-2 rounded-md px-3 hover:bg-action-neutral-hover"><Paperclip /> Attach</span></Label>
+          <Label className="cursor-pointer"><input className="sr-only" disabled={!online || sending || Boolean(sendAttempt.current)} multiple onChange={(event) => void attach(event.target.files)} type="file" /><span className="inline-flex h-8 items-center gap-2 rounded-md px-3 hover:bg-action-neutral-hover"><Paperclip /> Attach</span></Label>
           <Button disabled={!online || sending} onClick={() => void send()} type="button">{sending ? <Loader2Icon className="animate-spin" /> : <SendIcon />} Send</Button>
         </div>
       </footer>

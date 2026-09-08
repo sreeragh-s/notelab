@@ -234,7 +234,6 @@ mailMessageRoutes.post("/drafts/:draftId/send", async (c) => {
   }
   if (compose.draftId && compose.draftId !== draftId) return c.json({ message: "The Gmail draft ID does not match." }, 400)
   return runMailOperation(c, owned.userId, owned.connection, async (gateway) => {
-    await updateGmailDraft(gateway, owned.connection, draftId, compose)
     return c.json(await sendGmailComposition({
       compose,
       connection: owned.connection,

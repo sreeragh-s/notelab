@@ -27,3 +27,9 @@ The [send tests](../../../apps/server/src/features/mail/compose/mail-compose.tes
 OAuth account credential upsert and workspace binding commit in one transaction. OAuth completion and disconnect serialize per Zilobase user using a PostgreSQL transaction advisory lock, so a concurrent binding cannot race last-binding revocation. Credential ciphertext repaired after an upsert conflict is never visible before commit.
 
 Draft list/detail routes preserve Gmail draft identity. Selecting an online Drafts row resumes the existing composer; attachments are fetched into transient memory. The composer draft session serializes writes and discard, and close waits for a successful save. Draft changes refresh mailbox queries.
+
+Send receipts bind the normalized composition hash and draft ID. Receipt recovery
+precedes draft updates. Pending/ambiguous operations are reconciled, never blindly
+replayed; definite failures can be claimed again. Successful responses include
+`messageId` even if `message` hydration is temporarily unavailable. Maintenance
+removes at most 500 expired terminal receipts per sweep; uncertain receipts remain.

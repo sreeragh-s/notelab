@@ -185,6 +185,7 @@ export type MailDraftResponse = {
 }
 
 export type MailSendResponse = {
-  message: MailMessageRecord
+  messageId: string
+  message: MailMessageRecord | null
   reused: boolean
 }

@@ -110,6 +110,7 @@ test("ambiguous provider failures search Sent mail before allowing any retry", a
 })
 
 test("expired send receipts have a metadata-only cleanup path", async () => {
+  mocks.operations = [{ id: "expired" }]
   await cleanupExpiredGmailSendOperations(new Date("2026-08-30T00:00:00Z"))
   assert.equal(mocks.deleteCalls, 1)
 })
@@ -120,7 +121,7 @@ test("draft delivery retains the provider draft route", async () => {
   const result = await sendGmailComposition({ compose, connection, gateway, userId: "user-1", draftId: "draft-1" })
   assert.deepEqual(calls, ["draft-1"])
   assert.equal(result.reused, false)
-  assert.equal(result.message.id, "sent-draft")
+  assert.equal(result.messageId, "sent-draft")
 })
 
 test("a receipt cannot be reused by a different user or connection", async () => {
@@ -131,15 +132,15 @@ test("a receipt cannot be reused by a different user or connection", async () =>
   }
 })
 
-test("fresh pending receipts block retries while stale receipts can be reclaimed", async () => {
+test("fresh and stale pending receipts never replay uncertain delivery", async () => {
   let sends = 0
   mocks.operations = [{ id: compose.clientOperationId, connectionId: connection.id, userId: "user-1", status: "pending", rfcMessageId: "<zilobase.operation_123456@example.com>", updatedAt: new Date() }]
   const gateway = fakeGateway({ async listMessages() { return { messages: [] } }, async sendMessage() { sends += 1; return { id: "sent" } } })
   await assert.rejects(sendGmailComposition({ compose, connection, gateway, userId: "user-1" }), /still being sent/)
   assert.equal(sends, 0)
   mocks.operations[0]!.updatedAt = new Date(Date.now() - 121_000)
-  await sendGmailComposition({ compose, connection, gateway, userId: "user-1" })
-  assert.equal(sends, 1)
+  await assert.rejects(sendGmailComposition({ compose, connection, gateway, userId: "user-1" }), /still being sent/)
+  assert.equal(sends, 0)
 })
 
 test("unrecovered ambiguous sends retain a receipt for the next attempt", async () => {
@@ -164,6 +165,7 @@ test("definite provider failures are recorded and remain retryable by receipt cl
 
 function fakeGateway(overrides: Partial<GmailGateway>) {
   return {
+    async updateDraft(id: string) { return { id, message: await this.getMessage("draft-message") } },
     async getMessage(id: string) {
       return {
         historyId: "2",
@@ -183,3 +185,25 @@ function fakeGateway(overrides: Partial<GmailGateway>) {
     ...overrides,
   } as GmailGateway
 }
+
+test("draft retries recover a successful receipt before updating the deleted draft", async () => {
+  let updates = 0
+  const gateway = fakeGateway({
+    async listMessages() { return { messages: [] } },
+    async updateDraft(id) { if (++updates > 1) throw new Error("draft was deleted"); return { id, message: { id: "draft-message", threadId: "thread", payload: {} } } },
+    async sendDraft() { return { id: "sent" } },
+  })
+  const input = { compose, connection, gateway, userId: "user-1", draftId: "draft" }
+  await sendGmailComposition(input)
+  assert.equal((await sendGmailComposition(input)).reused, true)
+  assert.equal(updates, 1)
+  await assert.rejects(sendGmailComposition({ ...input, compose: { ...compose, bodyText: "changed" } }), /cannot be changed/)
+})
+
+test("failed message hydration cannot turn accepted delivery into a failed receipt", async () => {
+  const gateway = fakeGateway({ async listMessages() { return { messages: [] } }, async sendMessage() { return { id: "sent" } }, async getMessage() { throw new Error("read outage") } })
+  const response = await sendGmailComposition({ compose, connection, gateway, userId: "user-1" })
+  assert.equal(response.messageId, "sent")
+  assert.equal(response.message, null)
+  assert.equal(mocks.operations[0].status, "sent")
+})
