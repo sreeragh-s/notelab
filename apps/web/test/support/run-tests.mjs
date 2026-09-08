@@ -66,6 +66,7 @@ async function loadModule(path) {
         VITE_API_URL: "https://api.zilobase.test",
       }),
     },
+    alias: { "@zilobase/features/runtime": join(workspaceDir, "packages/features/src/runtime/index.ts") },
     entryPoints: [sourcePath],
     external: ["@zilobase/features"],
     format: "esm",

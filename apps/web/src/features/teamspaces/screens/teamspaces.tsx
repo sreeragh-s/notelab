@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 import { getTeamspaceManagementPermissions } from "../model/teamspace-settings";
 import { useTeamspaceDirectory } from "../commands/use-teamspace-directory";
 import { CreateTeamspaceDialog } from "../components/create-teamspace-dialog";
@@ -136,7 +137,7 @@ export default function TeamspacesSettingsPage() {
               type="search"
               value={query}
             />
-            <Select
+            {hasRuntimeCapability("members") && (<Select
               onValueChange={(value) =>
                 setAccessFilter(value as "all" | TeamspaceAccessMode)
               }
@@ -151,8 +152,8 @@ export default function TeamspacesSettingsPage() {
                 <SelectItem value="closed">Closed</SelectItem>
                 <SelectItem value="private">Private</SelectItem>
               </SelectContent>
-            </Select>
-            <Select
+            </Select>)}
+            {hasRuntimeCapability("members") && (<Select
               onValueChange={(value) =>
                 setMembershipFilter(value as typeof membershipFilter)
               }
@@ -172,7 +173,7 @@ export default function TeamspacesSettingsPage() {
                   <SelectItem value="ownerless">Ownerless</SelectItem>
                 ) : null}
               </SelectContent>
-            </Select>
+            </Select>)}
             {settings?.canManage && selectedIds.size > 0 ? (
               <Button
                 disabled={lifecycle.isPending}
@@ -317,7 +318,7 @@ function TeamspaceDirectoryRow({
           <Badge variant="outline">{teamspace.accessMode}</Badge>
         </div>
         <p className="truncate text-sm text-content-secondary">
-          {teamspace.memberCount ?? 0} members
+          {hasRuntimeCapability("members") ? `${teamspace.memberCount ?? 0} members` : ""}
           {teamspace.description ? ` · ${teamspace.description}` : ""}
         </p>
       </div>
@@ -334,6 +335,7 @@ function TeamspaceMembershipActions({
   teamspace: Teamspace;
   directory: ReturnType<typeof useTeamspaceDirectory>;
 }) {
+  if (!hasRuntimeCapability("members")) return null;
   const { membership, workspaceId } = directory;
   return (
     <>

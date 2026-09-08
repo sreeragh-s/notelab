@@ -1,3 +1,4 @@
+import { withRuntimeCapability } from "@/platform/runtime/capabilities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -30,7 +31,7 @@ type InstanceSettingsResponse = {
   };
 };
 
-export function RegistrationSettingsSection() {
+function RegistrationSettingsSectionContent() {
   const queryClient = useQueryClient();
   const settingsQuery = useQuery({
     queryKey: ["instance", "settings"],
@@ -98,3 +99,6 @@ export function RegistrationSettingsSection() {
     </section>
   );
 }
+
+const RegistrationSettingsSection = withRuntimeCapability(RegistrationSettingsSectionContent, "members", false);
+export { RegistrationSettingsSection };

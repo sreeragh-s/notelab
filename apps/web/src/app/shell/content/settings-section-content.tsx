@@ -1,3 +1,4 @@
+import { localSettingsAvailable, LocalFeatureUnavailable } from "@/platform/runtime/capabilities";
 import { editionWebModule } from "@zilobase/edition-web"
 
 import {
@@ -14,6 +15,7 @@ import { TeamSettingsPage } from "@/features/workspaces"
 import WorkspaceSettingsPage from "./workspace-settings"
 
 export function SettingsSectionContent({ section }: { section: SettingsSection }) {
+  if (!localSettingsAvailable(section)) return <LocalFeatureUnavailable />;
   const editionSection = editionWebModule.settingsSections.find((candidate) => candidate.id === section)
   if (editionSection) {
     const EditionSettings = editionSection.component

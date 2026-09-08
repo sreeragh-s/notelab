@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 import * as React from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { CameraIcon, DownloadIcon, LogOutIcon, Trash2Icon } from "@/shared/components/icons"
@@ -103,7 +104,7 @@ export default function ProfileSettingsPage() {
         />
       </div>
 
-      <div className="mx-auto mt-auto flex w-full max-w-3xl justify-end pt-2">
+      {hasRuntimeCapability("integrations") && (<div className="mx-auto mt-auto flex w-full max-w-3xl justify-end pt-2">
         <Button
           disabled={signOut.isPending}
           onClick={handleSignOut}
@@ -113,7 +114,7 @@ export default function ProfileSettingsPage() {
           {signOut.isPending ? <Spinner /> : <LogOutIcon />}
           {signOut.isPending ? "Logging out..." : "Log out"}
         </Button>
-      </div>
+      </div>)}
       <AlertDialog open={logoutDialog !== null} onOpenChange={(open) => !open && setLogoutDialog(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

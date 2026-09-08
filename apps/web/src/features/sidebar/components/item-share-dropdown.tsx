@@ -1,3 +1,4 @@
+import { withRuntimeCapability } from "@/platform/runtime/capabilities";
 import {
   useItemSharing,
   type ItemSharingState,
@@ -52,7 +53,7 @@ const accessLabels: Record<AccessLevel, string> = {
   view: "View access",
 };
 
-export function ItemShareDropdown({
+function ItemShareDropdownAvailable({
   databaseId,
   pageId,
 }: {
@@ -619,3 +620,6 @@ function ItemSharingTab({ sharing }: { sharing: ItemSharingState }) {
     </TabsContent>
   );
 }
+
+const ItemShareDropdown = withRuntimeCapability(ItemShareDropdownAvailable, "sharing", false);
+export { ItemShareDropdown };

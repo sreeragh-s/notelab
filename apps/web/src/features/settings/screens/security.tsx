@@ -1,3 +1,4 @@
+import { withRuntimeCapability } from "@/platform/runtime/capabilities";
 import * as React from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { Trash2Icon } from "@/shared/components/icons"
@@ -36,7 +37,7 @@ import {
 
 import { SettingsHeader } from "../components/settings-header"
 
-export default function SecuritySettingsPage() {
+function SecuritySettingsPage() {
   const { data: sessionData } = useSession()
   const user = sessionData?.user
 
@@ -319,3 +320,5 @@ function DeleteAccountSection({
     </section>
   )
 }
+
+export default withRuntimeCapability(SecuritySettingsPage, "integrations", true);

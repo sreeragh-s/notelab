@@ -36,3 +36,15 @@ adapts these menus to mobile drawers with larger touch targets and subpages.
 The [manual checklist](../../docs/testing/dropdown-menus.md) maps consumers to
 application areas. Navigation behavior is covered by
 [dropdown tests](../../apps/web/test/shared/dropdown-navigation.test.mjs).
+
+### Local capability boundaries
+
+The [runtime capability boundary](../../apps/web/src/platform/runtime/capabilities.tsx)
+uses the selected desktop profile and shared runtime policy. Hidden sharing,
+member-management, publishing, mail, and presence components never mount. Settings
+navigation and direct settings content use the same allowlist. Local teamspaces
+retain organization and editing while hiding access policies and membership actions.
+The library and sidebar retain content previously marked shared without displaying
+collaboration-only sections. Editor document synchronization remains enabled; remote
+cursor presentation is disabled independently. Personal comments retain author text,
+while mention notification targeting is unavailable.

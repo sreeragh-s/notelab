@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 import { buildHomepagePayload, buildHomepageRows, isHomepageView, homepageViews as libraryViews, type RecentsMode } from "../model/library-model";
 import { TeamspacesLibraryTable } from "../components/teamspace-library-table";
 import { CreateTeamspaceDialog as CreateLibraryTeamspaceDialog } from "@/features/teamspaces/creation/index";
@@ -69,7 +70,7 @@ export default function RecentsPage({
     [userSettings.sidebarConfig],
   );
   const requestedView =
-    mode === "home" && isHomepageView(location.search.view)
+    mode === "home" && isHomepageView(location.search.view) && (hasRuntimeCapability("sharing") || location.search.view !== "shared")
       ? location.search.view
       : null;
   const { data: navigation, isLoading } = usePageNavigation(workspaceId, {
@@ -108,7 +109,7 @@ export default function RecentsPage({
   >({});
   const [viewConfigs, setViewConfigs] = useState<Record<string, unknown>>(() =>
     Object.fromEntries(
-      homepageViews.map((view) => [
+      homepageViews.filter(view => hasRuntimeCapability("sharing") || view.id !== "shared").map((view) => [
         view.id,
         {
           ...(view.id === "recents"
@@ -485,7 +486,7 @@ export default function RecentsPage({
                       }),
                     ),
                   updateNameColumnConfig,
-                  viewTabs: homepageViews.map((view) => ({
+                  viewTabs: homepageViews.filter(view => hasRuntimeCapability("sharing") || view.id !== "shared").map((view) => ({
                     dataSourceId: payload.activeDataSource!.id,
                     fallbackIcon: view.icon,
                     id: view.id,

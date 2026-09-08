@@ -1,3 +1,4 @@
+import { withRuntimeCapability } from "@/platform/runtime/capabilities";
 import { useEffect, useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate, useSearch } from "@tanstack/react-router"
@@ -94,7 +95,7 @@ const organizationFolderDetails = {
   spam: { icon: BanIcon, label: "Spam" },
 } as const
 
-export default function MailPage() {
+function MailPageContent() {
   const activeWorkspaceId = useActiveWorkspaceId()
   const connectionQuery = useQuery(
     mailConnectionQueryOptions(apiFetch, activeWorkspaceId),
@@ -690,3 +691,5 @@ function persistedViewIcon(view: MailPersistedView) {
   if (view.templateId === "starred") return StarIcon
   return MailIcon
 }
+
+export default withRuntimeCapability(MailPageContent, "integrations", true);

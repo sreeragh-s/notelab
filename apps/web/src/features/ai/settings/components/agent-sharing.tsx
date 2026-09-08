@@ -1,3 +1,4 @@
+import { withRuntimeCapability } from "@/platform/runtime/capabilities";
 import { sharingActionAvailability } from "../model/draft-actions";
 import type { useSettingsDraft } from "../use-settings-draft";
 import { ChevronsUpDownIcon, Trash2Icon } from "@/shared/components/icons";
@@ -34,7 +35,7 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 
-export function AgentSharePopover({
+function AgentSharePopoverContent({
   agent,
   draft,
   anchor,
@@ -409,3 +410,6 @@ function showError(title: string, error: unknown) {
     description: error instanceof Error ? error.message : "Try again.",
   });
 }
+
+const AgentSharePopover = withRuntimeCapability(AgentSharePopoverContent, "sharing", false);
+export { AgentSharePopover };

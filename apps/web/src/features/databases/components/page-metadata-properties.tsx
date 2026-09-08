@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 import type { CSSProperties, Dispatch, SetStateAction } from "react"
 import type { PageLayoutConfig } from "@zilobase/features/pages"
 import { usePageProperties } from "@zilobase/features/pages/react";
@@ -25,7 +26,7 @@ function PagePropertyPresence({
 }: {
   collaborators: DatabasePresenceCollaborator[]
 }) {
-  if (collaborators.length === 0) return null
+  if (!hasRuntimeCapability("members") || collaborators.length === 0) return null
 
   return (
     <div

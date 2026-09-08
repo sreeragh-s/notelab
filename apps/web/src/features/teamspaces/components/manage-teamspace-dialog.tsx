@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 import { useTeamspaceManagement } from "../commands/use-teamspace-management";
 
 import { Layers3Icon, UsersIcon } from "@/shared/components/icons";
@@ -62,23 +63,23 @@ export function ManageTeamspaceDialog({
         <DialogHeader>
           <DialogTitle>{teamspace.name}</DialogTitle>
           <DialogDescription>
-            Manage details, members, and collaboration defaults.
+            {hasRuntimeCapability("members") ? "Manage details, members, and collaboration defaults." : "Manage this content collection."}
           </DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue={initialTab}>
+        <Tabs defaultValue={hasRuntimeCapability("members") ? initialTab : "general"}>
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger disabled={!canManage} value="general">
               General
             </TabsTrigger>
-            <TabsTrigger disabled={!canInvite && !canManage} value="members">
+            {hasRuntimeCapability("members") && (<TabsTrigger disabled={!canInvite && !canManage} value="members">
               Members
-            </TabsTrigger>
-            <TabsTrigger disabled={!canManage} value="permissions">
+            </TabsTrigger>)}
+            {hasRuntimeCapability("members") && (<TabsTrigger disabled={!canManage} value="permissions">
               Permissions
-            </TabsTrigger>
-            <TabsTrigger disabled={!canManage} value="security">
+            </TabsTrigger>)}
+            {hasRuntimeCapability("members") && (<TabsTrigger disabled={!canManage} value="security">
               Security
-            </TabsTrigger>
+            </TabsTrigger>)}
           </TabsList>
           <TeamspaceGeneralSettings
             teamspace={teamspace}
@@ -88,15 +89,15 @@ export function ManageTeamspaceDialog({
             onOpenChange={onOpenChange}
             state={state}
           />
-          <TeamspaceMemberSettings
+          {hasRuntimeCapability("members") && (<TeamspaceMemberSettings
             teamspace={teamspace}
             workspaceId={workspaceId}
             canInvite={canInvite}
             canManage={canManage}
             onOpenChange={onOpenChange}
             state={state}
-          />
-          <TabsContent className="grid gap-4 pt-4" value="permissions">
+          />)}
+          {hasRuntimeCapability("members") && (<TabsContent className="grid gap-4 pt-4" value="permissions">
             <PermissionSelect
               label="Default member page access"
               onChange={(memberAccessLevel) =>
@@ -126,8 +127,8 @@ export function ManageTeamspaceDialog({
               }
               value={teamspace.sidebarEditPolicy}
             />
-          </TabsContent>
-          <TabsContent className="grid gap-4 pt-4" value="security">
+          </TabsContent>)}
+          {hasRuntimeCapability("members") && (<TabsContent className="grid gap-4 pt-4" value="security">
             <SecurityToggle
               checked={teamspace.guestsEnabled}
               label="Allow guests"
@@ -153,7 +154,7 @@ export function ManageTeamspaceDialog({
                 save({ exportEnabled, teamspaceId: teamspace.id, workspaceId })
               }
             />
-          </TabsContent>
+          </TabsContent>)}
         </Tabs>
       </DialogContent>
     </Dialog>
@@ -312,7 +313,7 @@ function TeamspaceGeneralSettings({
           value={description}
         />
       </div>
-      <div className="grid gap-2">
+      {hasRuntimeCapability("members") && (<div className="grid gap-2">
         <Label>Access</Label>
         <Select
           onValueChange={(value) =>
@@ -333,7 +334,7 @@ function TeamspaceGeneralSettings({
             <SelectItem value="private">Private</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </div>)}
       <div className="flex justify-between gap-3">
         <Button
           disabled={teamspace.isDefault || lifecycle.isPending}

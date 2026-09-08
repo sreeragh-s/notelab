@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 import { useEffect, useMemo, useState } from "react";
 
 import { toast } from "sonner";
@@ -30,10 +31,10 @@ export function useTeamspaceManagement({
   const lifecycle = useTeamspaceLifecycle();
   const inviteLink = useUpdateTeamspaceInviteLink();
   const { data: principals = [] } = useTeamspacePrincipals(
-    workspaceId,
+    hasRuntimeCapability("members") ? workspaceId : null,
     teamspace?.id,
   );
-  const { data: targets } = useWorkspaceAccessTargets(workspaceId);
+  const { data: targets } = useWorkspaceAccessTargets(hasRuntimeCapability("members") ? workspaceId : null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [candidateId, setCandidateId] = useState("");

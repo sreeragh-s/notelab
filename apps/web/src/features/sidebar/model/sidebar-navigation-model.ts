@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 import type {
   Page,
   PageDatabase,
@@ -296,7 +297,7 @@ export function buildPageSections<Icon>(
   }
 
   return {
-    privatePages: roots.filter((item) => !item.isShared && !item.teamspaceId),
+    privatePages: roots.filter((item) => (!hasRuntimeCapability("sharing") || !item.isShared) && !item.teamspaceId),
     teamspacePages: roots.filter((item) => item.isShared && !item.teamspaceId),
     teamspacePagesById: Object.fromEntries(
       [...new Set(roots.flatMap((item) => item.teamspaceId ? [item.teamspaceId] : []))]

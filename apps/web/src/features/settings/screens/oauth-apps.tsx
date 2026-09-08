@@ -1,3 +1,4 @@
+import { withRuntimeCapability } from "@/platform/runtime/capabilities";
 import { useEffect, useState } from "react"
 
 import { SettingsHeader } from "../components/settings-header"
@@ -22,7 +23,7 @@ type OAuthApp = {
   redirect_uris?: string[]
 }
 
-export default function OAuthAppsSettingsPage() {
+function OAuthAppsSettingsPage() {
   const [apps, setApps] = useState<OAuthApp[]>([])
   const [name, setName] = useState("")
   const [redirectUris, setRedirectUris] = useState("")
@@ -153,3 +154,5 @@ export default function OAuthAppsSettingsPage() {
     </main>
   )
 }
+
+export default withRuntimeCapability(OAuthAppsSettingsPage, "integrations", true);

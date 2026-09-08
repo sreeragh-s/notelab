@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 import { getTeamspaceCreationInput } from "../model/teamspace-creation";
 import { useState } from "react";
 
@@ -96,7 +97,7 @@ export function CreateTeamspaceDialog({
               value={description}
             />
           </div>
-          <div className="grid gap-2">
+          {hasRuntimeCapability("members") && (<div className="grid gap-2">
             <Label>Access</Label>
             <Select
               onValueChange={(value) =>
@@ -117,7 +118,7 @@ export function CreateTeamspaceDialog({
                 </SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </div>)}
         </div>
         <DialogFooter>
           <Button onClick={() => onOpenChange(false)} variant="outline">

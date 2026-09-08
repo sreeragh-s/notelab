@@ -1,3 +1,4 @@
+import { withRuntimeCapability } from "@/platform/runtime/capabilities";
 import { useEffect, useState } from "react"
 
 import { SettingsHeader } from "../components/settings-header"
@@ -22,7 +23,7 @@ type OAuthConsent = {
   scopes?: string[]
 }
 
-export default function ConnectedAppsSettingsPage() {
+function ConnectedAppsSettingsPage() {
   const [consents, setConsents] = useState<OAuthConsent[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -105,3 +106,5 @@ export default function ConnectedAppsSettingsPage() {
     </main>
   )
 }
+
+export default withRuntimeCapability(ConnectedAppsSettingsPage, "integrations", true);

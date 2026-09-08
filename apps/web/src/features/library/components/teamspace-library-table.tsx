@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 import { Fragment, useState } from "react";
 
 import {
@@ -50,8 +51,8 @@ export function TeamspacesLibraryTable({
           <col className="w-[30%]" />
           <col className="w-[28%]" />
           <col className="w-[14%]" />
-          <col className="w-[17%]" />
-          <col className="w-[11%]" />
+          {hasRuntimeCapability("members") && <col className="w-[17%]" />}
+          {hasRuntimeCapability("members") && <col className="w-[11%]" />}
         </colgroup>
         <thead>
           <tr>
@@ -64,12 +65,12 @@ export function TeamspacesLibraryTable({
             <th>
               <div className="database-name-header-content">Type</div>
             </th>
-            <th>
+            {hasRuntimeCapability("members") && (<th>
               <div className="database-name-header-content">Access</div>
-            </th>
-            <th>
+            </th>)}
+            {hasRuntimeCapability("members") && (<th>
               <div className="database-name-header-content">Members</div>
-            </th>
+            </th>)}
           </tr>
         </thead>
         <tbody>
@@ -110,18 +111,18 @@ export function TeamspacesLibraryTable({
                     {teamspace.description?.trim() || "—"}
                   </td>
                   <td className="text-content-secondary">Teamspace</td>
-                  <td>
+                  {hasRuntimeCapability("members") && (<td>
                     <span className="flex items-center gap-1.5 capitalize">
                       <TeamspaceAccessIcon accessMode={teamspace.accessMode} />
                       {teamspace.isDefault ? "Default" : teamspace.accessMode}
                     </span>
-                  </td>
-                  <td>
+                  </td>)}
+                  {hasRuntimeCapability("members") && (<td>
                     <span className="flex items-center gap-1.5">
                       <UsersIcon className="size-4 text-content-secondary" />
                       {teamspace.memberCount ?? 0}
                     </span>
-                  </td>
+                  </td>)}
                 </tr>
                 {expanded ? (
                   <Fragment>
@@ -152,13 +153,12 @@ export function TeamspacesLibraryTable({
                           <td className="text-content-secondary">
                             {getHomepageRowType(row)}
                           </td>
-                          <td />
-                          <td />
+                          {hasRuntimeCapability("members") && <><td /><td /></>}
                         </tr>
                       ))
                     ) : (
                       <tr aria-label={`${teamspace.name} contents`}>
-                        <td className="h-8 text-content-secondary" colSpan={5}>
+                        <td className="h-8 text-content-secondary" colSpan={hasRuntimeCapability("members") ? 5 : 3}>
                           No pages yet
                         </td>
                       </tr>

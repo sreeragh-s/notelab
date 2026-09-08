@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 import { DEFAULT_MEETING_ITEM_ICON } from "@/features/pages/icons/item-icons";
 import { getDatabaseEmoji } from "@zilobase/features/databases/appearance";
 import type {
@@ -509,7 +510,7 @@ export function applyHomepageView(rows: HomepageRow[], view: HomepageView) {
     case "private":
       return rows.filter(
         (row) =>
-          row.itemKind !== "meeting" && !row.isShared && !row.teamspaceId,
+          row.itemKind !== "meeting" && (!hasRuntimeCapability("sharing") || !row.isShared) && !row.teamspaceId,
       );
     case "recents":
     default:

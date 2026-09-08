@@ -1,3 +1,4 @@
+import { withRuntimeCapability } from "@/platform/runtime/capabilities";
 import * as React from "react"
 import {
   CheckIcon,
@@ -80,7 +81,7 @@ const expirationOptions = [
   { label: "No expiry", value: "none" },
 ] as const
 
-export default function ApiKeysSettingsPage() {
+function ApiKeysSettingsPage() {
   const activeWorkspaceId = useActiveWorkspaceId()
   const { data: workspaces = [] } = useWorkspaces()
   const apiKeys = useApiKeys(activeWorkspaceId ?? null)
@@ -434,3 +435,5 @@ function formatDate(value: string) {
     year: "numeric",
   }).format(new Date(value))
 }
+
+export default withRuntimeCapability(ApiKeysSettingsPage, "integrations", true);

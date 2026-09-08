@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 "use client"
 
 import {
@@ -154,7 +155,7 @@ export function AppSidebar({
   const layout = React.useMemo(
     () => {
       const resolved = resolveSidebarWorkspaceLayout(sidebarConfig, workspaceId)
-      return isFeatureEnabled("mail") ? resolved : withoutMailFeatures(resolved)
+      return hasRuntimeCapability("integrations") && isFeatureEnabled("mail") ? resolved : withoutMailFeatures(resolved)
     },
     [sidebarConfig, workspaceId],
   )
@@ -197,7 +198,8 @@ export function AppSidebar({
       setActiveTabId(next)
     }
   }, [activeTabId, customizing, layout.tabs, pathname, workspaceId])
-  const activeTab = layout.tabs.find((tab) => tab.id === activeTabId) ?? layout.tabs[0]!
+  const selectedTab = layout.tabs.find((tab) => tab.id === activeTabId) ?? layout.tabs[0]!
+  const activeTab = { ...selectedTab, sections: selectedTab.sections.filter(section => hasRuntimeCapability("sharing") || section.kind !== "shared") }
   const needsMeetings = activeTab.sections.some((section) => section.kind === "meetings")
   const { data: navigation } = usePageNavigation(workspaceId)
   const { data: teamspaces = [] } = useTeamspaces(workspaceId)

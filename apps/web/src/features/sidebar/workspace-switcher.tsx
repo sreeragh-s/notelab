@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 "use client"
 
 import * as React from "react"
@@ -293,7 +294,7 @@ function MultiWorkspaceSwitcher({
                   )}
                 </DropDrawerItem>
               ))}
-              {isWorkspacePinned ? null : (
+              {isWorkspacePinned || !hasRuntimeCapability("members") ? null : (
                 <>
                   <DropDrawerSeparator />
                   <DropDrawerItem
@@ -309,7 +310,7 @@ function MultiWorkspaceSwitcher({
                   </DropDrawerItem>
                 </>
               )}
-              {isDesktop
+              {isDesktop && hasRuntimeCapability("integrations")
                 ? otherProfiles.map((profile) => (
                     <OtherServerSection
                       key={`${profile.server.instanceId}:${profile.server.apiOrigin}`}

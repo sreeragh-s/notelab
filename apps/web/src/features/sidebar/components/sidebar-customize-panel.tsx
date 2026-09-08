@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 import {
   closestCenter,
   DndContext,
@@ -343,9 +344,9 @@ export function SidebarCustomizePanel({
           {activeTab.id !== "mail" ? <>
             <div className="my-2 h-px bg-stroke-default" />
             <AddSectionMenu databases={databases} onAdd={addSection} onAddDatabase={addDatabaseSection} tabId={activeTab.id} workspaceId={workspaceId} />
-            <SortableContext items={activeTab.sections.map((section) => `sections:${section.id}`)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={activeTab.sections.filter(section => hasRuntimeCapability("sharing") || section.kind !== "shared").map((section) => `sections:${section.id}`)} strategy={verticalListSortingStrategy}>
               <div className="space-y-0.5 py-1">
-                {activeTab.sections.map((section, index) => {
+                {activeTab.sections.filter(section => hasRuntimeCapability("sharing") || section.kind !== "shared").map((section, index) => {
                 const Icon = sectionIcons[section.kind]
                 return (
                   <EditableRow id={`sections:${section.id}`} key={section.id}>
@@ -482,7 +483,7 @@ function AddSectionMenu({ databases, onAdd, onAddDatabase, tabId, workspaceId }:
         <DropDrawerLabel>Sections</DropDrawerLabel>
         {tabId === "ai"
           ? <DropDrawerItem onSelect={() => onAdd("aiChats")}><MessageSquareIcon />AI chats</DropDrawerItem>
-          : <>{sidebarSectionKinds.filter((kind) => kind !== "databaseView" && kind !== "aiChats").map((kind) => { const Icon = sectionIcons[kind]; return <DropDrawerItem key={kind} onSelect={() => onAdd(kind)}><Icon />{sidebarSectionLabels[kind]}</DropDrawerItem> })}<DropDrawerSub title="Database view"><DropDrawerSubTrigger><DatabaseIcon />Database view</DropDrawerSubTrigger><DropDrawerSubContent className="w-72 overflow-hidden p-0"><DatabasePicker databases={databases} onSelect={(database, view) => onAddDatabase(database, view?.id)} workspaceId={workspaceId} /></DropDrawerSubContent></DropDrawerSub></>}
+          : <>{sidebarSectionKinds.filter(kind => hasRuntimeCapability("sharing") || kind !== "shared").filter((kind) => kind !== "databaseView" && kind !== "aiChats").map((kind) => { const Icon = sectionIcons[kind]; return <DropDrawerItem key={kind} onSelect={() => onAdd(kind)}><Icon />{sidebarSectionLabels[kind]}</DropDrawerItem> })}<DropDrawerSub title="Database view"><DropDrawerSubTrigger><DatabaseIcon />Database view</DropDrawerSubTrigger><DropDrawerSubContent className="w-72 overflow-hidden p-0"><DatabasePicker databases={databases} onSelect={(database, view) => onAddDatabase(database, view?.id)} workspaceId={workspaceId} /></DropDrawerSubContent></DropDrawerSub></>}
       </DropDrawerContent>
     </DropDrawer>
   )

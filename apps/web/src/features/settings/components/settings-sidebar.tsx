@@ -1,3 +1,4 @@
+import { localSettingsAvailable } from "@/platform/runtime/capabilities";
 import {
   Building2Icon,
   Code as CodeIcon,
@@ -87,7 +88,7 @@ export function SettingsSidebar({
           <SidebarGroupContent>
             <nav aria-label="Settings sections">
               <SidebarMenu className="flex-row gap-1 overflow-x-auto sm:flex-col sm:gap-0.5 sm:overflow-x-visible">
-                {settingsItems.map((item) => {
+                {settingsItems.filter(item => localSettingsAvailable(item.section)).map((item) => {
                   const Icon = item.icon
                   const active = activeSection === item.section
 

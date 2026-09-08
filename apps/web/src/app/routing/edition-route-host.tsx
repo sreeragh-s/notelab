@@ -1,7 +1,8 @@
+import { withRuntimeCapability } from "@/platform/runtime/capabilities";
 import { useRouterState } from "@tanstack/react-router";
 import { editionWebModule } from "@zilobase/edition-web";
 
-export default function EditionRouteHost() {
+function EditionRouteHost() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -23,3 +24,5 @@ export default function EditionRouteHost() {
   const EditionComponent = route.component;
   return <EditionComponent />;
 }
+
+export default withRuntimeCapability(EditionRouteHost, "integrations", true);

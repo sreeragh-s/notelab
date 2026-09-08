@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 
 import { LockIcon, SlidersHorizontalIcon } from "@/shared/components/icons";
@@ -56,6 +57,7 @@ export function CustomAgentHeaderActions({ agentId }: { agentId: string }) {
 }
 
 export function CustomAgentShareHeaderAction({ agentId }: { agentId: string }) {
+  if (!hasRuntimeCapability("sharing")) return null;
   return (
     <Button
       variant="outline"

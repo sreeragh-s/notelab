@@ -1,3 +1,4 @@
+import { withRuntimeCapability } from "@/platform/runtime/capabilities";
 import { MemberList } from "../members/components/member-list";
 import {
   InviteMemberSection,
@@ -41,7 +42,7 @@ import {
   normalizeTeamSettingsTab,
 } from "../members/model/member-settings-tabs";
 
-export default function TeamSettingsPage() {
+function TeamSettingsPageContent() {
   const navigate = useNavigate();
   const tab = useSearch({
     strict: false,
@@ -225,3 +226,6 @@ export default function TeamSettingsPage() {
     </main>
   );
 }
+
+const TeamSettingsPage = withRuntimeCapability(TeamSettingsPageContent, "members", true);
+export default TeamSettingsPage;

@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 import { PendingPageEmbeds } from "../drag-drop/pending-page-embed"
 import CharacterCount from "@tiptap/extension-character-count"
 import {
@@ -116,7 +117,7 @@ export const createBaseExtensions = ({
           document: collaboration.document,
           field: collaborationField,
         }),
-        ...(collaboration.provider && collaboration.user
+        ...(hasRuntimeCapability("members") && collaboration.provider && collaboration.user
           ? [
               CollaborationCaret.configure({
                 provider: collaboration.provider,

@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 "use client"
 
 import {
@@ -697,7 +698,7 @@ export function PageCommentThread({
   const controller = usePageCommentController(pageId)
   const commentsSnapshot = usePageCommentsSnapshot(pageId)
   const { data: accessTargets } = usePagePersonAccessTargets(
-    pageId ?? null
+    hasRuntimeCapability("members") ? pageId ?? null : null
   )
 
   const thread = threadId
@@ -723,7 +724,7 @@ export function PageCommentThread({
   }, [threadId, comments.length])
 
   const mentionTrigger = useMemo(
-    () => getCommentMentionTrigger(newCommentBody, newCommentCursor),
+    () => hasRuntimeCapability("members") ? getCommentMentionTrigger(newCommentBody, newCommentCursor) : null,
     [newCommentBody, newCommentCursor],
   )
   const mentionKey = mentionTrigger

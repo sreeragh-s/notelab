@@ -1,3 +1,4 @@
+import { withRuntimeCapability } from "@/platform/runtime/capabilities";
 import {
   Check,
   ChevronRight,
@@ -53,7 +54,7 @@ const submissionAccessValues: DatabaseFormSubmissionAccess[] = [
   "full",
 ]
 
-export function DatabaseFormShareMenu() {
+function DatabaseFormShareMenuContent() {
   const {
     updateDatabaseFormShareSettings,
   } = useDatabaseActionsContext()
@@ -282,3 +283,6 @@ function FillAccessItem({
     </DropDrawerItem>
   )
 }
+
+const DatabaseFormShareMenu = withRuntimeCapability(DatabaseFormShareMenuContent, "publishing", false);
+export { DatabaseFormShareMenu };

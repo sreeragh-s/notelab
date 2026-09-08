@@ -1,3 +1,4 @@
+import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
 import { getNavigationItemPath } from "../model/database-view-navigation";
 import { useState, type DragEvent } from "react"
 import { useLocation, useNavigate } from "@tanstack/react-router"
@@ -501,13 +502,13 @@ function TeamspaceActionsMenu({
         </SidebarNavItemAction>
       </DropDrawerTrigger>
       <DropDrawerContent align="start" className="w-72 rounded-lg" side="right">
-        <DropDrawerItem
+        {hasRuntimeCapability("members") && (<DropDrawerItem
           disabled={!canInvite}
           onSelect={() => openSettings("members")}
         >
           <UserPlusIcon />
           <span>Add members</span>
-        </DropDrawerItem>
+        </DropDrawerItem>)}
         <DropDrawerSeparator />
         <DropDrawerItem
           disabled={!canManage}
@@ -525,7 +526,7 @@ function TeamspaceActionsMenu({
             </span>
           </span>
         </DropDrawerItem>
-        <DropDrawerItem
+        {hasRuntimeCapability("members") && (<DropDrawerItem
           disabled={!canLeave || membership.isPending}
           onSelect={() => {
             if (!workspaceId) return
@@ -544,7 +545,7 @@ function TeamspaceActionsMenu({
         >
           <HandIcon />
           <span>Leave teamspace</span>
-        </DropDrawerItem>
+        </DropDrawerItem>)}
         <DropDrawerItem
           disabled={!canArchive || lifecycle.isPending}
           onSelect={() => {

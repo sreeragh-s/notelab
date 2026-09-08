@@ -1,3 +1,4 @@
+import { localSettingsAvailable, LocalFeatureUnavailable } from "@/platform/runtime/capabilities";
 import type { ReactNode } from "react"
 
 import { SettingsSidebar, type SettingsSection } from "./settings-sidebar"
@@ -38,7 +39,7 @@ export function SettingsDialog({
           onSectionChange={onSectionChange}
         />
         <div className="flex min-h-0 min-w-0 flex-1 overflow-y-auto bg-surface-canvas">
-          {children}
+          {localSettingsAvailable(activeSection) ? children : <LocalFeatureUnavailable />}
         </div>
       </DialogContent>
     </Dialog>

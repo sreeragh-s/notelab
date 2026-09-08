@@ -1,3 +1,4 @@
+import { withRuntimeCapability } from "@/platform/runtime/capabilities";
 import {
   Avatar,
   AvatarFallback,
@@ -14,7 +15,7 @@ export type CollaborationPresenceUser = {
   name: string
 }
 
-export function CollaborationPresence({
+function CollaborationPresenceContent({
   className,
   users,
 }: {
@@ -63,3 +64,6 @@ function initials(name: string) {
     .map((part) => part[0]?.toUpperCase())
     .join("") || "?"
 }
+
+const CollaborationPresence = withRuntimeCapability(CollaborationPresenceContent, "members", false);
+export { CollaborationPresence };
