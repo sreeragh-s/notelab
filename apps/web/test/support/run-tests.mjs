@@ -67,7 +67,7 @@ async function loadModule(path) {
       }),
     },
     entryPoints: [sourcePath],
-    external: sourcePath.endsWith("mail-cache-query.ts") ? [] : ["@zilobase/features"],
+    external: (sourcePath.endsWith("mail-cache-query.ts") || sourcePath.includes("/features/calendar/")) ? [] : ["@zilobase/features"],
     format: "esm",
     jsx: "automatic",
     logLevel: "silent",
