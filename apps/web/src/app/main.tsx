@@ -1,3 +1,6 @@
+import { installLocalContentBoundary } from "@/platform/runtime/local-network";
+import { getSelectedDesktopServer } from "@/platform/server/desktop-server";
+import { initializeProductTelemetry } from "@/shared/lib/posthog";
 import { listen } from "@tauri-apps/api/event";
 import { flushActiveLocalDocuments } from "@/features/offline";
 import { isLocalDesktop } from "@/platform/server/desktop-server";
@@ -69,6 +72,9 @@ async function bootstrap(skipChoice = false) {
     renderStartupFailure(error);
     return;
   }
+
+  if (isLocalDesktop()) installLocalContentBoundary(getSelectedDesktopServer()!.apiOrigin);
+  else initializeProductTelemetry();
 
   recordDesktopDiagnostic("renderer.auth_initialization", {
     status: "started",

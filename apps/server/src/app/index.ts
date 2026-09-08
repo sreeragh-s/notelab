@@ -21,7 +21,7 @@ import type { AppBindings, AppErrorReporter } from "../shared/types";
 import type { EditionExtensionOptions } from "../shared/types";
 import { demoWriteGuard } from "../features/demo/write-guard";
 import { runWithBackgroundTraceContext } from "../infrastructure/background/contracts";
-import { isSelfHostedRuntime } from "../infrastructure/runtime/runtime-adapter";
+import { isLocalRuntime, isSelfHostedRuntime } from "../infrastructure/runtime/runtime-adapter";
 
 export function createApp(options: EditionExtensionOptions = {}) {
   const app = new Hono<AppBindings>();
@@ -65,6 +65,10 @@ export function createApp(options: EditionExtensionOptions = {}) {
   app.use("*", methodNotAllowed({ app }));
   app.use("*", serverTimingMiddleware);
   app.use("*", authenticatedSessionMiddleware);
+  app.use("*", async (c, next) => {
+    if (isLocalRuntime() && !c.get("user") && !["/health", "/.well-known/zilobase"].includes(c.req.path)) return c.json({ error: "Unauthorized" }, 401);
+    return next();
+  });
   app.use("*", demoWriteGuard);
   registerRoutes(app);
   options.editionExtension?.registerRoutes(app);

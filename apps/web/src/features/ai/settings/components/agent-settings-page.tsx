@@ -102,7 +102,7 @@ function ScopedAgentSettingsPage({
   function renderSettingsHeader() {
   const tabs: AgentSettingsTab[] = [
     "instructions",
-    ...(hasRuntimeCapability("integrations") ? ["connectors" as const] : []),
+    "connectors",
     ...(scope === "personal" ? [] : (["access"] as AgentSettingsTab[])),
     "activity",
     "versions",
@@ -121,7 +121,7 @@ function ScopedAgentSettingsPage({
         >
           <div className="min-w-0 max-w-full overflow-x-auto">
             <TabsList aria-label="Agent settings">
-              {tabs.map((t) => (
+              {tabs.filter(t => t !== "connectors" || hasRuntimeCapability("integrations")).map((t) => (
                 <TabsTrigger key={t} value={t} className="grow-0 capitalize">
                   {t === "access" ? "Triggers & Access" : t}
                   {draft.changedTabs.includes(t) && (

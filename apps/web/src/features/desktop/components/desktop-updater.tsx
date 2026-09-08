@@ -1,3 +1,4 @@
+import { isLocalDesktop } from "@/platform/server/desktop-server";
 import { isTauri } from "@tauri-apps/api/core"
 import type { Update } from "@tauri-apps/plugin-updater"
 import { useEffect } from "react"
@@ -11,7 +12,7 @@ let updateCheckStarted = false
 
 export function DesktopUpdater() {
   useEffect(() => {
-    if (!isTauri() || updateCheckStarted) return
+    if (!isTauri() || isLocalDesktop() || updateCheckStarted) return
 
     updateCheckStarted = true
     void checkForUpdate()
@@ -21,6 +22,7 @@ export function DesktopUpdater() {
 }
 
 async function checkForUpdate() {
+  if (isLocalDesktop()) return
   const startedAt = performance.now()
   recordDesktopDiagnostic("updater.check", { status: "started" })
   try {
@@ -62,6 +64,7 @@ async function checkForUpdate() {
 }
 
 async function installUpdate(update: Update) {
+  if (isLocalDesktop()) return
   const toastId = toast.loading("Downloading Zilobase update…")
   const startedAt = performance.now()
   recordDesktopDiagnostic("updater.install", { status: "started" })

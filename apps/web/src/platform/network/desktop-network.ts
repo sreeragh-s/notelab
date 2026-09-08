@@ -1,3 +1,4 @@
+import { isLocalDesktop, getSelectedDesktopServer } from "../server/desktop-server";
 let replacementStarted = false;
 let replacementController = new AbortController();
 
@@ -11,8 +12,13 @@ export function desktopNetworkFetch(
     );
   }
 
+  if (isLocalDesktop()) {
+    const target = new URL(input instanceof Request ? input.url : String(input), window.location.href);
+    if (target.origin !== getSelectedDesktopServer()?.apiOrigin || target.username || target.password) return Promise.reject(new Error("Remote requests are unavailable in local mode"));
+  }
   return fetch(input, {
     ...init,
+    ...(isLocalDesktop() ? { redirect: "error" as const } : {}),
     signal: combineAbortSignals(init.signal, replacementController.signal),
   });
 }

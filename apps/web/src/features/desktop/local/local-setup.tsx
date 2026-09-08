@@ -1,10 +1,12 @@
+import { stopProductTelemetry } from "@/shared/lib/posthog";
+import { beginDesktopServerNetworkShutdown } from "@/platform/network/desktop-network";
 import { useState } from "react"
 import { openLocalDesktop } from "@/platform/server/desktop-server"
 import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
 import { hasUnsyncedOfflineItems, syncDirtyOfflinePages, flushActiveLocalDocuments } from "@/features/offline"
 
-export function LocalSetup({ onReady }: { onReady?: () => void }) {
+export function LocalSetup(_props: { onReady?: () => void }) {
   const [name, setName] = useState("Me")
   const [workspaceName, setWorkspaceName] = useState("My workspace")
   const [pending, setPending] = useState(false)
@@ -17,10 +19,11 @@ export function LocalSetup({ onReady }: { onReady?: () => void }) {
         await syncDirtyOfflinePages()
         if (hasUnsyncedOfflineItems()) throw new Error("Sync or export pending edits before changing workspace.")
       }
+      await stopProductTelemetry()
+      beginDesktopServerNetworkShutdown()
       await openLocalDesktop({ name, workspaceName })
       window.localStorage.setItem("zilobase:mode-chosen", "1")
-      if (onReady) onReady()
-      else window.location.replace("/recents")
+      window.location.replace("/recents")
     } catch (error) { setError(error instanceof Error ? error.message : String(error)); setPending(false) }
   }
   return <section className="space-y-3">

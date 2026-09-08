@@ -1,3 +1,4 @@
+import { setLocalServicePorts } from "../../../infrastructure/local/network-boundary";
 import { localTranscriptionStatus } from "../../meetings/transcription/local-whisper";
 import { isLocalRuntime } from "../../../infrastructure/runtime/runtime-adapter";
 import { readLocalServices, writeLocalServices, localServicesSchema } from "../../../infrastructure/local/services";
@@ -199,6 +200,7 @@ workspaceSettingsRoutes.put("/ai/local", async c => {
   if (!isLocalRuntime()) return c.notFound();
   try {
     const config = localServicesSchema.parse(await c.req.json());
+    setLocalServicePorts([config.ollamaPort, config.whisperPort]);
     const compatibility = config.model ? await verifyLocalModel(config, config.model) : null;
     await writeLocalServices(config);
     return c.json({ config, compatibility });

@@ -1,3 +1,5 @@
+import { isTauri } from "@tauri-apps/api/core";
+import { isLocalDesktop } from "@/platform/server/desktop-server";
 import posthog, { type CaptureResult } from "posthog-js";
 
 const projectToken = import.meta.env.VITE_POSTHOG_KEY?.trim();
@@ -8,6 +10,8 @@ const sessionReplayEnabled =
 
 let configuredPosthog: typeof posthog | null = null;
 
+export function initializeProductTelemetry() {
+if (configuredPosthog || isLocalDesktop()) return;
 if (projectToken && host) {
   posthog.init(projectToken, {
     api_host: host,
@@ -83,6 +87,9 @@ if (projectToken && host) {
   );
 }
 
+}
+if (!isTauri()) initializeProductTelemetry();
+
 export function captureProductException(
   error: unknown,
   properties: Record<string, boolean | number | string | null> = {},
@@ -121,4 +128,10 @@ function stripUrlDetails(value: string) {
   }
 }
 
-export default configuredPosthog;
+export { configuredPosthog as default };
+
+export async function stopProductTelemetry() {
+  const previous = configuredPosthog;
+  configuredPosthog = null;
+  await previous?.shutdown();
+}

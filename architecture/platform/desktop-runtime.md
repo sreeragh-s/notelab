@@ -32,3 +32,20 @@ The local Node entrypoint drains the runtime and stops PostgreSQL on parent EOF.
 The [smoke test](../../scripts/desktop/local/smoke.mjs) exercises real migrations,
 startup, parent EOF, and reopening the same installation. Resource relocation is
 verified separately for ARM and Intel (Rosetta is not a clean Intel machine test).
+
+### Local network isolation
+
+Local bootstrap installs a renderer content policy before application content mounts.
+It permits bundled assets, IPC, and the active local API/WebSocket origin, blocks
+remote media/frames/fonts, and supplies placeholders for blocked resources. External
+links require a trusted click and open in the system browser. Product telemetry is
+initialized only after remote mode selection; local mode skips updater checks.
+
+The [local Node network boundary](../../apps/server/src/infrastructure/local/network-boundary.ts)
+restricts sockets beneath HTTP and WebSocket clients to PostgreSQL's installation
+socket and configured loopback service ports. DNS resolution is disabled. Provider
+fetchers reject redirects. Native startup clears inherited proxy/environment settings.
+[The boundary smoke test](../../scripts/desktop/local/network-smoke.mjs) verifies
+allowed loopback HTTP and rejects other sockets, DNS, and redirect escapes in an
+isolated process. These application checks do not control networking performed by
+independently managed Ollama or Whisper installations.

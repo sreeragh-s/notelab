@@ -1,3 +1,5 @@
+import { installLocalNetworkBoundary, setLocalServicePorts } from "../infrastructure/local/network-boundary";
+import { readLocalServices } from "../infrastructure/local/services";
 // Private desktop entrypoint: native-owned stdin carries configuration and lifetime.
 import { createInterface } from "node:readline";
 import { startLocalDatabase, grantLocalApplicationAccess } from "../app/local/database-process";
@@ -32,6 +34,9 @@ async function main() {
   for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => { void close(); });
   try {
     database = await startLocalDatabase(process.env.ZILOBASE_LOCAL_ROOT!, process.env.ZILOBASE_LOCAL_RESOURCES!);
+    const localServices = await readLocalServices();
+    setLocalServicePorts([localServices.ollamaPort, localServices.whisperPort]);
+    installLocalNetworkBoundary(new URL(database.adminUrl).searchParams.get("host")!);
     Object.assign(process.env, {
       DATABASE_URL: database.adminUrl,
       BETTER_AUTH_SECRET: database.authSecret,

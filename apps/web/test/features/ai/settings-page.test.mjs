@@ -62,6 +62,8 @@ export function register({ assert, appPath, test }) {
                 else if (path === "@tanstack/react-router")
                   code +=
                     "export const useNavigate=()=>value=>runtime.calls.push(value);";
+                else if (path === "@zilobase/features/runtime")
+                  code += 'export const runtimeHasCapability=(mode,capability)=>capability.startsWith("local-") ? mode === "local" : mode !== "local";';
                 else if (path === "@zilobase/features")
                   code +=
                     "export const useZilobaseFeatures=()=>({apiFetch(){}});";
