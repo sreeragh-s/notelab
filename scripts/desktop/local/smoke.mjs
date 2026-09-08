@@ -23,6 +23,12 @@ async function launch() {
   child.stdin.write(JSON.stringify({ ZILOBASE_LOCAL_ROOT: root, ZILOBASE_LOCAL_RESOURCES: resources }) + '\n');
   const message = await ready;
   assert.match(message.apiOrigin, /^http:\/\/127\.0\.0\.1:\d+$/);
+  const response = await fetch(`${message.apiOrigin}/session`, { headers: { authorization: `Bearer ${message.sessionToken}` } });
+  assert.equal(response.status, 200);
+  const session = await response.json();
+  assert.equal(session.user.id, message.userId);
+  assert.equal((await fetch(`${message.apiOrigin}/session`)).status, 401);
+  assert.equal((await fetch(`${message.apiOrigin}/api/auth/sign-up/email`, { method: 'POST' })).status, 403);
   const closed = new Promise((resolve, reject) => {
     const timer = setTimeout(() => { child.kill(); reject(Error('Shutdown timeout')); }, 20_000);
     child.once('exit', code => { clearTimeout(timer); code === 0 ? resolve() : reject(Error(`Shutdown failed: ${code}`)); });

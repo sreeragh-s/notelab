@@ -22,6 +22,9 @@ struct Running {
 pub(crate) struct LocalReady {
     pub api_origin: String,
     pub installation_id: String,
+    pub session_token: String,
+    pub user_id: String,
+    pub workspace_id: String,
 }
 
 pub(crate) fn enabled() -> bool {
@@ -63,6 +66,8 @@ fn resources(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 pub(crate) async fn start_local_runtime(
     app: tauri::AppHandle,
     state: tauri::State<'_, LocalRuntimeState>,
+    name: Option<String>,
+    workspace_name: Option<String>,
 ) -> Result<LocalReady, String> {
     if !enabled() {
         return Err("Local support is not enabled in this build".into());
@@ -129,7 +134,7 @@ pub(crate) async fn start_local_runtime(
             .take()
             .ok_or("Native control pipe unavailable")?;
         let configuration =
-            serde_json::json!({"ZILOBASE_LOCAL_ROOT":root, "ZILOBASE_LOCAL_RESOURCES":resources});
+            serde_json::json!({"ZILOBASE_LOCAL_ROOT":root, "ZILOBASE_LOCAL_RESOURCES":resources, "name": name, "workspaceName": workspace_name});
         writeln!(input, "{configuration}").map_err(|_| "Cannot configure local backend")?;
         let stdout = child
             .stdout
@@ -157,6 +162,9 @@ pub(crate) async fn start_local_runtime(
             }
         };
         let ready = LocalReady {
+            session_token: message["sessionToken"].as_str().ok_or("Invalid local session")?.into(),
+            user_id: message["userId"].as_str().ok_or("Invalid local owner")?.into(),
+            workspace_id: message["workspaceId"].as_str().ok_or("Invalid local workspace")?.into(),
             api_origin: message["apiOrigin"]
                 .as_str()
                 .ok_or("Invalid local origin")?

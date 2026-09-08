@@ -38,3 +38,11 @@ Start with [the existing tests or model](../../../apps/server/src/features/auth/
 The opt-in [provider integration test](../../../apps/server/src/features/auth/oauth.integration.test.ts) exercises registration, authorize/consent, real JWT verification, workspace-stable refresh and revocation against a migrated isolated PostgreSQL database. Run from `apps/server` with `OAUTH_TEST_DATABASE_URL` set to that database and `npx vitest run src/features/auth/oauth.integration.test.ts`.
 
 Update this guide when ownership, interfaces, authorization, persistence or cross-module flows change. [Architecture index](../../README.md).
+
+## Local desktop sessions
+
+The [local bootstrap](../../../apps/server/src/app/local/bootstrap.ts) runs only from
+the native process control flow. It persists one owner/workspace using the existing
+bootstrap transaction and creates normal Better Auth sessions. Tokens travel over
+the private parent pipe, never discovery, diagnostics, URLs, or anonymous HTTP.
+The local entrypoint rejects online sign-in/registration and account management.

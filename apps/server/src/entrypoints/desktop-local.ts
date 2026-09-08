@@ -54,7 +54,9 @@ async function main() {
     if (!address || typeof address === "string") throw new Error("Local HTTP listener is unavailable");
     const apiOrigin = `http://127.0.0.1:${address.port}`;
     process.env.BETTER_AUTH_URL = apiOrigin;
-    console.log(JSON.stringify({ event: "local.ready", apiOrigin, installationId: database.installationId }));
+    const { openLocalSession } = await import("../app/local/bootstrap");
+    const session = await openLocalSession({ installationId: database.installationId, name: typeof env.name === "string" ? env.name : undefined, workspaceName: typeof env.workspaceName === "string" ? env.workspaceName : undefined });
+    console.log(JSON.stringify({ event: "local.ready", apiOrigin, installationId: database.installationId, ...session }));
   } catch (error) {
     await runtime?.close().catch(() => undefined);
     await database?.stop();

@@ -21,6 +21,13 @@ export async function startLocalServer(afterMigrate?: () => Promise<void>) {
     if (!object) return c.notFound();
     return new Response(object.body, { headers: { "content-type": object.contentType ?? "application/octet-stream", "content-length": String(object.byteSize), "cache-control": "private, no-store", "x-content-type-options": "nosniff" } });
   });
+  app.use("*", async (c, next) => {
+    const pathname = c.req.path;
+    if ((pathname.startsWith("/api/auth/") && !["/api/auth/get-session", "/api/auth/sign-out"].includes(pathname)) || pathname === "/api/instance/bootstrap" || (pathname === "/workspaces" && c.req.method === "POST")) {
+      return c.json({ code: "FEATURE_UNAVAILABLE_LOCAL", error: "Account and membership management is unavailable in local mode" }, 403);
+    }
+    return next();
+  });
   app.route("/", createApp());
   const runtime = createNodeRuntime({
     app,
