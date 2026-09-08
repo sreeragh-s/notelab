@@ -9,6 +9,7 @@ import { attachNodeCollaborationRuntime } from "./collaboration-runtime";
 import { setCollaborationExtensionsFactory } from "../../features/collaboration/service";
 import { attachNodeDatabaseRealtimeRuntime } from "./database-realtime-runtime";
 import { attachNodeMeetingAudioRuntime } from "./meeting-audio-runtime";
+import { attachNodeCalendarRealtimeRuntime } from "./calendar-realtime-runtime";
 import { attachNodeMailRealtimeRuntime } from "./mail-realtime-runtime";
 import { createDbClientForUrl, runWithDbEnv } from "../../infrastructure/database";
 import { assertSelfHostedProductionConfiguration } from "../../features/instance/registration";
@@ -84,11 +85,12 @@ export function createNodeRuntime({
   setRealtimeReadinessProbe(() => realtimeBus?.isReady() ?? true);
   const collaboration = attachNodeCollaborationRuntime(server, env, {
     editionExtension,
-    passthroughPaths: ["/database-collaboration", "/mail-realtime", "/meeting-audio", "/navigation-realtime"],
+    passthroughPaths: ["/database-collaboration", "/mail-realtime", "/calendar-realtime", "/meeting-audio", "/navigation-realtime"],
     realtimeBus,
   });
   const databaseRealtime = attachNodeDatabaseRealtimeRuntime(server, env, { realtimeBus });
   const meetingAudio = attachNodeMeetingAudioRuntime(server, env);
+  const calendarRealtime = attachNodeCalendarRealtimeRuntime(server, env, { realtimeBus });
   const mailRealtime = attachNodeMailRealtimeRuntime(server, env, { realtimeBus });
   const navigationRealtime = attachNodeNavigationRealtimeRuntime(server, env, { realtimeBus });
   const backgroundCoordinator = processRole === "api"
@@ -100,6 +102,7 @@ export function createNodeRuntime({
     fetchMcpRequest: runtimeAdapter.fetchMcpRequest ?? fetchPinnedNodeMcp,
     publishDatabaseMutation: ({ event }) =>
       databaseRealtime.publishMutation(event),
+    publishCalendarNotification: ({ event }) => calendarRealtime.publishNotification(event),
     publishMailNotification: ({ event }) => mailRealtime.publishNotification(event),
     publishNavigationInvalidation: ({ event }) => navigationRealtime.publish(event),
     dispatchBackgroundTasks: ({ env: dispatchEnv, tasks }) =>
@@ -163,6 +166,7 @@ export function createNodeRuntime({
       await backgroundAdminServer?.stop();
       await databaseRealtime.destroy();
       await meetingAudio.destroy();
+      await calendarRealtime.destroy();
       await mailRealtime.destroy();
       await navigationRealtime.destroy();
       await collaboration.destroy();

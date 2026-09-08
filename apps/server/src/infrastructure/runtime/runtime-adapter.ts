@@ -1,13 +1,14 @@
 import { getRequiredStringEnv, getStringEnv, type RuntimeEnv } from "../../shared/config/config";
 import { requestSignal } from "../../shared/http/request";
 import { getRuntimeAdapter } from "./runtime-context";
-import type { MailNotificationEvent } from "./contracts";
+import type { MailNotificationEvent, CalendarNotificationEvent } from "./contracts";
 
 export { getRuntimeAdapter, runWithRuntimeAdapter, setRuntimeAdapter } from "./runtime-context";
 export type {
   OutboundEmailMessage,
   ServerRuntimeAdapter,
   MailNotificationEvent,
+  CalendarNotificationEvent,
   MeetingRecorderRuntimeInput,
   MeetingRecorderRuntimeState,
   MeetingTranscriptYjsSegment,
@@ -210,4 +211,24 @@ export function getConfiguredImageStorageMode(env: RuntimeEnv) {
   }
 
   throw new Error("IMAGE_STORAGE_MODE must be either 's3' or 'binding'");
+}
+
+export function getCalendarRealtimeWebSocketUrl(request: Request, env: RuntimeEnv) {
+  const configured = getRuntimeAdapter().getCalendarRealtimeWebSocketUrl?.(
+    request,
+    env,
+  );
+  if (configured) return configured;
+  const url = new URL(request.url);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  url.pathname = "/calendar-realtime";
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
+export async function publishCalendarNotification(env: RuntimeEnv, event: CalendarNotificationEvent) {
+ const publish = getRuntimeAdapter().publishCalendarNotification;
+ if (!publish) throw new Error("Calendar realtime publisher unavailable");
+ await publish({ env, event });
 }

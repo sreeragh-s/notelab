@@ -92,6 +92,7 @@ export function createNodeBackgroundCoordinator(env: RuntimeEnv) {
           await runAiJobBatch({ env, handlers: AI_JOB_HANDLERS, limit: concurrency, workerId: `${workerId}:ai` });
         } else {
           await Promise.allSettled([
+            advancePendingCalendars(env),
             advancePendingMailIndexes(env, concurrency),
             drainMailDatabaseSyncOutbox(env, { limit: concurrency, workerId: `${workerId}:mail` }),
           ]);

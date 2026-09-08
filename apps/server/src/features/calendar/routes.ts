@@ -1,3 +1,5 @@
+import { calendarRealtimeRoutes } from "./realtime/routes";
+import { acceptCalendarWebhook, stopCalendarWatches } from "./realtime/watches";
 import { calendarEventRoutes } from "./events/routes";
 import { calendarSyncRoutes } from "./sync/routes";
 import { calendarPreferenceRoutes } from "./preferences";
@@ -41,6 +43,9 @@ calendarRoutes.post("/connections/google/start", async c => {
   return c.json({ authorizationUrl: await beginCalendarOAuth(c.env, { userId: c.get("user")!.id, workspaceId: c.req.param("workspaceId")!, clientKind: body.client }) });
 });
 calendarRoutes.delete("/connections/:bindingId", async c => {
+  const owned = await requireCalendarBinding(c.get("user")!.id, c.req.param("workspaceId")!, c.req.param("bindingId"));
+  const bindings = await db.select().from(calendarBinding).where(eq(calendarBinding.accountId, owned.account.id));
+  if (bindings.length === 1) { try { await stopCalendarWatches(owned.account.id, await createCalendarGateway(c.env, owned.account)) } catch { /* Local disconnect still revokes access; abandoned watches expire. */ } }
   await disconnectCalendarBinding(c.get("user")!.id, c.req.param("workspaceId")!, c.req.param("bindingId")); return c.json({ disconnected: true });
 });
 calendarRoutes.get("/connections/:bindingId/calendars", async c => {
@@ -71,3 +76,9 @@ calendarRoutes.route("/", calendarPreferenceRoutes);
 calendarRoutes.route("/", calendarSyncRoutes);
 
 calendarRoutes.route("/", calendarEventRoutes);
+
+calendarRoutes.route("/", calendarRealtimeRoutes);
+calendarProviderRoutes.post("/google/webhook", async c => {
+ const accepted = await runWithDbEnv(c.env, () => acceptCalendarWebhook(c.req.raw.headers));
+ return c.body(null, accepted ? 204 : 403);
+});

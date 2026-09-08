@@ -37,6 +37,7 @@ export const calendarRangeSnapshot = pgTable("calendar_range_snapshot", {
 }, t => [foreignKey({ columns: [t.accountId, t.calendarId], foreignColumns: [calendarProviderCalendar.accountId, calendarProviderCalendar.calendarId] }).onDelete("cascade")]);
 export const calendarWatchChannel = pgTable("calendar_watch_channel", {
   id: text("id").primaryKey(), accountId: text("account_id").notNull().references(() => calendarAccount.id, { onDelete: "cascade" }), calendarId: text("calendar_id"),
+  messageNumber: text("message_number").notNull().default("0"), dirtyAt: timestamp("dirty_at", { withTimezone: true }),
   tokenHash: text("token_hash").notNull(), resourceId: text("resource_id"), expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(), status: text("status").notNull().default("pending"),
 });
 export const calendarMutationReceipt = pgTable("calendar_mutation_receipt", {

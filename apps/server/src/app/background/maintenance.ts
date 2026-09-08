@@ -1,3 +1,5 @@
+import { maintainCalendarWatches } from "../../features/calendar/realtime/watches";
+import { drainCalendarOutbox } from "../../features/calendar/realtime/outbox";
 import { advancePendingCalendars } from "../../features/calendar/sync/sync";
 import { and, asc, eq, isNull, lt, lte, or, sql } from "drizzle-orm";
 
@@ -164,7 +166,7 @@ const MAINTENANCE_TASK_HANDLERS: Record<MaintenanceTaskKey, MaintenanceTaskHandl
   "membership.expiry": async () => {
     await expireTemporaryMemberships();
   },
-  "calendar.sync_recovery": async (env) => { await advancePendingCalendars(env); },
+  "calendar.sync_recovery": async (env) => { await Promise.allSettled([advancePendingCalendars(env), maintainCalendarWatches(env), drainCalendarOutbox(env)]); },
   "mail.index_recovery": async (env) => {
     await advancePendingMailIndexes(env);
   },

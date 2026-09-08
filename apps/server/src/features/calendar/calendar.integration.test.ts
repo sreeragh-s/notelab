@@ -116,3 +116,16 @@ test.skipIf(!enabled)("a split recovers a committed successor after response los
   expect(result?.status).toBe("succeeded"); expect(inserts).toBe(1); expect(updates).toBe(1);
   expect(await runWithDb(database!, () => mutateCalendarEvent({}, input, gateway))).toEqual(result);
 });
+
+test.skipIf(!enabled)("webhooks authenticate early callbacks, deduplicate replay, and persist dirty markers", async () => {
+  const { acceptCalendarWebhook } = await import("./realtime/watches");
+  const { sha256Hex } = await import("../../shared/crypto/sha256");
+  const id = randomUUID(), token = randomUUID();
+  await database!.insert(schema.calendarWatchChannel).values({ id, accountId: secondAccount, calendarId: "primary", tokenHash: await sha256Hex(token), expiresAt: new Date(Date.now() + 60000) });
+  const headers = new Headers({ "x-goog-channel-id": id, "x-goog-channel-token": token, "x-goog-resource-id": "resource", "x-goog-message-number": "1" });
+  expect(await runWithDb(database!, () => acceptCalendarWebhook(headers))).toBe(true);
+  expect(await runWithDb(database!, () => acceptCalendarWebhook(headers))).toBe(true);
+  headers.set("x-goog-resource-id", "spoofed"); expect(await runWithDb(database!, () => acceptCalendarWebhook(headers))).toBe(false);
+  const [channel] = (await database!.select().from(schema.calendarWatchChannel)).filter(c => c.id === id);
+  expect(channel!.messageNumber).toBe("1"); expect(channel!.dirtyAt).toBeInstanceOf(Date); expect(channel!.resourceId).toBe("resource");
+});

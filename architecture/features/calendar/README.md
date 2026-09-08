@@ -49,3 +49,9 @@ The event editor uses shared controls and explicit guest-update settings. Calend
 ## Recurrence
 
 [Series operations](../../../apps/server/src/features/calendar/events/series-split.ts) persist the original series ETag and deterministic successor before modifying Google. Status reconciliation reads operation markers, resumes missing steps, and never repeats a successful insert. Following-occurrence edits truncate the original rule and reset later exceptions, matching Google's split model. Single-RRULE count limits are adjusted using provider instances; complex imported rule sets remain unchanged and reject splitting. Whole-series changes translate the edited occurrence's wall-clock delta back to the master in its IANA zone. The editor preserves imported recurrence unless the user explicitly replaces it.
+
+## Push and runtime delivery
+
+[Watch maintenance](../../../apps/server/src/features/calendar/realtime/watches.ts) registers independent calendar-list and event channels, persists a token digest before contacting Google, and accepts authenticated early callbacks. Monotonic message numbers discard replays. Event callbacks mark canonical streams dirty; list callbacks remain durable until metadata refresh. Renewal registers replacements before stopping old channels; abandoned channels expire.
+
+[Outbox delivery](../../../apps/server/src/features/calendar/realtime/outbox.ts) claims committed invalidations and retries failures with backoff. It resolves current account bindings at delivery time and sends only scoped revisions. Node attaches `/calendar-realtime` to the existing realtime bus. Calendar HMAC tickets have a separate signing domain, five-minute lifetime, and binding/account/user/workspace claims. Sockets speak `calendar.ready`, `calendar.ping`, `calendar.pong`, and `calendar.invalidate`; event contents never enter the bus. Runtime contracts and ticket verification are published through the server adapter and realtime entrypoints.
