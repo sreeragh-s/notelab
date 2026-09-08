@@ -1,3 +1,5 @@
+import { isLocalDesktop } from "@/platform/server/desktop-server"
+import { flushActiveLocalDocuments } from "@/features/offline"
 import { forgetDesktopAuthCredentials } from "@/platform/auth/desktop-auth-token"
 import { beginDesktopServerNetworkShutdown } from "@/platform/network/desktop-network"
 import {
@@ -13,6 +15,7 @@ import type { DesktopServerSwitchRequest } from "@/features/desktop/server/deskt
 export async function switchDesktopServerSession(
   request: DesktopServerSwitchRequest,
 ) {
+  if (isLocalDesktop()) await flushActiveLocalDocuments()
   beginDesktopServerNetworkShutdown()
   destroyDesktopOfflineConnections()
   await queryClient.cancelQueries()

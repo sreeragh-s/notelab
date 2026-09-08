@@ -1,3 +1,4 @@
+import { isLocalDesktop } from "@/platform/server/desktop-server"
 import * as React from "react"
 import {
   onlineManager,
@@ -234,7 +235,7 @@ function OfflineRuntime() {
     }
 
     const runProbe = async () => {
-      if (navigator.onLine === false) {
+      if (!isLocalDesktop() && navigator.onLine === false) {
         setConnectivityState("offline")
         scheduleRetry()
         return
@@ -262,7 +263,7 @@ function OfflineRuntime() {
         }
         setConnectivityState("service-unavailable")
       } catch {
-        setConnectivityState(!navigator.onLine ? "offline" : "service-unavailable")
+        setConnectivityState(!isLocalDesktop() && !navigator.onLine ? "offline" : "service-unavailable")
       } finally {
         window.clearTimeout(timeout)
       }
@@ -279,6 +280,7 @@ function OfflineRuntime() {
     }
 
     const handleOffline = () => {
+      if (isLocalDesktop()) { void probe(); return }
       setConnectivityState("offline")
       scheduleRetry()
     }

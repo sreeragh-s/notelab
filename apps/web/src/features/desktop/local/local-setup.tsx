@@ -2,7 +2,7 @@ import { useState } from "react"
 import { openLocalDesktop } from "@/platform/server/desktop-server"
 import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
-import { hasUnsyncedOfflineItems, syncDirtyOfflinePages } from "@/features/offline"
+import { hasUnsyncedOfflineItems, syncDirtyOfflinePages, flushActiveLocalDocuments } from "@/features/offline"
 
 export function LocalSetup({ onReady }: { onReady?: () => void }) {
   const [name, setName] = useState("Me")
@@ -12,6 +12,7 @@ export function LocalSetup({ onReady }: { onReady?: () => void }) {
   async function open() {
     setPending(true); setError(null)
     try {
+      await flushActiveLocalDocuments()
       if (hasUnsyncedOfflineItems()) {
         await syncDirtyOfflinePages()
         if (hasUnsyncedOfflineItems()) throw new Error("Sync or export pending edits before changing workspace.")

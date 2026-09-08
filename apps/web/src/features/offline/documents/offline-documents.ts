@@ -220,3 +220,8 @@ export function shouldMarkOfflineDocumentDirty(
 ) {
   return transaction.local
 }
+
+export async function flushActiveLocalDocuments() {
+  await Promise.all([...activeLocalDocuments].map(flushLocalPageDocument))
+  await Promise.all([...activeProviders].map(provider => waitForProviderSync(provider)))
+}

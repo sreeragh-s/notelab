@@ -21,3 +21,11 @@ Reconnect and server replacement destroy old connections and selectively clear c
 Start with [the existing tests or model](../../../apps/web/test/features/offline/offline-recovery.test.mjs) and the adjacent tests in the owning modules. Exercise observable outcomes through the owning interface; a source assertion alone does not establish runtime behavior. Run the affected workspace scripts described in [testing and quality](../../setup/testing-and-quality.md).
 
 Update this guide when ownership, interfaces, authorization, persistence or cross-module flows change. [Architecture index](../../README.md).
+
+## Local runtime connectivity
+
+Local desktop probes the loopback service even when the OS reports no internet.
+React Query connectivity follows service reachability. Native Quit requests wait for
+active document persistence and provider synchronization; a failure preserves recovery
+state and keeps the application open. Closing the local window hides it without
+stopping jobs. Saved-profile switching flushes active local documents first.

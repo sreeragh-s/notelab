@@ -1,3 +1,6 @@
+import { listen } from "@tauri-apps/api/event";
+import { flushActiveLocalDocuments } from "@/features/offline";
+import { isLocalDesktop } from "@/platform/server/desktop-server";
 import { prepareDesktopServerCandidate, commitDesktopServerCandidate, desktopCloudConnectUrl } from "@/platform/server/desktop-server";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { LocalSetup } from "@/features/desktop/local/local-setup";
@@ -71,6 +74,13 @@ async function bootstrap(skipChoice = false) {
     status: "started",
   });
   await initializeDesktopAuthToken();
+  if (isTauri() && isLocalDesktop()) {
+    await listen("local-quit-requested", () => {
+      void flushActiveLocalDocuments().then(() => invoke("finish_local_quit")).catch(() => {
+        window.alert("Zilobase could not finish saving. Your recovery data is preserved. Keep the app open and try again after the local service recovers.");
+      });
+    });
+  }
   await initializeDesktopTranslucency().catch(() => {
     // Older desktop shells can continue at the default, fully opaque setting.
   });

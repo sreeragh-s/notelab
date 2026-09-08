@@ -13,7 +13,7 @@ use std::{
     },
     time::{Duration, Instant},
 };
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -124,6 +124,11 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .on_window_event(|window, event| {
+            if crate::server::active_profile_is_local(window.app_handle()) {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event { api.prevent_close(); let _ = window.hide(); }
+            }
+        })
         .on_page_load(move |_webview, payload| {
             log::info!(
                 target: "zilobase::startup",
@@ -190,6 +195,7 @@ pub fn run() {
             crate::local::local_runtime_enabled,
             crate::local::start_local_runtime,
             crate::local::activate_local_desktop,
+            crate::local::finish_local_quit,
             keyring::get_auth_token,
             keyring::set_auth_token,
             keyring::get_auth_owner,
@@ -226,6 +232,12 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
+            if let tauri::RunEvent::ExitRequested { ref api, .. } = event {
+                if crate::server::active_profile_is_local(app) && !crate::local::quit_is_approved(app) {
+                    api.prevent_exit();
+                    let _ = app.emit("local-quit-requested", ());
+                }
+            }
             if let tauri::RunEvent::Exit = event { app.state::<crate::local::LocalRuntimeState>().stop(); }
         });
 }

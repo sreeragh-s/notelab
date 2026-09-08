@@ -5,6 +5,7 @@ export {
   destroyDesktopOfflineConnections,
   documentDiffersFromConfirmed,
   flushLocalPageDocument,
+  flushActiveLocalDocuments,
   openLocalPageDocument,
   recordConfirmedDocument,
   shouldMarkOfflineDocumentDirty,

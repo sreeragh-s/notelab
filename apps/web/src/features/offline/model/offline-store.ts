@@ -1,6 +1,7 @@
 import { isDesktopApp } from "@/platform/environment"
 import {
   desktopPersistKey,
+  getSelectedDesktopServer,
   resolveRuntimeApiOrigin,
   type DesktopServer,
 } from "@/platform/server/desktop-server"
@@ -323,6 +324,7 @@ export async function clearAllOfflineData() {
 }
 
 export async function clearDesktopServerIndexedData(server?: DesktopServer | null) {
+  if (server?.runtimeMode === "local") return
   if (!server) {
     await clearAllOfflineData()
   } else {
@@ -543,5 +545,7 @@ function emit(listeners: Set<() => void>) {
 }
 
 function getOfflineApiOrigin() {
+  const server = getSelectedDesktopServer()
+  if (server?.runtimeMode === "local") return `http://local-${server.instanceId}.localhost`
   return resolveRuntimeApiOrigin()
 }

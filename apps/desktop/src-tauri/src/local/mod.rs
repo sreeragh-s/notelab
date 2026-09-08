@@ -10,7 +10,10 @@ use std::{
 use tauri::{Emitter, Manager};
 
 #[derive(Default, Clone)]
-pub(crate) struct LocalRuntimeState(Arc<Mutex<Option<Running>>>);
+pub(crate) struct LocalRuntimeState(
+    Arc<Mutex<Option<Running>>>,
+    Arc<std::sync::atomic::AtomicBool>,
+);
 struct Running {
     child: Child,
     _input: ChildStdin,
@@ -243,4 +246,17 @@ pub(crate) fn update_token(app: &tauri::AppHandle, token: Option<String>) -> boo
         }
     }
     true
+}
+
+pub(crate) fn quit_is_approved(app: &tauri::AppHandle) -> bool {
+    app.state::<LocalRuntimeState>()
+        .1
+        .load(std::sync::atomic::Ordering::SeqCst)
+}
+#[tauri::command]
+pub(crate) fn finish_local_quit(app: tauri::AppHandle) {
+    app.state::<LocalRuntimeState>()
+        .1
+        .store(true, std::sync::atomic::Ordering::SeqCst);
+    app.exit(0);
 }

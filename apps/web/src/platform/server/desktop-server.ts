@@ -282,7 +282,7 @@ function normalizeDesktopServerProfileList(
       lastActiveWorkspaceId: profile.lastActiveWorkspaceId ?? null,
       lastPath: profile.lastPath ?? null,
       lastUsedAt: profile.lastUsedAt ?? null,
-      server: validateDesktopServer(profile.server),
+      server: { ...validateDesktopServer(profile.server), ...(profile.kind === "local" ? { runtimeMode: "local" as const } : {}) },
       workspaces: Array.isArray(profile.workspaces)
         ? profile.workspaces.flatMap((workspace) => {
             if (

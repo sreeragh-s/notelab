@@ -1,3 +1,4 @@
+import { isLocalDesktop } from "@/platform/server/desktop-server"
 import { NetworkUnavailableError } from "@/platform/network/api"
 import { installRequestPolicy, type RequestObservation } from "@/platform/network/request-policy"
 import {
@@ -26,8 +27,8 @@ export function configureApplicationRequests() {
 function observeDesktopConnectivity(event: RequestObservation) {
   if (!isDesktopOfflineSupported()) return
   if (event.type === "network-error") {
-    setConnectivityState(navigator.onLine === false ? "offline" : "service-unavailable")
-    throw new NetworkUnavailableError(event.error instanceof Error ? event.error.message : undefined)
+    setConnectivityState(!isLocalDesktop() && navigator.onLine === false ? "offline" : "service-unavailable")
+    throw new NetworkUnavailableError(isLocalDesktop() ? "The local workspace service is unavailable. Your data is preserved; reopen Zilobase to recover." : event.error instanceof Error ? event.error.message : undefined)
   }
   // Any HTTP response proves reachability, including authorization and 5xx errors.
   setConnectivityState("online")
