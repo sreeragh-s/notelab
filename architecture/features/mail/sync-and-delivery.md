@@ -50,3 +50,15 @@ state. Connection responses expose additive `pushAvailable` capability.
 Expired history recovery queues cached threads outside the returned folder page for explicit reconciliation; absence in that page is not deletion evidence. Full thread snapshots remove messages no longer present. Initial sync captures its history watermark before listing, preventing changes during listing from being skipped. Ordinary incremental requests no longer enumerate every cached ID.
 
 Cached mailbox reads use an ordered cursor with a bounded result window; offline views page through that cache. Indexed rows seed missing thread summaries so actions work before a body is opened. Every mutation schedules index/list reconciliation, including partial failures. HTML-only drafts and forwards convert their complete body to text for the existing plain-text composer.
+
+Browser acceptance exercises the actual composer and receive hook with controlled
+transport, including byte-identical styled screenshots against the prior composer.
+An opt-in PostgreSQL integration suite verifies Hono routes, concurrent send claims,
+and OAuth transaction credentials in a disposable migrated database. See the
+[Gmail runbook](../../../docs/mail/gmail-deployment.md) for commands and live gates.
+Open conversations reload newly synchronized partial messages without requiring
+selection to change. Definite send rejection permits editing; uncertain sends keep
+their original composition frozen for recovery.
+
+Reconnecting an existing account preserves its monotonic mailbox revision so clients
+with persisted notification checkpoints continue accepting subsequent revisions.

@@ -450,8 +450,8 @@ export function webCacheDirectory(profile, rootDir = stateDir) {
   return path.join(rootDir, "vite", profile.name);
 }
 
-function runtimeEnvironment(profile, env) {
-  if (env.ZILOBASE_DEV_PUBLIC_ORIGIN) return env;
+export function runtimeEnvironment(profile, env) {
+  if (env.ZILOBASE_DEV_PUBLIC_ORIGIN) return { ...env, VITE_BACKEND_PROXY_TARGET: apiUrl(profile) };
   const origin = apiUrl(profile);
   const client = runtimeUrl(profile);
   return {

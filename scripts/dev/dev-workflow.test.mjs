@@ -19,6 +19,7 @@ import {
 import {
   databaseResetStatements,
   effectiveProfile,
+  runtimeEnvironment,
   resetLocal,
   webCacheDirectory,
 } from "./local.mjs";
@@ -226,4 +227,12 @@ test("public mail development uses one origin without proxying back into its tun
     assert.equal(env.NAVIGATION_REALTIME_WEBSOCKET_URL, "wss://mail-dev.example.com/navigation-realtime");
   }
   assert.throws(() => applyPublicDevelopmentOrigin({ ZILOBASE_DEV_PUBLIC_ORIGIN: "https://example.com/path" }, localProfiles.node), /HTTPS origin/);
+});
+
+test("mail readiness uses launcher origins rather than obsolete generated hostnames", () => {
+  for (const name of ["node", "worker"]) {
+    const env = { BETTER_AUTH_URL: "http://obsolete.zilobase.localhost:3000" };
+    const profile = effectiveProfile(name, env);
+    assert.equal(runtimeEnvironment(profile, env).BETTER_AUTH_URL, `http://${profile.apiHost}:${profile.apiPort}`);
+  }
 });

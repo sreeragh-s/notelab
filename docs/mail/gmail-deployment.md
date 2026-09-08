@@ -188,8 +188,8 @@ Set only `GMAIL_GOOGLE_CLIENT_ID`, `GMAIL_GOOGLE_CLIENT_SECRET`, and
 `GMAIL_TOKEN_ENCRYPTION_KEY`; set `MAIL_ENABLED=true` and
 `VITE_FEATURE_MAIL=true`, then leave every `GMAIL_PUBSUB_*` value empty. Connect,
 initial sync, incremental sync, search, mutations, drafts, and send still work.
-No watch is created. Reload or refocus the mailbox to retrieve changes made by
-another Gmail client. Use a controlled HTTPS tunnel and a separate test
+No watch is created. While Mail is visible and online, fallback synchronization
+checks for changes about once per minute; focus and reconnect also synchronize. Use a controlled HTTPS tunnel and a separate test
 subscription only when push delivery itself must be tested.
 
 ## 6. Operations and recovery
@@ -212,8 +212,7 @@ structured non-PII events:
 
 Gmail watches expire and must be renewed; a successful watch also sends an
 immediate notification. If authorization is revoked, Zilobase marks the
-connection as requiring reconnection. The user should open Mail, disconnect if
-the old connection is still shown, and connect Google again. Do not edit token
+connection as requiring reconnection. The user should open Mail and use the existing Reconnect Gmail flow. Do not edit token
 rows manually. After a webhook outage, restoring the endpoint is sufficient:
 clients synchronize through `history.list` after socket recovery, focus, or
 reconnect.
@@ -291,3 +290,55 @@ Run `npm run mail:config:check -- --profile=node` (or `worker`) before connectin
 Use one profile/test account at a time or separate accounts and subscriptions.
 Desktop started with the selected profile uses the same configured API origin.
 Remove the public-origin value to return to ordinary loopback testing.
+
+## Automated acceptance
+
+From the core repository:
+
+```sh
+npm run test:mail:deployment
+npm run test:mail:integration
+npm run test:mail:browser
+```
+
+The integration command uses the local Node profile's PostgreSQL server, creates
+and migrates a uniquely named disposable database, runs real Hono/Drizzle/Gmail
+transport tests with a controlled provider, and drops only that database afterward.
+It refuses a non-loopback database host. Start local dependencies with `dev:setup`
+and the local development launcher if PostgreSQL is not already running.
+
+The browser suite requires Google Chrome and a free port 1499. It uses fresh
+browser contexts and a fixture server; it never sends real email. Composer
+screenshots are saved under ignored `.dev/mail-e2e-results/`. The visual comparison
+loads the pre-change composer from Git commit `53498fbb^`, so retain that history
+in the test checkout. Interaction tests cover close-before-autosave, discard during
+creation, draft resume, save failure, uncertain send retry, definite rejection,
+and online/offline receive polling.
+
+Schema migration `0086_mail_send_identity` adds nullable composition fingerprints
+and draft associations to send receipts. Existing receipts remain recoverable;
+uncertain legacy operations are not automatically resent. A send response contains
+`messageId`; `message` can be null when delivery succeeded but message loading did
+not. Clients should reconcile through normal sync instead of offering a fresh send.
+
+### Real-Google acceptance matrix
+
+Run each scenario on Node web, Worker web, desktop/Node, and desktop/Worker with
+two controlled accounts. Record results without OAuth codes, tokens or mail content.
+
+| Scenario | Required evidence |
+| --- | --- |
+| Connect and reconnect | Correct workspace/account, refresh works, revoked consent requests reconnection |
+| New send and receive | One Sent copy, recipient receives it, reply arrives automatically |
+| Threads | Reply and reply-all remain in the Gmail conversation; recipients and Bcc are correct |
+| Drafts | Close/reload/resume/edit/discard/send preserve text and attachments |
+| Forward and MIME | Attachments download correctly; HTML-only and non-UTF-8 mail remain readable |
+| Organization | Labels, read/star/archive/spam/trash, batch operations, views and properties persist |
+| Reminders/database sync | Due reminders appear; matching threads sync once without overwriting unmapped fields |
+| Recovery | Offline cached reading, expired cursor, reconnect, lost response and dropped push recover |
+| Push | Authenticated tunnel subscription delivers; wrong audience/identity is rejected; watch renews |
+| Isolation | Other workspace/member/server cannot access cached mail or provider operations |
+
+Public rollout remains gated on this live matrix and applicable Google restricted
+scope verification. Automated fixtures establish implementation behavior, not
+real-Google delivery or native interactive OAuth completion.

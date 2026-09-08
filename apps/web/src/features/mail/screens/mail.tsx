@@ -302,11 +302,12 @@ function MailboxController({ connection, userId }: { connection: MailConnection;
     : "Inbox")
   const idlePrefetchIds = useMemo(() => displayedThreads.slice(0, 6).map((thread) => thread.id), [displayedThreads])
   const idlePrefetchKey = idlePrefetchIds.join("|")
+  const selectedBodyRevision = selectedMessages.filter((message) => !message.hasFullBody).map((message) => `${message.id}:${message.historyId}`).join("|")
 
   useEffect(() => {
     if (!selection) return
     void controller.openThread(selection)
-  }, [controller.openThread, selection])
+  }, [controller.openThread, selection, selectedBodyRevision])
 
   useEffect(() => {
     if (!selection || !controller.online) return

@@ -17,7 +17,11 @@ try {
   const profile = process.argv.find((argument) => argument.startsWith("--profile="))?.slice("--profile=".length)
   if (profile && !["node", "worker"].includes(profile)) throw new Error("Profile must be node or worker.")
   if (profile && envFile) throw new Error("Choose --profile or --env-file, not both.")
-  const env = profile ? await (await import("../dev/env.mjs")).loadProfileEnvironment(profile) : process.env
+  let env = profile ? await (await import("../dev/env.mjs")).loadProfileEnvironment(profile) : process.env
+  if (profile) {
+    const { effectiveProfile, runtimeEnvironment } = await import("../dev/local.mjs")
+    env = runtimeEnvironment(effectiveProfile(profile, env), env)
+  }
   const enabled = (value) => value === "true" || value === "1"
   console.info(`Mail runtime: ${enabled(env.MAIL_ENABLED) ? "enabled" : "disabled"}`)
   console.info(`Mail frontend: ${enabled(env.VITE_FEATURE_MAIL) ? "enabled" : "disabled"}`)

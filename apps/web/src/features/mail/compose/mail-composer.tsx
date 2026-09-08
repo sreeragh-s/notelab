@@ -8,7 +8,7 @@ import {
 } from "@zilobase/features/mail"
 import { toast } from "sonner"
 
-import { apiFetch, getApiErrorMessage } from "@/platform/network/api"
+import { ApiError, apiFetch, getApiErrorMessage } from "@/platform/network/api"
 import { FloatingWidget } from "@/shared/components/floating-widget"
 import { Loader2Icon, Paperclip, SendIcon, TrashIcon, XIcon } from "@/shared/components/icons"
 import { Button } from "@/shared/ui/button"
@@ -44,6 +44,8 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
   const [draftId, setDraftId] = useState<string | null>(seed.draftId ?? null)
   const [showCopies, setShowCopies] = useState(Boolean(seed.cc?.length || seed.bcc?.length))
   const [saving, setSaving] = useState(false)
+  const [attaching, setAttaching] = useState(false)
+  const attachmentLoad = useRef(false)
   const [sending, setSending] = useState(false)
   const operationId = useRef(seed.clientOperationId ?? crypto.randomUUID())
   const session = useRef<ReturnType<typeof createDraftSession> | null>(null)
@@ -87,7 +89,7 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
   }
 
   const close = async () => {
-    if (busy.current) return
+    if (busy.current || attachmentLoad.current) return
     busy.current = true
     setSending(true)
     try {
@@ -105,7 +107,7 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
   }, [hasContent, online, serialized, sending])
 
   const send = async () => {
-    if (!online || busy.current) return
+    if (!online || busy.current || attachmentLoad.current) return
     busy.current = true
     setSending(true)
     try {
@@ -121,6 +123,10 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
       onClose()
       void Promise.resolve(onSent(response)).catch(() => toast.error("Message sent. Refresh the mailbox to update it."))
     } catch (error) {
+      if (error instanceof ApiError && [400, 403, 413, 422].includes(error.status)) {
+        sendAttempt.current = null
+        operationId.current = crypto.randomUUID()
+      }
       toast.error(getApiErrorMessage(error))
     } finally {
       busy.current = false
@@ -129,7 +135,7 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
   }
 
   const discard = async () => {
-    if (busy.current || !online) return
+    if (busy.current || attachmentLoad.current || !online) return
     busy.current = true
     setSending(true)
     try {
@@ -141,19 +147,24 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
   }
 
   const attach = async (files: FileList | null) => {
-    if (!files?.length) return
+    if (!files?.length || attachmentLoad.current || busy.current) return
     const total = attachments.reduce((sum, attachment) => sum + base64ByteLength(attachment.contentBase64), 0)
       + [...files].reduce((sum, file) => sum + file.size, 0)
     if (total > MAX_ATTACHMENT_BYTES) {
       toast.error("Attachments must total 20 MB or less.")
       return
     }
-    const loaded = await Promise.all([...files].map(async (file) => ({
-      contentBase64: arrayBufferToBase64(await file.arrayBuffer()),
-      filename: file.name,
-      mimeType: file.type || "application/octet-stream",
-    })))
-    setAttachments((current) => [...current, ...loaded])
+    attachmentLoad.current = true
+    setAttaching(true)
+    try {
+      const loaded = await Promise.all([...files].map(async (file) => ({
+        contentBase64: arrayBufferToBase64(await file.arrayBuffer()),
+        filename: file.name,
+        mimeType: file.type || "application/octet-stream",
+      })))
+      setAttachments((current) => [...current, ...loaded])
+    } catch (error) { toast.error(getApiErrorMessage(error)) }
+    finally { attachmentLoad.current = false; setAttaching(false) }
   }
 
   return (
@@ -186,7 +197,7 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
           <Input aria-label="Subject" disabled={!online || sending || Boolean(sendAttempt.current)} onChange={(event) => setSubject(event.target.value)} placeholder="Subject" value={subject} />
           <Textarea aria-label="Message body" className="min-h-64 flex-1 resize-none" disabled={!online || sending || Boolean(sendAttempt.current)} onChange={(event) => setBodyText(event.target.value)} placeholder="Write a message…" value={bodyText} />
           {attachments.length ? <div className="flex flex-wrap gap-2">{attachments.map((attachment, index) => (
-            <Button disabled={sending} key={`${attachment.filename}-${index}`} onClick={() => setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))} size="sm" type="button" variant="outline">
+            <Button disabled={sending || Boolean(sendAttempt.current)} key={`${attachment.filename}-${index}`} onClick={() => setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))} size="sm" type="button" variant="outline">
               <Paperclip /> {attachment.filename} ×
             </Button>
           ))}</div> : null}
@@ -195,7 +206,7 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
         <Button disabled={sending || (Boolean(draftId) && !online)} onClick={() => void discard()} type="button" variant="ghost"><TrashIcon /> Discard</Button>
         <div className="flex items-center gap-2">
           <Label className="cursor-pointer"><input className="sr-only" disabled={!online || sending || Boolean(sendAttempt.current)} multiple onChange={(event) => void attach(event.target.files)} type="file" /><span className="inline-flex h-8 items-center gap-2 rounded-md px-3 hover:bg-action-neutral-hover"><Paperclip /> Attach</span></Label>
-          <Button disabled={!online || sending} onClick={() => void send()} type="button">{sending ? <Loader2Icon className="animate-spin" /> : <SendIcon />} Send</Button>
+          <Button disabled={!online || sending || attaching} onClick={() => void send()} type="button">{sending ? <Loader2Icon className="animate-spin" /> : <SendIcon />} Send</Button>
         </div>
       </footer>
     </FloatingWidget>

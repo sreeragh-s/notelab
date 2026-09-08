@@ -5,7 +5,7 @@ import type { MailDatabase } from "./mail-database"
 export function cachedThreadMatchesView(thread: MailThreadSummary, view: MailView) {
   if (view === "all_mail") return !["SPAM", "TRASH"].some((label) => thread.labelIds.includes(label))
   if (view === "archive") return !["INBOX", "SENT", "DRAFT", "SPAM", "TRASH"].some((label) => thread.labelIds.includes(label))
-  const label = { inbox: "INBOX", sent: "SENT", drafts: "DRAFT", bin: "TRASH", spam: "SPAM", starred: "STARRED", unread: "UNREAD", important: "IMPORTANT" }[view]
+  const label = { inbox: "INBOX", sent: "SENT", drafts: "DRAFT", bin: "TRASH", trash: "TRASH", spam: "SPAM", starred: "STARRED", unread: "UNREAD", important: "IMPORTANT" }[view]
   return label ? thread.labelIds.includes(label) : true
 }
 
