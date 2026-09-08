@@ -210,3 +210,37 @@ impl LocalRuntimeState {
         }
     }
 }
+
+#[tauri::command]
+pub(crate) fn activate_local_desktop(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, LocalRuntimeState>,
+) -> Result<crate::server::DesktopServer, String> {
+    let guard = state.0.lock().map_err(|_| "Local runtime unavailable")?;
+    let running = guard.as_ref().ok_or("Start the local runtime first")?;
+    crate::server::activate_local_server(&app, &running.ready)
+}
+
+pub(crate) fn active_ready(app: &tauri::AppHandle) -> Option<LocalReady> {
+    if !crate::server::active_profile_is_local(app) {
+        return None;
+    }
+    app.state::<LocalRuntimeState>()
+        .0
+        .lock()
+        .ok()?
+        .as_ref()
+        .map(|running| running.ready.clone())
+}
+
+pub(crate) fn update_token(app: &tauri::AppHandle, token: Option<String>) -> bool {
+    if !crate::server::active_profile_is_local(app) {
+        return false;
+    }
+    if let Ok(mut guard) = app.state::<LocalRuntimeState>().0.lock() {
+        if let Some(running) = guard.as_mut() {
+            running.ready.session_token = token.unwrap_or_default();
+        }
+    }
+    true
+}

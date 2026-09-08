@@ -278,7 +278,8 @@ pub(super) fn profile_list_from_config(config: &DesktopServerConfig) -> DesktopS
             .map(|profile| DesktopServerProfileView {
                 kind: profile.kind,
                 active: servers_refer_to_same_instance(&profile.server, active),
-                has_credentials: server_has_credentials(&profile.server),
+                has_credentials: profile.kind == super::contracts::DesktopProfileKind::Local
+                    || server_has_credentials(&profile.server),
                 last_active_workspace_id: profile.last_active_workspace_id.clone(),
                 last_path: profile.last_path.clone(),
                 last_used_at: profile.last_used_at.clone(),

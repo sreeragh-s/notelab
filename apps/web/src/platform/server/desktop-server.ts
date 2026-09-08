@@ -3,6 +3,7 @@ import packageJson from "../../../package.json"
 import { desktopNetworkFetch } from "../network/desktop-network"
 
 export type DesktopServer = {
+  runtimeMode?: "remote" | "local"
   instanceId: string
   displayName: string
   issuer: string
@@ -83,6 +84,10 @@ export async function initializeDesktopServer() {
     selectedDesktopServer = validateDesktopServer(
       await invoke<DesktopServer>("initialize_desktop_server"),
     )
+    const profiles = await invoke<DesktopServerProfileList>("list_desktop_server_profiles").catch(() => null)
+    if (profiles?.profiles.find(profile => profile.active)?.kind === "local") {
+      await openLocalDesktop()
+    }
     return selectedDesktopServer
   } catch (error) {
     selectedDesktopServer = null
@@ -271,6 +276,7 @@ function normalizeDesktopServerProfileList(
     activeInstanceId:
       typeof value.activeInstanceId === "string" ? value.activeInstanceId : "",
     profiles: value.profiles.map((profile) => ({
+      ...(profile.kind ? { kind: profile.kind } : {}),
       active: profile.active === true,
       hasCredentials: profile.hasCredentials === true,
       lastActiveWorkspaceId: profile.lastActiveWorkspaceId ?? null,
@@ -520,4 +526,13 @@ export function normalizeDesktopServerError(error: unknown) {
       : "The Zilobase server could not be verified."
 
   return new DesktopServerError(code, message)
+}
+
+export function isLocalDesktop() { return selectedDesktopServer?.runtimeMode === "local" }
+
+export async function openLocalDesktop(input: { name?: string; workspaceName?: string } = {}) {
+  await invoke("start_local_runtime", { name: input.name, workspaceName: input.workspaceName })
+  const server = validateDesktopServer(await invoke("activate_local_desktop"))
+  selectedDesktopServer = { ...server, runtimeMode: "local" }
+  return selectedDesktopServer
 }

@@ -30,3 +30,9 @@ Configuration version 3 adds a local/remote profile kind. Versions 1 and 2 migra
 to remote profiles without changing credentials or navigation. Runtime capability
 policy lives in `@zilobase/features/runtime`; provider readiness is separate from
 capability availability. See [the decision](../../decisions/0002-local-desktop-runtime.md).
+
+Local activation uses native-owned runtime metadata, updates only the local profile,
+and preserves all remote profiles. Local sessions are read from native runtime memory;
+Keychain is not required to reopen them. The web bootstrap resumes a selected local
+profile before auth initialization. The internally gated startup chooser and Connect
+screen expose local onboarding. A failed startup stays on recovery UI.

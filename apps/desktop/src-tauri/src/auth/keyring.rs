@@ -11,24 +11,36 @@ pub(crate) const LEGACY_AUTH_OWNER_ACCOUNT: &str = "session-owner";
 
 #[tauri::command]
 pub(crate) fn get_auth_token(app: AppHandle) -> Result<Option<String>, String> {
+    if let Some(ready) = crate::local::active_ready(&app) {
+        return Ok(Some(ready.session_token));
+    }
     let server = load_credential_server(&app)?;
     get_server_keyring_value(&server, LEGACY_AUTH_ACCOUNT, "session_token")
 }
 
 #[tauri::command]
 pub(crate) fn set_auth_token(app: AppHandle, token: Option<String>) -> Result<(), String> {
+    if crate::local::update_token(&app, token.clone()) {
+        return Ok(());
+    }
     let server = load_credential_server(&app)?;
     set_server_keyring_value(&server, LEGACY_AUTH_ACCOUNT, "session_token", token)
 }
 
 #[tauri::command]
 pub(crate) fn get_auth_owner(app: AppHandle) -> Result<Option<String>, String> {
+    if let Some(ready) = crate::local::active_ready(&app) {
+        return Ok(Some(ready.user_id));
+    }
     let server = load_credential_server(&app)?;
     get_server_keyring_value(&server, LEGACY_AUTH_OWNER_ACCOUNT, "session_owner")
 }
 
 #[tauri::command]
 pub(crate) fn set_auth_owner(app: AppHandle, owner: Option<String>) -> Result<(), String> {
+    if crate::local::active_ready(&app).is_some() {
+        return Ok(());
+    }
     let server = load_credential_server(&app)?;
     set_server_keyring_value(&server, LEGACY_AUTH_OWNER_ACCOUNT, "session_owner", owner)
 }

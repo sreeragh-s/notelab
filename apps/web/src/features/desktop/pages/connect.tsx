@@ -1,3 +1,5 @@
+import { invoke, isTauri } from "@tauri-apps/api/core"
+import { LocalSetup } from "../local/local-setup"
 import { useEffect, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 
@@ -22,6 +24,8 @@ import { requestDesktopServerReplacement } from "@/features/desktop/server/index
 import { executeDesktopServerSwitch } from "@/features/desktop/server/index"
 
 export default function ConnectPage() {
+  const [localEnabled, setLocalEnabled] = useState(false)
+  useEffect(() => { if (isTauri()) void invoke<boolean>("local_runtime_enabled").then(setLocalEnabled).catch(() => undefined) }, [])
   const navigate = useNavigate()
   const server = getSelectedDesktopServer()
   const onCloud = isCloudDesktopServer(server)
@@ -42,7 +46,7 @@ export default function ConnectPage() {
     }
   }, [])
 
-  const otherProfiles = profiles.filter((profile) => !profile.active)
+  const otherProfiles = profiles.filter((profile) => !profile.active && profile.kind !== "local")
 
   const continueWithCurrent = () => {
     void navigate({ to: "/login" })
@@ -76,6 +80,7 @@ export default function ConnectPage() {
         </div>
 
         <FieldGroup>
+          {localEnabled ? <LocalSetup /> : null}
           <Field>
             <Button onClick={useCloud} type="button">
               {onCloud ? "Continue with Zilobase Cloud" : "Use Zilobase Cloud"}

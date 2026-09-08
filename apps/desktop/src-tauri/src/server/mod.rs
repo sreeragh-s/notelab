@@ -266,6 +266,55 @@ impl DesktopServerCandidateState {
     }
 }
 
+pub(crate) fn activate_local_server(
+    app: &AppHandle,
+    ready: &crate::local::LocalReady,
+) -> Result<DesktopServer, String> {
+    let directory = app_config_directory(app).map_err(|_| "Configuration directory unavailable")?;
+    let mut config =
+        load_or_initialize_config(&directory).map_err(|_| "Cannot load desktop profiles")?;
+    let server = DesktopServer {
+        instance_id: ready.installation_id.clone(),
+        display_name: "On this Mac".into(),
+        issuer: ready.api_origin.clone(),
+        api_origin: ready.api_origin.clone(),
+        web_origin: ready.api_origin.clone(),
+        protocol_version: 1,
+        server_version: env!("CARGO_PKG_VERSION").into(),
+        minimum_desktop_version: env!("CARGO_PKG_VERSION").into(),
+    };
+    if let Some(profile) = config
+        .profiles
+        .iter_mut()
+        .find(|profile| profile.kind == contracts::DesktopProfileKind::Local)
+    {
+        profile.server = server.clone();
+        profile.last_active_workspace_id = Some(ready.workspace_id.clone());
+    } else {
+        upsert_and_activate(&mut config, &server);
+        let profile = config
+            .profiles
+            .last_mut()
+            .ok_or("Local profile unavailable")?;
+        profile.kind = contracts::DesktopProfileKind::Local;
+        profile.last_active_workspace_id = Some(ready.workspace_id.clone());
+    }
+    config.active_instance_id = server.instance_id.clone();
+    write_config(&directory, &config).map_err(|_| "Cannot save local profile")?;
+    Ok(server)
+}
+
+pub(crate) fn active_profile_is_local(app: &AppHandle) -> bool {
+    app_config_directory(app)
+        .and_then(|directory| load_or_initialize_config(&directory))
+        .ok()
+        .and_then(|config| {
+            active_profile_index(&config)
+                .map(|index| config.profiles[index].kind == contracts::DesktopProfileKind::Local)
+        })
+        .unwrap_or(false)
+}
+
 #[cfg(test)]
 mod tests {
     use super::contracts::DesktopAuthorizationEndpoints;

@@ -189,6 +189,7 @@ pub fn run() {
             greet,
             crate::local::local_runtime_enabled,
             crate::local::start_local_runtime,
+            crate::local::activate_local_desktop,
             keyring::get_auth_token,
             keyring::set_auth_token,
             keyring::get_auth_owner,
