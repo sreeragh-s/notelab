@@ -16,37 +16,42 @@ export type MailComposeSeed = {
 }
 
 export function parseComposerAddresses(value: string): MailAddress[] {
-  return value.split(",").map((entry) => entry.trim()).filter(Boolean).map((entry) => {
+  return dedupe(splitComposerAddresses(value).map((entry) => entry.trim()).filter(Boolean).map((entry) => {
     const match = /^(.*?)\s*<([^<>]+)>$/.exec(entry)
     return {
       address: (match?.[2] ?? entry).trim().toLowerCase(),
-      name: match?.[1]?.trim().replace(/^"|"$/g, "") || null,
+      name: match?.[1]?.trim().replace(/^"|"$/g, "").replace(/\\(["\\])/g, "$1") || null,
     }
-  })
+  }))
 }
 
 export function formatComposerAddresses(addresses: MailAddress[]) {
-  return addresses.map((item) => item.name ? `${item.name} <${item.address}>` : item.address).join(", ")
+  return addresses.map((item) => item.name ? `${JSON.stringify(item.name)} <${item.address}>` : item.address).join(", ")
 }
 
 export function replySeed(message: MailMessageRecord, ownEmail: string, replyAll = false): MailComposeSeed {
+  const own = ownEmail.toLowerCase()
   const sender = message.replyTo ?? message.from
-  const excluded = new Set([ownEmail.toLowerCase(), sender?.address.toLowerCase()].filter(Boolean))
+  const to = message.from?.address.toLowerCase() === own
+    ? dedupe(message.to.filter((address) => address.address.toLowerCase() !== own))
+    : sender ? [sender] : []
+  const excluded = new Set([own, ...to.map((address) => address.address.toLowerCase())])
   const cc = replyAll ? dedupe([...message.to, ...message.cc].filter((address) => !excluded.has(address.address.toLowerCase()))) : []
   const references = [...message.references, message.messageIdHeader].filter(Boolean) as string[]
   return {
     cc,
     inReplyTo: message.messageIdHeader ?? undefined,
-    references: [...new Set(references)],
+    references: [...new Set(references)].slice(-100),
     subject: replySubject(message.subject),
     threadId: message.threadId,
-    to: sender ? [sender] : [],
+    to,
   }
 }
 
 export function forwardSeed(message: MailMessageRecord): MailComposeSeed {
   const sender = message.from?.name || message.from?.address || "Unknown sender"
   return {
+    attachmentReferences: (message.attachments ?? []).filter((attachment) => !attachment.inline),
     bodyText: `\n\n---------- Forwarded message ----------\nFrom: ${sender}\nDate: ${message.date ?? new Date(message.internalDate).toLocaleString()}\nSubject: ${message.subject}\nTo: ${formatComposerAddresses(message.to)}\n\n${message.bodyText || message.snippet}`,
     subject: /^(fwd?|fw):/i.test(message.subject) ? message.subject : `Fwd: ${message.subject}`,
   }
@@ -76,4 +81,19 @@ export function draftSeed(message: MailMessageRecord, draftId: string): MailComp
     inReplyTo: message.inReplyTo ?? undefined, references: message.references,
     attachmentReferences: message.attachments,
   }
+}
+
+function splitComposerAddresses(value: string) {
+  const entries: string[] = []
+  let current = ""
+  let quoted = false
+  let escaped = false
+  for (const character of value) {
+    if (character === '"' && !escaped) quoted = !quoted
+    if (character === "," && !quoted) { entries.push(current); current = "" }
+    else current += character
+    escaped = character === "\\" && !escaped
+  }
+  if (current) entries.push(current)
+  return entries
 }

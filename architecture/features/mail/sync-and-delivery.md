@@ -33,3 +33,5 @@ precedes draft updates. Pending/ambiguous operations are reconciled, never blind
 replayed; definite failures can be claimed again. Successful responses include
 `messageId` even if `message` hydration is temporarily unavailable. Maintenance
 removes at most 500 expired terminal receipts per sweep; uncertain receipts remain.
+
+Reply seeds exclude the connected sender and preserve the last 100 threading references. Composer addresses round-trip quoted display names. Forwarding includes ordinary attachments, resolved in transient memory before opening the unchanged composer; Bcc is never copied into a reply or forward.
