@@ -1,3 +1,4 @@
+import { reconcileCalendarMutations } from "../events/calendar-mutations";
 import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import type { CalendarConnection } from "@zilobase/features/calendar";
@@ -19,6 +20,7 @@ export function useCalendarCache(connection: CalendarConnection, userId: string,
     try { await synchronizeCalendarCache(database, start, end, apiFetch); setError(undefined); return true } catch (cause) { setError(cause); return null } finally { setSyncing(false) }
   }, [database, start, end, online]);
   useEffect(() => { void refresh() }, [refresh]);
+  useEffect(() => { if (!database || !online) return; void reconcileCalendarMutations(database); const timer = setInterval(() => void reconcileCalendarMutations(database), 30_000); return () => clearInterval(timer) }, [database, online]);
   const cached = useLiveQuery(async () => {
     if (!database) return { calendars: [], events: [], loaded: false, stale: true };
     const calendars = await database.calendars.toArray();

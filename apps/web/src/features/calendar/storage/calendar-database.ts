@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from "dexie";
-import { calendarEventKey, type CalendarEvent, type CalendarRecord, type CalendarRangeResponse } from "@zilobase/features/calendar";
+import { calendarEventKey, eventOverlaps, type CalendarEvent, type CalendarRecord, type CalendarRangeResponse } from "@zilobase/features/calendar";
 export type CalendarCacheIdentity = { apiOrigin: string; userId: string; workspaceId: string; bindingId: string };
 export type CachedRange = { key: string; calendarId: string; start: string; end: string; eventKeys: string[]; generation: number; revision: number; fetchedAt: number; accessedAt: number };
 export type PendingCalendarMutation = { id: string; eventKey: string; before?: CalendarEvent; optimistic?: CalendarEvent; status: "pending" | "ambiguous" };
@@ -45,13 +45,14 @@ export async function applyCalendarRange(database: CalendarDatabase, response: C
     if (state && (state.generation > response.generation || (state.generation === response.generation && state.revision > response.revision))) return false;
     const key = calendarRangeKey(response.calendarId, response.start, response.end), prior = await database.ranges.get(key);
     if (prior && (prior.generation > response.generation || (prior.generation === response.generation && prior.revision > response.revision))) return false;
-    const pending = new Set((await database.pending.toArray()).map(row => row.eventKey));
+    const pendingRows = await database.pending.toArray();
+    const pending = new Set(pendingRows.map(row => row.eventKey));
     const events = response.events.filter(event => event.status !== "cancelled");
     for (const event of events) {
       if (event.workspaceId !== database.identity.workspaceId || event.bindingId !== database.identity.bindingId || event.calendarId !== response.calendarId) throw new Error("Calendar response identity mismatch");
       const eventKey = calendarEventKey(event); if (!pending.has(eventKey)) await database.events.put({ key: eventKey, event });
     }
-    await database.ranges.put({ key, calendarId: response.calendarId, start: response.start, end: response.end, eventKeys: events.map(calendarEventKey), generation: response.generation, revision: response.revision, fetchedAt: Date.now(), accessedAt: Date.now() });
+    await database.ranges.put({ key, calendarId: response.calendarId, start: response.start, end: response.end, eventKeys: [...new Set([...events.map(calendarEventKey).filter(key => !pending.has(key)), ...pendingRows.filter(row => row.optimistic?.calendarId === response.calendarId && eventOverlaps(row.optimistic, response.start, response.end, row.optimistic.start.timeZone ?? "UTC")).map(row => row.eventKey)])], generation: response.generation, revision: response.revision, fetchedAt: Date.now(), accessedAt: Date.now() });
     await database.state.put({ key: response.calendarId, generation: response.generation, revision: response.revision });
     return true;
   });
