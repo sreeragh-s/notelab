@@ -1,3 +1,4 @@
+import { inspectLocalSchema, recordLocalSchema } from "./schema-compatibility";
 import { createDbClientForUrl } from "../../infrastructure/database";
 import { runMigrationSets, CORE_MIGRATION_SET } from "../../infrastructure/node/migrations";
 import { execFile } from "node:child_process";
@@ -63,10 +64,12 @@ export async function restoreLocalWorkspace(root: string, resources: string, arc
       if (owner.rows[0].count !== 1 || workspace.rows[0].count !== 1) throw new Error("The backup is not a single-user local workspace");
       await client.query('delete from session; delete from verification;');
     } finally { await client.end(); }
+    await inspectLocalSchema(database.appUrl, resources);
     // Validate and apply bundled migrations before this installation becomes authoritative.
     const migration = createDbClientForUrl(database.appUrl);
     await migration.client.connect();
     try { await runMigrationSets(migration.db, [{ ...CORE_MIGRATION_SET, migrationsFolder: path.join(resources, "drizzle") }]); } finally { await migration.client.end(); }
+    await recordLocalSchema(replacement, resources);
     const ownership = new Client({ connectionString: database.adminUrl });
     await ownership.connect();
     try { await ownership.query("reassign owned by zilo_app to zilo_owner; revoke create on database postgres from zilo_app; revoke create on schema public from zilo_app"); } finally { await ownership.end(); }
@@ -78,9 +81,12 @@ export async function restoreLocalWorkspace(root: string, resources: string, arc
     for (const folder of ["objects", "recordings", "native-recordings"]) await copyIfPresent(path.join(extracted, folder), path.join(replacement, folder));
     await copyIfPresent(path.join(extracted, "local-services.json"), path.join(replacement, "local-services.json"));
     const previous = `${root}.recovery-${Date.now()}`;
+    const intent = `${root}.restore-intent.json`;
+    await writeFile(intent, JSON.stringify({ previous }), { mode: 0o600, flag: "wx" });
     let moved = false;
     try { await rename(root, previous); moved = true; } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
     try { await rename(replacement, root); } catch (error) { if (moved) await rename(previous, root); throw error; }
+    await rm(intent);
     return { recoveryCopy: moved ? previous : null };
   } finally { await database?.stop(); await rm(staging, { recursive: true, force: true }); }
 }

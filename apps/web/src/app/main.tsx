@@ -42,8 +42,9 @@ void bootstrap();
 
 async function bootstrap(skipChoice = false) {
   const savedProfiles = isTauri() ? await listDesktopServerProfiles().catch(() => null) : null;
+  const deletedLocal = isTauri() && await invoke<{ deleted: boolean }>("local_installation_status").then(status => status.deleted).catch(() => false);
   const reopeningLocal = savedProfiles?.profiles.some(profile => profile.active && profile.kind === "local");
-  if (!skipChoice && !reopeningLocal && isTauri() && !window.localStorage.getItem("zilobase:mode-chosen") && await invoke<boolean>("local_runtime_enabled").catch(() => false)) {
+  if (!skipChoice && (!reopeningLocal || deletedLocal) && isTauri() && (deletedLocal || !window.localStorage.getItem("zilobase:mode-chosen")) && await invoke<boolean>("local_runtime_enabled").catch(() => false)) {
     applicationRoot.render(<main className="mx-auto flex min-h-svh max-w-md flex-col justify-center gap-6 p-6">
       <h1 className="text-xl font-semibold">Choose where to work</h1>
       <button onClick={() => { void (async () => { const candidate = await prepareDesktopServerCandidate(desktopCloudConnectUrl()); await commitDesktopServerCandidate(candidate.candidateId); window.localStorage.setItem("zilobase:mode-chosen", "1"); await bootstrap(true) })().catch(renderStartupFailure) }}>Zilobase Cloud</button>

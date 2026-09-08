@@ -49,3 +49,7 @@ fetchers reject redirects. Native startup clears inherited proxy/environment set
 allowed loopback HTTP and rejects other sockets, DNS, and redirect escapes in an
 isolated process. These application checks do not control networking performed by
 independently managed Ollama or Whisper installations.
+
+## Local data lifecycle
+
+[Schema compatibility](../../apps/server/src/app/local/schema-compatibility.ts) requires the installed migration history to be a prefix of bundled hashes. Startup backs up an existing schema before migration; restore validates the same boundary in staging. [The watchdog](../../apps/server/src/entrypoints/desktop-watchdog.ts) handles backend pipe loss independently of the backend process. Native deletion checks installation identity, directory canonicalization and the installation lock; its marker makes startup ask for a mode again. See the [data lifecycle runbook](../../docs/desktop/local-data-lifecycle.md).

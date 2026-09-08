@@ -201,6 +201,8 @@ pub fn run() {
             crate::local::maintain_local_workspace,
             crate::local::show_local_data_folder,
             crate::local::local_backup_status,
+            crate::local::local_installation_status,
+            crate::local::delete_local_workspace,
             keyring::get_auth_token,
             keyring::set_auth_token,
             keyring::get_auth_owner,
@@ -238,7 +240,7 @@ pub fn run() {
         .expect("error while building tauri application")
         .run(|app, event| {
             if let tauri::RunEvent::ExitRequested { ref api, .. } = event {
-                if crate::server::active_profile_is_local(app) && !crate::local::quit_is_approved(app) {
+                if crate::local::active_ready(app).is_some() && !crate::local::quit_is_approved(app) {
                     api.prevent_exit();
                     let _ = app.emit("local-quit-requested", ());
                 }

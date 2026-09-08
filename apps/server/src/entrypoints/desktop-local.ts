@@ -1,3 +1,4 @@
+import path from "node:path";
 import { installLocalNetworkBoundary, setLocalServicePorts } from "../infrastructure/local/network-boundary";
 import { readLocalServices } from "../infrastructure/local/services";
 // Private desktop entrypoint: native-owned stdin carries configuration and lifetime.
@@ -34,6 +35,12 @@ async function main() {
   for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => { void close(); });
   try {
     database = await startLocalDatabase(process.env.ZILOBASE_LOCAL_ROOT!, process.env.ZILOBASE_LOCAL_RESOURCES!);
+    const { inspectLocalSchema, recordLocalSchema } = await import("../app/local/schema-compatibility");
+    const schema = await inspectLocalSchema(database.adminUrl, process.env.ZILOBASE_LOCAL_RESOURCES!);
+    if (schema.initialized && schema.pending) {
+      const { backupLocalWorkspace } = await import("../app/local/backups");
+      await backupLocalWorkspace(process.env.ZILOBASE_LOCAL_ROOT!, process.env.ZILOBASE_LOCAL_RESOURCES!, database.adminUrl, path.join(process.env.ZILOBASE_LOCAL_ROOT!, "backups/pre-upgrade.zilobackup"));
+    }
     const localServices = await readLocalServices();
     setLocalServicePorts([localServices.ollamaPort, localServices.whisperPort]);
     installLocalNetworkBoundary(new URL(database.adminUrl).searchParams.get("host")!);
@@ -50,17 +57,18 @@ async function main() {
     console.log(JSON.stringify({ event: "local.phase", phase: "migrating" }));
     const { startLocalServer } = await import("../app/local/server");
     runtime = await startLocalServer(async () => {
+      await recordLocalSchema(process.env.ZILOBASE_LOCAL_ROOT!, process.env.ZILOBASE_LOCAL_RESOURCES!);
       await grantLocalApplicationAccess(database!.adminUrl);
       process.env.DATABASE_URL = database!.appUrl;
     });
-    starting = false;
-    if (parentGone) { await close(); return; }
     const address = runtime.server.address();
     if (!address || typeof address === "string") throw new Error("Local HTTP listener is unavailable");
     const apiOrigin = `http://127.0.0.1:${address.port}`;
     process.env.BETTER_AUTH_URL = apiOrigin;
     const { openLocalSession } = await import("../app/local/bootstrap");
     const session = await openLocalSession({ installationId: database.installationId, name: typeof env.name === "string" ? env.name : undefined, workspaceName: typeof env.workspaceName === "string" ? env.workspaceName : undefined });
+    starting = false;
+    if (parentGone) { await close(); return; }
     console.log(JSON.stringify({ event: "local.ready", apiOrigin, installationId: database.installationId, ...session }));
   } catch (error) {
     await runtime?.close().catch(() => undefined);

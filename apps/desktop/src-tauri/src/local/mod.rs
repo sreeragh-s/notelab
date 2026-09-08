@@ -94,6 +94,7 @@ pub(crate) async fn start_local_runtime(
         }
         let resources = resources(&app)?;
         let root = data_root(&app)?;
+        let _ = std::fs::remove_file(root.with_extension("deleted"));
         std::fs::create_dir_all(&root).map_err(|_| "Cannot create local data directory")?;
         #[cfg(unix)]
         {
@@ -152,7 +153,7 @@ pub(crate) async fn start_local_runtime(
             Ok(value) => value,
             Err(_) => {
                 drop(input);
-                let _ = child.wait();
+                stop_child(&mut child);
                 return Err("Local runtime failed to become ready; data has been preserved".into());
             }
         };
@@ -193,14 +194,7 @@ impl LocalRuntimeState {
             }) = guard.take()
             {
                 drop(_input);
-                for _ in 0..150 {
-                    if child.try_wait().ok().flatten().is_some() {
-                        return;
-                    }
-                    std::thread::sleep(Duration::from_millis(100));
-                }
-                let _ = child.kill();
-                let _ = child.wait();
+                stop_child(&mut child);
             }
         }
     }
@@ -354,5 +348,111 @@ pub(crate) fn local_backup_status(app: tauri::AppHandle) -> Result<serde_json::V
             Ok(serde_json::json!({"lastBackupAt":null}))
         }
         Err(_) => Err("Backup status unavailable".into()),
+    }
+}
+
+fn stop_child(child: &mut Child) {
+    for _ in 0..150 {
+        if child.try_wait().ok().flatten().is_some() {
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    let _ = child.kill();
+    let _ = child.wait();
+}
+
+#[tauri::command]
+pub(crate) fn local_installation_status(
+    app: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let root = data_root(&app)?;
+    let manifest = std::fs::read(root.join("manifest.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok());
+    Ok(
+        serde_json::json!({"exists":root.join("postgres/PG_VERSION").is_file(), "deleted":root.with_extension("deleted").is_file(), "installationId":manifest.and_then(|value| value["installationId"].as_str().map(str::to_owned))}),
+    )
+}
+
+#[tauri::command]
+pub(crate) async fn delete_local_workspace(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, LocalRuntimeState>,
+    confirmation: String,
+    installation_id: String,
+) -> Result<(), String> {
+    if !enabled() || confirmation != "DELETE LOCAL WORKSPACE" {
+        return Err("Type DELETE LOCAL WORKSPACE to confirm".into());
+    }
+    let shared = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = data_root(&app)?;
+        validate_deletion(&root, &installation_id)?;
+        crate::meetings::capture::stop_for_local_maintenance(&app)?;
+        let retained = shared.0.lock().map_err(|_| "Runtime unavailable")?.as_ref().map(|running| running._lock.try_clone()).transpose().map_err(|_| "Cannot retain lock")?;
+        shared.stop();
+        let _lock = if let Some(lock) = retained { lock } else {
+            let lock = OpenOptions::new().read(true).write(true).create(true).truncate(false).open(root.with_extension("runtime.lock")).map_err(|_| "Cannot open lock")?;
+            lock.try_lock().map_err(|_| "Installation is in use")?; lock
+        };
+        validate_deletion(&root, &installation_id)?;
+        // Never delete a directory while a database may still be using it.
+        if root.join("postgres/postmaster.pid").exists() { return Err("A database process may still be running. Reopen the workspace and quit cleanly before deletion.".into()); }
+        std::fs::write(root.with_extension("deleted"), b"Choose a mode before creating another workspace").map_err(|_| "Cannot record deletion")?;
+        std::fs::remove_dir_all(root).map_err(|_| "Deletion was interrupted; inspect the local data folder".into())
+    }).await.map_err(|_| "Deletion worker failed")?
+}
+
+fn validate_deletion(root: &std::path::Path, installation_id: &str) -> Result<(), String> {
+    let canonical = root
+        .canonicalize()
+        .map_err(|_| "Cannot validate installation path")?;
+    let expected = root
+        .parent()
+        .ok_or("Invalid installation path")?
+        .canonicalize()
+        .map_err(|_| "Cannot validate data directory")?
+        .join(root.file_name().ok_or("Invalid installation name")?);
+    if canonical != expected
+        || std::fs::symlink_metadata(root)
+            .map_err(|_| "Cannot inspect data directory")?
+            .file_type()
+            .is_symlink()
+    {
+        return Err("Refusing an unexpected installation path".into());
+    }
+    let manifest: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(root.join("manifest.json")).map_err(|_| "Installation manifest missing")?,
+    )
+    .map_err(|_| "Installation manifest invalid")?;
+    if manifest["installationId"].as_str() != Some(installation_id) || installation_id.is_empty() {
+        return Err("The selected installation has changed".into());
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn deletion_requires_matching_identity_and_a_real_directory() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().join("local");
+        std::fs::create_dir(&root).unwrap();
+        std::fs::write(
+            root.join("manifest.json"),
+            br#"{"installationId":"expected"}"#,
+        )
+        .unwrap();
+        assert!(validate_deletion(&root, "expected").is_ok());
+        assert!(validate_deletion(&root, "another").is_err());
+        assert!(validate_deletion(&root, "").is_err());
+        #[cfg(unix)]
+        {
+            let alias = temporary.path().join("alias");
+            std::os::unix::fs::symlink(&root, &alias).unwrap();
+            assert!(validate_deletion(&alias, "expected").is_err());
+        }
     }
 }

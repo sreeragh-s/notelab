@@ -1,12 +1,21 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { chmod, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Client } from "pg";
 const execute = promisify(execFile);
 
 export async function startLocalDatabase(root: string, resources: string) {
+  const intentPath = `${root}.restore-intent.json`;
+  const intent = await readFile(intentPath, "utf8").catch((error: NodeJS.ErrnoException) => { if (error.code === "ENOENT") return null; throw error; });
+  if (intent) {
+    const { previous } = JSON.parse(intent);
+    if (typeof previous !== "string" || path.dirname(previous) !== path.dirname(root) || !previous.startsWith(`${root}.recovery-`) || !/^\d+$/.test(previous.slice(`${root}.recovery-`.length))) throw new Error("Invalid restore recovery record");
+    const exists = await readdir(root).then(entries => entries.length > 0, (error: NodeJS.ErrnoException) => { if (error.code === "ENOENT") return false; throw error; });
+    if (!exists) { await rm(root, { recursive: true, force: true }); await rename(previous, root); }
+    await rm(intentPath);
+  }
   await mkdir(root, { recursive: true, mode: 0o700 });
   await chmod(root, 0o700);
   for (const name of ["objects", "secrets", "backups", "staging"]) await mkdir(path.join(root, name), { recursive: true, mode: 0o700 });
@@ -53,9 +62,24 @@ export async function startLocalDatabase(root: string, resources: string) {
       await execute(binary("initdb"), ["-D", data, "-U", "zilo_owner", "--encoding=UTF8", "--no-locale", "--auth-local=scram-sha-256", "--auth-host=reject", `--pwfile=${passwordFile}`], { timeout: 60_000 });
     } finally { await rm(passwordFile, { force: true }); }
   } else if (version.trim() !== "17") throw new Error("Unsupported PostgreSQL major version");
+  // Native holds the installation lock. Recover only a verified postmaster for this exact directory.
+  const pidFile = await readFile(path.join(data, "postmaster.pid"), "utf8").catch((error: NodeJS.ErrnoException) => { if (error.code === "ENOENT") return null; throw error; });
+  if (pidFile) {
+    const [pid, directory] = pidFile.split("\n");
+    if (!/^[1-9]\d*$/.test(pid) || directory !== data) throw new Error("Unrecognized database process identity; manual recovery required");
+    const command = await execute("/bin/ps", ["-p", pid, "-o", "command="], { timeout: 2000 }).then(result => result.stdout.trim()).catch(() => "");
+    if (command) {
+      if (!command.startsWith(`${binary("postgres")} -D ${data} `)) throw new Error("Database process identity cannot be verified; data preserved");
+      await execute(binary("pg_ctl"), ["-D", data, "stop", "-m", "fast", "-w", "-t", "10"], { timeout: 15_000 });
+    }
+  }
   const socket = await mkdtemp("/tmp/zilo-pg-");
   await chmod(socket, 0o700);
   const child = spawn(binary("postgres"), ["-D", data, "-c", "listen_addresses=", "-c", `unix_socket_directories=${socket}`, "-c", "unix_socket_permissions=0700", "-c", "max_connections=30", "-c", "shared_buffers=32MB"], { stdio: ["ignore", "ignore", "pipe"] });
+  const watchdog = spawn(process.execPath, [path.join(resources, "server/desktop-watchdog.cjs")], { stdio: ["pipe", "ignore", "ignore"] });
+  watchdog.on("error", () => { child.kill("SIGINT"); });
+  watchdog.stdin?.on("error", () => { child.kill("SIGINT"); });
+  watchdog.stdin?.write(JSON.stringify({ data, pgCtl: binary("pg_ctl"), pid: child.pid }) + "\n");
   child.stderr?.on("data", () => { /* Do not emit database values into native diagnostics. */ });
   let processError: Error | undefined;
   child.once("error", error => { processError = error; });
@@ -68,6 +92,7 @@ export async function startLocalDatabase(root: string, resources: string) {
       await Promise.race([new Promise<void>(resolve => child.once("exit", () => resolve())), new Promise<void>(resolve => setTimeout(resolve, 10_000))]);
       if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
     }
+    watchdog.stdin?.end();
     await rm(socket, { recursive: true, force: true });
   };
   try {
