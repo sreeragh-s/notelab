@@ -28,3 +28,11 @@ The stable [schema aggregate](../../apps/server/src/infrastructure/database/sche
 - Column builders hold binary/search column types and timestamp defaults. Soft-delete columns depend on authentication's user declaration and reuse timestamp builders.
 
 All table names, indexes, constraints, defaults and foreign keys remain unchanged. No migration was produced. The existing declarative-schema coverage and clone exclusions follow only the moved schema declarations; application runtime coverage and all thresholds remain unchanged. Mail uniqueness tests inspect Drizzle index metadata through the aggregate rather than searching schema source text.
+
+## Local objects
+
+[Filesystem storage](../../apps/server/src/infrastructure/storage/local/filesystem-storage.ts)
+implements binding uploads as atomic files containing a bounded metadata header and
+streamed bytes. Keys hash to filenames; traversals and symlinks are rejected.
+The local server serves short-lived object-scoped HMAC read URLs without requiring
+cookies on media elements. Completed uploads survive interrupted replacements.

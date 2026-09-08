@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, realpath } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const triple = process.arch === 'arm64' ? 'aarch64-apple-darwin' : 'x86_64-apple-darwin';
 const resources = fileURLToPath(new URL(`../../../apps/desktop/src-tauri/local-resources/${triple}`, import.meta.url));
-const root = await mkdtemp(path.join(os.tmpdir(), 'zilo-runtime-'));
+const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'zilo-runtime-')));
 async function launch() {
   const child = spawn(path.join(resources, 'node/node'), [path.join(resources, 'server/desktop-local.cjs')], { env: { PATH: '/usr/bin:/bin', ZILOBASE_LOCAL_ENABLED: '1' }, stdio: ['pipe', 'pipe', 'pipe'] });
   let errors = '';
