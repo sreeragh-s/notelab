@@ -36,3 +36,7 @@ implements binding uploads as atomic files containing a bounded metadata header 
 streamed bytes. Keys hash to filenames; traversals and symlinks are rejected.
 The local server serves short-lived object-scoped HMAC read URLs without requiring
 cookies on media elements. Completed uploads survive interrupted replacements.
+
+## Desktop backup boundary
+
+[Local maintenance](../../apps/server/src/entrypoints/desktop-maintenance.ts) runs outside the API while native code retains the installation lock. [Workspace backup/restore](../../apps/server/src/app/local/backups.ts) combines a logical database dump with objects, recording recovery and content keys. [Archive storage](../../apps/server/src/infrastructure/local/archive.ts) streams checksummed classic ZIP files and verifies before publication. Restore uses a staging database with fresh credentials before directory activation; the prior installation becomes a recovery copy. See the [backup runbook](../../docs/desktop/local-backups.md) for limits and outstanding acceptance checks.

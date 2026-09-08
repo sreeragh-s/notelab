@@ -1,3 +1,4 @@
+import { LocalBackupControls } from "./local-backups";
 import { stopProductTelemetry } from "@/shared/lib/posthog";
 import { beginDesktopServerNetworkShutdown } from "@/platform/network/desktop-network";
 import { useState } from "react"
@@ -32,6 +33,7 @@ export function LocalSetup(_props: { onReady?: () => void }) {
     <label className="block text-sm">Your name<Input value={name} maxLength={100} onChange={event => setName(event.target.value)} disabled={pending} /></label>
     <label className="block text-sm">Workspace name<Input value={workspaceName} maxLength={100} onChange={event => setWorkspaceName(event.target.value)} disabled={pending} /></label>
     <Button type="button" onClick={() => void open()} disabled={pending || !name.trim() || !workspaceName.trim()}>{pending ? "Opening local workspace…" : "Open local workspace"}</Button>
+    <LocalBackupControls setup />
     {error ? <p role="alert" className="text-sm">{error}</p> : null}
   </section>
 }

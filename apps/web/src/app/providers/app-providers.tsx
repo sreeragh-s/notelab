@@ -1,3 +1,4 @@
+import { LocalBackupScheduler } from "@/features/desktop/local/local-backups";
 import * as React from "react"
 import { ThemeProvider, useTheme } from "next-themes"
 
@@ -52,7 +53,7 @@ export function AppProviders({ children }: React.PropsWithChildren) {
                         </PageEditorCommentsProvider>
                       </PageCommentsRegistryProvider>
                     </PageEditorRegistryProvider>
-                    <DesktopUpdater />
+                    <DesktopUpdater /><LocalBackupScheduler />
                     <Toaster />
                   </TooltipProvider>
                 </DemoExperience>

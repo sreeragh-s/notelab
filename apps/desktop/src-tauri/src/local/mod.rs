@@ -93,15 +93,7 @@ pub(crate) async fn start_local_runtime(
             guard.take();
         }
         let resources = resources(&app)?;
-        let root = app
-            .path()
-            .app_data_dir()
-            .map_err(|_| "Data directory unavailable")?
-            .join(if cfg!(debug_assertions) {
-                "local-debug"
-            } else {
-                "local"
-            });
+        let root = data_root(&app)?;
         std::fs::create_dir_all(&root).map_err(|_| "Cannot create local data directory")?;
         #[cfg(unix)]
         {
@@ -114,7 +106,7 @@ pub(crate) async fn start_local_runtime(
             .write(true)
             .create(true)
             .truncate(false)
-            .open(root.join("runtime.lock"))
+            .open(root.with_extension("runtime.lock"))
             .map_err(|_| "Cannot open local lock")?;
         lock.try_lock()
             .map_err(|_| "Local installation is already open")?;
@@ -259,4 +251,108 @@ pub(crate) fn finish_local_quit(app: tauri::AppHandle) {
         .1
         .store(true, std::sync::atomic::Ordering::SeqCst);
     app.exit(0);
+}
+
+pub(crate) fn data_root(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    Ok(app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Data directory unavailable")?
+        .join(if cfg!(debug_assertions) {
+            "local-debug"
+        } else {
+            "local"
+        }))
+}
+
+#[tauri::command]
+pub(crate) async fn local_backup_dialog(
+    app: tauri::AppHandle,
+    restore: bool,
+) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    tauri::async_runtime::spawn_blocking(move || {
+        let dialog = app
+            .dialog()
+            .file()
+            .add_filter("Zilobase workspace backup", &["zilobackup"]);
+        let file = if restore {
+            dialog.blocking_pick_file()
+        } else {
+            dialog
+                .set_file_name("workspace.zilobackup")
+                .blocking_save_file()
+        };
+        file.map(|file| {
+            file.into_path()
+                .map(|path| path.to_string_lossy().into_owned())
+                .map_err(|_| "Choose a local file".into())
+        })
+        .transpose()
+    })
+    .await
+    .map_err(|_| "File dialog unavailable")?
+}
+
+#[tauri::command]
+pub(crate) fn show_local_data_folder(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let root = data_root(&app)?;
+    std::fs::create_dir_all(&root).map_err(|_| "Cannot open local data folder")?;
+    app.opener()
+        .open_path(root.to_string_lossy(), None::<&str>)
+        .map_err(|_| "Cannot open local data folder".into())
+}
+
+#[tauri::command]
+pub(crate) async fn maintain_local_workspace(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, LocalRuntimeState>,
+    operation: String,
+    file: Option<String>,
+) -> Result<serde_json::Value, String> {
+    if !enabled() || !["backup", "daily-backup", "restore"].contains(&operation.as_str()) {
+        return Err("Local maintenance is unavailable".into());
+    }
+    let shared = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::meetings::capture::stop_for_local_maintenance(&app)?;
+        let root = data_root(&app)?;
+        std::fs::create_dir_all(&root).map_err(|_| "Cannot locate local installation")?;
+        let retained = shared.0.lock().map_err(|_| "Runtime unavailable")?.as_ref().map(|running| running._lock.try_clone()).transpose().map_err(|_| "Cannot retain installation lock")?;
+        shared.stop();
+        let _lock = if let Some(lock) = retained { lock } else {
+            let lock = OpenOptions::new().read(true).write(true).create(true).truncate(false).open(root.with_extension("runtime.lock")).map_err(|_| "Cannot open installation lock")?;
+            lock.try_lock().map_err(|_| "Local installation is already open")?; lock
+        };
+        let resources = resources(&app)?;
+        let _ = app.emit("local-runtime-status", serde_json::json!({"phase":"maintenance"}));
+        let mut child = Command::new(resources.join("node/node")).arg(resources.join("server/desktop-maintenance.cjs")).env_clear().env("PATH", "/usr/bin:/bin").env("ZILOBASE_LOCAL_ENABLED", "1").stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn().map_err(|_| "Cannot start local maintenance")?;
+        let config = serde_json::json!({"ZILOBASE_LOCAL_ROOT":root,"ZILOBASE_LOCAL_RESOURCES":resources,"operation":operation,"file":file});
+        let mut input = child.stdin.take().ok_or("Maintenance control unavailable")?;
+        writeln!(input, "{config}").map_err(|_| "Cannot configure maintenance")?;
+        let deadline = std::time::Instant::now() + Duration::from_secs(900);
+        while child.try_wait().map_err(|_| "Cannot inspect maintenance")?.is_none() {
+            if std::time::Instant::now() > deadline { let _ = child.kill(); let _ = child.wait(); return Err("Maintenance timed out. The existing installation has been preserved.".into()); }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        let output = child.wait_with_output().map_err(|_| "Maintenance output unavailable")?;
+        let message = String::from_utf8_lossy(&output.stdout).lines().filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok()).find(|value| value["event"] == "local.maintenance").ok_or("Maintenance failed; preserve the data folder for recovery")?;
+        if let Some(error) = message["error"].as_str() { return Err(error.into()); }
+        Ok(message["result"].clone())
+    }).await.map_err(|_| "Maintenance worker failed")?
+}
+
+#[tauri::command]
+pub(crate) fn local_backup_status(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let file = data_root(&app)?.join("backups/status.json");
+    match std::fs::read(file) {
+        Ok(bytes) => {
+            serde_json::from_slice(&bytes).map_err(|_| "Backup status is unreadable".into())
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            Ok(serde_json::json!({"lastBackupAt":null}))
+        }
+        Err(_) => Err("Backup status unavailable".into()),
+    }
 }

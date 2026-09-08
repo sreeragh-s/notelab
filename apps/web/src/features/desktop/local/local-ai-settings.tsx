@@ -1,3 +1,4 @@
+import { LocalBackupControls } from "./local-backups";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/platform/network/api";
 import { Button } from "@/shared/ui/button";
@@ -28,6 +29,7 @@ export function LocalAiSettings() {
     finally { setBusy(false); }
   };
   return <section className="grid gap-3" aria-label="Local AI services">
+    <LocalBackupControls />
     <h2 className="font-semibold">Local AI services</h2>
     <p className="text-sm text-content-secondary">Install Ollama separately and import an offline model pack. Disable Ollama cloud features. Zilobase never downloads models or starts external services.</p>
     <Label htmlFor="ollama-port">Ollama loopback port</Label>

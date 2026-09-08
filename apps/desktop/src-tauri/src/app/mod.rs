@@ -122,6 +122,7 @@ pub fn run() {
         )
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .on_window_event(|window, event| {
@@ -196,6 +197,10 @@ pub fn run() {
             crate::local::start_local_runtime,
             crate::local::activate_local_desktop,
             crate::local::finish_local_quit,
+            crate::local::local_backup_dialog,
+            crate::local::maintain_local_workspace,
+            crate::local::show_local_data_folder,
+            crate::local::local_backup_status,
             keyring::get_auth_token,
             keyring::set_auth_token,
             keyring::get_auth_owner,

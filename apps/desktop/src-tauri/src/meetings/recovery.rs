@@ -25,11 +25,24 @@ pub(crate) fn meeting_capture_recoverable_sessions(
         .map_err(|error| format!("Could not inspect meeting checkpoints: {error}"))?
         .flatten()
     {
+        if !entry.file_type().is_ok_and(|kind| kind.is_dir()) {
+            continue;
+        }
         let checkpoint = entry.path().join("checkpoint.json");
         let Ok(bytes) = fs::read(checkpoint) else {
             continue;
         };
-        if let Ok(session) = serde_json::from_slice::<RecoverableMeetingCapture>(&bytes) {
+        if let Ok(mut session) = serde_json::from_slice::<RecoverableMeetingCapture>(&bytes) {
+            if validate_meeting_id(&session.meeting_id).is_err()
+                || entry.file_name().to_string_lossy() != session.meeting_id
+            {
+                continue;
+            }
+            session.audio_path = entry
+                .path()
+                .join("meeting-audio.wav")
+                .to_string_lossy()
+                .into_owned();
             if Path::new(&session.audio_path).exists() {
                 sessions.push(session);
             }
@@ -83,6 +96,9 @@ pub(super) fn validate_meeting_id(meeting_id: &str) -> Result<(), String> {
 }
 
 pub(super) fn capture_base_directory(app: &AppHandle) -> Result<PathBuf, String> {
+    if crate::server::active_profile_is_local(app) {
+        return crate::local::data_root(app).map(|path| path.join("native-recordings"));
+    }
     app.path()
         .app_local_data_dir()
         .map(|path| path.join(CAPTURE_DIRECTORY))

@@ -75,6 +75,7 @@ for (const filename of await files(pgRoot)) {
 }
 await mkdir(path.join(output, 'server'), { recursive: true });
 await build({ entryPoints: [path.join(root, 'apps/server/src/entrypoints/desktop-local.ts')], bundle: true, platform: 'node', target: 'node22', format: 'cjs', outfile: path.join(output, 'server/desktop-local.cjs'), banner: { js: 'const __localImportMetaUrl = require("node:url").pathToFileURL(__filename).href;' }, define: { 'import.meta.url': '__localImportMetaUrl' } });
+await build({ entryPoints: [path.join(root, 'apps/server/src/entrypoints/desktop-maintenance.ts')], bundle: true, platform: 'node', target: 'node22', format: 'cjs', outfile: path.join(output, 'server/desktop-maintenance.cjs'), banner: { js: 'const __localImportMetaUrl = require("node:url").pathToFileURL(__filename).href;' }, define: { 'import.meta.url': '__localImportMetaUrl' } });
 await rm(path.join(output, 'drizzle'), { recursive: true, force: true });
 await cp(path.join(root, 'apps/server/drizzle'), path.join(output, 'drizzle'), { recursive: true });
 const hashes = {};

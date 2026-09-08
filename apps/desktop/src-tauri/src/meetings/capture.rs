@@ -890,6 +890,20 @@ fn validate_config(config: &MeetingCaptureConfig) -> Result<(), String> {
     Ok(())
 }
 
+pub(crate) fn stop_for_local_maintenance(app: &AppHandle) -> Result<(), String> {
+    use tauri::Manager;
+    let manager = app.state::<MeetingCaptureManager>();
+    let active = manager
+        .session
+        .lock()
+        .map_err(|_| "Capture state unavailable")?
+        .is_some();
+    if active {
+        meeting_capture_stop(manager)?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
