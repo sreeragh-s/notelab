@@ -314,7 +314,7 @@ function spawnWeb(name, profile, env, color) {
       env: {
         ...env,
         ZILOBASE_VITE_CACHE_DIR: webCacheDirectory(profile),
-        VITE_API_URL: process.env.VITE_API_URL ?? apiUrl(profile),
+        VITE_API_URL: env.VITE_API_URL ?? apiUrl(profile),
         VITE_DEV_HOST: "0.0.0.0",
         VITE_DEV_PORT: String(profile.appPort),
       },
@@ -451,6 +451,7 @@ export function webCacheDirectory(profile, rootDir = stateDir) {
 }
 
 function runtimeEnvironment(profile, env) {
+  if (env.ZILOBASE_DEV_PUBLIC_ORIGIN) return env;
   const origin = apiUrl(profile);
   const client = runtimeUrl(profile);
   return {

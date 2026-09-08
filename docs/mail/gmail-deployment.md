@@ -277,3 +277,17 @@ Validate the effective profile with `npm run mail:config:check -- --profile=node
 (or `worker`). The checker prints readiness and URLs, never secrets.
 The exact source callbacks are `http://localhost:3000/mail/oauth/google/callback`
 and `http://127.0.0.1:3010/mail/oauth/google/callback` respectively.
+
+### Same-origin local push canary
+
+Set `ZILOBASE_DEV_PUBLIC_ORIGIN=https://YOUR_DEV_HOST` in the selected profile's
+development file, and forward your HTTPS tunnel to the **web** port (Node 1420,
+Worker 1422). Open Zilobase through that HTTPS URL. The profile sets API, OAuth,
+web and realtime origins consistently, while Vite proxies API traffic to the local
+backend. Add `https://YOUR_DEV_HOST/mail/oauth/google/callback` to Google's Web
+client and set the Pub/Sub audience/endpoint to
+`https://YOUR_DEV_HOST/mail/google/pubsub`. Configure all four push variables.
+Run `npm run mail:config:check -- --profile=node` (or `worker`) before connecting.
+Use one profile/test account at a time or separate accounts and subscriptions.
+Desktop started with the selected profile uses the same configured API origin.
+Remove the public-origin value to return to ordinary loopback testing.

@@ -1,3 +1,4 @@
+import { applyPublicDevelopmentOrigin } from "./public-origin.mjs";
 import { randomBytes } from "node:crypto";
 import { constants } from "node:fs";
 import { access, chmod, copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
@@ -101,7 +102,7 @@ export async function loadProfileEnvironment(name) {
     ignore: ["MISSING_ENV_FILE"],
     noOps: true,
   });
-  return { ...target, ...process.env };
+  return applyPublicDevelopmentOrigin({ ...target, ...process.env }, localProfiles[name]);
 }
 
 export async function loadGeneratedEnvironment(filename) {

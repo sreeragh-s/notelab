@@ -19,7 +19,7 @@ const child = spawn(
   ["run", "tauri", "--", "dev", "--config", `src-tauri/tauri.${name}.conf.json`],
   {
     cwd: desktopDir,
-    env: { ...env, VITE_API_URL: apiUrl(profile) },
+    env: { ...env, VITE_API_URL: env.VITE_API_URL ?? apiUrl(profile) },
     stdio: "inherit",
   },
 );

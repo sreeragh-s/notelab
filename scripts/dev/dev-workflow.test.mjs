@@ -1,3 +1,4 @@
+import { applyPublicDevelopmentOrigin } from "./public-origin.mjs";
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
@@ -214,4 +215,15 @@ test("mail flags belong to the operator rather than generated infrastructure", a
   assert.equal(await migrateGeneratedMailEnvironment(filename), true);
   assert.deepEqual(parse(await readFile(filename, "utf8")), { DATABASE_URL: "preserved" });
   assert.equal(await migrateGeneratedMailEnvironment(filename), false);
+});
+
+test("public mail development uses one origin without proxying back into its tunnel", () => {
+  for (const profile of Object.values(localProfiles)) {
+    const env = applyPublicDevelopmentOrigin({ ZILOBASE_DEV_PUBLIC_ORIGIN: "https://mail-dev.example.com" }, profile);
+    assert.equal(env.BETTER_AUTH_URL, env.CLIENT_URL);
+    assert.equal(env.VITE_API_URL, env.BETTER_AUTH_URL);
+    assert.equal(env.VITE_BACKEND_PROXY_TARGET, `http://${profile.apiHost}:${profile.apiPort}`);
+    assert.equal(env.NAVIGATION_REALTIME_WEBSOCKET_URL, "wss://mail-dev.example.com/navigation-realtime");
+  }
+  assert.throws(() => applyPublicDevelopmentOrigin({ ZILOBASE_DEV_PUBLIC_ORIGIN: "https://example.com/path" }, localProfiles.node), /HTTPS origin/);
 });
