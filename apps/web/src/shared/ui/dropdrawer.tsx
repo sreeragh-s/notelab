@@ -28,6 +28,7 @@ import {
 } from "@/shared/ui/dropdown-menu";
 import { useIsMobile } from "@/shared/hooks/use-mobile";
 import { cn } from "@/shared/lib/utils";
+import { menuViewportClassName } from "@/shared/ui/menu-styles";
 
 const DropDrawerContext = React.createContext<{
   defaultSubDisplayMode: "inline" | "nested";
@@ -108,7 +109,7 @@ function DropDrawer({
     <DropDrawerContext.Provider value={contextValue}>
       <DropdownComponent
         data-slot="drop-drawer"
-        {...(isMobile && { autoFocus: true })}
+        {...(isMobile ? { autoFocus: true } : { defaultSubDisplayMode })}
         {...props}
       >
         {children}
@@ -467,7 +468,7 @@ function DropDrawerContent({
       sideOffset={4}
       sticky="always"
       className={cn(
-        "max-h-[min(36rem,calc(100vh-1rem))] max-w-[min(20rem,calc(100vw-1rem))] overflow-x-hidden overflow-y-auto overscroll-contain",
+        menuViewportClassName,
         className,
       )}
       {...props}
@@ -479,6 +480,7 @@ function DropDrawerContent({
 
 function DropDrawerItem({
   className,
+  closeOnSelect,
   children,
   onSelect,
   onClick,
@@ -525,7 +527,7 @@ function DropDrawerItem({
       </div>
     );
 
-    if (inline || isInSubmenu) {
+    if (inline || !(closeOnSelect ?? !isInSubmenu)) {
       return content;
     }
 
@@ -535,7 +537,8 @@ function DropDrawerItem({
   return (
     <DropdownMenuItem
       data-slot="drop-drawer-item"
-      className={cn("my-0.5 text-[13px]", className)}
+      closeOnSelect={closeOnSelect}
+      className={className}
       onSelect={onSelect}
       onClick={onClick as React.MouseEventHandler<HTMLDivElement>}
       variant={variant}
@@ -902,7 +905,7 @@ function DropDrawerSubTrigger({
     <DropdownMenuSubTrigger
       data-slot="drop-drawer-sub-trigger"
       data-inset={inset}
-      className={cn("my-0.5 text-[13px]", className)}
+      className={className}
       inset={inset}
       {...props}
     >
@@ -930,7 +933,7 @@ function DropDrawerSubContent({
       data-slot="drop-drawer-sub-content"
       sideOffset={sideOffset}
       className={cn(
-        "max-h-[min(36rem,calc(100vh-1rem))] max-w-[min(20rem,calc(100vw-1rem))] overflow-y-auto overscroll-contain",
+        menuViewportClassName,
         className,
       )}
       {...props}

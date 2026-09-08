@@ -30,9 +30,12 @@ export function register({ readSource, assert, test }) {
     assert.match(tabs, /rounded-lg p-0/)
     assert.match(tabs, /rounded-md[^"\n]*data-active:bg-action-neutral-hover/)
     assert.doesNotMatch(tabs, /TabsPrimitive\.Indicator/)
+    const styles = await readSource("/src/shared/ui/menu-styles.ts")
+    assert.match(styles, /menuSurfaceClassName[^]*?rounded-lg/)
+    assert.match(styles, /menuItemClassName[^]*?rounded-md/)
     for (const menu of [dropdown, contextMenu]) {
-      assert.match(menu, /rounded-lg[^"\n]*p-1/)
-      assert.match(menu, /data-slot="[^"]+-item"[\s\S]*?rounded-md/)
+      assert.match(menu, /menuSurfaceClassName/)
+      assert.match(menu, /data-slot="[^"]+-item"[\s\S]*?menuItemClassName/)
     }
   })
 

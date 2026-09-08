@@ -184,12 +184,14 @@
 /* Typography belongs to the shared component boundary so every import inherits
    the same token-driven default, including portalled dropdown content. */
 :where(
+  [data-slot="popover-content"][data-variant="menu"],
   [data-slot="dropdown-menu-content"],
   [data-slot="dropdown-menu-sub-content"],
   [data-slot="drop-drawer-content"],
   [data-slot="select-content"]
 ),
 :where(
+  [data-slot="popover-content"][data-variant="menu"],
   [data-slot="dropdown-menu-content"],
   [data-slot="dropdown-menu-sub-content"],
   [data-slot="drop-drawer-content"],

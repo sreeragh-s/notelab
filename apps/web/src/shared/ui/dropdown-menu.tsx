@@ -6,6 +6,13 @@ import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui"
 import { Button } from "@/shared/ui/button"
 import { cn } from "@/shared/lib/utils"
 import {
+  menuSurfaceClassName,
+  menuViewportClassName,
+  menuItemClassName,
+  menuLabelClassName,
+  menuSeparatorClassName,
+} from "@/shared/ui/menu-styles"
+import {
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -92,13 +99,19 @@ type DropdownMenuSubContextValue = {
   title: string
 }
 
+const DropdownMenuDefaultSubModeContext =
+  React.createContext<DropdownMenuSubDisplayMode>("nested")
+
 const DropdownMenuSubContext =
   React.createContext<DropdownMenuSubContextValue | null>(null)
 
 function DropdownMenu({
+  defaultSubDisplayMode = "nested",
   onOpenChange,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Root> & {
+  defaultSubDisplayMode?: DropdownMenuSubDisplayMode
+}) {
   const [inlineNavigation] = React.useState(createInlineSubmenuNavigationStore)
 
   React.useEffect(() => {
@@ -106,16 +119,18 @@ function DropdownMenu({
   }, [inlineNavigation, props.open])
 
   return (
-    <InlineSubmenuNavigationContext.Provider value={inlineNavigation}>
-      <DropdownMenuPrimitive.Root
-        data-slot="dropdown-menu"
-        onOpenChange={(open) => {
-          if (!open) inlineNavigation.reset()
-          onOpenChange?.(open)
-        }}
-        {...props}
-      />
-    </InlineSubmenuNavigationContext.Provider>
+    <DropdownMenuDefaultSubModeContext.Provider value={defaultSubDisplayMode}>
+      <InlineSubmenuNavigationContext.Provider value={inlineNavigation}>
+        <DropdownMenuPrimitive.Root
+          data-slot="dropdown-menu"
+          onOpenChange={(open) => {
+            if (!open) inlineNavigation.reset()
+            onOpenChange?.(open)
+          }}
+          {...props}
+        />
+      </InlineSubmenuNavigationContext.Provider>
+    </DropdownMenuDefaultSubModeContext.Provider>
   )
 }
 
@@ -142,6 +157,7 @@ function DropdownMenuContent({
   className,
   align = "start",
   sideOffset = 4,
+  collisionPadding = 8,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   const inlineNavigation = React.useContext(InlineSubmenuNavigationContext)
@@ -151,14 +167,29 @@ function DropdownMenuContent({
     inlineNavigation?.getActivePanel ?? getNoActivePanel,
   )
 
+  const backButtonRef = React.useRef<HTMLButtonElement>(null)
+  const previousPanelId = React.useRef<string | null>(null)
+  React.useEffect(() => {
+    const previousId = previousPanelId.current
+    previousPanelId.current = activePanel?.id ?? null
+    if (activePanel) {
+      backButtonRef.current?.focus()
+    } else if (previousId) {
+      document.getElementById(`${previousId}-trigger`)?.focus()
+    }
+  }, [activePanel?.id])
+
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
         align={align}
         className={cn(
-          "z-50 max-h-(--radix-dropdown-menu-content-available-height) w-(--radix-dropdown-menu-trigger-width) min-w-32 origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-surface-overlay p-1 text-content-primary shadow-md ring-1 ring-stroke-default duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:overflow-hidden data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "z-50 max-h-(--radix-dropdown-menu-content-available-height) w-72 min-w-32 origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto p-1 duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:overflow-hidden data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+        menuSurfaceClassName,
+        menuViewportClassName,
           className,
           activePanel &&
             "flex w-max max-w-[min(20rem,calc(100vw-1rem))] flex-col overflow-hidden",
@@ -179,6 +210,7 @@ function DropdownMenuContent({
           <>
             <div className="flex shrink-0 items-center gap-1 px-1 py-1">
               <Button
+                ref={backButtonRef}
                 aria-label={`Back from ${activePanel.title}`}
                 className="text-content-secondary"
                 onClick={inlineNavigation?.goBack}
@@ -250,7 +282,8 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        "group/dropdown-menu-item relative flex min-h-7 cursor-default items-center gap-2 rounded-md px-2 py-1 text-xs/relaxed outline-hidden select-none focus:bg-action-neutral-hover focus:text-action-on-neutral not-data-[variant=destructive]:focus:**:text-action-on-neutral data-inset:pl-7.5 data-[variant=destructive]:text-action-danger-text data-[variant=destructive]:focus:bg-feedback-error-subtle data-[variant=destructive]:focus:text-action-danger-text dark:data-[variant=destructive]:focus:bg-feedback-error-subtle data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5 data-[variant=destructive]:*:[svg]:text-action-danger-text",
+        menuItemClassName,
+        "group/dropdown-menu-item not-data-[variant=destructive]:focus:**:text-action-on-neutral data-inset:pl-7.5 data-[variant=destructive]:text-action-danger-text data-[variant=destructive]:focus:bg-feedback-error-subtle data-[variant=destructive]:focus:text-action-danger-text dark:data-[variant=destructive]:focus:bg-feedback-error-subtle data-[variant=destructive]:*:[svg]:text-action-danger-text",
         className,
       )}
       {...props}
@@ -267,20 +300,31 @@ function DropdownMenuCheckboxItem({
   children,
   checked,
   inset,
+  closeOnSelect,
+  onSelect,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.CheckboxItem> & {
+  closeOnSelect?: boolean
   inset?: boolean
 }) {
+  const isInlineSubmenuPanel = React.useContext(InlineSubmenuPanelContext)
+  const shouldCloseOnSelect = closeOnSelect ?? !isInlineSubmenuPanel
+
   return (
     <DropdownMenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
       data-inset={inset}
       className={cn(
-        "relative flex min-h-7 cursor-default items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-xs outline-hidden select-none focus:bg-action-neutral-hover focus:text-action-on-neutral focus:**:text-action-on-neutral data-inset:pl-7.5 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+        menuItemClassName,
+        "pr-8 focus:**:text-action-on-neutral data-inset:pl-7.5",
         className,
       )}
       checked={checked}
       {...props}
+      onSelect={(event) => {
+        onSelect?.(event)
+        if (!shouldCloseOnSelect) event.preventDefault()
+      }}
     >
       <span
         className="pointer-events-none absolute right-2 flex items-center justify-center"
@@ -310,19 +354,30 @@ function DropdownMenuRadioItem({
   className,
   children,
   inset,
+  closeOnSelect,
+  onSelect,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.RadioItem> & {
+  closeOnSelect?: boolean
   inset?: boolean
 }) {
+  const isInlineSubmenuPanel = React.useContext(InlineSubmenuPanelContext)
+  const shouldCloseOnSelect = closeOnSelect ?? !isInlineSubmenuPanel
+
   return (
     <DropdownMenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
       className={cn(
-        "relative flex min-h-7 cursor-default items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-xs outline-hidden select-none focus:bg-action-neutral-hover focus:text-action-on-neutral focus:**:text-action-on-neutral data-inset:pl-7.5 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+        menuItemClassName,
+        "pr-8 focus:**:text-action-on-neutral data-inset:pl-7.5",
         className,
       )}
       {...props}
+      onSelect={(event) => {
+        onSelect?.(event)
+        if (!shouldCloseOnSelect) event.preventDefault()
+      }}
     >
       <span
         className="pointer-events-none absolute right-2 flex items-center justify-center"
@@ -349,7 +404,8 @@ function DropdownMenuLabel({
       data-slot="dropdown-menu-label"
       data-inset={inset}
       className={cn(
-        "px-2 py-1.5 text-xs text-content-secondary data-inset:pl-7.5",
+        menuLabelClassName,
+        "data-inset:pl-7.5",
         className,
       )}
       {...props}
@@ -364,7 +420,7 @@ function DropdownMenuSeparator({
   return (
     <DropdownMenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      className={cn("-mx-1 my-1 h-px bg-stroke-default", className)}
+      className={cn(menuSeparatorClassName, className)}
       {...props}
     />
   )
@@ -388,13 +444,15 @@ function DropdownMenuShortcut({
 
 function DropdownMenuSub({
   children,
-  displayMode = "nested",
+  displayMode: requestedDisplayMode,
   title = "Submenu",
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Sub> & {
   displayMode?: DropdownMenuSubDisplayMode
   title?: string
 }) {
+  const defaultSubDisplayMode = React.useContext(DropdownMenuDefaultSubModeContext)
+  const displayMode = requestedDisplayMode ?? defaultSubDisplayMode
   const id = React.useId()
   const contextValue = React.useMemo(
     () => ({ displayMode, id, title }),
@@ -430,7 +488,8 @@ function DropdownMenuSubTrigger({
   const inlineNavigation = React.useContext(InlineSubmenuNavigationContext)
   const registrationOnly = React.useContext(InlineSubmenuRegistrationContext)
   const triggerClassName = cn(
-    "flex min-h-7 cursor-default items-center gap-2 rounded-md px-2 py-1 text-xs outline-hidden select-none focus:bg-action-neutral-hover focus:text-action-on-neutral not-data-[variant=destructive]:focus:**:text-action-on-neutral data-inset:pl-7.5 data-open:bg-action-neutral-hover data-open:text-action-on-neutral [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+    menuItemClassName,
+        "not-data-[variant=destructive]:focus:**:text-action-on-neutral data-inset:pl-7.5 data-open:bg-action-neutral-hover data-open:text-action-on-neutral",
     className,
   )
 
@@ -442,12 +501,19 @@ function DropdownMenuSubTrigger({
         data-slot="dropdown-menu-sub-trigger"
         data-inset={inset}
         className={triggerClassName}
-        disabled={props.disabled}
+        {...props}
+        id={`${submenu.id}-trigger`}
+        onKeyDown={(event) => {
+          props.onKeyDown?.(event)
+          if (!event.defaultPrevented && event.key === "ArrowRight" && !props.disabled) {
+            event.preventDefault()
+            inlineNavigation?.navigateTo(submenu.id)
+          }
+        }}
         onSelect={(event) => {
           event.preventDefault()
           inlineNavigation?.navigateTo(submenu.id)
         }}
-        textValue={props.textValue}
       >
         {children}
         <ChevronRightIcon className="ml-auto" />
@@ -471,6 +537,8 @@ function DropdownMenuSubTrigger({
 function DropdownMenuSubContent({
   className,
   children,
+  sideOffset = 4,
+  collisionPadding = 8,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
   const submenu = React.useContext(DropdownMenuSubContext)
@@ -492,16 +560,24 @@ function DropdownMenuSubContent({
   if (submenu?.displayMode === "inline") return null
 
   return (
-    <DropdownMenuPrimitive.SubContent
-      data-slot="dropdown-menu-sub-content"
-      className={cn(
-        "z-50 min-w-32 origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-lg bg-surface-overlay p-1 text-content-primary shadow-md ring-1 ring-stroke-default duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </DropdownMenuPrimitive.SubContent>
+    <DropdownMenuPrimitive.Portal>
+      <DropdownMenuPrimitive.SubContent
+        data-slot="dropdown-menu-sub-content"
+        sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
+        className={cn(
+          "z-50 min-w-32 origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden p-1 duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          menuSurfaceClassName,
+          menuViewportClassName,
+          className,
+        )}
+        {...props}
+      >
+        <InlineSubmenuPanelContext.Provider value={false}>
+          {children}
+        </InlineSubmenuPanelContext.Provider>
+      </DropdownMenuPrimitive.SubContent>
+    </DropdownMenuPrimitive.Portal>
   )
 }
 
