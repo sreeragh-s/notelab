@@ -2,6 +2,8 @@ export const libraryViewIds = [
   "recents",
   "favourites",
   "meetings",
+  "skills",
+  "instructions",
   "shared",
   "teamspaces",
   "private",

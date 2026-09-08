@@ -21,6 +21,8 @@ export const sidebarSectionLabels: Record<SidebarSectionKind, string> = {
 }
 
 export const libraryViewLabels: Record<LibraryView, string> = {
+  skills: "Skills",
+  instructions: "Instructions",
   favourites: "Favourites",
   meetings: "Meetings",
   private: "Private",

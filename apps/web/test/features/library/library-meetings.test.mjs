@@ -21,7 +21,7 @@ export function register({ readSource, assert, loadModule, test }) {
     assert.match(source, /aria-expanded=\{expanded\}/)
     assert.match(source, /buildTeamspaceLibraryRows\(rows, teamspace\.id\)/)
     assert.match(source, /aria-label=\{`\$\{teamspace\.name\} contents`\}/)
-    assert.match(source, /className="database-table"/)
+    assert.match(source, /className="database-table w-full min-w-full"/)
     assert.match(source, /className="database-table-wrap min-w-\[58rem\] text-sm leading-5"/)
     assert.doesNotMatch(source, /className="database-table-wrap tiptap-editor/)
     assert.match(source, /<DatabasePageLink[\s\S]*onOpen=\{onOpenRow\}/)
@@ -34,20 +34,22 @@ export function register({ readSource, assert, loadModule, test }) {
     assert.match(source, /showTitle: false/)
   })
 
-  test("meetings is a supported Library view", async () => {
+  test("meetings, skills and instructions are supported and remembered Library views", async () => {
     const { libraryViewIds, normalizeSidebarConfig } =
       await loadModule(sidebarConfigPath)
 
-    assert.ok(libraryViewIds.includes("meetings"))
-    assert.equal(
-      normalizeSidebarConfig({
-        defaultLayout: { tabs: [], taskDatabaseIds: [] },
-        libraryView: "meetings",
-        version: 3,
-        workspaceLayouts: {},
-      }).libraryView,
-      "meetings",
-    )
+    for (const view of ["meetings", "skills", "instructions"]) {
+      assert.ok(libraryViewIds.includes(view))
+      assert.equal(
+        normalizeSidebarConfig({
+          defaultLayout: { tabs: [], taskDatabaseIds: [] },
+          libraryView: view,
+          version: 3,
+          workspaceLayouts: {},
+        }).libraryView,
+        view,
+      )
+    }
   })
 
   test("Library lists meetings and its sidebar shortcut opens that tab", async () => {

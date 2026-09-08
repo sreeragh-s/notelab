@@ -45,7 +45,7 @@ export function TeamspacesLibraryTable({
       className="database-table-wrap min-w-[58rem] text-sm leading-5"
       data-vertical-lines="true"
     >
-      <table className="database-table">
+      <table className="database-table w-full min-w-full">
         <colgroup>
           <col className="w-[30%]" />
           <col className="w-[28%]" />

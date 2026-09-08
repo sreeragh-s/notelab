@@ -31,6 +31,8 @@ import type { LibraryView, MailView, SidebarShortcut, SidebarTabIconId } from "@
 import { PageIconDisplay } from "@/features/pages/index"
 
 export const libraryViewIcons = {
+  skills: SparklesIcon,
+  instructions: FilePenLineIcon,
   favourites: StarIcon,
   meetings: CalendarDaysIcon,
   private: LockIcon,

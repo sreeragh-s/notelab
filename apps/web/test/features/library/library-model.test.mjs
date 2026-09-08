@@ -1,5 +1,34 @@
 export function register({ assert, loadModule, test }) {
   const load = () => loadModule("/src/features/library/model/library-model.ts");
+  test("Skills and Instructions tabs contain only matching saved items", async () => {
+    const { buildHomepageRows, applyHomepageView, buildHomepagePayload } = await load();
+    const page = {
+      name: "Saved item", createdAt: "2026-09-08", updatedAt: "2026-09-08",
+      workspaceId: "workspace", type: "page", metadata: {},
+    };
+    const rows = buildHomepageRows({
+      pages: [
+        { ...page, id: "ordinary" },
+        { ...page, id: "skill", metadata: { zilobaseai: "skill" } },
+        { ...page, id: "instruction", metadata: { zilobaseai: "instruction" } },
+        { ...page, id: "deleted", deletedAt: "2026-09-08", metadata: { zilobaseai: "skill" } },
+        { ...page, id: "meeting", type: "meeting", metadata: { zilobaseai: "instruction" } },
+      ],
+      databases: [{ ...page, id: "database", metadata: { zilobaseai: "skill" } }],
+      placements: [],
+    }, [], [{ id: "agent", name: "Agent", ownerUserId: "owner", status: "active", updatedAt: "2026-09-08" }], "home");
+    for (const [view, id] of [["skills", "skill"], ["instructions", "instruction"]]) {
+      assert.deepEqual(applyHomepageView(rows, view).map((row) => row.id), [`page:${id}`]);
+      const payload = buildHomepagePayload({
+        activeViewId: view, rows, mode: "home", workspaceId: "workspace",
+        databaseConfig: {}, propertyConfigs: {}, viewConfigs: {},
+      });
+      assert.deepEqual(payload.rows.map((row) => row.id), [`page:${id}`]);
+      assert.equal(rows.find((row) => row.id === `page:${id}`).openPageId, id);
+    }
+    assert.deepEqual(applyHomepageView([], "skills"), []);
+    assert.deepEqual(applyHomepageView([], "instructions"), []);
+  });
   test("library models keep meeting rows separate and exclude deleted pages and archived agents", async () => {
     const { buildHomepageRows, applyHomepageView } = await load();
     const page = {
@@ -161,7 +190,7 @@ export function register({ assert, loadModule, test }) {
     assert.equal(payload.database.id, "homepage");
     assert.deepEqual(
       payload.views.map((view) => view.id),
-      ["recents", "favourites", "meetings", "shared", "teamspaces", "private"],
+      ["recents", "favourites", "meetings", "skills", "instructions", "shared", "teamspaces", "private"],
     );
     assert.equal(payload.rows[0].id, "page:p");
     assert.equal(payload.properties[0].property.config.custom, true);

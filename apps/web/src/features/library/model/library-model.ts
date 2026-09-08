@@ -491,6 +491,13 @@ export function applyHomepageView(rows: HomepageRow[], view: HomepageView) {
       return rows.filter((row) => row.itemKind !== "meeting" && row.isFavorite);
     case "meetings":
       return rows.filter((row) => row.itemKind === "meeting");
+    case "skills":
+    case "instructions":
+      return rows.filter(
+        (row) =>
+          row.itemKind === "page" &&
+          row.metadata?.zilobaseai === (view === "skills" ? "skill" : "instruction"),
+      );
     case "shared":
       return rows.filter(
         (row) => row.itemKind !== "meeting" && row.isShared && !row.teamspaceId,

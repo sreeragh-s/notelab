@@ -75,7 +75,7 @@ export function SidebarSectionMenu({
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu defaultSubDisplayMode="inline">
       <DropdownMenuTrigger asChild>
         <SidebarGroupAction
           aria-label={`Configure ${label ?? sectionId} section`}
@@ -89,7 +89,7 @@ export function SidebarSectionMenu({
         </SidebarGroupAction>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56" side="right">
-        <DropdownMenuSub>
+        <DropdownMenuSub title="Sort">
           <DropdownMenuSubTrigger>
             <ArrowUpDownIcon />
             <span className="flex min-w-0 flex-1 items-center gap-2">
@@ -117,7 +117,7 @@ export function SidebarSectionMenu({
             </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
-        <DropdownMenuSub>
+        <DropdownMenuSub title="Show">
           <DropdownMenuSubTrigger>
             <HashIcon />
             <span className="flex min-w-0 flex-1 items-center gap-2">
