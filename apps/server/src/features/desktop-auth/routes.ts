@@ -231,7 +231,7 @@ desktopAuthRoutes.post("/desktop/authorize/switch", async (c) => {
     return c.json({ error: "invalid_request" }, 400);
   }
 
-  const auth = createAuth(c.env, c.req.raw, undefined, {
+  const auth = await createAuth(c.env, c.req.raw, undefined, {
     editionExtension: c.get("editionExtension") ?? undefined,
   });
   const signOut = await auth.api.signOut({
@@ -304,7 +304,7 @@ desktopAuthRoutes.post("/api/auth/desktop/token", async (c) => {
 
         if (!authorizationCode) return null;
 
-        const auth = createAuth(c.env, c.req.raw, undefined, {
+        const auth = await createAuth(c.env, c.req.raw, undefined, {
           editionExtension: c.get("editionExtension") ?? undefined,
         });
         const authContext = await auth.$context;

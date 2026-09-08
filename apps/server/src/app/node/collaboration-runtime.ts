@@ -153,7 +153,7 @@ async function authenticateUpgrade(
   editionExtension?: ZilobaseEditionExtension,
 ) {
   return runWithDbEnv(env, async () => {
-    const auth = createAuth(env, request, undefined, { editionExtension });
+    const auth = await createAuth(env, request, undefined, { editionExtension });
     const headers = await getAuthHeaders(auth, request.headers);
 
     if (!headers.has("cookie")) {

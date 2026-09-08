@@ -101,8 +101,8 @@ async function authRequest<T>(
     body,
     headers,
   });
-  const response = await runWithDb(db, () =>
-    createAuth(authEnv, request, db).handler(request),
+  const response = await runWithDb(db, async () =>
+    (await createAuth(authEnv, request, db)).handler(request),
   );
 
   jar?.store(response.headers);

@@ -47,13 +47,17 @@ export const organizationRoles = {
   temporary: memberAc,
 };
 
-export function createAuth(
+export async function createAuth(
   env: AuthEnv,
   request: Request,
   database: Database = db,
   options: EditionExtensionOptions = {},
-): Auth {
-  return createAuthInstance(env, request, database, options);
+): Promise<Auth> {
+  const auth = createAuthInstance(env, request, database, options);
+  // Plugin initialization queries the database. Keep it inside the caller's
+  // database scope and propagate failures through the request error boundary.
+  await auth.$context;
+  return auth;
 }
 
 function createAuthInstance(

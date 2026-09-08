@@ -17,7 +17,7 @@ test.skipIf(!process.env.OAUTH_TEST_DATABASE_URL)("real provider grants stay pin
         await runWithDb(conn.db, async () => {
             const origin = 'https://api.example.com';
             const env = { BETTER_AUTH_SECRET: process.env.OAUTH_TEST_AUTH_SECRET ?? "isolated-oauth-integration-test-secret", BETTER_AUTH_URL: origin, CLIENT_URL: 'https://app.example.com' };
-            const auth = createAuth(env, new Request(origin), conn.db);
+            const auth = await createAuth(env, new Request(origin), conn.db);
             const workspaceId = randomUUID();
             await conn.db.insert(schema.workspace).values({ id: workspaceId, name: 'Smoke workspace', slug: workspaceId });
             const uid = randomUUID();

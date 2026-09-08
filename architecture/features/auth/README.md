@@ -25,6 +25,8 @@ The official Web Clipper client id is `zilobase-web-clipper` (public native, no 
 
 ## Side effects, failures and recovery
 
+`createAuth` is asynchronous: callers await Better Auth's plugin initialization inside their database scope before using the instance. OAuth resource initialization failures propagate to the caller's request error boundary instead of escaping as unhandled rejections or continuing after a standalone connection closes. A later request creates a fresh instance and can recover when the database is available again.
+
 Desktop [authorization rules](../../../apps/server/src/features/desktop-auth/authorization.ts) own request parsing, redirect validation, PKCE challenges, authorization-code hashing and signed consent tokens. [Desktop routes](../../../apps/server/src/features/desktop-auth/routes.ts) own session checks, consent presentation, code persistence/consumption and HTTP/deep-link responses. Callback parameters retain state and issuer; consuming a code matches its hash, redirect URI, challenge and expiry through the existing repository interface. [Authorization tests](../../../apps/server/src/features/desktop-auth/authorization.test.ts) and [route tests](../../../apps/server/src/features/desktop-auth/routes.test.ts) cover the production interface with controlled persistence.
 
 Email and OAuth are external side effects. Sign-out also coordinates client account state. Invalid or expired sessions must follow session-guard behavior; keep cookie, bearer and desktop authentication semantics distinct.

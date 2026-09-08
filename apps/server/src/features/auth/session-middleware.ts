@@ -96,11 +96,10 @@ export const sessionMiddleware = createMiddleware<AppBindings>(async (
     }
 
     const rawApiKey = readApiKeyFromHeaders(c.req.raw.headers);
-    const auth = createAuth(c.env, c.req.raw, db, {
-      editionExtension: c.get("editionExtension") ?? undefined,
-    });
-
     if (rawApiKey) {
+      const auth = await createAuth(c.env, c.req.raw, db, {
+        editionExtension: c.get("editionExtension") ?? undefined,
+      });
       const verification = await timed(c, "session_api_key_verify", () =>
         auth.api.verifyApiKey({
           body: { key: rawApiKey },
@@ -221,6 +220,9 @@ export const sessionMiddleware = createMiddleware<AppBindings>(async (
       return;
     }
 
+    const auth = await createAuth(c.env, c.req.raw, db, {
+      editionExtension: c.get("editionExtension") ?? undefined,
+    });
     const session = await timed(c, "session_auth", async () =>
       auth.api.getSession({
         headers: await getAuthHeaders(auth, c.req.raw.headers),

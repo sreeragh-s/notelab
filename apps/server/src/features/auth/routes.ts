@@ -153,7 +153,7 @@ authRoutes.get("/.well-known/openid-configuration/*", (c) =>
 authRoutes.post("/api/auth/set-password", async (c) => {
   const body = await readJsonBody(c.req);
   return runWithDbEnv(c.env, async () => {
-    const auth = createAuth(c.env, c.req.raw, undefined, {
+    const auth = await createAuth(c.env, c.req.raw, undefined, {
       editionExtension: c.get("editionExtension") ?? undefined,
     });
 
@@ -191,7 +191,7 @@ authRoutes.on(["GET", "POST"], "/api/auth/*", async (c) => {
       );
     }
 
-    const auth = createAuth(c.env, request, undefined, {
+    const auth = await createAuth(c.env, request, undefined, {
       editionExtension: c.get("editionExtension") ?? undefined,
     });
 
@@ -247,7 +247,7 @@ function serveOAuthMetadata(
 ) {
   return runWithDbEnv(c.env, async () => {
     await ensureOfficialClipperClient(db, getPrimaryClientOrigin(c.env));
-    const auth = createAuth(c.env, c.req.raw, undefined, {
+    const auth = await createAuth(c.env, c.req.raw, undefined, {
       editionExtension: c.get("editionExtension") ?? undefined,
     });
 
