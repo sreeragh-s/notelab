@@ -80,7 +80,8 @@
     "env": "dotenvx",
     "release": "npm run tokens:check && npm run test:community-boundary && node scripts/release/release.mjs",
     "version:set": "node scripts/release/set-version.mjs",
-    "test:architecture": "node --test scripts/refactor/check-architecture.test.mjs && node scripts/refactor/check-architecture.mjs"
+    "test:architecture": "node --test scripts/refactor/check-architecture.test.mjs && node scripts/refactor/check-architecture.mjs",
+    "build:desktop:local-resources": "node scripts/desktop/local/build.mjs"
   },
   "dependencies": {
     "@dotenvx/dotenvx": "1.75.1"

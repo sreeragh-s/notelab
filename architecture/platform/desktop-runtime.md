@@ -13,3 +13,11 @@ Native command names, deep links, keychain identifiers and persisted server conf
 ## Verification
 
 See [tests or test configuration](../../apps/desktop/e2e/selfhost.mjs) and [testing and quality](../setup/testing-and-quality.md). [Architecture index](../README.md).
+
+## Bundled local resources
+
+[Resource builder](../../scripts/desktop/local/build.mjs) builds pinned native Node/PostgreSQL
+resources and the private desktop backend, with checksums and license notices.
+The optional Tauri local configuration includes these resources. The entrypoint
+requires the internal enable flag and reads configuration from its native parent
+over stdin before loading the server. Hosted entrypoints remain independent.

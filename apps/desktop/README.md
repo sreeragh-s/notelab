@@ -149,3 +149,11 @@ The command does not open the application window. It creates a diagnostics ZIP i
 the current directory containing safe system metadata and up to four recent log
 files. Set `ZILOBASE_LOG=debug` when launching from a terminal to opt into verbose
 diagnostic events; secrets remain excluded by the diagnostic event schema.
+
+## Local runtime resource builds
+
+Run `npm run build:desktop:local-resources -- arm64` (or `x64`) on macOS.
+This downloads checksum-pinned upstream sources and builds PostgreSQL using Xcode
+command-line tools. Generated resources are ignored by Git. Pass
+`--config src-tauri/tauri.local.conf.json` to Tauri when packaging these resources.
+Local mode remains internally gated until packaged acceptance checks pass.

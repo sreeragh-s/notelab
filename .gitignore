@@ -50,3 +50,5 @@ target
 .fallow/
 .dev/ai-thread-logs/
 .dev/local/
+
+apps/desktop/src-tauri/local-resources/

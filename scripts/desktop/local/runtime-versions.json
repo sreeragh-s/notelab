@@ -1,0 +1,13 @@
+{
+  "node": {
+    "version": "22.23.2",
+    "arm64": "61130f394c1630d211dd50aecc4353d379480f36d3ac913cd85dbba1aed585c6",
+    "x64": "58e99022c2ff89395576cc7fd4d98cea24bb68081475d5f88b801ee8729fb026",
+    "license": "MIT and bundled third-party notices"
+  },
+  "postgres": {
+    "version": "17.10",
+    "sha256": "078a03516dcdbdb705fecaf415ea3d13a956c589e46f09fed68a06fb00598c90",
+    "license": "PostgreSQL License"
+  }
+}
