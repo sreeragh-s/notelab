@@ -95,3 +95,12 @@ export function getKanbanGroupLabel({
 export function getDerivedKanbanGroupId(groupValue: string, propertyType: string) {
   return groupValue ? `${propertyType}:${groupValue}` : "empty"
 }
+
+export function getUntitledKanbanGroupName(options: Pick<KanbanGroupOption, "name" | "groupValue">[]) {
+  const names = new Set(options.flatMap((option) => [option.name, option.groupValue])
+    .map((name) => name.trim().toLowerCase()))
+  let name = "Untitled"
+  let suffix = 2
+  while (names.has(name.toLowerCase())) name = `Untitled ${suffix++}`
+  return name
+}

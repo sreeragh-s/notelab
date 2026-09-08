@@ -1009,7 +1009,7 @@
   }
 
   .database-kanban-board {
-    @apply flex min-h-72 w-max min-w-full gap-3;
+    @apply flex min-h-72 w-max min-w-full gap-2;
   }
 
   .database-kanban-wrap[data-inline-scroll="true"] .database-kanban-board {
@@ -1018,19 +1018,23 @@
   }
 
   .database-kanban-column {
-    @apply flex w-72 shrink-0 flex-col rounded-md bg-surface-subtle transition-colors;
+    @apply flex w-72 shrink-0 flex-col rounded-md bg-transparent transition-colors;
   }
 
-  .database-kanban-column[data-color-token] {
-    background-color: var(--database-kanban-tint);
+  .database-kanban-column[data-drop-active="true"] {
+    @apply bg-surface-subtle;
   }
 
   .database-kanban-new-column {
-    @apply border border-dashed border-stroke-default bg-transparent;
+    @apply bg-transparent;
+  }
+
+  .database-kanban-new-column > .database-kanban-cards {
+    @apply mx-2 mt-2 rounded-md border border-dashed border-stroke-default;
   }
 
   .database-kanban-column-header {
-    @apply flex min-h-10 items-center gap-2 px-3 py-2;
+    @apply flex h-11 shrink-0 items-center gap-2 px-3 py-2;
   }
 
   .database-kanban-new-column-header {
@@ -1056,11 +1060,7 @@
   }
 
   .database-kanban-count {
-    @apply ml-auto inline-flex min-w-5 justify-center rounded-sm bg-surface-canvas px-1.5 py-0.5 text-xs font-medium text-content-secondary;
-  }
-
-  .database-kanban-column[data-color-token] .database-kanban-count {
-    background-color: var(--database-kanban-tint);
+    @apply inline-flex min-w-5 justify-center rounded-sm bg-transparent px-1.5 py-0.5 text-xs font-medium text-content-secondary;
   }
 
   .database-kanban-cards {
@@ -1068,11 +1068,26 @@
   }
 
   .database-kanban-card {
-    @apply relative overflow-hidden rounded-md border border-stroke-default bg-surface-card shadow-sm transition-[border-color,box-shadow,opacity];
+    @apply relative shrink-0 overflow-hidden rounded-md border border-stroke-default bg-surface-card shadow-sm transition-[transform,border-color,box-shadow,opacity] duration-150 motion-reduce:transition-none;
+  }
+
+  /* The final layout already occupies the preview positions. Animating the
+     obsolete transform back to zero would move each card a second time. */
+  .database-kanban-board[data-drop-settling="true"]
+    :is(.database-kanban-card, .database-kanban-new-card) {
+    transition: none;
+  }
+
+  .database-kanban-card[draggable="true"] {
+    @apply cursor-grab active:cursor-grabbing;
   }
 
   .database-kanban-card[data-dragging="true"] {
-    @apply opacity-50;
+    @apply opacity-0;
+  }
+
+  .database-kanban-card-placeholder {
+    @apply pointer-events-none absolute inset-x-2 rounded-md border border-dashed border-stroke-default bg-surface-subtle;
   }
 
   .database-kanban-card[data-drop-before="true"]::before {
@@ -1190,11 +1205,7 @@
   }
 
   .database-kanban-new-card {
-    @apply flex h-9 w-full items-center gap-2 rounded-md border border-stroke-default bg-surface-card px-2 text-left text-sm text-content-secondary shadow-xs transition-colors hover:bg-action-neutral-hover hover:text-action-on-neutral active:bg-action-neutral-pressed active:text-action-on-neutral disabled:opacity-70;
-  }
-
-  .database-kanban-column[data-color-token] .database-kanban-new-card {
-    color: var(--database-kanban-accent);
+    @apply flex h-9 w-full shrink-0 items-center justify-center gap-2 rounded-md border border-stroke-default bg-surface-card px-2 text-left text-sm text-content-secondary shadow-xs transition-[transform,color,background-color] duration-150 motion-reduce:transition-none hover:bg-action-neutral-hover hover:text-action-on-neutral active:bg-action-neutral-pressed active:text-action-on-neutral disabled:opacity-70;
   }
 
   .database-kanban-new-card svg {

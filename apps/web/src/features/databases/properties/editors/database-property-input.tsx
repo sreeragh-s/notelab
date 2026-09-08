@@ -30,6 +30,7 @@ function DatabaseInputCell({
   onActivate = () => {},
   onChange,
   onCommit,
+  onCancel,
   onDeactivate = () => {},
   onInput = () => {},
   propertyConfig,
@@ -41,6 +42,7 @@ function DatabaseInputCell({
   label: string
   onActivate?: (element: HTMLTextAreaElement) => void
   onChange: (value: string) => void
+  onCancel?: () => void
   onCommit: () => void
   onDeactivate?: () => void
   onInput?: (event: FormEvent<HTMLTextAreaElement>) => void
@@ -118,7 +120,11 @@ function DatabaseInputCell({
           return
         }
 
-        commitAndClose()
+        if (onCancel) {
+          onCancel()
+          onDeactivate()
+          setIsOpen(false)
+        } else commitAndClose()
       }}
     >
       <PopoverTrigger asChild>
@@ -184,7 +190,12 @@ function DatabaseInputCell({
             }}
             onKeyDown={(event) => {
               if (event.key === "Escape") {
-                commitAndClose()
+                if (onCancel) {
+                  event.preventDefault()
+                  onCancel()
+                  onDeactivate()
+                  setIsOpen(false)
+                } else commitAndClose()
                 return
               }
 
