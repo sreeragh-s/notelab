@@ -1,0 +1,45 @@
+name: Desktop local runtime checks
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'apps/server/**'
+      - 'apps/desktop/**'
+      - 'scripts/desktop/local/**'
+      - 'package-lock.json'
+      - '.github/workflows/desktop-local.yml'
+permissions:
+  contents: read
+jobs:
+  runtime:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+            target: aarch64-apple-darwin
+          - runner: macos-15-intel
+            arch: x64
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/desktop/local/build.mjs ${{ matrix.arch }}
+      - run: node scripts/desktop/local/verify.mjs
+      - run: node scripts/desktop/local/smoke.mjs
+      - run: node scripts/desktop/local/backup-smoke.mjs
+      - run: node scripts/desktop/local/upgrade-smoke.mjs
+      - run: node scripts/desktop/local/network-smoke.mjs
+      - run: node --test scripts/desktop/local/release-gate.test.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: local-resources-${{ matrix.target }}
+          path: apps/desktop/src-tauri/local-resources/${{ matrix.target }}
+          retention-days: 7

@@ -255,7 +255,7 @@ export async function runAiChatTurn(input: {
       ])),
       input.withDb(() => getAiChatThreadSummary(auth.threadId)),
     ]);
-    if (isLocalRuntime() && !resolvedModel.catalog.supportsFiles && requestBody.attachmentIds.length > 0) throw new Error("The selected local model does not support file attachments. Paste text or attach a local page instead.");
+    assertLocalAttachmentSupport(resolvedModel.catalog, requestBody.attachmentIds.length);
     const [experienceInstruction, mentionedPeopleInstruction] =
       contextInstructions;
     const editablePageIds = referencedPageAccess
@@ -297,7 +297,7 @@ export async function runAiChatTurn(input: {
     };
 
     const model = resolvedModel.model;
-    const hasTools = (!isLocalRuntime() || resolvedModel.catalog.supportsTools) && Object.keys(tools).length > 0;
+    const hasTools = chatToolsAvailable(resolvedModel.catalog, tools);
     const pageContextInstruction = buildPageContextInstruction(
       requestBody.pageContext,
     );
@@ -689,4 +689,12 @@ async function persistAiAgentAudit(
       }),
     );
   }
+}
+
+function assertLocalAttachmentSupport(catalog: { supportsFiles: boolean } | undefined, count: number) {
+  if (isLocalRuntime() && !catalog?.supportsFiles && count > 0) throw new Error("The selected local model does not support file attachments. Paste text or attach a local page instead.");
+}
+function chatToolsAvailable(catalog: { supportsTools: boolean } | undefined, tools: object) {
+  if (isLocalRuntime() && !catalog?.supportsTools) return false;
+  return Object.keys(tools).length > 0;
 }

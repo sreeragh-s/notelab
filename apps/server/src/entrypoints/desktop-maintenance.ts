@@ -2,6 +2,10 @@ import path from "node:path";
 import { createInterface } from "node:readline";
 import { startLocalDatabase } from "../app/local/database-process";
 import { backupLocalWorkspace, restoreLocalWorkspace, retainDailyBackups } from "../app/local/backups";
+function configureMaintenance(config: Record<string, string>) {
+  for (const key of ["ZILOBASE_LOCAL_ROOT", "ZILOBASE_LOCAL_RESOURCES"]) if (typeof config[key] !== "string" || !config[key].startsWith("/")) throw new Error("Invalid maintenance configuration");
+  Object.assign(process.env, { ZILOBASE_LOCAL_ROOT: config.ZILOBASE_LOCAL_ROOT, ZILOBASE_LOCAL_RESOURCES: config.ZILOBASE_LOCAL_RESOURCES });
+}
 async function main() {
   if (process.env.ZILOBASE_LOCAL_ENABLED !== "1") throw new Error("Local support is disabled");
   const input = createInterface({ input: process.stdin });
@@ -9,8 +13,7 @@ async function main() {
   let finished = false;
   input.once("close", () => { if (!finished) process.exit(1); });
   const config = JSON.parse(line);
-  for (const key of ["ZILOBASE_LOCAL_ROOT", "ZILOBASE_LOCAL_RESOURCES"]) if (typeof config[key] !== "string" || !config[key].startsWith("/")) throw new Error("Invalid maintenance configuration");
-  Object.assign(process.env, { ZILOBASE_LOCAL_ROOT: config.ZILOBASE_LOCAL_ROOT, ZILOBASE_LOCAL_RESOURCES: config.ZILOBASE_LOCAL_RESOURCES });
+  configureMaintenance(config);
   const root = config.ZILOBASE_LOCAL_ROOT, resources = config.ZILOBASE_LOCAL_RESOURCES;
   let result;
   if (config.operation === "restore") {
@@ -18,7 +21,7 @@ async function main() {
     result = await restoreLocalWorkspace(root, resources, config.file);
   } else if (["backup", "daily-backup"].includes(config.operation)) {
     const database = await startLocalDatabase(root, resources);
-    try { result = await backupLocalWorkspace(root, resources, database.adminUrl, config.operation === "daily-backup" ? path.join(root, "backups", `daily-${new Date().toISOString().slice(0, 10)}.zilobackup`) : config.file || undefined);
+    try { result = await backupLocalWorkspace(root, resources, database.adminUrl, config.operation === "daily-backup" ? path.join(root, "backups", `daily-${new Date().toISOString().slice(0, 10)}.zilobackup`) : config.file || undefined, config.operation === "daily-backup");
       if (config.operation === "daily-backup") await retainDailyBackups(root); }
     finally { await database.stop(); }
   } else throw new Error("Unknown maintenance action");

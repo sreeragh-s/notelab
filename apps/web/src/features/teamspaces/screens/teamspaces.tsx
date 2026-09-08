@@ -315,11 +315,10 @@ function TeamspaceDirectoryRow({
           {teamspace.isDefault ? (
             <Badge variant="secondary">Default</Badge>
           ) : null}
-          <Badge variant="outline">{teamspace.accessMode}</Badge>
+          {hasRuntimeCapability("members") && <Badge variant="outline">{teamspace.accessMode}</Badge>}
         </div>
         <p className="truncate text-sm text-content-secondary">
-          {hasRuntimeCapability("members") ? `${teamspace.memberCount ?? 0} members` : ""}
-          {teamspace.description ? ` · ${teamspace.description}` : ""}
+          {teamspaceDescription(teamspace)}
         </p>
       </div>
       <TeamspaceMembershipActions teamspace={teamspace} directory={directory} />
@@ -453,4 +452,9 @@ function TeamspaceManagementActions({
       ) : null}
     </>
   );
+}
+
+function teamspaceDescription(teamspace: Teamspace) {
+  if (!hasRuntimeCapability("members")) return teamspace.description ?? "";
+  return `${teamspace.memberCount ?? 0} members${teamspace.description ? ` · ${teamspace.description}` : ""}`;
 }

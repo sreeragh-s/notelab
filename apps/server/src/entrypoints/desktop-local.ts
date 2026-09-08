@@ -5,8 +5,7 @@ import { readLocalServices } from "../infrastructure/local/services";
 import { createInterface } from "node:readline";
 import { startLocalDatabase, grantLocalApplicationAccess } from "../app/local/database-process";
 
-async function main() {
-  if (process.env.ZILOBASE_LOCAL_ENABLED !== "1") throw new Error("Local runtime is not enabled");
+async function readNativeConfiguration() {
   const input = createInterface({ input: process.stdin });
   const configuration = await new Promise<string>((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error("Native configuration timeout")), 10_000);
@@ -18,6 +17,14 @@ async function main() {
     if (typeof env[key] !== "string" || !env[key].startsWith("/")) throw new Error("Invalid native configuration");
     process.env[key] = env[key];
   }
+  return { input, env };
+}
+
+function optionalName(value: unknown) { return typeof value === "string" ? value : undefined; }
+
+async function main() {
+  if (process.env.ZILOBASE_LOCAL_ENABLED !== "1") throw new Error("Local runtime is not enabled");
+  const { input, env } = await readNativeConfiguration();
   let database: Awaited<ReturnType<typeof startLocalDatabase>> | undefined;
   let runtime: Awaited<ReturnType<typeof import("../app/local/server")["startLocalServer"]>> | undefined;
   let stopping = false;
@@ -66,7 +73,7 @@ async function main() {
     const apiOrigin = `http://127.0.0.1:${address.port}`;
     process.env.BETTER_AUTH_URL = apiOrigin;
     const { openLocalSession } = await import("../app/local/bootstrap");
-    const session = await openLocalSession({ installationId: database.installationId, name: typeof env.name === "string" ? env.name : undefined, workspaceName: typeof env.workspaceName === "string" ? env.workspaceName : undefined });
+    const session = await openLocalSession({ installationId: database.installationId, name: optionalName(env.name), workspaceName: optionalName(env.workspaceName) });
     starting = false;
     if (parentGone) { await close(); return; }
     console.log(JSON.stringify({ event: "local.ready", apiOrigin, installationId: database.installationId, ...session }));

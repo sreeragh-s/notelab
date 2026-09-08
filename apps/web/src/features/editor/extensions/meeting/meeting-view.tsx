@@ -1,5 +1,5 @@
 import { hasRuntimeCapability } from "@/platform/runtime/capabilities";
-import { LocalTranscriptionProgress } from "@/features/desktop/local/local-transcription-progress";
+import { LocalTranscriptionProgress } from "./local-transcription-progress";
 import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"

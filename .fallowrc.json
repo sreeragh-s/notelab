@@ -10,7 +10,9 @@
     "packages/**/*.test.ts",
     // Root scripts are not npm workspace packages, so list them explicitly.
     "scripts/**/*.mjs",
-    "apps/desktop/e2e/**/*.mjs"
+    "apps/desktop/e2e/**/*.mjs",
+    // Native launches these compiled backend entrypoints over its private pipe.
+    "apps/server/src/entrypoints/desktop-*.ts"
   ],
   // CI workflow shell fragments are not JavaScript entrypoints. In particular,
   // Docker's {{...}} format strings are not filesystem globs.
@@ -431,7 +433,8 @@
       },
       {
         "from": "web-platform",
-        "allow": ["web-platform"]
+        // Runtime capability contracts are shared with the server.
+        "allow": ["web-platform", "package-features"]
       },
       {
         "from": "web-desktop",
@@ -586,6 +589,7 @@
   },
   // The custom web test harness bundles these literal loadModule() paths.
   "dynamicallyLoaded": [
+    "apps/web/src/platform/runtime/local-network.ts",
     "apps/web/src/features/comments/model/yjs-comments.ts",
     "apps/web/src/features/sidebar/model/database-view-navigation.ts",
     "apps/web/src/features/databases/views/timeline/gantt/gantt-geometry.ts",

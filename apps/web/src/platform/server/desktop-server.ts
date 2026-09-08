@@ -1,6 +1,6 @@
 import { invoke, isTauri } from "@tauri-apps/api/core"
 import packageJson from "../../../package.json"
-import { desktopNetworkFetch } from "../network/desktop-network"
+import { desktopNetworkFetch, configureDesktopNetworkProfile } from "../network/desktop-network"
 
 export type DesktopServer = {
   runtimeMode?: "remote" | "local"
@@ -74,6 +74,7 @@ export const CLOUD_DESKTOP_SERVER: DesktopServer = {
 const DEFAULT_DEV_API_ORIGIN = "http://localhost:3000"
 
 let selectedDesktopServer: DesktopServer | null = null
+configureDesktopNetworkProfile(() => selectedDesktopServer)
 let discoveredRuntimeDesktopServer: DesktopServer | null = null
 let runtimeDiscoveryPromise: Promise<DesktopServer> | null = null
 

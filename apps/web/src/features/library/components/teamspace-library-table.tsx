@@ -111,18 +111,7 @@ export function TeamspacesLibraryTable({
                     {teamspace.description?.trim() || "—"}
                   </td>
                   <td className="text-content-secondary">Teamspace</td>
-                  {hasRuntimeCapability("members") && (<td>
-                    <span className="flex items-center gap-1.5 capitalize">
-                      <TeamspaceAccessIcon accessMode={teamspace.accessMode} />
-                      {teamspace.isDefault ? "Default" : teamspace.accessMode}
-                    </span>
-                  </td>)}
-                  {hasRuntimeCapability("members") && (<td>
-                    <span className="flex items-center gap-1.5">
-                      <UsersIcon className="size-4 text-content-secondary" />
-                      {teamspace.memberCount ?? 0}
-                    </span>
-                  </td>)}
+                  <TeamspaceMemberCells teamspace={teamspace} />
                 </tr>
                 {expanded ? (
                   <Fragment>
@@ -184,4 +173,22 @@ function TeamspaceAccessIcon({
   if (accessMode === "private")
     return <LockIcon className="size-4 text-content-secondary" />;
   return <UsersIcon className="size-4 text-content-secondary" />;
+}
+
+function TeamspaceMemberCells({ teamspace }: { teamspace: Teamspace }) {
+  if (!hasRuntimeCapability("members")) return null;
+  return <>
+                  <td>
+                    <span className="flex items-center gap-1.5 capitalize">
+                      <TeamspaceAccessIcon accessMode={teamspace.accessMode} />
+                      {teamspace.isDefault ? "Default" : teamspace.accessMode}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="flex items-center gap-1.5">
+                      <UsersIcon className="size-4 text-content-secondary" />
+                      {teamspace.memberCount ?? 0}
+                    </span>
+                  </td>
+  </>;
 }

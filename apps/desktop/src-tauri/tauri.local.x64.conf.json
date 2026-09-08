@@ -1,0 +1,7 @@
+{
+  "bundle": {
+    "resources": {
+      "local-resources/x86_64-apple-darwin/": "local-resources/x86_64-apple-darwin/"
+    }
+  }
+}

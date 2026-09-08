@@ -1,3 +1,5 @@
+import { invoke } from "@tauri-apps/api/core";
+import { LocalSetup } from "@/features/desktop/local/local-setup";
 import * as React from "react"
 import { isTauri } from "@tauri-apps/api/core"
 
@@ -42,6 +44,8 @@ export function DesktopConnectServerDialog({
   const [error, setError] = React.useState<string | null>(null)
   const [profiles, setProfiles] = React.useState<DesktopServerProfile[]>([])
 
+  const [localEnabled, setLocalEnabled] = React.useState(false)
+  React.useEffect(() => { if (isTauri()) void invoke<boolean>("local_runtime_enabled").then(setLocalEnabled).catch(() => undefined) }, [])
   React.useEffect(() => {
     if (!open || !isTauri()) return
     let disposed = false
@@ -108,6 +112,7 @@ export function DesktopConnectServerDialog({
             device stay signed in.
           </DialogDescription>
         </DialogHeader>
+        {localEnabled && <LocalSetup />}
         <FieldGroup className="py-2">
           {cloudAlreadySaved ? null : (
             <>

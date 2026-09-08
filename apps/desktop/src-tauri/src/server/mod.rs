@@ -103,10 +103,22 @@ pub(crate) fn initialize_desktop_server(
 
 #[tauri::command]
 pub(crate) async fn prepare_desktop_server_candidate(
+    app: AppHandle,
     state: tauri::State<'_, DesktopServerCandidateState>,
     server_url: String,
 ) -> Result<PreparedDesktopServer, DesktopServerError> {
-    let server = verify_desktop_server(&server_url).await?;
+    if active_profile_is_local(&app) {
+        crate::local::suspend_local_for_remote_switch(app.clone())
+            .await
+            .map_err(DesktopServerError::configuration)?;
+    }
+    let server = match verify_desktop_server(&server_url).await {
+        Ok(server) => server,
+        Err(error) => {
+            crate::local::cancel_remote_switch(&app);
+            return Err(error);
+        }
+    };
     let candidate = DesktopServerCandidate {
         id: random_candidate_id()?,
         server,

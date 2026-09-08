@@ -1,4 +1,6 @@
-import { isLocalDesktop, getSelectedDesktopServer } from "../server/desktop-server";
+type NetworkProfile = { runtimeMode?: "local" | "remote"; apiOrigin: string } | null;
+let resolveProfile: () => NetworkProfile = () => null;
+export function configureDesktopNetworkProfile(resolver: () => NetworkProfile) { resolveProfile = resolver; }
 let replacementStarted = false;
 let replacementController = new AbortController();
 
@@ -12,13 +14,15 @@ export function desktopNetworkFetch(
     );
   }
 
-  if (isLocalDesktop()) {
+  const profile = resolveProfile();
+  const local = profile?.runtimeMode === "local";
+  if (local) {
     const target = new URL(input instanceof Request ? input.url : String(input), window.location.href);
-    if (target.origin !== getSelectedDesktopServer()?.apiOrigin || target.username || target.password) return Promise.reject(new Error("Remote requests are unavailable in local mode"));
+    if (target.origin !== profile.apiOrigin || target.username || target.password) return Promise.reject(new Error("Remote requests are unavailable in local mode"));
   }
   return fetch(input, {
     ...init,
-    ...(isLocalDesktop() ? { redirect: "error" as const } : {}),
+    ...(local ? { redirect: "error" as const } : {}),
     signal: combineAbortSignals(init.signal, replacementController.signal),
   });
 }

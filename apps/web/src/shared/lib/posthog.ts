@@ -1,5 +1,4 @@
 import { isTauri } from "@tauri-apps/api/core";
-import { isLocalDesktop } from "@/platform/server/desktop-server";
 import posthog, { type CaptureResult } from "posthog-js";
 
 const projectToken = import.meta.env.VITE_POSTHOG_KEY?.trim();
@@ -11,7 +10,7 @@ const sessionReplayEnabled =
 let configuredPosthog: typeof posthog | null = null;
 
 export function initializeProductTelemetry() {
-if (configuredPosthog || isLocalDesktop()) return;
+if (configuredPosthog) return;
 if (projectToken && host) {
   posthog.init(projectToken, {
     api_host: host,

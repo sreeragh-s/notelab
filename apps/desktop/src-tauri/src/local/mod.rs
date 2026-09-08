@@ -13,7 +13,14 @@ use tauri::{Emitter, Manager};
 pub(crate) struct LocalRuntimeState(
     Arc<Mutex<Option<Running>>>,
     Arc<std::sync::atomic::AtomicBool>,
+    Arc<Mutex<Option<FlushBarrier>>>,
+    Arc<std::sync::atomic::AtomicBool>,
 );
+struct FlushBarrier {
+    id: String,
+    pending: std::collections::HashSet<String>,
+    failed: bool,
+}
 struct Running {
     child: Child,
     _input: ChildStdin,
@@ -31,7 +38,8 @@ pub(crate) struct LocalReady {
 }
 
 pub(crate) fn enabled() -> bool {
-    cfg!(target_os = "macos") && std::env::var("ZILOBASE_LOCAL_ENABLED").as_deref() == Ok("1")
+    cfg!(target_os = "macos")
+        && (cfg!(local_release) || std::env::var("ZILOBASE_LOCAL_ENABLED").as_deref() == Ok("1"))
 }
 #[tauri::command]
 pub(crate) fn local_runtime_enabled() -> bool {
@@ -76,6 +84,7 @@ pub(crate) async fn start_local_runtime(
         return Err("Local support is not enabled in this build".into());
     }
     let shared = state.inner().clone();
+    shared.3.store(false, std::sync::atomic::Ordering::SeqCst);
     tauri::async_runtime::spawn_blocking(move || {
         let mut guard = shared
             .0
@@ -240,11 +249,17 @@ pub(crate) fn quit_is_approved(app: &tauri::AppHandle) -> bool {
         .load(std::sync::atomic::Ordering::SeqCst)
 }
 #[tauri::command]
-pub(crate) fn finish_local_quit(app: tauri::AppHandle) {
-    app.state::<LocalRuntimeState>()
-        .1
-        .store(true, std::sync::atomic::Ordering::SeqCst);
+pub(crate) async fn finish_local_quit(app: tauri::AppHandle) -> Result<(), String> {
+    let shared = app.state::<LocalRuntimeState>().inner().clone();
+    if shared.1.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        return Ok(());
+    }
+    if let Err(error) = flush_local_windows(&app).await {
+        shared.1.store(false, std::sync::atomic::Ordering::SeqCst);
+        return Err(error);
+    }
     app.exit(0);
+    Ok(())
 }
 
 pub(crate) fn data_root(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -307,6 +322,9 @@ pub(crate) async fn maintain_local_workspace(
 ) -> Result<serde_json::Value, String> {
     if !enabled() || !["backup", "daily-backup", "restore"].contains(&operation.as_str()) {
         return Err("Local maintenance is unavailable".into());
+    }
+    if active_ready(&app).is_some() {
+        flush_local_windows(&app).await?;
     }
     let shared = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
@@ -430,6 +448,123 @@ fn validate_deletion(root: &std::path::Path, installation_id: &str) -> Result<()
         return Err("The selected installation has changed".into());
     }
     Ok(())
+}
+
+async fn flush_local_windows(app: &tauri::AppHandle) -> Result<(), String> {
+    let shared = app.state::<LocalRuntimeState>().inner().clone();
+    let id = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|_| "Clock unavailable")?
+        .as_nanos()
+        .to_string();
+    {
+        let mut barrier = shared.2.lock().map_err(|_| "Flush state unavailable")?;
+        if barrier.is_some() {
+            return Err("Local documents are already being saved".into());
+        }
+        *barrier = Some(FlushBarrier {
+            id: id.clone(),
+            pending: app.webview_windows().into_keys().collect(),
+            failed: false,
+        });
+    }
+    if app
+        .emit("local-flush-requested", serde_json::json!({"id":id}))
+        .is_err()
+    {
+        *shared.2.lock().map_err(|_| "Flush state unavailable")? = None;
+        return Err("Cannot request document saves".into());
+    }
+    for _ in 0..150 {
+        {
+            let mut guard = shared.2.lock().map_err(|_| "Flush state unavailable")?;
+            let barrier = guard.as_ref().ok_or("Flush state disappeared")?;
+            if barrier.failed {
+                *guard = None;
+                return Err(
+                    "A window could not save its documents; data has been preserved".into(),
+                );
+            }
+            if barrier.pending.is_empty() {
+                *guard = None;
+                return Ok(());
+            }
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    *shared.2.lock().map_err(|_| "Flush state unavailable")? = None;
+    Err("A window did not finish saving. Close any unresponsive windows and try again.".into())
+}
+
+#[tauri::command]
+pub(crate) fn acknowledge_local_flush(
+    window: tauri::WebviewWindow,
+    state: tauri::State<'_, LocalRuntimeState>,
+    id: String,
+    saved: bool,
+) -> Result<(), String> {
+    if let Some(barrier) = state
+        .2
+        .lock()
+        .map_err(|_| "Flush state unavailable")?
+        .as_mut()
+    {
+        if barrier.id == id && barrier.pending.remove(window.label()) && !saved {
+            barrier.failed = true;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub(crate) fn local_runtime_process_state(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, LocalRuntimeState>,
+) -> Result<serde_json::Value, String> {
+    if state.3.load(std::sync::atomic::Ordering::SeqCst) {
+        return Ok(serde_json::json!({"alive":false,"busy":true}));
+    }
+    let Ok(mut guard) = state.0.try_lock() else {
+        return Ok(serde_json::json!({"alive":false,"busy":true}));
+    };
+    if let Some(running) = guard.as_mut() {
+        return Ok(
+            serde_json::json!({"alive":running.child.try_wait().map_err(|_| "Cannot inspect runtime")?.is_none(),"busy":false}),
+        );
+    }
+    let lock = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(data_root(&app)?.with_extension("runtime.lock"))
+        .map_err(|_| "Cannot inspect installation lock")?;
+    Ok(serde_json::json!({"alive":false,"busy":lock.try_lock().is_err()}))
+}
+
+#[tauri::command]
+pub(crate) async fn suspend_local_for_remote_switch(app: tauri::AppHandle) -> Result<(), String> {
+    let shared = app.state::<LocalRuntimeState>().inner().clone();
+    shared.3.store(true, std::sync::atomic::Ordering::SeqCst);
+    if active_ready(&app).is_some() {
+        if let Err(error) = flush_local_windows(&app).await {
+            shared.3.store(false, std::sync::atomic::Ordering::SeqCst);
+            return Err(error);
+        }
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::meetings::capture::stop_for_local_maintenance(&app)?;
+        shared.stop();
+        Ok(())
+    })
+    .await
+    .map_err(|_| "Cannot suspend local runtime")?
+}
+
+pub(crate) fn cancel_remote_switch(app: &tauri::AppHandle) {
+    app.state::<LocalRuntimeState>()
+        .3
+        .store(false, std::sync::atomic::Ordering::SeqCst);
 }
 
 #[cfg(test)]

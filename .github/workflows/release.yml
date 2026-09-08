@@ -242,7 +242,7 @@ jobs:
 
   desktop-macos:
     needs: [release, desktop-platform-matrix]
-    runs-on: macos-latest
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 300
     strategy:
       fail-fast: false
@@ -250,8 +250,12 @@ jobs:
         include:
           - name: Apple Silicon
             target: aarch64-apple-darwin
+            arch: arm64
+            runner: macos-15
           - name: Intel
             target: x86_64-apple-darwin
+            arch: x64
+            runner: macos-15-intel
 
     name: Desktop (${{ matrix.name }})
 
@@ -339,15 +343,32 @@ jobs:
           fi
           echo "APPLE_SIGNING_IDENTITY=$signing_identity" >> "$GITHUB_ENV"
 
+      - name: Prepare accepted local resources
+        if: vars.ENABLE_DESKTOP_LOCAL == 'true'
+        env:
+          LOCAL_ACCEPTANCE_JSON: ${{ vars.DESKTOP_LOCAL_ACCEPTANCE }}
+          ZILOBASE_LOCAL_ACCEPTANCE: ${{ runner.temp }}/local-acceptance.json
+        run: |
+          node -e 'require("fs").writeFileSync(process.env.ZILOBASE_LOCAL_ACCEPTANCE, process.env.LOCAL_ACCEPTANCE_JSON)'
+          node scripts/desktop/local/release-gate.mjs
+          node scripts/desktop/local/build.mjs ${{ matrix.arch }}
+          node scripts/desktop/local/sign.mjs apps/desktop/src-tauri/local-resources/${{ matrix.target }}
+          node scripts/desktop/local/verify.mjs
+          node scripts/desktop/local/smoke.mjs
+          node scripts/desktop/local/backup-smoke.mjs
+          node scripts/desktop/local/upgrade-smoke.mjs
+
       - name: Build and upload desktop app
         uses: tauri-apps/tauri-action@v1
         env:
+          ZILOBASE_LOCAL_RELEASE: ${{ vars.ENABLE_DESKTOP_LOCAL == 'true' && '1' || '0' }}
+          ZILOBASE_LOCAL_ACCEPTANCE: ${{ runner.temp }}/local-acceptance.json
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_OPTIONS: --max-old-space-size=4096 --use-system-ca
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
-          args: --target ${{ matrix.target }}
+          args: --target ${{ matrix.target }} ${{ vars.ENABLE_DESKTOP_LOCAL == 'true' && format('--config src-tauri/tauri.local.{0}.conf.json', matrix.arch) || '' }}
           projectPath: apps/desktop
           releaseDraft: false
           tagName: ${{ needs.release.outputs.tag }}

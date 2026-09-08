@@ -7,7 +7,7 @@ import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
 import { hasUnsyncedOfflineItems, syncDirtyOfflinePages, flushActiveLocalDocuments } from "@/features/offline"
 
-export function LocalSetup(_props: { onReady?: () => void }) {
+export function LocalSetup(_props: { onReady?: () => void } = {}) {
   const [name, setName] = useState("Me")
   const [workspaceName, setWorkspaceName] = useState("My workspace")
   const [pending, setPending] = useState(false)

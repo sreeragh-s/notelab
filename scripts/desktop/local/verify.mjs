@@ -17,8 +17,16 @@ try {
   await cp(source, relocated, { recursive: true });
   const manifest = JSON.parse(await readFile(path.join(relocated, 'manifest.json')));
   assert.equal(manifest.target, triple);
+  for (const required of ['node/node', 'node/LICENSE', 'postgres/LICENSE', 'server/desktop-local.cjs', 'server/desktop-maintenance.cjs', 'server/desktop-watchdog.cjs', ...['initdb', 'postgres', 'pg_ctl', 'pg_isready', 'pg_dump', 'pg_restore'].map(name => 'postgres/bin/' + name)]) assert.ok(manifest.files[required], `Missing resource: ${required}`);
   for (const [name, hash] of Object.entries(manifest.files)) {
-    assert.equal(createHash('sha256').update(await readFile(path.join(relocated, name))).digest('hex'), hash, name);
+    const filename = path.join(relocated, name);
+    assert.equal(createHash('sha256').update(await readFile(filename)).digest('hex'), hash, name);
+    if (execFileSync('/usr/bin/file', ['-b', filename], { encoding: 'utf8' }).includes('Mach-O')) {
+      const architectures = execFileSync('/usr/bin/lipo', ['-archs', filename], { encoding: 'utf8' }).trim();
+      assert.equal(architectures, process.arch === 'arm64' ? 'arm64' : 'x86_64', name);
+      const dependencies = execFileSync('/usr/bin/otool', ['-L', filename], { encoding: 'utf8' }).split('\n').slice(1).map(line => line.trim().split(' (')[0]);
+      for (const dependency of dependencies) assert.ok(!dependency.startsWith('/') || dependency.startsWith('/usr/lib/') || dependency.startsWith('/System/Library/'), `${name}: ${dependency}`);
+    }
   }
   assert.equal(execFileSync(path.join(relocated, 'node/node'), ['--version'], { encoding: 'utf8' }).trim(), `v${manifest.node}`);
   assert.match(pg('postgres', ['--version']), new RegExp(manifest.postgres.replaceAll('.', '\\.')));

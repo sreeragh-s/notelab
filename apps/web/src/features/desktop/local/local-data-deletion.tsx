@@ -1,3 +1,4 @@
+import { emit } from "@tauri-apps/api/event";
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/shared/ui/button";
@@ -17,6 +18,7 @@ export function LocalDataDeletion() {
       beginDesktopServerNetworkShutdown();
       await invoke("delete_local_workspace", { confirmation, installationId: status.installationId });
       window.localStorage.removeItem("zilobase:mode-chosen");
+      await emit("local-runtime-reopened");
       window.location.replace("/");
     } catch (error) { setError(`${String(error)} Reload the app before trying again.`); setBusy(false); }
   }

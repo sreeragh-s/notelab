@@ -1,9 +1,10 @@
+import { createHash } from "node:crypto";
 import { inspectLocalSchema, recordLocalSchema } from "./schema-compatibility";
 import { createDbClientForUrl } from "../../infrastructure/database";
 import { runMigrationSets, CORE_MIGRATION_SET } from "../../infrastructure/node/migrations";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { cp, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, readdir, stat, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Client } from "pg";
 import { z } from "zod";
@@ -24,9 +25,36 @@ async function copyIfPresent(source: string, destination: string) {
   } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
 }
 /** The caller must stop all application writers while retaining the installation lock. */
-export async function backupLocalWorkspace(root: string, resources: string, adminUrl: string, destination?: string) {
+async function changeFingerprint(root: string, adminUrl: string) {
+  const hash = createHash("sha256");
+  const client = new Client({ connectionString: adminUrl }); await client.connect();
+  try {
+    const rows = await client.query("select relname, n_tup_ins, n_tup_upd, n_tup_del from pg_stat_user_tables where schemaname = 'public' and relname not in ('session', 'verification') order by relname");
+    hash.update(JSON.stringify(rows.rows));
+  } finally { await client.end(); }
+  async function visit(directory: string) {
+    const entries = await readdir(directory, { withFileTypes: true }).catch((error: NodeJS.ErrnoException) => { if (error.code === "ENOENT") return []; throw error; });
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const filename = path.join(directory, entry.name);
+      if (entry.isSymbolicLink()) throw new Error("Backup paths must not contain symlinks");
+      if (entry.isDirectory()) await visit(filename);
+      else { const info = await stat(filename); hash.update(JSON.stringify([path.relative(root, filename), info.size, info.mtimeMs])); }
+    }
+  }
+  for (const directory of ["objects", "recordings", "native-recordings"]) await visit(path.join(root, directory));
+  hash.update(await readFile(path.join(root, "local-services.json")).catch((error: NodeJS.ErrnoException) => { if (error.code === "ENOENT") return ""; throw error; }));
+  return hash.digest("hex");
+}
+export async function backupLocalWorkspace(root: string, resources: string, adminUrl: string, destination?: string, onlyIfChanged = false) {
   await mkdir(path.join(root, "staging"), { recursive: true, mode: 0o700 });
   await mkdir(path.join(root, "backups"), { recursive: true, mode: 0o700 });
+  const fingerprint = await changeFingerprint(root, adminUrl);
+  const statusPath = path.join(root, "backups/status.json");
+  const previous = await readFile(statusPath, "utf8").then(value => JSON.parse(value)).catch((error: NodeJS.ErrnoException) => { if (error.code === "ENOENT") return null; throw error; });
+  if (onlyIfChanged && previous?.fingerprint === fingerprint) {
+    await writeFile(statusPath, JSON.stringify({ ...previous, lastCheckedAt: new Date().toISOString() }), { mode: 0o600 });
+    return { skipped: true };
+  }
   const snapshot = await mkdtemp(path.join(root, "staging/backup-"));
   try {
     const secrets = JSON.parse(await readFile(path.join(root, "secrets/database.json"), "utf8"));
@@ -38,7 +66,7 @@ export async function backupLocalWorkspace(root: string, resources: string, admi
     const archive = destination ?? path.join(root, "backups", `workspace-${new Date().toISOString().replace(/[:.]/g, "-")}.zilobackup`);
     if (!path.isAbsolute(archive)) throw new Error("Backup destination must be absolute");
     const result = await createLocalArchive(snapshot, archive);
-    await writeFile(path.join(root, "backups/status.json"), JSON.stringify({ lastBackupAt: new Date().toISOString(), file: archive }), { mode: 0o600 });
+    await writeFile(path.join(root, "backups/status.json"), JSON.stringify({ lastBackupAt: new Date().toISOString(), lastCheckedAt: new Date().toISOString(), fingerprint, file: archive }), { mode: 0o600 });
     return result;
   } finally { await rm(snapshot, { recursive: true, force: true }); }
 }

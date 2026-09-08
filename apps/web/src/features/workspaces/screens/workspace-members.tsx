@@ -42,7 +42,7 @@ import {
   normalizeTeamSettingsTab,
 } from "../members/model/member-settings-tabs";
 
-function TeamSettingsPageContent() {
+function TeamSettingsPage() {
   const navigate = useNavigate();
   const tab = useSearch({
     strict: false,
@@ -227,5 +227,4 @@ function TeamSettingsPageContent() {
   );
 }
 
-const TeamSettingsPage = withRuntimeCapability(TeamSettingsPageContent, "members", true);
-export default TeamSettingsPage;
+export default withRuntimeCapability(TeamSettingsPage, "members", true);

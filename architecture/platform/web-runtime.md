@@ -48,3 +48,5 @@ The library and sidebar retain content previously marked shared without displayi
 collaboration-only sections. Editor document synchronization remains enabled; remote
 cursor presentation is disabled independently. Personal comments retain author text,
 while mention notification targeting is unavailable.
+
+Local runtime capabilities come from the shared runtime contract. The application initializes telemetry only after resolving a remote profile; the shared telemetry module does not depend on profile selection. Desktop profile composition injects a profile resolver into the network layer, keeping request restrictions current without a network/server import cycle. The meeting editor owns the local transcription backlog presentation alongside its other meeting views. Static analysis lists the three native-launched backend entrypoints explicitly because Rust process launches are not JavaScript imports.

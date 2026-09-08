@@ -1,0 +1,24 @@
+{
+  "measuredAt": "2026-09-08T16:45:54.435Z",
+  "architecture": "arm64",
+  "os": "25.4.0",
+  "fixture": "fresh empty workspace; warm OS caches; 20 authenticated workspace-list requests",
+  "resourceBytes": 161624761,
+  "samples": [
+    {
+      "startupMs": 9403.608625,
+      "apiMedianMs": 96.52137500000026,
+      "apiP95Ms": 234.05791599999975,
+      "runtimeRssKiB": 403776
+    },
+    {
+      "startupMs": 2792.082124999999,
+      "apiMedianMs": 75.44645899999887,
+      "apiP95Ms": 232.23925000000236,
+      "runtimeRssKiB": 348160
+    }
+  ],
+  "backupMs": 1659.8864170000015,
+  "signedInstallerBytes": null,
+  "transcriptionRate": null
+}

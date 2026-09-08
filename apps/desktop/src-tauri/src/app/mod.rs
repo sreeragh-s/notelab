@@ -125,6 +125,13 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri::plugin::Builder::<tauri::Wry, ()>::new("local-navigation")
+            .on_navigation(|webview, url| {
+                if !crate::server::active_profile_is_local(webview.app_handle()) { return true; }
+                (url.scheme() == "tauri" && url.host_str() == Some("localhost"))
+                    || (url.scheme() == "http" && url.host_str() == Some("tauri.localhost"))
+                    || (cfg!(debug_assertions) && url.scheme() == "http" && url.host_str() == Some("localhost") && url.port() == Some(1420))
+            }).build())
         .on_window_event(|window, event| {
             if crate::server::active_profile_is_local(window.app_handle()) {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event { api.prevent_close(); let _ = window.hide(); }
@@ -195,8 +202,11 @@ pub fn run() {
             greet,
             crate::local::local_runtime_enabled,
             crate::local::start_local_runtime,
+            crate::local::local_runtime_process_state,
+            crate::local::suspend_local_for_remote_switch,
             crate::local::activate_local_desktop,
             crate::local::finish_local_quit,
+            crate::local::acknowledge_local_flush,
             crate::local::local_backup_dialog,
             crate::local::maintain_local_workspace,
             crate::local::show_local_data_folder,

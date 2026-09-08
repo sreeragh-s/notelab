@@ -1,3 +1,4 @@
+import { emit } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/shared/ui/button";
@@ -12,13 +13,14 @@ async function maintenance(operation: "backup" | "daily-backup" | "restore", fil
     await flushActiveLocalDocuments();
     await invoke("maintain_local_workspace", { operation, file });
     await openLocalDesktop();
+    await emit("local-runtime-reopened");
     window.location.replace("/recents");
   } catch (error) {
     maintenanceRunning = false;
     // Reopen preserved data after a failed maintenance operation; never switch to Cloud.
     if (wasLocal) {
       window.sessionStorage.setItem("zilobase:maintenance-error", error instanceof Error ? error.message : String(error));
-      await openLocalDesktop().then(() => window.location.reload()).catch(() => undefined);
+      await openLocalDesktop().then(async () => { await emit("local-runtime-reopened"); window.location.reload(); }).catch(() => undefined);
     }
     throw error;
   }
@@ -30,8 +32,8 @@ export function LocalBackupControls({ setup = false }: { setup?: boolean }) {
   const run = async (restore: boolean, exportCopy = false) => {
     setBusy(true);
     try {
-      const file = restore || exportCopy ? await invoke<string | null>("local_backup_dialog", { restore }) : undefined;
-      if ((restore || exportCopy) && !file) return;
+      const file = await chooseBackupFile(restore, exportCopy);
+      if (file === null) return;
       setMessage(restore ? "Validating the backup and preparing a replacement workspace…" : "Saving documents and creating a verified backup…");
       await maintenance(restore ? "restore" : "backup", file ?? undefined);
     } catch (error) { setMessage(error instanceof Error ? error.message : String(error)); }
@@ -51,8 +53,8 @@ export function LocalBackupScheduler() {
   useEffect(() => {
     if (!isLocalDesktop()) return;
     const check = async () => {
-      const status = await invoke<{ lastBackupAt: string | null }>("local_backup_status");
-      if (status.lastBackupAt && Date.now() - Date.parse(status.lastBackupAt) < 24 * 3600_000) return;
+      const status = await invoke<{ lastBackupAt: string | null; lastCheckedAt?: string }>("local_backup_status");
+      if ((status.lastCheckedAt || status.lastBackupAt) && Date.now() - Date.parse(status.lastCheckedAt || status.lastBackupAt!) < 24 * 3600_000) return;
       const capture = await invoke<{ phase: string }>("meeting_capture_state");
       if (["recording", "paused", "starting"].includes(capture.phase)) return;
       await maintenance("daily-backup");
@@ -62,4 +64,9 @@ export function LocalBackupScheduler() {
     return () => { clearInterval(timer); clearTimeout(initial); };
   }, []);
   return null;
+}
+
+async function chooseBackupFile(restore: boolean, exportCopy: boolean) {
+  if (!restore && !exportCopy) return undefined;
+  return invoke<string | null>("local_backup_dialog", { restore });
 }

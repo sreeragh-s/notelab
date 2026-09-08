@@ -47,3 +47,5 @@ MCP is grouped into [connections](../../../apps/server/src/features/ai/mcp/conne
 The [web interface](../../../apps/web/src/features/ai/index.ts) retains `useAiChatThreadState`; routing enters screens explicitly. Existing conversation element interfaces remain intact, including reusable UI primitives. The shared package name and `ai-chat` subpaths remain stable. Vite adapter selection and the web harness resolve the new conversation location explicitly. No HTTP path, SDK tool name, queue kind, settings scope or stored representation changes as part of this grouping.
 
 The pure [draft action rules](../../../apps/web/src/features/ai/settings/model/draft-actions.ts) distinguish card visibility, save/discard availability and mutation busy state. [Behavioral tests](../../../apps/web/test/features/ai/settings-actions.test.mjs) cover pending runs, conflicts and read-only actors; the rendered actions retain mutation and toast ownership.
+
+Local agent settings retain the internal Triggers view and omit access management through the shared sharing capability, including when the stored tab identifier is `access`.

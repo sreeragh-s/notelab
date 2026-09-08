@@ -1,3 +1,5 @@
+import { LocalBackupControls } from "@/features/desktop/local/local-backups";
+import { StartupRemoteServer } from "@/features/desktop/local/startup-remote-server";
 import { installLocalContentBoundary } from "@/platform/runtime/local-network";
 import { getSelectedDesktopServer } from "@/platform/server/desktop-server";
 import { initializeProductTelemetry } from "@/shared/lib/posthog";
@@ -38,21 +40,44 @@ configureApplicationRequests();
 configureApplicationMeetingCapture();
 installDesktopDiagnostics();
 const applicationRoot = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
+let flushListenerInstalled = false;
 void bootstrap();
+async function installLocalLifecycleListeners() {
+  if (isTauri() && !flushListenerInstalled) {
+    flushListenerInstalled = true;
+    await listen("local-runtime-reopened", () => { if (isLocalDesktop()) window.location.reload(); });
+    await listen<{ id: string }>("local-flush-requested", event => {
+      void flushActiveLocalDocuments().then(
+        () => invoke("acknowledge_local_flush", { id: event.payload.id, saved: true }),
+        () => invoke("acknowledge_local_flush", { id: event.payload.id, saved: false }),
+      );
+    });
+  }
+}
 
-async function bootstrap(skipChoice = false) {
-  const savedProfiles = isTauri() ? await listDesktopServerProfiles().catch(() => null) : null;
-  const deletedLocal = isTauri() && await invoke<{ deleted: boolean }>("local_installation_status").then(status => status.deleted).catch(() => false);
+function shouldOfferModeChoice(reopeningLocal: boolean, deletedLocal: boolean) {
+  return (deletedLocal && reopeningLocal) || (!reopeningLocal && !window.localStorage.getItem("zilobase:mode-chosen"));
+}
+async function showModeChoices(skipChoice: boolean) {
+  if (skipChoice || !isTauri()) return false;
+  const savedProfiles = await listDesktopServerProfiles().catch(() => null);
+  const deletedLocal = await invoke<{ deleted: boolean }>("local_installation_status").then(status => status.deleted).catch(() => false);
   const reopeningLocal = savedProfiles?.profiles.some(profile => profile.active && profile.kind === "local");
-  if (!skipChoice && (!reopeningLocal || deletedLocal) && isTauri() && (deletedLocal || !window.localStorage.getItem("zilobase:mode-chosen")) && await invoke<boolean>("local_runtime_enabled").catch(() => false)) {
+  if (shouldOfferModeChoice(Boolean(reopeningLocal), deletedLocal) && await invoke<boolean>("local_runtime_enabled").catch(() => false)) {
     applicationRoot.render(<main className="mx-auto flex min-h-svh max-w-md flex-col justify-center gap-6 p-6">
       <h1 className="text-xl font-semibold">Choose where to work</h1>
       <button onClick={() => { void (async () => { const candidate = await prepareDesktopServerCandidate(desktopCloudConnectUrl()); await commitDesktopServerCandidate(candidate.candidateId); window.localStorage.setItem("zilobase:mode-chosen", "1"); await bootstrap(true) })().catch(renderStartupFailure) }}>Zilobase Cloud</button>
-      <button onClick={() => { window.localStorage.setItem("zilobase:mode-chosen", "1"); window.history.replaceState(null, "", "/connect"); void bootstrap(true) }}>Your server</button>
+      <button onClick={() => applicationRoot.render(<StartupRemoteServer onConnected={() => void bootstrap(true)} onBack={() => void bootstrap()} />)}>Your server</button>
       <LocalSetup onReady={() => void bootstrap(true)} />
     </main>);
-    return;
+    return true;
   }
+  return false;
+}
+
+async function bootstrap(skipChoice = false) {
+  await installLocalLifecycleListeners();
+  if (await showModeChoices(skipChoice)) return;
   recordDesktopDiagnostic("renderer.server_initialization", {
     status: "started",
   });
@@ -70,7 +95,7 @@ async function bootstrap(skipChoice = false) {
       },
       "error",
     );
-    renderStartupFailure(error);
+    renderStartupFailure(error, await savedProfileIsLocal());
     return;
   }
 
@@ -115,17 +140,23 @@ async function bootstrap(skipChoice = false) {
   );
 }
 
-function renderStartupFailure(error: unknown) {
+async function savedProfileIsLocal() {
+  const profiles = await listDesktopServerProfiles().catch(() => null);
+  return Boolean(profiles?.profiles.some(profile => profile.active && profile.kind === "local"));
+}
+
+function renderStartupFailure(error: unknown, localFailure = false) {
   captureProductException(error, { error_boundary: "startup" });
   const message =
     error instanceof Error
       ? error.message
-      : "The saved desktop server configuration could not be loaded.";
+      : typeof error === "string" ? error : "The saved desktop server configuration could not be loaded.";
   applicationRoot.render(
     <main className="flex min-h-svh items-center justify-center bg-surface-canvas p-6">
       <div className="max-w-md space-y-4 rounded-lg border bg-surface-card p-6 text-content-primary">
         <h1 className="text-lg font-semibold">Zilobase could not start</h1>
         <p className="text-sm text-content-secondary">{message}</p>
+        {localFailure && <><LocalBackupControls setup /><button onClick={() => void invoke("show_local_data_folder")}>Show data folder</button></>}
         <button
           className="rounded-md bg-action-primary px-4 py-2 text-sm text-action-on-primary hover:bg-action-primary-hover"
           onClick={() => window.location.reload()}

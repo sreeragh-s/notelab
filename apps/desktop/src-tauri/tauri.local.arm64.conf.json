@@ -1,0 +1,7 @@
+{
+  "bundle": {
+    "resources": {
+      "local-resources/aarch64-apple-darwin/": "local-resources/aarch64-apple-darwin/"
+    }
+  }
+}

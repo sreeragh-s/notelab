@@ -14,3 +14,14 @@ it("blocks direct collaboration and provider requests before handlers execute", 
     expect((await app.request(route!, { method })).status).toBe(200);
   }
 });
+it("rejects collaboration policy hidden inside a normal teamspace update", async () => {
+  const app = new Hono<AppBindings>(); let executed = 0;
+  app.use("*", localFeatureGuard); app.patch("*", c => { executed++; return c.text("ok"); });
+  for (const field of ["accessMode", "invitePolicy", "memberAccessLevel", "publicSharingEnabled", "sidebarEditPolicy", "guestsEnabled"]) {
+    const response = await app.request("/workspaces/w/teamspaces/t", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ [field]: true }) });
+    expect(response.status).toBe(403);
+    expect((await response.json()).code).toBe("FEATURE_UNAVAILABLE_LOCAL");
+  }
+  expect(executed).toBe(0);
+  expect((await app.request("/workspaces/w/teamspaces/t", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "Personal projects" }) })).status).toBe(200);
+});

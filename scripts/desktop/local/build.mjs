@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { build } from '../../../apps/web/node_modules/esbuild/lib/main.js';
+import { build } from 'esbuild';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const versions = JSON.parse(await readFile(new URL('./runtime-versions.json', import.meta.url)));
@@ -39,7 +39,7 @@ await cp(path.join(cache, nodeName, 'LICENSE'), path.join(output, 'node/LICENSE'
 const pgName = `postgresql-${versions.postgres.version}`;
 const pgArchive = await download(`https://ftp.postgresql.org/pub/source/v${versions.postgres.version}/${pgName}.tar.bz2`, versions.postgres.sha256, `${pgName}.tar.bz2`);
 const pgRoot = path.join(output, 'postgres');
-if (!(await readFile(path.join(cache, 'postgres-built')).catch(() => null))) {
+if ((await readFile(path.join(cache, 'postgres-built'), 'utf8').catch(() => null)) !== versions.postgres.version || !(await readFile(path.join(pgRoot, 'bin/postgres')).catch(() => null))) {
   run('tar', ['-xjf', pgArchive, '-C', cache]);
   const source = path.join(cache, pgName);
   const env = { ...process.env, CC: 'clang', CFLAGS: `-O2 -arch ${arch === 'x64' ? 'x86_64' : 'arm64'}`, LDFLAGS: `-arch ${arch === 'x64' ? 'x86_64' : 'arm64'}`, MACOSX_DEPLOYMENT_TARGET: '12.0', PKG_CONFIG: '/usr/bin/false' };
@@ -71,6 +71,8 @@ for (const filename of await files(pgRoot)) {
       throw Error(`Unbundled dependency: ${filename}: ${dependency}`);
     }
   }
+  const installId = spawnSync('otool', ['-D', filename], { encoding: 'utf8' }).stdout.split('\n')[1]?.trim();
+  if (installId) run('install_name_tool', ['-id', `@loader_path/${path.basename(filename)}`, filename]);
   run('codesign', ['--force', '--sign', '-', filename]);
 }
 await mkdir(path.join(output, 'server'), { recursive: true });
@@ -84,5 +86,5 @@ for (const filename of await files(output)) {
   if (filename.endsWith('/manifest.json')) continue;
   hashes[path.relative(output, filename)] = createHash('sha256').update(await readFile(filename)).digest('hex');
 }
-await writeFile(path.join(output, 'manifest.json'), JSON.stringify({ version: 1, target: triple, node: versions.node.version, postgres: versions.postgres.version, files: hashes }, null, 2));
+await writeFile(path.join(output, 'manifest.json'), JSON.stringify({ version: 1, target: triple, node: versions.node.version, postgres: versions.postgres.version, licenses: { node: 'node/LICENSE', postgres: 'postgres/LICENSE' }, files: hashes }, null, 2));
 console.log(`Local resources: ${output}`);

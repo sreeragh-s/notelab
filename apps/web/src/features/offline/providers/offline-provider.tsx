@@ -1,3 +1,6 @@
+import { invoke } from "@tauri-apps/api/core"
+import { emit } from "@tauri-apps/api/event"
+import { openLocalDesktop } from "@/platform/server/desktop-server"
 import { isLocalDesktop } from "@/platform/server/desktop-server"
 import * as React from "react"
 import {
@@ -268,6 +271,7 @@ function OfflineRuntime() {
         window.clearTimeout(timeout)
       }
 
+      if (isLocalDesktop()) await attemptLocalRuntimeRecovery()
       scheduleRetry()
     }
 
@@ -300,8 +304,10 @@ function OfflineRuntime() {
     window.addEventListener("zilobase:authentication-required", handleAuthenticationRequired)
     window.addEventListener("zilobase:server-replacement-started", handleServerReplacement)
     void probe()
+    const healthTimer = isLocalDesktop() ? window.setInterval(() => { void probe() }, 15_000) : null
 
     return () => {
+      if (healthTimer !== null) window.clearInterval(healthTimer)
       disposed = true
       if (retryTimer !== null) window.clearTimeout(retryTimer)
       window.removeEventListener("offline", handleOffline)
@@ -357,4 +363,17 @@ export function useOfflineSessionLocked() {
   }, [expiresAt])
 
   return connectivity !== "online" && Boolean(expiresAt) && expiresAt <= now
+}
+
+async function attemptLocalRuntimeRecovery() {
+        const state = await invoke<{ alive: boolean; busy: boolean }>("local_runtime_process_state").catch(() => null)
+        if (state && !state.alive && !state.busy) {
+          const key = "zilobase:local-restarts"
+          const attempts: number[] = JSON.parse(window.sessionStorage.getItem(key) || "[]")
+          const recent = attempts.filter(time => Date.now() - time < 300_000)
+          if (recent.length < 3) {
+            window.sessionStorage.setItem(key, JSON.stringify([...recent, Date.now()]))
+            await openLocalDesktop().then(async () => { await emit("local-runtime-reopened"); window.location.reload() }).catch(() => undefined)
+          }
+        }
 }

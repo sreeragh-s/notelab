@@ -1,3 +1,5 @@
+import { isLocalRuntime } from "../../infrastructure/runtime/runtime-adapter";
+import { FEATURE_UNAVAILABLE_LOCAL } from "@zilobase/features/runtime";
 import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 
 import { getMembership } from "../access";
@@ -178,7 +180,8 @@ export class TeamspaceManagementService {
           const [created] = await transaction
             .insert(teamspace)
             .values({
-              accessMode: input.accessMode,
+              accessMode: isLocalRuntime() ? "private" : input.accessMode,
+              ...(isLocalRuntime() ? { guestsEnabled: false, publicSharingEnabled: false } : {}),
               createdById: input.userId,
               description: input.description ?? null,
               icon: input.icon ?? null,
@@ -233,6 +236,7 @@ export class TeamspaceManagementService {
       workspaceId: string;
     } & TeamspaceUpdateInput,
   ) {
+    if (isLocalRuntime() && ["accessMode", "invitePolicy", "memberAccessLevel", "publicSharingEnabled", "sidebarEditPolicy", "guestsEnabled"].some(key => key in input)) throw new TeamspaceManagementError(FEATURE_UNAVAILABLE_LOCAL, 403);
     const { membership, record, role } = await this.requireManage(input);
     if (
       input.accessMode === "private" &&

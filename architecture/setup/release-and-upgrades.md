@@ -12,3 +12,7 @@ Release tooling synchronizes versions and orchestrates packaging. [Versioned pac
 - [Verification](../../scripts/desktop/test-update.mjs)
 
 Command definitions remain in [package scripts](../../package.json); consult them for the current invocation. [Architecture index](../README.md).
+
+## Local macOS release gate
+
+[Local resource checks](../../.github/workflows/desktop-local.yml) run native arm64 and Intel jobs. [Release acceptance](../../scripts/desktop/local/release-gate.mjs) requires evidence for both architectures at the exact source revision; the Rust build checks it independently before compiling local release enablement. [Resource signing](../../scripts/desktop/local/sign.mjs) signs bundled Mach-O files and refreshes their manifest hashes. Architecture-specific Tauri overlays prevent shipping both runtime architectures in one installer. See [the acceptance ledger](../../docs/desktop/local-release-acceptance.md); local release enablement remains off until its outstanding checks pass.

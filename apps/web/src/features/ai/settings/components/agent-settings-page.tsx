@@ -123,7 +123,7 @@ function ScopedAgentSettingsPage({
             <TabsList aria-label="Agent settings">
               {tabs.filter(t => t !== "connectors" || hasRuntimeCapability("integrations")).map((t) => (
                 <TabsTrigger key={t} value={t} className="grow-0 capitalize">
-                  {t === "access" ? "Triggers & Access" : t}
+                  {t === "access" ? (hasRuntimeCapability("sharing") ? "Triggers & Access" : "Triggers") : t}
                   {draft.changedTabs.includes(t) && (
                     <span
                       className="ml-1 inline-block size-1.5 rounded-full bg-action-primary"
@@ -234,15 +234,23 @@ function ScopedAgentSettingsPage({
     );
   }
 
+  function renderActivity() {
+    return <div className="px-5 py-6">{agent ? <><SettingsRunActivity agentId={agent.id} />{hasRuntimeCapability("integrations") && <AgentMcpActivity agent={agent} />}</> : hasRuntimeCapability("integrations") ? <PersonalMcpActivity /> : null}</div>;
+  }
+
+  function renderTriggers() {
+    if (!d || scope === "personal") return null;
+    return <><SettingsTriggers review={review} scope={scope} definition={d} onChange={draft.patch} disabled={disabled} />{hasRuntimeCapability("sharing") && <SettingsAccess review={review} definition={d} onChange={draft.patch} disabled={disabled} />}</>;
+  }
   function renderSettingsContent() {
     if (!d) return null;
     if (tab === "connectors" && !hasRuntimeCapability("integrations")) return <LocalFeatureUnavailable />;
     switch (tab) {
       case "instructions": return renderInstructionPane();
       case "connectors": return <div className="px-5 py-6"><SettingsConnectors review={review} scope={scope} definition={d} onChange={draft.patch} disabled={disabled} /></div>;
-      case "activity": return <div className="px-5 py-6">{agent ? <><SettingsRunActivity agentId={agent.id} />{hasRuntimeCapability("integrations") && <AgentMcpActivity agent={agent} />}</> : hasRuntimeCapability("integrations") ? <PersonalMcpActivity /> : null}</div>;
+      case "activity": return renderActivity();
       case "versions": return renderVersionHistory();
-      case "access": return scope !== "personal" ? <><SettingsTriggers review={review} scope={scope} definition={d} onChange={draft.patch} disabled={disabled} /><SettingsAccess review={review} definition={d} onChange={draft.patch} disabled={disabled} /></> : null;
+      case "access": return renderTriggers();
     }
   }
 
