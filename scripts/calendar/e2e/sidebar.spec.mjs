@@ -63,6 +63,7 @@ test("removal failure keeps the dialog and calendar, then allows retry", async (
     }
     return route.fallback();
   });
+  await page.getByRole("button", { name: "Holidays in India", exact: true }).hover();
   await page.getByRole("button", { name: "Options for Holidays in India", exact: true }).click();
   await page.getByRole("menuitem", { name: "Remove calendar from list" }).click();
   await page.getByRole("button", { name: "Remove calendar", exact: true }).click();
@@ -76,6 +77,7 @@ test("removal failure keeps the dialog and calendar, then allows retry", async (
 
 test("calendar menus use shared inline panels on a narrow sidebar", async ({ page }) => {
   await page.setViewportSize({ width: 700, height: 600 });
+  await page.getByRole("button", { name: "Personal Default", exact: true }).hover();
   await page.getByRole("button", { name: "Options for Personal", exact: true }).click();
   await page.getByRole("menuitem", { name: /Color/ }).click();
   await expect(page.getByRole("button", { name: "Back from Color" })).toBeVisible();
@@ -83,4 +85,21 @@ test("calendar menus use shared inline panels on a narrow sidebar", async ({ pag
   await page.screenshot({ animations: "disabled", path: ".dev/calendar-e2e-results/color-menu-narrow.png" });
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Options for Personal", exact: true })).toBeFocused();
+});
+
+test("only the eye changes visibility and Default never overlaps actions", async ({ page }) => {
+  const name = page.getByRole("button", { name: "Personal Default", exact: true });
+  const eye = page.getByRole("button", { name: "Hide Personal", exact: true });
+  await name.click();
+  await expect(name).toBeFocused();
+  await expect(eye).toHaveAttribute("aria-pressed", "true");
+  await eye.click();
+  await expect(page.getByRole("button", { name: "Show Personal", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await name.hover();
+  await expect(name.locator("span").first()).toHaveClass(/text-content-secondary/);
+  await name.click();
+  await expect(page.getByRole("button", { name: "Show Personal", exact: true })).toBeVisible();
+  const label = await name.getByText("Default", { exact: true }).boundingBox();
+  const more = await page.getByRole("button", { name: "Options for Personal", exact: true }).boundingBox();
+  expect(label.x + label.width).toBeLessThanOrEqual(more.x);
 });

@@ -88,3 +88,8 @@ The [toolbar](../../../apps/web/src/features/calendar/workspace/calendar-toolbar
 rendered in `PagePaneHeader`'s padded action slot, with compact search/navigation
 menus at narrow widths. The schedule renders a plain month heading and Create event;
 date picking remains in the left mini calendar.
+
+Calendar row buttons only receive focus. Visibility and its pressed state belong
+to the eye button; hidden names use the shared secondary text token. A flex action
+area allocates space for the eye and expands for the options button on hover,
+focus, or menu-open state, keeping the Default label intact.
