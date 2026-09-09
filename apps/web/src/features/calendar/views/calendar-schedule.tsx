@@ -102,7 +102,14 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
   useEffect(() => workspace.register({ close, create: () => create() }));
   useEffect(() => { if (search.event) workspace.openPanel(); }, [search.event, workspace.openPanel]);
   const selection = selectionData(selected, snapshots, connections);
-  const card = (event: CalendarEvent) => <Button key={calendarEventKey(event)} draggable={view === "month" && online && !event.start.date} onDragStart={e => e.dataTransfer.setData("text/calendar-event", calendarEventKey(event))} variant="ghost" className={`h-auto w-full justify-start overflow-hidden rounded-sm px-1.5 py-1 text-left text-xs font-normal ${color(event).backgroundClass} ${color(event).textClass}`} onClick={() => open(event)} title={event.title}><span className="truncate">{!event.start.date && <span className="mr-1 text-content-secondary">{eventClock(event.start, preferences.timeZone, preferences.timeFormat)}</span>}{event.title}</span></Button>;
+  const card = (event: CalendarEvent) => {
+    const timed = !event.start.date && !query && (view === "day" || view === "week");
+    const awaiting = event.attendees.some(attendee => attendee.self && attendee.responseStatus === "needsAction");
+    return <Button key={calendarEventKey(event)} data-calendar-event-card draggable={view === "month" && online && !event.start.date} onDragStart={e => e.dataTransfer.setData("text/calendar-event", calendarEventKey(event))} variant="ghost" className={`${timed ? "h-full flex-col items-start gap-0.5 rounded-md border border-current p-2" : "h-auto rounded-sm px-1.5 py-1"} ${timed && awaiting ? "border-dashed" : ""} w-full justify-start overflow-hidden text-left text-xs font-normal ${color(event).backgroundClass} ${color(event).textClass}`} onClick={() => open(event)} title={event.title}>
+      <span className="w-full truncate font-medium">{event.title}</span>
+      {!event.start.date && <span className="truncate text-[11px] opacity-80">{eventClock(event.start, preferences.timeZone, preferences.timeFormat)}–{eventClock(event.end, preferences.timeZone, preferences.timeFormat)}</span>}
+    </Button>;
+  };
   return <div className="flex min-h-0 min-w-0 flex-1 flex-col">
     {connections.map(c => <AccountData key={c.bindingId} connection={c} userId={userId} start={cacheStart} end={cacheEnd} onData={onData} />)}
     <div className="flex shrink-0 items-center gap-3 border-b border-stroke-default px-4 py-3">

@@ -304,3 +304,31 @@ test("catalog errors stay actionable while cached events survive and recovery cl
   await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Design review/ })).toBeVisible();
 });
+
+test("the entire event card opens unified details with expandable participants", async ({ page }) => {
+  const attendees = Array.from({ length: 8 }, (_, index) => ({ email: `guest${index}@example.test`, displayName: `Guest ${index}`, self: index === 7, organizer: index === 0, responseStatus: index === 7 ? 'needsAction' : index < 5 ? 'accepted' : 'declined' }));
+  const detailed = { ...event, attendees, organizer: { email: 'guest0@example.test' }, conferenceUrl: 'https://meet.google.com/abc-defg-hij', recurringEventId: 'series', reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 10 }] } };
+  await page.route('**/ranges?**', route => { const url = new URL(route.request().url()); return route.fulfill({ json: { calendarId: 'primary', start: url.searchParams.get('start'), end: url.searchParams.get('end'), generation: 2, revision: 10, events: [detailed], complete: true, nextPageToken: null } }); });
+  await page.reload();
+  const card = page.getByRole('button', { name: /Design review/ });
+  await expect(card).toHaveClass(/border-dashed/);
+  await expect(card).toContainText('10:00–11:00');
+  const box = await card.boundingBox();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height - 8);
+  const panel = page.locator('[data-calendar-event-panel]');
+  await expect(panel.getByRole('heading', { name: 'Design review', exact: true })).toBeVisible();
+  await expect(panel.getByRole('heading', { name: '8 participants', exact: true })).toBeVisible();
+  await expect(panel.getByText('5 yes · 2 no · 0 maybe · 1 awaiting', { exact: true })).toBeVisible();
+  await expect(panel.getByText('Guest 4', { exact: true })).toHaveCount(0);
+  await panel.getByRole('button', { name: 'See all 8 participants' }).click();
+  await expect(panel.getByText('Guest 4', { exact: true })).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Yes', exact: true })).toHaveCount(1);
+  await expect(panel.getByRole('link', { name: 'Google Meet' })).toHaveAttribute('href', detailed.conferenceUrl);
+  await expect(panel.getByText('10min before', { exact: true })).toBeVisible();
+  await panel.getByRole('button', { name: 'Show fewer participants' }).click();
+  await panel.getByRole('heading', { name: 'Design review', exact: true }).scrollIntoViewIfNeeded();
+  for (const mode of ['light', 'dark']) {
+    await page.evaluate(mode => document.documentElement.classList.toggle('dark', mode === 'dark'), mode);
+    await page.screenshot({ animations: 'disabled', path: `.dev/calendar-e2e-results/event-details-${mode}.png` });
+  }
+});

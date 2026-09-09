@@ -105,3 +105,15 @@ switches. Hidden content is inert. Calendar and AI are mutually exclusive even
 when AI uses its saved floating presentation; switching does not rewrite that
 preference. Explicit close clears route selection and restores trigger focus;
 leaving Calendar resets registration and search state.
+
+## Event presentation
+
+Timed cards use a single full-height click target with title and time range;
+awaiting invitations have a dashed outline. Drag/resize handles retain their
+existing geometry behavior. The [event details](../../../apps/web/src/features/calendar/views/calendar-event-details.tsx)
+surface is part of the same event dock: time, timezone, recurrence status,
+participant counts/preview, inline participant expansion and RSVP, meeting link,
+location/description, calendar, visibility and reminders. Shared avatars, buttons,
+tokens and section borders define its appearance. RSVP and management controls
+reuse the existing mutation flow; expansion does not open another panel or alter
+selection. Notes/database linking and proposal workflows are not implemented.
