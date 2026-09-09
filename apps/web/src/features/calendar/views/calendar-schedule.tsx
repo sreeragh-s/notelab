@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { calendarDays, todayInZone, dayInstant, addCalendarDays, shiftCalendarPeriod, calendarEventKey, eventInstant, eventClock, calendarApiBasePath, type CalendarConnection, type CalendarEvent, type CalendarPreferences, type CalendarRecord, type CalendarView } from "@zilobase/features/calendar";
 import { useCalendarCache } from "../sync/use-calendar-cache";
-import { calendarSelectionKey } from "../connections/calendar-list";
+import { calendarSelectionKey, resolveDefaultCalendar } from "../connections/calendar-selection";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
@@ -79,7 +79,7 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
   const open = (event: CalendarEvent) => { setEditing(false); setCreating(false); setSelected(event); void navigate({ to: "/calendar", search: { date, view, binding: event.bindingId, calendar: event.calendarId, event: event.eventId } }) };
   const create = (day = date, hour = 9, duration = 30) => {
     const writable = data.flatMap(d => d.calendars).filter(c => c.permissions.write);
-    const calendar = writable.find(c => calendarSelectionKey(c.bindingId, c.id) === preferences.defaultCalendarKey) ?? writable[0];
+    const calendar = resolveDefaultCalendar(writable, preferences);
     if (!calendar) return;
     const connection = connections.find(c => c.bindingId === calendar.bindingId)!;
     let seed: CalendarEvent;
