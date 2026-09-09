@@ -98,3 +98,15 @@ Page/database integration, bookings, published availability, automatic blocking,
 ## References
 
 [CalendarCN](https://github.com/vmnog/calendarcn) informed interaction/layout design; no source code was copied. [Notion event workflows](https://www.notion.com/help/manage-your-calendars-and-events) and [settings](https://www.notion.com/help/notion-calendar-settings) informed product behavior. Provider rules follow Google's [incremental sync](https://developers.google.com/workspace/calendar/api/guides/sync) and [recurrence](https://developers.google.com/workspace/calendar/api/guides/recurringevents) documentation. Zilobase components and semantic tokens remain the visual source of truth.
+
+## Refresh-only 404 after a local code update
+
+A running API may still have the old route table after the web client reloads.
+In particular, the client now reads `GET /connections/:bindingId/catalog` during
+refresh; older APIs support `/ranges` but do not mount `/catalog`. This can show
+an intermittent 404 while ordinary schedule loading still succeeds. Restart the
+local API manually after updating both workspaces. An unauthenticated 401 is not
+a route-compatibility check: authentication middleware runs before routing.
+Verify an authenticated catalog request returns 200 after restarting. Do not
+suppress all 404s: missing or inaccessible provider resources still require
+attention. Cached schedules remain available during recovery.

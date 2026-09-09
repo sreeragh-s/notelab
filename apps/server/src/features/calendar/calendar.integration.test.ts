@@ -161,3 +161,29 @@ test.skipIf(!enabled)("outbox retries failed publication and emits only currentl
   expect(published.length).toBeGreaterThan(0);
   for (const event of published) expect(Object.keys(event as object).sort()).toEqual(["accountId", "bindingId", "calendarId", "generation", "revision", "userId", "workspaceId"]);
 });
+
+// A refresh reads the local catalog; it must not depend on a Google request.
+test.skipIf(!enabled)("catalog refresh is mounted, scoped, and provider-independent", async () => {
+  const { Hono } = await import("hono");
+  const { calendarSyncRoutes } = await import("./sync/routes");
+  const { CalendarAccessError } = await import("./connections/ownership");
+  const [binding] = (await database!.select().from(schema.calendarBinding)).filter(row => row.accountId === secondAccount);
+  const users = await database!.select().from(schema.user);
+  let identity = userId;
+  const app = new Hono<import("../../shared/types").AppBindings>();
+  app.use("*", async (c, next) => { c.set("user", users.find(user => user.id === identity)!); await next(); });
+  app.onError((error, c) => c.json({ error: error.message }, error instanceof CalendarAccessError ? error.status : 500));
+  app.route("/workspaces/:workspaceId/calendar", calendarSyncRoutes);
+  const fetchSpy = vi.fn(() => { throw new Error("Catalog must not call Google"); });
+  vi.stubGlobal("fetch", fetchSpy);
+  try {
+    const path = `/workspaces/${workspaceId}/calendar/connections/${binding!.id}/catalog`;
+    const response = await runWithDb(database!, () => app.request(path));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.calendars).toEqual(expect.arrayContaining([expect.objectContaining({ id: "primary", bindingId: binding!.id })]));
+    identity = otherUser;
+    expect((await runWithDb(database!, () => app.request(path))).status).toBe(404);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  } finally { vi.unstubAllGlobals(); }
+});
