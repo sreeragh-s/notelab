@@ -103,8 +103,8 @@ export function PopupApp() {
         canonicalUrl: extracted.metadata.canonicalUrl,
         captureMode,
         html: captureMode === "bookmark" ? null : extracted.html,
-        parentPageId: destination?.kind === "page" ? destination.id : null,
-        databaseId: destination?.kind === "database" ? destination.id : null,
+        parentPageId: destinationId(destination, "page"),
+        databaseId: destinationId(destination, "database"),
         metadata: {
           author: extracted.metadata.author,
           description: extracted.metadata.description,
@@ -194,7 +194,7 @@ export function PopupApp() {
             {captureModes.map((mode) => (
               <Button
                 aria-pressed={captureMode === mode.value}
-                disabled={mode.value === "selection" && !extracted?.selectionPresent}
+                disabled={selectionUnavailable(mode.value, extracted)}
                 key={mode.value}
                 onClick={() => setCaptureMode(mode.value)}
                 size="sm"
@@ -209,7 +209,7 @@ export function PopupApp() {
 
       {error ? <FieldError>{error}</FieldError> : null}
 
-      {savedUrl && session ? (
+      {savedUrl ? (
         <Button
           onClick={() => openClippedPage(session, savedUrl)}
           variant="link"
@@ -229,4 +229,12 @@ export function PopupApp() {
       )}
     </div>
   )
+}
+
+function destinationId(destination: ClipperDestination | null, kind: ClipperDestination["kind"]) {
+  return destination?.kind === kind ? destination.id : null
+}
+
+function selectionUnavailable(mode: ClipCaptureMode, extracted: ExtractResult | null) {
+  return mode === "selection" && !extracted?.selectionPresent
 }

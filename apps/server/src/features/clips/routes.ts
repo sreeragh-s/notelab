@@ -103,27 +103,8 @@ function parseCreateClipRequest(
   if (!isClipCaptureMode(captureMode)) {
     return { ok: false, error: "captureMode is invalid" }
   }
-  if (
-    body.parentPageId != null &&
-    typeof body.parentPageId !== "string"
-  ) {
-    return { ok: false, error: "parentPageId must be a string or null" }
-  }
-  if (body.databaseId != null && typeof body.databaseId !== "string") {
-    return { ok: false, error: "databaseId must be a string or null" }
-  }
-  if (
-    body.duplicateStrategy != null &&
-    !isClipDuplicateStrategy(body.duplicateStrategy)
-  ) {
-    return { ok: false, error: "duplicateStrategy is invalid" }
-  }
-  if (body.html != null && typeof body.html !== "string") {
-    return { ok: false, error: "html must be a string" }
-  }
-  if (body.note != null && typeof body.note !== "string") {
-    return { ok: false, error: "note must be a string" }
-  }
+  const optionalError = validateOptionalClipFields(body)
+  if (optionalError) return { ok: false, error: optionalError }
 
   return {
     ok: true,
@@ -132,21 +113,42 @@ function parseCreateClipRequest(
       title: title.trim(),
       sourceUrl,
       captureMode,
-      parentPageId: (body.parentPageId as string | null | undefined) ?? null,
-      databaseId: (body.databaseId as string | null | undefined) ?? null,
-      teamspaceId: typeof body.teamspaceId === "string" ? body.teamspaceId : null,
-      canonicalUrl:
-        typeof body.canonicalUrl === "string" ? body.canonicalUrl : null,
-      note: typeof body.note === "string" ? body.note : null,
-      html: typeof body.html === "string" ? body.html : null,
-      content: body.content ?? null,
-      metadata:
-        body.metadata && typeof body.metadata === "object"
-          ? (body.metadata as CreateClipRequest["metadata"])
-          : undefined,
-      duplicateStrategy: isClipDuplicateStrategy(body.duplicateStrategy)
-        ? body.duplicateStrategy
-        : "create",
+      ...optionalClipFields(body),
     },
   }
+}
+
+function validateOptionalClipFields(body: Record<string, unknown>): string | null {
+  for (const field of ["parentPageId", "databaseId"]) {
+    if (body[field] != null && typeof body[field] !== "string") return `${field} must be a string or null`
+  }
+  if (body.duplicateStrategy != null && !isClipDuplicateStrategy(body.duplicateStrategy)) return "duplicateStrategy is invalid"
+  for (const field of ["html", "note"]) {
+    if (body[field] != null && typeof body[field] !== "string") return `${field} must be a string`
+  }
+  return null
+}
+
+function optionalClipFields(body: Record<string, unknown>) {
+  return {
+    parentPageId: (body.parentPageId as string | null | undefined) ?? null,
+    databaseId: (body.databaseId as string | null | undefined) ?? null,
+    teamspaceId: nullableString(body.teamspaceId),
+    canonicalUrl:
+      nullableString(body.canonicalUrl),
+    note: nullableString(body.note),
+    html: nullableString(body.html),
+    content: body.content ?? null,
+    metadata:
+      body.metadata && typeof body.metadata === "object"
+        ? (body.metadata as CreateClipRequest["metadata"])
+        : undefined,
+    duplicateStrategy: isClipDuplicateStrategy(body.duplicateStrategy)
+      ? body.duplicateStrategy
+      : "create",
+  }
+}
+
+function nullableString(value: unknown) {
+  return typeof value === "string" ? value : null
 }

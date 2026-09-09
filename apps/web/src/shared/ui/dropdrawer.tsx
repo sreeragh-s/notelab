@@ -527,7 +527,7 @@ function DropDrawerItem({
       </div>
     );
 
-    if (inline || !(closeOnSelect ?? !isInSubmenu)) {
+    if (keepDrawerItemOpen(inline, closeOnSelect, isInSubmenu)) {
       return content;
     }
 
@@ -957,3 +957,7 @@ export {
   DropDrawerSubTrigger,
   DropDrawerTrigger,
 };
+
+function keepDrawerItemOpen(inline: boolean, closeOnSelect: boolean | undefined, isInSubmenu: boolean) {
+  return inline || !(closeOnSelect ?? !isInSubmenu);
+}

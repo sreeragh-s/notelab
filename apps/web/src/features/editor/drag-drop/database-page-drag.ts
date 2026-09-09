@@ -47,7 +47,7 @@ export const insertDraggedDatabasePage = (
   if (!view.state.schema.nodes.pageBlock || !view.editable) return false;
   event.preventDefault();
   insertPendingPageEmbed(
-    view, target.pos, pageId, payload?.title ?? "Untitled",
+    view, target.pos, pageId, payload.title ?? "Untitled",
     () => onEmbedPage?.(pageId), onError,
   );
   return true;

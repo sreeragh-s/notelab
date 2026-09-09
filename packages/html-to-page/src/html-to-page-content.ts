@@ -88,6 +88,10 @@ function blockNodeToJson(node: Node): PageDocumentNode[] {
   const element = node as Element
   const tagName = element.tagName.toLowerCase()
 
+  return simpleBlockElementToJson(element, tagName) ?? nestedBlockElementToJson(element, tagName)
+}
+
+function simpleBlockElementToJson(element: Element, tagName: string): PageDocumentNode[] | null {
   if (/^h[1-6]$/.test(tagName)) {
     return [
       {
@@ -127,6 +131,10 @@ function blockNodeToJson(node: Node): PageDocumentNode[] {
     return [{ type: "horizontalRule" }]
   }
 
+  return null
+}
+
+function mediaBlockElementToJson(element: Element, tagName: string): PageDocumentNode[] | null {
   if (tagName === "img") {
     const src = element.getAttribute("src")
     return src
@@ -159,6 +167,12 @@ function blockNodeToJson(node: Node): PageDocumentNode[] {
       : []
   }
 
+  return null
+}
+
+function nestedBlockElementToJson(element: Element, tagName: string): PageDocumentNode[] {
+  const media = mediaBlockElementToJson(element, tagName)
+  if (media) return media
   if (tagName === "ul" || tagName === "ol") {
     return [
       {
@@ -203,6 +217,22 @@ function withInlineContent(element: Element): Pick<PageDocumentNode, "content"> 
   return content.length > 0 ? { content } : {}
 }
 
+function appendInlineMarks(element: Element, tagName: string, nextMarks: NonNullable<PageDocumentNode["marks"]>) {
+  if (tagName === "strong" || tagName === "b") {
+    nextMarks.push({ type: "bold" })
+  } else if (tagName === "em" || tagName === "i") {
+    nextMarks.push({ type: "italic" })
+  } else if (tagName === "code") {
+    nextMarks.push({ type: "code" })
+  } else if (tagName === "a") {
+    nextMarks.push({
+      type: "link",
+      attrs: { href: element.getAttribute("href") },
+    })
+  }
+
+}
+
 function inlineNodeToJson(
   node: Node,
   marks: PageDocumentNode["marks"] = [],
@@ -220,22 +250,8 @@ function inlineNodeToJson(
   const tagName = element.tagName.toLowerCase()
   const nextMarks = [...marks]
 
-  if (tagName === "strong" || tagName === "b") {
-    nextMarks.push({ type: "bold" })
-  } else if (tagName === "em" || tagName === "i") {
-    nextMarks.push({ type: "italic" })
-  } else if (tagName === "code") {
-    nextMarks.push({ type: "code" })
-  } else if (tagName === "a") {
-    nextMarks.push({
-      type: "link",
-      attrs: { href: element.getAttribute("href") },
-    })
-  }
-
-  if (tagName === "br") {
-    return [{ type: "hardBreak" }]
-  }
+  appendInlineMarks(element, tagName, nextMarks)
+  if (tagName === "br") return [{ type: "hardBreak" }]
 
   return Array.from(element.childNodes).flatMap((child) =>
     inlineNodeToJson(child, nextMarks),

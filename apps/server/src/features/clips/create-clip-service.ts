@@ -24,26 +24,7 @@ export async function createClipService(input: {
   const sourceUrl = request.canonicalUrl?.trim() || request.sourceUrl
   const duplicateStrategy = request.duplicateStrategy ?? "create"
 
-  if (request.parentPageId) {
-    if (!(await canAccessPage(request.parentPageId, userId, "edit"))) {
-      throw new ServiceMutationError("Forbidden", 403)
-    }
-  } else if (!(await getMembership(request.workspaceId, userId))) {
-    throw new ServiceMutationError("Forbidden", 403)
-  }
-
-  if (request.databaseId) {
-    if (
-      !(await canAccessDatabaseInWorkspace(
-        request.databaseId,
-        request.workspaceId,
-        userId,
-        "edit",
-      ))
-    ) {
-      throw new ServiceMutationError("Forbidden", 403)
-    }
-  }
+  await authorizeClipDestination(request, userId)
 
   const existing = await findDuplicateClip({
     sourceUrl,
@@ -51,17 +32,8 @@ export async function createClipService(input: {
     workspaceId: request.workspaceId,
   })
 
-  if (existing && duplicateStrategy === "reject") {
-    throw new ServiceMutationError("This URL has already been clipped.", 409)
-  }
-
-  if (existing && duplicateStrategy === "open-existing") {
-    return {
-      pageId: existing.pageId,
-      url: `/p/${existing.pageId}`,
-      duplicateOf: existing.pageId,
-    }
-  }
+  const duplicate = duplicateClipResponse(existing, duplicateStrategy)
+  if (duplicate) return duplicate
 
   const content = buildClipContent(request)
   const metadata = {
@@ -109,6 +81,46 @@ export async function createClipService(input: {
     databaseRowId,
     url: `/p/${created.pageId}`,
   }
+}
+
+function duplicateClipResponse(existing: { pageId: string } | null, duplicateStrategy: CreateClipRequest["duplicateStrategy"]): CreateClipResponse | null {
+  if (existing && duplicateStrategy === "reject") {
+    throw new ServiceMutationError("This URL has already been clipped.", 409)
+  }
+
+  if (existing && duplicateStrategy === "open-existing") {
+    return {
+      pageId: existing.pageId,
+      url: `/p/${existing.pageId}`,
+      duplicateOf: existing.pageId,
+    }
+  }
+
+  return null
+}
+
+async function authorizeClipDestination(request: CreateClipRequest, userId: string) {
+  if (request.parentPageId) {
+    if (!(await canAccessPage(request.parentPageId, userId, "edit"))) {
+      throw new ServiceMutationError("Forbidden", 403)
+    }
+  } else if (!(await getMembership(request.workspaceId, userId))) {
+    throw new ServiceMutationError("Forbidden", 403)
+  }
+
+  if (request.databaseId) {
+    if (
+      !(await canAccessDatabaseInWorkspace(
+        request.databaseId,
+        request.workspaceId,
+        userId,
+        "edit",
+      ))
+    ) {
+      throw new ServiceMutationError("Forbidden", 403)
+    }
+  }
+
 }
 
 async function resolveDataSourceId(databaseOrSourceId: string) {

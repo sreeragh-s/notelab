@@ -112,10 +112,7 @@ export function DatabaseVirtualizedTable({
     () => new Map(rows.map((row, index) => [row.pageId, index])),
     [rows]
   )
-  const activeCellSeparatorIndex = activeCellKey?.indexOf(":") ?? -1
-  const activePageId = activeCellKey && activeCellSeparatorIndex > -1
-    ? activeCellKey.slice(0, activeCellSeparatorIndex)
-    : null
+  const activePageId = activeCellPageId(activeCellKey)
   const activeRowIndex = activePageId
     ? rowIndexByPageId.get(activePageId) ?? -1
     : -1
@@ -354,4 +351,11 @@ export function useSyncedHorizontalScroll(
       delete header.dataset.databaseRubberBand
     }
   }, [bodyRef, headerRef, syncVersion])
+}
+
+function activeCellPageId(activeCellKey: string | null) {
+  const activeCellSeparatorIndex = activeCellKey?.indexOf(":") ?? -1
+  return activeCellKey && activeCellSeparatorIndex > -1
+    ? activeCellKey.slice(0, activeCellSeparatorIndex)
+    : null
 }
