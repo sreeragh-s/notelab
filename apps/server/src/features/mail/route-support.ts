@@ -87,6 +87,22 @@ export function mailPropertyError(c: Context<AppBindings>, error: unknown) {
   throw error
 }
 
+async function recordMailOperationFailure(error: unknown, connectionId: string) {
+  if (error instanceof GmailApiError && error.code === "quota_exceeded") {
+    await recordMailMetric("quota_failure", { connectionId, code: error.code, status: error.status })
+  }
+  if (error instanceof GmailApiError && error.code === "authorization_revoked") {
+    clearGmailAccessTokenCache(connectionId)
+    const update = { lastErrorCode: error.code, status: "reconnect_required", updatedAt: new Date() }
+    await db.update(gmailAccount).set(update).where(eq(gmailAccount.id, connectionId))
+    await invalidateDatabaseAutomationDependencies({
+      dependencyId: connectionId,
+      dependencyType: "gmail_connection",
+      reason: "Reconnect the automation owner's Gmail account",
+    })
+  }
+}
+
 export async function runMailOperation(
   c: Context<AppBindings>,
   userId: string,
@@ -99,19 +115,7 @@ export async function runMailOperation(
       return operation(gateway)
     })
   } catch (error) {
-    if (error instanceof GmailApiError && error.code === "quota_exceeded") {
-      await recordMailMetric("quota_failure", { connectionId: connection.id, code: error.code, status: error.status })
-    }
-    if (error instanceof GmailApiError && error.code === "authorization_revoked") {
-      clearGmailAccessTokenCache(connection.id)
-      const update = { lastErrorCode: error.code, status: "reconnect_required", updatedAt: new Date() }
-      await db.update(gmailAccount).set(update).where(eq(gmailAccount.id, connection.id))
-      await invalidateDatabaseAutomationDependencies({
-        dependencyId: connection.id,
-        dependencyType: "gmail_connection",
-        reason: "Reconnect the automation owner's Gmail account",
-      })
-    }
+    await recordMailOperationFailure(error, connection.id)
     const status = error instanceof GmailApiError || error instanceof MailConcurrencyError
       ? error.status
       : 500

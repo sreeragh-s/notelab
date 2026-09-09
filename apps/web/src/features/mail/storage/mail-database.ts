@@ -126,6 +126,37 @@ export async function openMailDatabase(input: MailDatabaseIdentity, recoveryAtte
   }
 }
 
+async function resetRecoveryViews(database: MailDatabase, response: MailSyncResponse) {
+  const known = await database.threads.toCollection().primaryKeys()
+  const currentState = await database.syncState.get("primary")
+  const returned = new Set(response.threads.map((thread) => thread.id))
+  if (currentState) await database.syncState.put({ ...currentState, loadedViews: {}, pageTokens: {},
+    pendingThreadReconciliationIds: [...new Set([...(currentState.pendingThreadReconciliationIds ?? []), ...known.filter((id) => !returned.has(String(id))).map(String)])] })
+}
+
+async function updateSyncCheckpoint(
+  database: MailDatabase,
+  response: MailSyncResponse,
+  view: MailView,
+  options: { markViewLoaded?: boolean; advanceHistory?: boolean },
+) {
+  const current = await database.syncState.get("primary")
+  if (!current) throw new Error("Mail cache identity is missing.")
+  await database.syncState.put({
+    ...current,
+    historyId: options.advanceHistory === false ? current.historyId : newerMailHistoryId(current.historyId, response.historyId),
+    lastSyncedAt: Date.now(),
+    loadedViews: options.markViewLoaded === false
+      ? current.loadedViews
+      : { ...current.loadedViews, [view]: true },
+    mailboxRevision: Math.max(current.mailboxRevision, response.mailboxRevision),
+    pageTokens: options.markViewLoaded === false ? current.pageTokens : {
+      ...current.pageTokens,
+      [view]: response.nextPageToken ?? undefined,
+    },
+  })
+}
+
 export async function applyMailSyncResponse(
   database: MailDatabase,
   response: MailSyncResponse,
@@ -140,11 +171,7 @@ export async function applyMailSyncResponse(
     database.threads,
     async () => {
       if (response.mode === "recovery") {
-        const known = await database.threads.toCollection().primaryKeys()
-        const currentState = await database.syncState.get("primary")
-        const returned = new Set(response.threads.map((thread) => thread.id))
-        if (currentState) await database.syncState.put({ ...currentState, loadedViews: {}, pageTokens: {},
-          pendingThreadReconciliationIds: [...new Set([...(currentState.pendingThreadReconciliationIds ?? []), ...known.filter((id) => !returned.has(String(id))).map(String)])] })
+        await resetRecoveryViews(database, response)
       }
       if (response.labels.length) await database.labels.bulkPut(response.labels)
       if (response.messages.length) await mergeMessages(database, response.messages)
@@ -156,21 +183,7 @@ export async function applyMailSyncResponse(
         await database.threads.bulkDelete(response.deletedThreadIds)
       }
 
-      const current = await database.syncState.get("primary")
-      if (!current) throw new Error("Mail cache identity is missing.")
-      await database.syncState.put({
-        ...current,
-        historyId: options.advanceHistory === false ? current.historyId : newerMailHistoryId(current.historyId, response.historyId),
-        lastSyncedAt: Date.now(),
-        loadedViews: options.markViewLoaded === false
-          ? current.loadedViews
-          : { ...current.loadedViews, [view]: true },
-        mailboxRevision: Math.max(current.mailboxRevision, response.mailboxRevision),
-        pageTokens: options.markViewLoaded === false ? current.pageTokens : {
-          ...current.pageTokens,
-          [view]: response.nextPageToken ?? undefined,
-        },
-      })
+      await updateSyncCheckpoint(database, response, view, options)
     },
   )
 }

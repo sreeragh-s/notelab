@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client"
 import { Toaster } from "sonner"
 import { useMailRealtime } from "@/features/mail/realtime/mail-realtime"
 import { MailComposer } from "@/features/mail/compose/mail-composer"
-import { MailComposer as Baseline } from "mail-baseline"
+import { MailComposer as Baseline } from "virtual:mail-baseline"
 import "@/shared/styles/global.css"
 import "@/app/styles.css"
 

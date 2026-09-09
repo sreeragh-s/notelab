@@ -62,3 +62,7 @@ their original composition frozen for recovery.
 
 Reconnecting an existing account preserves its monotonic mailbox revision so clients
 with persisted notification checkpoints continue accepting subsequent revisions.
+
+The mail browser fixture is an explicit audit entrypoint and loads the historical
+composer through a Vite virtual module. Its browser and PostgreSQL harness
+dependencies are declared as root development dependencies.

@@ -49,12 +49,20 @@ export function replySeed(message: MailMessageRecord, ownEmail: string, replyAll
   }
 }
 
+function forwardedBody(message: MailMessageRecord) {
+  return message.bodyText || (message.bodyHtml ? "" : message.snippet)
+}
+
+function forwardedSender(message: MailMessageRecord) {
+  return message.from?.name || message.from?.address || "Unknown sender"
+}
+
 export function forwardSeed(message: MailMessageRecord): MailComposeSeed {
-  const sender = message.from?.name || message.from?.address || "Unknown sender"
+  const sender = forwardedSender(message)
   return {
     sourceHtml: message.bodyText ? undefined : message.bodyHtml ?? undefined,
     attachmentReferences: (message.attachments ?? []).filter((attachment) => !attachment.inline),
-    bodyText: `\n\n---------- Forwarded message ----------\nFrom: ${sender}\nDate: ${message.date ?? new Date(message.internalDate).toLocaleString()}\nSubject: ${message.subject}\nTo: ${formatComposerAddresses(message.to)}\n\n${message.bodyText || (message.bodyHtml ? "" : message.snippet)}`,
+    bodyText: `\n\n---------- Forwarded message ----------\nFrom: ${sender}\nDate: ${message.date ?? new Date(message.internalDate).toLocaleString()}\nSubject: ${message.subject}\nTo: ${formatComposerAddresses(message.to)}\n\n${forwardedBody(message)}`,
     subject: /^(fwd?|fw):/i.test(message.subject) ? message.subject : `Fwd: ${message.subject}`,
   }
 }

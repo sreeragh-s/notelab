@@ -129,4 +129,3 @@ export function viewFilter(view: MailView) {
     case "unread": return { labelIds: ["UNREAD"] }
   }
 }
-
