@@ -59,3 +59,9 @@ The event editor uses shared controls and explicit guest-update settings. Calend
 ## Browser recovery
 
 [Recovery coordination](../../../apps/web/src/features/calendar/realtime/calendar-recovery.ts) holds a Web Lock for the binding's socket leader and uses BroadcastChannel for scoped invalidations and health. The leader sends 20-second heartbeats, renews expiring tickets and reconnects with bounded backoff. Visible online clients check provider changes every minute without healthy push or about five minutes with it, with jitter and failure backoff. Focus, visibility and connectivity recovery also check Google. Separate provider and range locks coalesce concurrent tabs. Invalidation-driven range refreshes do not start another canonical sync, avoiding feedback loops. Late component responses cannot replace current loading/error state.
+
+## Running-app reminders
+
+The lazy [application reminder host](../../../apps/web/src/features/calendar/reminders/calendar-reminder-host.tsx) sits outside route content and subscribes to each enabled account's upcoming cache. It continues through navigation and checks deadlines on a timer and after focus/visibility restoration. Calendar defaults and popup overrides determine deadlines; declined, cancelled and ended events are excluded. [Atomic IndexedDB claims](../../../apps/web/src/features/calendar/reminders/scheduler.ts) deduplicate delivery across tabs and survive restarts. Editing the start produces a new reminder identity; pending provider mutations cannot notify.
+
+In-app delivery is always available when reminders are enabled. System delivery uses browser Notification permission or the [Tauri notification plugin](https://v2.tauri.app/plugin/notification/), requested only from Calendar settings. The scheduler does not register closed-app alarms, service-worker push, or native scheduled notifications. Disconnection deletes its scoped cache and reminder claims; logout removes the session host.
