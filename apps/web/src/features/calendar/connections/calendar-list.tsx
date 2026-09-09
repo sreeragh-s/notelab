@@ -26,8 +26,8 @@ function CalendarRow({ calendar, allCalendars, preferences, onPreferences, disab
   const row = useRef<HTMLButtonElement>(null), completed = useRef(false);
   const save = (next: CalendarPreferences) => { void onPreferences(next).catch(() => {}); };
   const toggle = () => save({ ...preferences, hiddenCalendarKeys: hidden ? preferences.hiddenCalendarKeys.filter(id => id !== key) : [...preferences.hiddenCalendarKeys, key] });
-  return <SidebarMenuItem><div data-calendar-row data-menu-open={menuOpen || undefined} className="group/nav-row relative flex items-center rounded-md pr-1.5 hover:bg-action-neutral-hover focus-within:bg-action-neutral-hover data-[menu-open]:bg-action-neutral-hover">
-    <SidebarMenuButton ref={row} disabled={disabled} onClick={event => event.currentTarget.focus()} title={calendar.name} className={`${SIDEBAR_NAV_ROW_INTERACTION_CLASS_NAME} min-w-0 flex-1 pr-1!`}>
+  return <SidebarMenuItem><div data-calendar-row data-menu-open={menuOpen || undefined} className="group/nav-row relative flex items-center rounded-md pr-1.5 hover:bg-action-neutral-hover focus-within:bg-action-neutral-hover data-[menu-open]:bg-action-neutral-hover active:bg-action-neutral-pressed! has-[>button:active]:bg-action-neutral-pressed!">
+    <SidebarMenuButton ref={row} disabled={disabled} onClick={event => event.currentTarget.focus()} title={calendar.name} className={`${SIDEBAR_NAV_ROW_INTERACTION_CLASS_NAME} min-w-0 flex-1 bg-transparent! pr-1!`}>
       <CalendarIcon className={PALETTE[color].textClass} /><span className={`min-w-0 flex-1 truncate ${hidden ? "text-content-secondary!" : "text-content-primary"}`}>{calendar.name}</span>
       {preferences.defaultCalendarKey === key && <span className="shrink-0 overflow-visible! whitespace-nowrap text-xs text-content-secondary">Default</span>}
     </SidebarMenuButton>

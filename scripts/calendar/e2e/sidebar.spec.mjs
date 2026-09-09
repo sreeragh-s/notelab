@@ -1,4 +1,9 @@
 import { test, expect } from "@playwright/test";
+async function openCalendarMenu(page, name) {
+  const trigger = page.getByRole("button", { name: `Options for ${name}`, exact: true });
+  await page.locator('[data-calendar-row]').filter({ has: trigger }).locator('[data-sidebar=menu-button]').focus();
+  await trigger.click();
+}
 const calendars = [
   { id: "primary", bindingId: "binding", name: "Personal", timeZone: "Asia/Kolkata", colorId: null, primary: true, permissions: { read: true, write: true, owner: true, freeBusyOnly: false }, defaultReminders: [] },
   { id: "holidays", bindingId: "binding", name: "Holidays in India", timeZone: "Asia/Kolkata", colorId: null, primary: false, permissions: { read: true, write: false, owner: false, freeBusyOnly: false }, defaultReminders: [] },
@@ -31,16 +36,16 @@ test("calendar eye, color submenu, removal confirmation and restoration persist"
   const name = "Holidays in India";
   await page.getByRole("button", { name: `Hide ${name}`, exact: true }).click();
   await expect(page.getByRole("button", { name: `Show ${name}`, exact: true })).toBeVisible();
-  await page.getByRole("button", { name: `Options for ${name}`, exact: true }).click();
+  await openCalendarMenu(page, name);
   await page.getByRole("menuitem", { name: /Color/ }).click();
   await page.getByRole("menuitem", { name: "Green", exact: true }).click();
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: `Options for ${name}`, exact: true }).click();
+  await openCalendarMenu(page, name);
   await page.getByRole("menuitem", { name: "Remove calendar from list" }).click();
   await expect(page.getByRole("alertdialog")).toContainText("This won’t delete it");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(page.getByRole("button", { name, exact: true })).toBeFocused();
-  await page.getByRole("button", { name: `Options for ${name}`, exact: true }).click();
+  await openCalendarMenu(page, name);
   await page.getByRole("menuitem", { name: "Remove calendar from list" }).click();
   await page.getByRole("button", { name: "Remove calendar", exact: true }).click();
   await expect(page.getByRole("button", { name, exact: true })).toHaveCount(0);
@@ -64,7 +69,7 @@ test("removal failure keeps the dialog and calendar, then allows retry", async (
     return route.fallback();
   });
   await page.getByRole("button", { name: "Holidays in India", exact: true }).hover();
-  await page.getByRole("button", { name: "Options for Holidays in India", exact: true }).click();
+  await openCalendarMenu(page, "Holidays in India");
   await page.getByRole("menuitem", { name: "Remove calendar from list" }).click();
   await page.getByRole("button", { name: "Remove calendar", exact: true }).click();
   await expect(page.getByRole("alertdialog").getByRole("alert")).toBeVisible();
@@ -78,7 +83,7 @@ test("removal failure keeps the dialog and calendar, then allows retry", async (
 test("calendar menus use shared inline panels on a narrow sidebar", async ({ page }) => {
   await page.setViewportSize({ width: 700, height: 600 });
   await page.getByRole("button", { name: "Personal Default", exact: true }).click();
-  await page.getByRole("button", { name: "Options for Personal", exact: true }).click();
+  await openCalendarMenu(page, "Personal");
   await page.getByRole("menuitem", { name: /Color/ }).click();
   await expect(page.getByRole("button", { name: "Back from Color" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Grey", exact: true })).toBeVisible();
