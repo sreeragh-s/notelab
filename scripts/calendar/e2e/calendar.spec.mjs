@@ -133,8 +133,9 @@ test("every calendar view scrolls vertically in a short viewport", async ({ page
       : page.locator("[data-calendar-scroll]");
     await expect(scroll).toBeVisible();
     await expect.poll(() => scroll.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
-    await scroll.evaluate(element => { element.scrollTop = 100 });
-    await expect.poll(() => scroll.evaluate(element => element.scrollTop)).toBe(100);
+    const target = view === "month" ? 700 : 100;
+    await scroll.evaluate((element, top) => { element.scrollTop = top }, target);
+    await expect.poll(() => scroll.evaluate(element => element.scrollTop)).toBe(target);
   }
 });
 
@@ -149,4 +150,38 @@ test("a healthy socket without provider watches retains one-minute recovery", as
   page.on("request", request => { if (request.url().endsWith("/sync")) checks++; });
   await page.clock.fastForward(70000);
   await expect.poll(() => checks).toBeGreaterThan(0);
+});
+
+for (const view of ["day", "week"]) test(`${view} pins headers and timezone rail in both scroll directions`, async ({ page }) => {
+  await page.evaluate(view => window.calendarFixture.navigate(view), view);
+  const header = page.locator("[data-calendar-grid-header]"), axis = page.locator("[data-calendar-time-axis]"), pager = page.locator("[data-calendar-period-scroll]");
+  const headerBox = await header.boundingBox(), axisBox = await axis.boundingBox();
+  const active = page.locator('[data-calendar-period-scroll] > [aria-hidden="false"] [data-calendar-scroll]');
+  await active.evaluate(element => { element.scrollTop = 240 });
+  await expect.poll(() => axis.evaluate(element => element.scrollTop)).toBe(240);
+  await pager.evaluate(element => { element.scrollLeft = element.clientWidth * 2 });
+  await expect(page.getByRole("button", { name: `Create event ${view === "day" ? "2026-09-10" : "2026-09-14"} 9:00`, exact: true })).toBeAttached();
+  expect((await header.boundingBox()).y).toBe(headerBox.y);
+  expect((await header.boundingBox()).x).toBe(headerBox.x);
+  expect((await axis.boundingBox()).x).toBe(axisBox.x);
+  await expect.poll(() => axis.evaluate(element => element.scrollTop)).toBe(240);
+});
+
+test("month scroll continues in both directions with bounded rows and stable anchors", async ({ page }) => {
+  await page.evaluate(() => window.calendarFixture.navigate("month"));
+  const scroll = page.locator("[data-calendar-month-scroll]");
+  await expect(scroll).toBeVisible();
+  for (let index = 0; index < 8; index++) {
+    await scroll.evaluate(element => { element.scrollTop = element.scrollHeight - element.clientHeight - 10 });
+    await expect.poll(() => scroll.evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeGreaterThan(300);
+  }
+  await expect(page.getByRole("button", { name: /2027/, exact: false }).first()).toBeVisible();
+  expect(await page.locator("[data-calendar-week]").count()).toBeLessThanOrEqual(12);
+  for (let index = 0; index < 8; index++) {
+    await scroll.evaluate(element => { element.scrollTop = 20 });
+    await expect.poll(() => scroll.evaluate(element => element.scrollTop)).toBe(596);
+  }
+  await page.evaluate(() => window.calendarFixture.navigate("month", "2026-09-09"));
+  await expect(page.getByRole("button", { name: "September 2026", exact: true })).toBeVisible();
+  await expect.poll(() => scroll.evaluate(element => element.scrollTop)).toBe(576);
 });

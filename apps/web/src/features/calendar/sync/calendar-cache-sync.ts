@@ -32,6 +32,8 @@ export async function synchronizeCalendarCache(database: CalendarDatabase, start
     if (!database.isOpen()) return;
     const pinned = [];
     for (const calendar of sync.calendars.filter(c => c.permissions.read && !c.permissions.freeBusyOnly)) {
+      for (const range of calendarRequestRanges(start, end)) {
+      const { start, end } = range;
       const load = async () => {
       const prior = await database.ranges.get(calendarRangeKey(calendar.id, start, end));
       const state = await database.state.get(calendar.id);
@@ -47,6 +49,7 @@ export async function synchronizeCalendarCache(database: CalendarDatabase, start
       if (typeof navigator !== "undefined" && navigator.locks) await navigator.locks.request(`${database.name}:range:${calendar.id}:${start}:${end}`, load);
       else await load();
       pinned.push(calendarRangeKey(calendar.id, start, end));
+      }
     }
     await evictCalendarRanges(database, pinned);
   });
@@ -63,4 +66,17 @@ export async function prefetchCalendarMonths(database: CalendarDatabase, start: 
     if (ranges.length && ranges.every(range => range && Date.now() - range.fetchedAt < 300_000)) continue;
     await synchronizeCalendarCache(database, from, until, fetcher, false);
   }
+}
+
+// Keep moving month windows within the server's 62-day per-request limit.
+export function calendarRequestRanges(start: string, end: string) {
+  const ranges: { start: string; end: string }[] = [];
+  let cursor = Date.parse(start);
+  const until = Date.parse(end);
+  while (cursor < until) {
+    const next = Math.min(until, cursor + 60 * 86400_000);
+    ranges.push({ start: new Date(cursor).toISOString(), end: new Date(next).toISOString() });
+    cursor = next;
+  }
+  return ranges;
 }
