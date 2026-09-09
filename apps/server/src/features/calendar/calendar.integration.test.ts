@@ -123,11 +123,16 @@ test.skipIf(!enabled)("webhooks authenticate early callbacks, deduplicate replay
   const id = randomUUID(), token = randomUUID();
   await database!.insert(schema.calendarWatchChannel).values({ id, accountId: secondAccount, calendarId: "primary", tokenHash: await sha256Hex(token), expiresAt: new Date(Date.now() + 60000) });
   const headers = new Headers({ "x-goog-channel-id": id, "x-goog-channel-token": token, "x-goog-resource-id": "resource", "x-goog-message-number": "1" });
-  expect(await runWithDb(database!, () => acceptCalendarWebhook(headers))).toBe(true);
-  expect(await runWithDb(database!, () => acceptCalendarWebhook(headers))).toBe(true);
+  const dispatched: unknown[] = [];
+  const dispatch = async (accountId: string, calendarId: string | null) => { dispatched.push([accountId, calendarId]); };
+  expect(await runWithDb(database!, () => acceptCalendarWebhook(headers, dispatch))).toBe(true);
+  expect(await runWithDb(database!, () => acceptCalendarWebhook(headers, dispatch))).toBe(true);
+  expect(dispatched).toEqual([[secondAccount, "primary"]]);
+  headers.set("x-goog-message-number", "2");
+  expect(await runWithDb(database!, () => acceptCalendarWebhook(headers, async () => { throw new Error("queue unavailable"); }))).toBe(true);
   headers.set("x-goog-resource-id", "spoofed"); expect(await runWithDb(database!, () => acceptCalendarWebhook(headers))).toBe(false);
   const [channel] = (await database!.select().from(schema.calendarWatchChannel)).filter(c => c.id === id);
-  expect(channel!.messageNumber).toBe("1"); expect(channel!.dirtyAt).toBeInstanceOf(Date); expect(channel!.resourceId).toBe("resource");
+  expect(channel!.messageNumber).toBe("2"); expect(channel!.dirtyAt).toBeInstanceOf(Date); expect(channel!.resourceId).toBe("resource");
 });
 
 test.skipIf(!enabled)("expired sync tokens preserve cached canonical events until recovery commits", async () => {

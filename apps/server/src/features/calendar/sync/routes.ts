@@ -37,3 +37,10 @@ calendarSyncRoutes.get("/connections/:bindingId/calendars/:calendarId/events/:ev
   const raw = await gateway.request(`/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(c.req.param("eventId"))}`);
   return c.json({ event: normalizeEvent(raw, { workspaceId: binding.workspaceId, bindingId: binding.id, calendarId }, "UTC") });
 });
+
+// Metadata-only cache reads must never trigger another provider sync.
+calendarSyncRoutes.get("/connections/:bindingId/catalog", async c => {
+  const { account, binding } = await requireCalendarBinding(c.get("user")!.id, c.req.param("workspaceId")!, c.req.param("bindingId"));
+  const states = await db.select().from(calendarProviderCalendar).where(eq(calendarProviderCalendar.accountId, account.id));
+  return c.json({ calendars: states.map(state => ({ ...state.data, bindingId: binding.id })) });
+});

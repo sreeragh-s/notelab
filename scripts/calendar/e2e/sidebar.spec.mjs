@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith("/preferences")) { if (route.request().method() === "PUT") preferences = route.request().postDataJSON(); return route.fulfill({ json: preferences }); }
     if (url.pathname.endsWith("/connections")) return route.fulfill({ json: { providerConfigured: true, connections: [{ workspaceId: "workspace", bindingId: "binding", accountId: "account", email: "calendar@example.test", status: "connected", pushAvailable: false }] } });
-    if (url.pathname.endsWith("/calendars")) return route.fulfill({ json: { calendars } });
+    if ((url.pathname.endsWith("/calendars") || url.pathname.endsWith("/catalog"))) return route.fulfill({ json: { calendars } });
     if (url.pathname.endsWith("/sync")) return route.fulfill({ json: { calendars, revisions: { primary: 1, holidays: 1 }, pending: false } });
     if (url.pathname.endsWith("/ranges")) return route.fulfill({ json: { calendarId: url.searchParams.get("calendarId"), start: url.searchParams.get("start"), end: url.searchParams.get("end"), generation: 1, revision: 1, events: [], complete: true, nextPageToken: null } });
     return route.fulfill({ status: 503, json: { message: "Push unavailable" } });
@@ -51,6 +51,36 @@ test("calendar eye, color submenu, removal confirmation and restoration persist"
   await expect(page.getByRole("button", { name, exact: true }).locator("svg").first()).toHaveClass(/text-palette-green/);
   for (const appearance of ["light", "dark"]) {
     await page.evaluate(appearance => document.documentElement.classList.toggle("dark", appearance === "dark"), appearance);
-    await page.screenshot({ path: `.dev/calendar-e2e-results/sidebar-${appearance}.png` });
+    await page.screenshot({ animations: "disabled", path: `.dev/calendar-e2e-results/sidebar-${appearance}.png` });
   }
+});
+
+test("removal failure keeps the dialog and calendar, then allows retry", async ({ page }) => {
+  let fail = true;
+  await page.route("**/preferences", route => {
+    if (route.request().method() === "PUT" && route.request().postDataJSON().removedCalendarKeys?.length && fail) {
+      fail = false; return route.fulfill({ status: 503, json: { message: "Preferences unavailable" } });
+    }
+    return route.fallback();
+  });
+  await page.getByRole("button", { name: "Options for Holidays in India", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Remove calendar from list" }).click();
+  await page.getByRole("button", { name: "Remove calendar", exact: true }).click();
+  await expect(page.getByRole("alertdialog").getByRole("alert")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Remove calendar", exact: true })).toBeEnabled();
+  await page.screenshot({ animations: "disabled", path: ".dev/calendar-e2e-results/remove-dialog.png" });
+  await page.getByRole("button", { name: "Remove calendar", exact: true }).click();
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  await expect(page.locator('[id="calendar-account-binding"]')).toBeFocused();
+});
+
+test("calendar menus use shared inline panels on a narrow sidebar", async ({ page }) => {
+  await page.setViewportSize({ width: 700, height: 600 });
+  await page.getByRole("button", { name: "Options for Personal", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Color/ }).click();
+  await expect(page.getByRole("button", { name: "Back from Color" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Grey", exact: true })).toBeVisible();
+  await page.screenshot({ animations: "disabled", path: ".dev/calendar-e2e-results/color-menu-narrow.png" });
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Options for Personal", exact: true })).toBeFocused();
 });

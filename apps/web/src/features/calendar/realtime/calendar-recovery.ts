@@ -1,14 +1,31 @@
 import { emitCalendarMetric } from "../metrics";
-import { calendarRecoveryDelay, validCalendarInvalidation } from "./recovery-model";
+import { calendarRecoveryDelay, calendarPushHealthy, validCalendarInvalidation } from "./recovery-model";
 import { calendarApiBasePath } from "@zilobase/features/calendar";
 import { apiFetch } from "@/platform/network/api";
 import type { CalendarDatabase } from "../storage/calendar-database";
-export function startCalendarRecovery(database: CalendarDatabase, refresh: (recover: boolean) => Promise<unknown>, isOnline: () => boolean) {
+type Refresh = (recover: boolean) => Promise<unknown>;
+const coordinators = new Map<string, { subscribers: Set<Refresh>; stop: () => void }>();
+export function startCalendarRecovery(database: CalendarDatabase, refresh: Refresh, isOnline: () => boolean) {
+  let coordinator = coordinators.get(database.name);
+  if (!coordinator) {
+    const subscribers = new Set<Refresh>();
+    const stop = createCalendarRecovery(database, async provider => {
+      const outcomes = await Promise.allSettled([...subscribers].map(subscriber => subscriber(provider)));
+      return outcomes.every(outcome => outcome.status === "fulfilled" && Boolean(outcome.value));
+    }, isOnline);
+    coordinator = { subscribers, stop }; coordinators.set(database.name, coordinator);
+  }
+  coordinator.subscribers.add(refresh);
+  return () => { coordinator.subscribers.delete(refresh); if (!coordinator.subscribers.size) { coordinator.stop(); coordinators.delete(database.name); } };
+}
+function createCalendarRecovery(database: CalendarDatabase, refresh: Refresh, isOnline: () => boolean) {
   const scope = database.identity, abort = new AbortController();
   const channel = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel(`${database.name}:realtime`);
+  let watchExpiresAt = 0;
   let stopped = false, socket: WebSocket | null = null, leader = false, lastPong = 0, failures = 0, reconnectAttempt = 0;
   let heartbeat: ReturnType<typeof setInterval> | undefined, reconnect: ReturnType<typeof setTimeout> | undefined, polling: ReturnType<typeof setTimeout> | undefined;
-  const healthy = () => Date.now() - lastPong < 45_000;
+  const socketHealthy = () => lastPong > 0 && Date.now() - lastPong < 45_000;
+  const healthy = () => calendarPushHealthy(lastPong, watchExpiresAt);
   const recover = async (provider: boolean) => { if (!stopped && isOnline() && document.visibilityState !== "hidden") { const ok = await refresh(provider); failures = ok ? 0 : failures + 1 } };
   const invalidation = async (data: unknown) => {
     if (!validCalendarInvalidation(data, scope) || !database.isOpen()) return;
@@ -18,16 +35,17 @@ export function startCalendarRecovery(database: CalendarDatabase, refresh: (reco
     await recover(false);
   };
   channel && (channel.onmessage = event => {
-    if (event.data?.type === "calendar.health") lastPong = Date.now();
+    if (event.data?.type === "calendar.health") { lastPong = Date.now(); watchExpiresAt = typeof event.data.watchExpiresAt === "number" ? event.data.watchExpiresAt : 0; }
     else if (event.data?.type === "calendar.recover") void recover(false);
     else void invalidation(event.data);
   });
-  const receivedHealth = (type: string) => { lastPong = Date.now(); reconnectAttempt = 0; channel?.postMessage({ type: "calendar.health" }); if (type === "calendar.ready") void recover(true) };
+  const receivedHealth = (type: string) => { lastPong = Date.now(); reconnectAttempt = 0; channel?.postMessage({ type: "calendar.health", watchExpiresAt }); if (type === "calendar.ready") void recover(true) };
   const connect = async () => {
     if (stopped || !leader || !isOnline()) return;
     try {
-      const ticket = await apiFetch<{ websocketUrl: string; websocketProtocols: string[]; expiresAt: string }>(`${calendarApiBasePath(scope.workspaceId)}/connections/${encodeURIComponent(scope.bindingId)}/realtime-ticket`, { method: "POST" });
+      const ticket = await apiFetch<{ websocketUrl: string; websocketProtocols: string[]; expiresAt: string; providerWatchExpiresAt?: string | null }>(`${calendarApiBasePath(scope.workspaceId)}/connections/${encodeURIComponent(scope.bindingId)}/realtime-ticket`, { method: "POST" });
       if (stopped || !leader) return;
+      watchExpiresAt = Date.parse(ticket.providerWatchExpiresAt ?? "") || 0;
       const ws = new WebSocket(ticket.websocketUrl, ticket.websocketProtocols); socket = ws;
       ws.onmessage = event => {
         if (stopped || socket !== ws) return;
@@ -41,7 +59,7 @@ export function startCalendarRecovery(database: CalendarDatabase, refresh: (reco
       if (heartbeat) clearInterval(heartbeat);
       heartbeat = setInterval(() => {
         if (stopped || socket !== ws) return;
-        if (Date.now() >= Date.parse(ticket.expiresAt) - 30_000 || !healthy()) { ws.close(); return }
+        if (Date.now() >= Date.parse(ticket.expiresAt) - 30_000 || !socketHealthy()) { ws.close(); return }
         if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "calendar.ping" }));
       }, 20_000);
     } catch { scheduleReconnect() }

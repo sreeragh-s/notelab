@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { CalendarMiniCalendar } from "./calendar-mini-calendar";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/shared/ui/button";
-import { AlertDialog, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/shared/ui/alert-dialog";
+import { AlertDialog, AlertDialogHeader, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/shared/ui/alert-dialog";
 import { CalendarList } from "./calendar-list";
 import { CalendarConnectButton } from "./calendar-connect-button";
 import { useCalendarAccounts } from "./use-calendar-accounts";
@@ -42,6 +42,6 @@ export function CalendarAccountsSidebar({ workspaceId }: { workspaceId: string }
       {catalog.queries[index]?.error ? <p role="alert" className="px-2 text-xs text-content-secondary">{getApiErrorMessage(catalog.queries[index]?.error)}</p> : catalog.queries[index]?.isPending ? <p className="px-2 text-xs text-content-secondary">Loading calendars…</p> : value && <CalendarList allCalendars={catalog.calendars} calendars={catalog.calendars.filter(calendar => calendar.bindingId === account.bindingId)} preferences={{ ...value, defaultCalendarKey: defaultKey }} onPreferences={data => preferences.save.mutateAsync(data)} disabled={preferences.pending} />}
     </div>)}<SidebarMenu><SidebarMenuItem><SidebarMenuButton onClick={() => setAdding(true)}><PlusIcon /><span>Add calendar account</span></SidebarMenuButton></SidebarMenuItem></SidebarMenu></aside>
     <Dialog open={adding} onOpenChange={setAdding}><DialogContent><DialogHeader><DialogTitle>Add calendar account</DialogTitle><DialogDescription>Manage your personal and work calendars all in one place.</DialogDescription></DialogHeader><CalendarConnectButton accounts={accounts} connect={connect} /></DialogContent></Dialog>
-    <AlertDialog open={Boolean(disconnectId)} onOpenChange={open => { if (!open) setDisconnectId(null) }}><AlertDialogContent><AlertDialogTitle>Disconnect calendar account?</AlertDialogTitle><AlertDialogDescription>This removes this account from this workspace. Events remain in Google Calendar.</AlertDialogDescription><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => { if (disconnectId) disconnect.mutate(disconnectId); setDisconnectId(null) }}>Disconnect</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+    <AlertDialog open={Boolean(disconnectId)} onOpenChange={open => { if (!open && !disconnect.isPending) setDisconnectId(null) }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Disconnect calendar account?</AlertDialogTitle><AlertDialogDescription>This removes this account from this workspace. Events remain in Google Calendar.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={disconnect.isPending}>Cancel</AlertDialogCancel><AlertDialogAction variant="destructive" disabled={disconnect.isPending} onClick={event => { event.preventDefault(); if (disconnectId) disconnect.mutate(disconnectId, { onSuccess: () => setDisconnectId(null) }); }}>Disconnect</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </>;
 }

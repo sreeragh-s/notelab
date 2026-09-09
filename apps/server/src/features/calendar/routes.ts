@@ -1,3 +1,4 @@
+import { dispatchCalendarWebhook } from "./background";
 import { inspectCalendarConfiguration } from "./configuration";
 import { getRuntimeAdapter } from "../../infrastructure/runtime/runtime-adapter";
 import { calendarRealtimeRoutes } from "./realtime/routes";
@@ -81,7 +82,7 @@ calendarRoutes.route("/", calendarEventRoutes);
 
 calendarRoutes.route("/", calendarRealtimeRoutes);
 calendarProviderRoutes.post("/google/webhook", async c => {
- const accepted = await runWithDbEnv(c.env, () => acceptCalendarWebhook(c.req.raw.headers));
+ const accepted = await runWithDbEnv(c.env, () => acceptCalendarWebhook(c.req.raw.headers, (accountId, calendarId) => dispatchCalendarWebhook(c.env, accountId, calendarId)));
  return c.body(null, accepted ? 204 : 403);
 });
 

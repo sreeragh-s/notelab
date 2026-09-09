@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
       fixtureEvents = [updated]; return route.fulfill({ json: { operationId: body.operationId, status: "succeeded", event: updated } });
     }
     if (url.pathname.endsWith("/realtime-ticket")) return route.fulfill({ status: 503, json: { message: "Push unavailable" } });
-    if (url.pathname.endsWith("/sync")) return route.fulfill({ json: { calendars: [{ id: "primary", bindingId: "binding", name: "Personal", timeZone: "Asia/Kolkata", colorId: "2", primary: true, permissions: { read: true, write: true, owner: true, freeBusyOnly: false }, defaultReminders: [] }], revisions: { primary: 1 }, pending: false } });
+    if (url.pathname.endsWith("/sync") || url.pathname.endsWith("/catalog")) return route.fulfill({ json: { calendars: [{ id: "primary", bindingId: "binding", name: "Personal", timeZone: "Asia/Kolkata", colorId: "2", primary: true, permissions: { read: true, write: true, owner: true, freeBusyOnly: false }, defaultReminders: [] }], revisions: { primary: 1 }, pending: false } });
     if (url.pathname.endsWith("/ranges")) return route.fulfill({ json: { calendarId: "primary", start: url.searchParams.get("start"), end: url.searchParams.get("end"), generation: 1, revision: 1, events: fixtureEvents, complete: true, nextPageToken: null } });
     return route.fulfill({ json: { events: [event], nextPageToken: null } });
   });
@@ -136,4 +136,17 @@ test("every calendar view scrolls vertically in a short viewport", async ({ page
     await scroll.evaluate(element => { element.scrollTop = 100 });
     await expect.poll(() => scroll.evaluate(element => element.scrollTop)).toBe(100);
   }
+});
+
+test("a healthy socket without provider watches retains one-minute recovery", async ({ page }) => {
+  await page.clock.install(); let checks = 0;
+  await page.routeWebSocket("ws://localhost:1498/calendar-test-realtime", ws => {
+    ws.send(JSON.stringify({ type: "calendar.ready" }));
+    ws.onMessage(message => { if (JSON.parse(String(message)).type === "calendar.ping") ws.send(JSON.stringify({ type: "calendar.pong" })); });
+  });
+  await page.route("**/realtime-ticket", route => route.fulfill({ json: { websocketUrl: "ws://localhost:1498/calendar-test-realtime", websocketProtocols: [], expiresAt: new Date(Date.now() + 300000).toISOString(), providerWatchExpiresAt: null } }));
+  await page.reload(); await expect(page.getByRole("button", { name: /Design review/ })).toBeVisible();
+  page.on("request", request => { if (request.url().endsWith("/sync")) checks++; });
+  await page.clock.fastForward(70000);
+  await expect.poll(() => checks).toBeGreaterThan(0);
 });

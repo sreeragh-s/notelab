@@ -1,3 +1,5 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { calendarKeys } from "@zilobase/features/calendar";
 import { startCalendarRecovery } from "../realtime/calendar-recovery";
 import { reconcileCalendarMutations } from "../events/calendar-mutations";
 import { useEffect, useState, useCallback, useSyncExternalStore, useRef } from "react";
@@ -8,6 +10,7 @@ import { getConnectivityState, subscribeConnectivity } from "@/features/offline/
 import { openCalendarDatabase, readCalendarRangeCache, type CalendarDatabase } from "../storage/calendar-database";
 import { synchronizeCalendarCache, prefetchCalendarMonths } from "./calendar-cache-sync";
 export function useCalendarCache(connection: CalendarConnection, userId: string, start: string, end: string) {
+  const client = useQueryClient();
   const [database, setDatabase] = useState<CalendarDatabase | null>(null), [error, setError] = useState<unknown>(), [syncing, setSyncing] = useState(false);
   const online = useSyncExternalStore(subscribeConnectivity, () => getConnectivityState() === "online", () => true);
   useEffect(() => {
@@ -20,7 +23,7 @@ export function useCalendarCache(connection: CalendarConnection, userId: string,
   const refresh = useCallback(async (recover = true) => {
     if (!database || !online) return null;
     const generation = ++activeRequest.current; setSyncing(true);
-    try { await synchronizeCalendarCache(database, start, end, apiFetch, recover); if (generation === activeRequest.current) setError(undefined); return true } catch (cause) { if (generation === activeRequest.current) setError(cause); return null } finally { if (generation === activeRequest.current) setSyncing(false) }
+    try { await synchronizeCalendarCache(database, start, end, apiFetch, recover); if (database.isOpen()) client.setQueryData(calendarKeys.calendars(connection), { calendars: await database.calendars.toArray() }); if (generation === activeRequest.current) setError(undefined); return true } catch (cause) { if (generation === activeRequest.current) setError(cause); return null } finally { if (generation === activeRequest.current) setSyncing(false) }
   }, [database, start, end, online]);
   useEffect(() => { void refresh() }, [refresh]);
   useEffect(() => { if (!database || !online) return; const timer = setTimeout(() => void prefetchCalendarMonths(database, start, end, apiFetch).catch(() => {}), 1500); return () => clearTimeout(timer) }, [database, online, start, end]);

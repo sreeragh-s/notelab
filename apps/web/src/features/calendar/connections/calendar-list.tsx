@@ -50,7 +50,7 @@ function CalendarRow({ calendar, allCalendars, preferences, onPreferences, disab
   <AlertDialog open={removing} onOpenChange={open => { if (!pending) setRemoving(open); }}>
     <AlertDialogContent onCloseAutoFocus={event => { event.preventDefault(); if (!completed.current) row.current?.focus(); else document.getElementById(`calendar-account-${calendar.bindingId}`)?.focus(); }}>
       <AlertDialogHeader><AlertDialogTitle>Remove this calendar from Zilobase?</AlertDialogTitle><AlertDialogDescription>You can restore ‘{calendar.name}’ in Calendar settings. This won’t delete it or its events from Google Calendar. To temporarily hide it, use the eye icon next to the calendar.</AlertDialogDescription></AlertDialogHeader>
-      {error ? <p role="alert" className="text-sm text-feedback-danger-text">{getApiErrorMessage(error)}</p> : null}
+      {error ? <p role="alert" className="text-sm text-feedback-error-text">{getApiErrorMessage(error)}</p> : null}
       <AlertDialogFooter><AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel><AlertDialogAction variant="destructive" disabled={pending || disabled} onClick={event => {
         event.preventDefault(); if (pending) return; setPending(true); setError(undefined);
         void onPreferences({ ...preferences, removedCalendarKeys: [...new Set([...(preferences.removedCalendarKeys ?? []), key])] }).then(() => { completed.current = true; setRemoving(false); requestAnimationFrame(() => document.getElementById(`calendar-account-${calendar.bindingId}`)?.focus()); }).catch(setError).finally(() => setPending(false));

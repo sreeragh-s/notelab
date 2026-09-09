@@ -65,11 +65,21 @@ Use disposable calendars, two explicitly authorized Google accounts, and consent
 | Guests and Meet | Send invitations only to consenting test users; change guests, RSVP and inspect Meet success/pending/failure. Retry a lost response without duplicate events or invitations. |
 | Recurrence | Edit one occurrence, following occurrences and the whole series; verify moved/cancelled exceptions, COUNT limits, DST and split recovery after restart. |
 | External changes | Edit/delete in Google; verify watch invalidation and local convergence. Disable push and verify provider recovery polling catches the change. |
-| Recovery | Expire tickets, interrupt sockets, suspend/resume the device, use multiple tabs, and lose connectivity. Cached periods remain readable and stale status stays explicit. |
+| Recovery | Expire tickets, interrupt sockets, suspend/resume the device, use multiple tabs, and lose connectivity. Cached periods remain readable and offline feedback remains explicit without a routine sync-status strip. |
 | Reminders | Navigate away from Calendar; one reminder appears across open tabs. Test permission denial, edited/cancelled events, wake-up and disconnect. No closed-app delivery is promised. |
 | Disable | Disable Calendar independently and confirm Mail continues working. Re-enable the pilot and verify reconnection/cache recovery. |
 
 Current automated acceptance is not a substitute for these live rows. No production deployment or live invitation delivery is part of the local implementation verification.
+
+## Sync cadence and local development
+
+Google webhooks dispatch Calendar work immediately after recording durable dirty markers. Event tasks drain committed revision notifications before completing; calendar-list tasks refresh metadata and queue event streams. Normal processing targets seconds after webhook receipt, subject to provider delivery, queue load and pagination. The minute-based maintenance runner repairs interrupted work and missed dispatches.
+
+Visible online clients use jittered recovery checks at approximately one minute without active provider-watch coverage, or five minutes when provider watches and the websocket are both healthy. The 20-second socket heartbeat is not a Google poll. Failure backoff is bounded; focus/visibility/connectivity recovery triggers coalesced checks. A connected websocket alone does not prove Google push is available.
+
+Localhost requires a reachable HTTPS webhook URL to receive Google notifications. Without `CALENDAR_WEBHOOK_URL`, local development intentionally uses fallback polling. Configure a reachable endpoint and restart the relevant runtimes before expecting push; no client change can make Google deliver to a private localhost address. Realtime tickets return `providerWatchExpiresAt` only for complete active coverage. Check actual external event convergence in addition to configuration booleans.
+
+The existing `calendar.sync` background resource payload supports `[accountId, calendarId]` and `[accountId, null]` for list refreshes. Deploy matching core code to task consumers before the webhook producer when rolling out across separate runtimes. Missing watch metadata on older realtime-ticket responses safely retains fallback polling. The metadata-only catalog endpoint must be deployed before the updated web client.
 
 ## Operations and recovery
 
