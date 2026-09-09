@@ -91,6 +91,8 @@ export type ServerRuntimeAdapter = {
     env: RuntimeEnv,
   ): string;
   getMeetingAudioWebSocketUrl?(request: Request, env: RuntimeEnv): string;
+  getCalendarRealtimeWebSocketUrl?(request: Request, env: RuntimeEnv): string;
+  publishCalendarNotification?(input: { env: RuntimeEnv; event: CalendarNotificationEvent }): Promise<void>;
   getMailRealtimeWebSocketUrl?(request: Request, env: RuntimeEnv): string;
   getNavigationRealtimeWebSocketUrl?(request: Request, env: RuntimeEnv): string;
   getMeetingRecorderSession?(input: {
@@ -161,3 +163,5 @@ export type MeetingTranscriptYjsSegment = {
   text: string;
 };
 
+
+export type CalendarNotificationEvent = { bindingId: string; accountId: string; userId: string; workspaceId: string; calendarId: string; revision: number; generation: number };

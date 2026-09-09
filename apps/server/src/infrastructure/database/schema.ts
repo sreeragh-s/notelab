@@ -165,3 +165,4 @@ export {
   aiJob,
   backgroundMaintenanceTask,
 } from "./schema/background";
+export { calendarAccount, calendarBinding, calendarOauthAttempt, calendarProviderCalendar, calendarEventRecord, calendarRangeSnapshot, calendarWatchChannel, calendarMutationReceipt, calendarNotificationOutbox, calendarPreference } from "./schema/calendar";

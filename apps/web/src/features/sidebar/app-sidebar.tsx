@@ -1,3 +1,5 @@
+import { CalendarIcon } from "@/shared/components/icons";
+import { Button as CalendarNavButton } from "@/shared/ui/button";
 "use client"
 
 import {
@@ -329,6 +331,7 @@ export function AppSidebar({
             </div>
           )}
           <SidebarContent className="block overflow-x-hidden overflow-y-auto overscroll-y-contain" aria-label="Sidebar sections">
+            {isFeatureEnabled("calendar") && <CalendarNavButton variant="ghost" className="mx-2 justify-start" onClick={() => void navigate({ to: "/calendar" })}><CalendarIcon />Calendar</CalendarNavButton>}
             {activeTab.id === "mail" ? (
               <WorkspaceMailNavigation workspaceId={workspaceId} />
             ) : (

@@ -240,3 +240,11 @@ test("string environment helpers reject empty and non-string values", () => {
   assert.equal(getRequiredStringEnv({ VALUE: "configured" }, "VALUE"), "configured");
   assert.throws(() => getRequiredStringEnv({}, "VALUE"), /VALUE is required/);
 });
+
+import { isCalendarFeatureEnabled } from "./config";
+test("calendar requires its independent flag and workspace rollout", () => {
+  assert.equal(isCalendarFeatureEnabled({ MAIL_ENABLED: "true" }, "w"), false);
+  assert.equal(isCalendarFeatureEnabled({ CALENDAR_ENABLED: "true" }, "w"), false);
+  assert.equal(isCalendarFeatureEnabled({ CALENDAR_ENABLED: "true", CALENDAR_ENABLED_WORKSPACE_IDS: "w" }, "w"), true);
+  assert.equal(isCalendarFeatureEnabled({ CALENDAR_ENABLED: "true", CALENDAR_ENABLED_WORKSPACE_IDS: "w" }, "other"), false);
+});

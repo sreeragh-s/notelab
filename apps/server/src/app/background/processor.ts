@@ -1,3 +1,4 @@
+import { processCalendarSyncTask } from "../../features/calendar/sync/sync";
 import { AI_JOB_HANDLERS } from "../../features/ai/jobs/ai-job-handlers";
 import { runAiJobById } from "../../features/ai/jobs/ai-jobs";
 import { processAgentRun } from "../../features/ai/execution/agent-run-service";
@@ -101,6 +102,7 @@ async function processBackgroundTaskInner(input: {
         jobId: task.resourceId,
         workerId,
       }),
+    "calendar.sync": () => processCalendarSyncTask(env, task.resourceId),
     "mail.index": () => processMailIndexTask(env, task.resourceId),
     "mail.database_sync": () =>
       processMailDatabaseSyncTask(env, task.resourceId, workerId),

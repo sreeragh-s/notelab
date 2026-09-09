@@ -610,6 +610,27 @@
       "when": 1788910000000,
       "tag": "0086_mail_send_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1788990000000,
+      "tag": "0087_calendar_persistence",
+      "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1788990000001,
+      "tag": "0088_calendar_range_cursor",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1788990000002,
+      "tag": "0089_calendar_watch_delivery",
+      "breakpoints": true
     }
   ]
 }

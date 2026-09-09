@@ -29,6 +29,7 @@ export const appConfig = {
       import.meta.env.VITE_FEATURE_NAVIGATION_REALTIME,
       true,
     ),
+    calendar: readBooleanFeatureFlag(import.meta.env.VITE_FEATURE_CALENDAR, false),
     mail: readBooleanFeatureFlag(
       import.meta.env.VITE_FEATURE_MAIL,
       false,

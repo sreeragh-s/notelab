@@ -141,3 +141,5 @@ function logRedisError(error: Error) {
     event: "realtime_redis_error",
   }));
 }
+
+export function calendarRealtimeChannel(bindingId: string) { return `calendar:${bindingId}` }

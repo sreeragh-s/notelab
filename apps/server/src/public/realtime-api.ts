@@ -41,3 +41,7 @@ export {
 } from "../features/meetings/audio/meeting-audio-ticket";
 
 import type { MeetingStatus } from "../features/meetings/contracts/meeting-types";
+
+export { isCalendarFeatureEnabled } from "../shared/config/config";
+export { createCalendarRealtimeTicket, verifyCalendarRealtimeTicket, CALENDAR_REALTIME_PROTOCOL, CALENDAR_REALTIME_AUTH_PROTOCOL_PREFIX, type CalendarRealtimeTicketClaims } from "../features/calendar/realtime/calendar-realtime-ticket";
+export type { CalendarNotificationEvent } from "../infrastructure/runtime/runtime-adapter";

@@ -20,6 +20,8 @@ const apiPathPrefixes = [
   "/desktop",
   "/images",
   "/mail",
+  "/calendar/oauth",
+  "/calendar/google",
   "/metadata",
   "/meetings",
   "/user-settings",

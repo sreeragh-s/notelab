@@ -10,6 +10,8 @@
     "packages/**/*.test.ts",
     // Root scripts are not npm workspace packages, so list them explicitly.
     "scripts/**/*.mjs",
+    // Calendar fixture is loaded by the Vite HTML entry in its Playwright harness.
+    "scripts/calendar/e2e/fixture.tsx",
     // Mail fixture is loaded by the Vite HTML entry in its Playwright harness.
     "scripts/mail/e2e/fixture.tsx",
     "apps/desktop/e2e/**/*.mjs"

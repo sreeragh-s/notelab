@@ -217,3 +217,10 @@ export {
 } from "../app/background/maintenance";
 export { getBackgroundOperationalSnapshot } from "../infrastructure/background/health";
 export type { AppBindings } from "../shared/types";
+
+export { isCalendarFeatureEnabled } from "../shared/config/config";
+export { getCalendarRealtimeWebSocketUrl, publishCalendarNotification, type CalendarNotificationEvent } from "../infrastructure/runtime/runtime-adapter";
+export { advancePendingCalendars } from "../features/calendar/sync/sync";
+
+export { maintainCalendarWatches } from "../features/calendar/realtime/watches";
+export { drainCalendarOutbox } from "../features/calendar/realtime/outbox";

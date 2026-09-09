@@ -29,3 +29,9 @@ test("the combined Node runtime sends discovery, probes, and desktop auth to the
     assert.equal(isNodeApiPath(path), false, path);
   }
 });
+
+test("calendar callback paths reach Hono while the calendar screen remains a web route", () => {
+  assert.equal(isNodeApiPath("/calendar/oauth/google/callback"), true);
+  assert.equal(isNodeApiPath("/calendar/google/webhook"), true);
+  assert.equal(isNodeApiPath("/calendar"), false);
+});

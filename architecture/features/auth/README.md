@@ -38,3 +38,5 @@ Start with [the existing tests or model](../../../apps/server/src/features/auth/
 The opt-in [provider integration test](../../../apps/server/src/features/auth/oauth.integration.test.ts) exercises registration, authorize/consent, real JWT verification, workspace-stable refresh and revocation against a migrated isolated PostgreSQL database. Run from `apps/server` with `OAUTH_TEST_DATABASE_URL` set to that database and `npx vitest run src/features/auth/oauth.integration.test.ts`.
 
 Update this guide when ownership, interfaces, authorization, persistence or cross-module flows change. [Architecture index](../../README.md).
+
+Google identity-token verification is shared at `shared/security/google-id-token.ts` for Mail and Calendar. Calendar callback paths bypass ordinary session middleware and enforce single-use OAuth state independently.

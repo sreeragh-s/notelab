@@ -1,3 +1,4 @@
+import { isFeatureEnabled } from "@/shared/config/feature-flags";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Dispatch, ReactNode, SetStateAction } from "react"
 import { Outlet, useNavigate, useRouter, useRouterState } from "@tanstack/react-router"
@@ -86,6 +87,8 @@ const ChatSidebarPanel = lazy(() =>
 )
 
 const CHAT_PRESENTATION_MODE_STORAGE_KEY = "zilobase:ai-chat-presentation-mode"
+
+const CalendarReminderHost = lazy(() => import("@/features/calendar/reminders/calendar-reminder-host"));
 
 export function AppLayout({
   children,
@@ -243,7 +246,7 @@ function AppLayoutContent({
     const query = search.toString()
     router.history.replace(`${pathname}${query ? `?${query}` : ""}${hash}`)
   }, [hash, pathname, router.history, searchStr])
-  const isMailPage = pathname === "/mail"
+  const isMailPage = pathname === "/mail" || pathname === "/calendar"
   const pageId = useRoutePageId(pathname)
   const databaseId = getDatabaseId(pathname)
   const agentId = pathname.match(/^\/agents\/([^/]+)$/)?.[1] ?? null
@@ -589,6 +592,7 @@ function AppLayoutContent({
           />
         </Suspense>
       ) : null}
+      {isFeatureEnabled("calendar") && <Suspense fallback={null}><CalendarReminderHost /></Suspense>}
       <ResizablePanelGroup
         className="relative min-h-0 min-w-0 flex-1 overflow-hidden has-data-[desktop-tabs]:pt-9"
         orientation="horizontal"

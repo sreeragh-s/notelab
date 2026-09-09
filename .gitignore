@@ -54,3 +54,6 @@ apps/desktop/src-tauri/local-resources/
 
 # Mail browser acceptance artifacts
 .dev/mail-e2e-results/
+
+# Calendar browser acceptance artifacts
+.dev/calendar-e2e-results/

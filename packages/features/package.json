@@ -9,13 +9,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@js-temporal/polyfill": "^0.5.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tanstack/react-query": "^5.100.14",
     "@types/node": "^25.9.1",
-    "tsx": "^4.22.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "tsx": "^4.22.3"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.100.14",
@@ -275,6 +276,14 @@
     "./workspaces/react": {
       "types": "./src/workspaces/react.ts",
       "default": "./src/workspaces/react.ts"
+    },
+    "./calendar": {
+      "types": "./src/calendar/index.ts",
+      "default": "./src/calendar/index.ts"
+    },
+    "./calendar/contracts": {
+      "types": "./src/calendar/contracts.ts",
+      "default": "./src/calendar/contracts.ts"
     }
   }
 }

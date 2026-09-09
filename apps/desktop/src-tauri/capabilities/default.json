@@ -11,6 +11,7 @@
     "core:window:allow-toggle-maximize",
     "deep-link:default",
     "opener:default",
+    "notification:default",
     "process:default",
     "updater:default"
   ]

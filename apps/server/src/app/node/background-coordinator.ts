@@ -1,3 +1,4 @@
+import { advancePendingCalendars } from "../../features/calendar/sync/sync";
 import { eq, inArray, min, sql } from "drizzle-orm";
 
 import { AI_JOB_HANDLERS } from "../../features/ai/jobs/ai-job-handlers";
@@ -91,6 +92,7 @@ export function createNodeBackgroundCoordinator(env: RuntimeEnv) {
           await runAiJobBatch({ env, handlers: AI_JOB_HANDLERS, limit: concurrency, workerId: `${workerId}:ai` });
         } else {
           await Promise.allSettled([
+            advancePendingCalendars(env),
             advancePendingMailIndexes(env, concurrency),
             drainMailDatabaseSyncOutbox(env, { limit: concurrency, workerId: `${workerId}:mail` }),
           ]);

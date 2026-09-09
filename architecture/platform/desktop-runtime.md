@@ -13,3 +13,5 @@ Native command names, deep links, keychain identifiers and persisted server conf
 ## Verification
 
 See [tests or test configuration](../../apps/desktop/e2e/selfhost.mjs) and [testing and quality](../setup/testing-and-quality.md). [Architecture index](../README.md).
+
+Calendar's running-app reminder host can deliver immediate native notifications through `tauri-plugin-notification`. The main-window capability grants the plugin API; the web settings flow requests OS permission explicitly. No native alarm is scheduled, so this adds no closed-app delivery guarantee. See the [Calendar guide](../features/calendar/README.md).
