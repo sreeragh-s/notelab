@@ -114,6 +114,8 @@ existing geometry behavior. The [event details](../../../apps/web/src/features/c
 surface is part of the same event dock: time, timezone, recurrence status,
 participant counts/preview, inline participant expansion and RSVP, meeting link,
 location/description, calendar, visibility and reminders. Shared avatars, buttons,
-tokens and section borders define its appearance. RSVP and management controls
+button groups, compact settings typography, and section borders define its appearance.
+The dock uses the shared control sizes and secondary-text tokens; editor labels
+stack above fields while checkbox rows retain their horizontal layout. RSVP and management controls
 reuse the existing mutation flow; expansion does not open another panel or alter
 selection. Notes/database linking and proposal workflows are not implemented.

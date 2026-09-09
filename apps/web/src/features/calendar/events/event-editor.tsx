@@ -37,19 +37,19 @@ export function EventEditor({ event, calendars, database, online, isNew, onSaved
       if (result.status === "succeeded") onSaved(); else { setUncertain(true); setError(new Error("Delivery is being checked. Do not create another copy.")) }
     } catch (cause) { setError(cause); setUncertain(await database.pending.count() > 0) } finally { setPending(false) }
   };
-  return <form className="mt-4 grid gap-3 text-sm" onSubmit={e => { e.preventDefault(); void save() }}>
-    <fieldset className="grid gap-3" disabled={!online || pending || uncertain}>
-      <Label>Title<Input required value={title} onChange={e => setTitle(e.target.value)} /></Label>
-      <Label>Calendar<Select value={calendarId} disabled={!isNew} onValueChange={setCalendarId}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{calendars.filter(c => c.permissions.write).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></Label>
+  return <form className="grid gap-4 text-xs/relaxed" onSubmit={e => { e.preventDefault(); void save() }}>
+    <fieldset className="grid gap-4" disabled={!online || pending || uncertain}>
+      <Label className="grid min-w-0 gap-2">Title<Input required value={title} onChange={e => setTitle(e.target.value)} /></Label>
+      <Label className="grid min-w-0 gap-2">Calendar<Select value={calendarId} disabled={!isNew} onValueChange={setCalendarId}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{calendars.filter(c => c.permissions.write).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></Label>
       <EventTimingFields draft={draft} update={(key, value) => setDraft(current => ({ ...current, [key]: value }))} />
       <EventRecurrenceFields event={event} scope={scope} setScope={setScope} onChange={setRecurrence} />
-      <Label>Guests<Input value={guests} onChange={e => setGuests(e.target.value)} placeholder="Emails separated by commas" /></Label>
-      <Label>Location<Input value={location} onChange={e => setLocation(e.target.value)} /></Label>
-      <Label>Description<Textarea value={description} onChange={e => setDescription(e.target.value)} /></Label>
+      <Label className="grid min-w-0 gap-2">Guests<Input value={guests} onChange={e => setGuests(e.target.value)} placeholder="Emails separated by commas" /></Label>
+      <Label className="grid min-w-0 gap-2">Location<Input value={location} onChange={e => setLocation(e.target.value)} /></Label>
+      <Label className="grid min-w-0 gap-2">Description<Textarea value={description} onChange={e => setDescription(e.target.value)} /></Label>
       <Label className="flex items-center gap-2"><Checkbox checked={meet} onCheckedChange={v => setMeet(v === true)} />Create Google Meet link</Label>
-      <div className="grid grid-cols-1 gap-2 @sm:grid-cols-2"><Label>Show as<Select value={busy} onValueChange={v => setBusy(v as typeof busy)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="opaque">Busy</SelectItem><SelectItem value="transparent">Free</SelectItem></SelectContent></Select></Label><Label>Visibility<Select value={visibility} onValueChange={value => setVisibility(value as typeof visibility)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="default">Default</SelectItem><SelectItem value="public">Public</SelectItem><SelectItem value="private">Private</SelectItem></SelectContent></Select></Label></div>
-      <Label>Event color<Select value={colorId} onValueChange={setColorId}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["default", ...Array.from({ length: 11 }, (_, i) => String(i + 1))].map(id => <SelectItem key={id} value={id}>{id === "default" ? "Calendar color" : `Color ${id}`}</SelectItem>)}</SelectContent></Select></Label>
-      <Label className="flex items-center gap-2"><Checkbox checked={defaultReminders} onCheckedChange={v => setDefaultReminders(v === true)} />Use calendar reminders</Label>{!defaultReminders && <Label>Remind me before (minutes)<Input type="number" min={0} max={40320} value={reminder} onChange={e => setReminder(Number(e.target.value))} /></Label>}
+      <div className="grid grid-cols-1 gap-2 @sm:grid-cols-2"><Label className="grid min-w-0 gap-2">Show as<Select value={busy} onValueChange={v => setBusy(v as typeof busy)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="opaque">Busy</SelectItem><SelectItem value="transparent">Free</SelectItem></SelectContent></Select></Label><Label className="grid min-w-0 gap-2">Visibility<Select value={visibility} onValueChange={value => setVisibility(value as typeof visibility)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="default">Default</SelectItem><SelectItem value="public">Public</SelectItem><SelectItem value="private">Private</SelectItem></SelectContent></Select></Label></div>
+      <Label className="grid min-w-0 gap-2">Event color<Select value={colorId} onValueChange={setColorId}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["default", ...Array.from({ length: 11 }, (_, i) => String(i + 1))].map(id => <SelectItem key={id} value={id}>{id === "default" ? "Calendar color" : `Color ${id}`}</SelectItem>)}</SelectContent></Select></Label>
+      <Label className="flex items-center gap-2"><Checkbox checked={defaultReminders} onCheckedChange={v => setDefaultReminders(v === true)} />Use calendar reminders</Label>{!defaultReminders && <Label className="grid min-w-0 gap-2">Remind me before (minutes)<Input type="number" min={0} max={40320} value={reminder} onChange={e => setReminder(Number(e.target.value))} /></Label>}
       <Label className="flex items-center gap-2"><Checkbox checked={sendUpdates === "all"} onCheckedChange={v => setSendUpdates(v ? "all" : "none")} />Send updates to guests</Label>
       <Button type="submit">{pending ? "Saving…" : "Save event"}</Button>
     </fieldset>

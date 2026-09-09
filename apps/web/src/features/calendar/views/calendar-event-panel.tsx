@@ -21,9 +21,9 @@ export function CalendarEventPanel(props: PanelProps) {
     if (key.key === "Escape" && !key.defaultPrevented) { key.preventDefault(); props.onClose(); }
   }}>
     <header className="flex h-12 shrink-0 items-center gap-2 border-b border-stroke-default px-3">
-      <h2 ref={heading} tabIndex={-1} className="min-w-0 flex-1 truncate text-sm font-medium outline-none">{event ? props.editing ? "Edit event" : "Event" : "Calendar event"}</h2>
+      <h2 ref={heading} tabIndex={-1} className="min-w-0 flex-1 truncate text-xs/relaxed font-medium outline-none">{event ? props.editing ? "Edit event" : "Event" : "Calendar event"}</h2>
       <Button variant="ghost" size="icon" aria-label="Close calendar event panel" onClick={props.onClose}><XIcon /></Button>
     </header>
-    <div className={`@container min-h-0 flex-1 overflow-y-auto ${props.editing || !event ? "p-5" : ""}`}>{event ? props.editing && props.database ? <EventEditor key={event.eventId} event={event} database={props.database} calendars={props.calendars} online={props.online} isNew={props.creating} onSaved={props.onClose} /> : <CalendarEventDetails key={event.eventId} {...props} selected={event} /> : <div className="grid gap-3 text-sm"><p className="text-content-secondary">Select an event to see its details.</p><Button onClick={workspace.create}>Create event</Button></div>}</div>
+    <div className={`@container min-h-0 flex-1 overflow-y-auto ${props.editing || !event ? "p-3" : ""}`}>{event ? props.editing && props.database ? <EventEditor key={event.eventId} event={event} database={props.database} calendars={props.calendars} online={props.online} isNew={props.creating} onSaved={props.onClose} /> : <CalendarEventDetails key={event.eventId} {...props} selected={event} /> : <div className="grid gap-3 text-xs/relaxed"><p className="text-content-secondary">Select an event to see its details.</p><Button onClick={workspace.create}>Create event</Button></div>}</div>
   </div>, workspace.panelElement);
 }
