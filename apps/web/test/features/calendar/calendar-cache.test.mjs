@@ -12,6 +12,8 @@ export function register({ assert, loadModule, test }) {
       assert.equal((await readCalendarRangeCache(a, "c", response.start, response.end)).loaded, true);
       assert.equal(await applyCalendarRange(a, { ...response, revision: 1 }), false);
       await assert.rejects(() => applyCalendarRange(a, { ...response, events: [{ workspaceId: "workspace", bindingId: "second", calendarId: "c", eventId: "e", status: "confirmed" }] }));
+      assert.equal((await readCalendarRangeCache(a, "c", "2026-09-09T00:00:00Z", "2026-09-10T00:00:00Z")).loaded, true);
+      assert.equal((await readCalendarRangeCache(a, "c", "2026-09-30T00:00:00Z", "2026-10-02T00:00:00Z")).loaded, false);
       assert.equal(b.isOpen(), true); await destroyCalendarDatabase(a.name); assert.equal(b.isOpen(), true);
     } finally { await destroyCalendarDatabase(a.name); await destroyCalendarDatabase(b.name) }
   });

@@ -58,14 +58,24 @@ export async function applyCalendarRange(database: CalendarDatabase, response: C
   });
 }
 export async function readCalendarRangeCache(database: CalendarDatabase, calendarId: string, start: string, end: string) {
-  const range = await database.ranges.get(calendarRangeKey(calendarId, start, end));
-  if (!range) return { events: [] as CalendarEvent[], loaded: false, stale: true };
-  const state = await database.state.get(calendarId), rows = await database.events.bulkGet(range.eventKeys);
-  return { events: rows.flatMap(row => row ? [row.event] : []), loaded: true, stale: !state || state.generation !== range.generation || state.revision > range.revision || Date.now() - range.fetchedAt > 300_000 };
+  const candidates = (await database.ranges.where("calendarId").equals(calendarId).toArray()).filter(row => Date.parse(row.start) < Date.parse(end) && Date.parse(row.end) > Date.parse(start)).sort((a, b) => Date.parse(a.start) - Date.parse(b.start) || Date.parse(b.end) - Date.parse(a.end));
+  let coveredUntil = Date.parse(start);
+  const selected: CachedRange[] = [];
+  for (const range of candidates) {
+    if (Date.parse(range.end) <= coveredUntil) continue;
+    if (Date.parse(range.start) > coveredUntil) break;
+    selected.push(range); coveredUntil = Date.parse(range.end); if (coveredUntil >= Date.parse(end)) break;
+  }
+  const ranges = selected.length ? selected : candidates;
+  const state = await database.state.get(calendarId), calendar = await database.calendars.get(calendarId);
+  const rows = await database.events.bulkGet([...new Set(ranges.flatMap(range => range.eventKeys))]);
+  return { events: rows.flatMap(row => row && eventOverlaps(row.event, start, end, calendar?.timeZone ?? "UTC") ? [row.event] : []), loaded: coveredUntil >= Date.parse(end), stale: coveredUntil < Date.parse(end) || !state || ranges.some(range => state.generation !== range.generation || state.revision > range.revision || Date.now() - range.fetchedAt > 300_000) };
 }
 export async function evictCalendarRanges(database: CalendarDatabase, pinnedKeys: string[]) {
   await database.transaction("rw", database.ranges, database.events, database.pending, async () => {
     const rows = await database.ranges.orderBy("accessedAt").reverse().toArray(), pinned = new Set(pinnedKeys);
+    const pendingKeys = new Set((await database.pending.toArray()).map(row => row.eventKey));
+    for (const row of rows) if (row.eventKeys.some(key => pendingKeys.has(key))) pinned.add(row.key);
     const buckets = new Set<string>();
     for (const row of rows) {
       const bucket = row.start.slice(0, 7);

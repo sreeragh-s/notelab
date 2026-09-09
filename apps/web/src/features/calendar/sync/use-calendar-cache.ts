@@ -6,7 +6,7 @@ import type { CalendarConnection } from "@zilobase/features/calendar";
 import { apiFetch, toApiUrl } from "@/platform/network/api";
 import { getConnectivityState, subscribeConnectivity } from "@/features/offline/model";
 import { openCalendarDatabase, readCalendarRangeCache, type CalendarDatabase } from "../storage/calendar-database";
-import { synchronizeCalendarCache } from "./calendar-cache-sync";
+import { synchronizeCalendarCache, prefetchCalendarMonths } from "./calendar-cache-sync";
 export function useCalendarCache(connection: CalendarConnection, userId: string, start: string, end: string) {
   const [database, setDatabase] = useState<CalendarDatabase | null>(null), [error, setError] = useState<unknown>(), [syncing, setSyncing] = useState(false);
   const online = useSyncExternalStore(subscribeConnectivity, () => getConnectivityState() === "online", () => true);
@@ -23,6 +23,7 @@ export function useCalendarCache(connection: CalendarConnection, userId: string,
     try { await synchronizeCalendarCache(database, start, end, apiFetch, recover); if (generation === activeRequest.current) setError(undefined); return true } catch (cause) { if (generation === activeRequest.current) setError(cause); return null } finally { if (generation === activeRequest.current) setSyncing(false) }
   }, [database, start, end, online]);
   useEffect(() => { void refresh() }, [refresh]);
+  useEffect(() => { if (!database || !online) return; const timer = setTimeout(() => void prefetchCalendarMonths(database, start, end, apiFetch).catch(() => {}), 1500); return () => clearTimeout(timer) }, [database, online, start, end]);
   const refreshRef = useRef(refresh); refreshRef.current = refresh;
   useEffect(() => { if (!database || !online) return; return startCalendarRecovery(database, recover => refreshRef.current(recover), () => getConnectivityState() === "online") }, [database, online]);
   useEffect(() => { if (!database || !online) return; void reconcileCalendarMutations(database); const timer = setInterval(() => void reconcileCalendarMutations(database), 30_000); return () => clearInterval(timer) }, [database, online]);

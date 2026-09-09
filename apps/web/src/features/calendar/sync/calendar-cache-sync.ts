@@ -51,3 +51,16 @@ export async function synchronizeCalendarCache(database: CalendarDatabase, start
     await evictCalendarRanges(database, pinned);
   });
 }
+
+export async function prefetchCalendarMonths(database: CalendarDatabase, start: string, end: string, fetcher: Transport) {
+  const middle = new Date((Date.parse(start) + Date.parse(end)) / 2);
+  for (const offset of [0, -1, 1]) {
+    if (!database.isOpen()) return;
+    const from = new Date(Date.UTC(middle.getUTCFullYear(), middle.getUTCMonth() + offset, 1)).toISOString();
+    const until = new Date(Date.UTC(middle.getUTCFullYear(), middle.getUTCMonth() + offset + 1, 1)).toISOString();
+    const calendars = await database.calendars.toArray();
+    const ranges = await Promise.all(calendars.map(calendar => database.ranges.get(calendarRangeKey(calendar.id, from, until))));
+    if (ranges.length && ranges.every(range => range && Date.now() - range.fetchedAt < 300_000)) continue;
+    await synchronizeCalendarCache(database, from, until, fetcher, false);
+  }
+}
