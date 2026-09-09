@@ -1,3 +1,4 @@
+import { RemovedCalendars } from "../preferences/removed-calendars";
 import type { CalendarConnection, CalendarPreferences } from "@zilobase/features/calendar";
 import { CalendarSchedule } from "../views/calendar-schedule";
 import { useSession } from "@zilobase/features/auth/react";
@@ -45,7 +46,7 @@ function CalendarWorkspace({ workspaceId }: { workspaceId: string }) {
           </section>
         </main>
         : <CalendarScheduleContent connections={accounts.data.connections} preferences={preferences.query.data} error={preferences.query.error} userId={session?.user?.id} />}
-    <Dialog open={settings} onOpenChange={setSettings}><DialogContent><DialogTitle>Calendar settings</DialogTitle>{preferences.query.data ? <CalendarSettings key={preferences.query.dataUpdatedAt} value={preferences.query.data} pending={preferences.save.isPending} onSave={data => preferences.save.mutate(data, { onSuccess: () => setSettings(false) })} /> : <p>Loading preferences…</p>}</DialogContent></Dialog>
+    <Dialog open={settings} onOpenChange={setSettings}><DialogContent className="max-h-[85vh] overflow-y-auto"><DialogTitle>Calendar settings</DialogTitle>{preferences.query.data ? <CalendarSettings key={preferences.query.dataUpdatedAt} value={preferences.query.data} pending={preferences.pending} onSave={data => preferences.save.mutate(data, { onSuccess: () => setSettings(false) })} /> : <p>Loading preferences…</p>}<RemovedCalendars workspaceId={workspaceId} /></DialogContent></Dialog>
     </section>}
   />;
 }

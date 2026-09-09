@@ -1,18 +1,60 @@
-import type { CalendarRecord, CalendarPreferences } from "@zilobase/features/calendar";
-import { EyeIcon, EyeOffIcon, MoreHorizontalIcon, CalendarIcon, CheckIcon } from "@/shared/components/icons";
+import { useRef, useState } from "react";
+import type { CalendarRecord, CalendarPreferences, CalendarColor } from "@zilobase/features/calendar";
+import { EyeIcon, EyeOffIcon, MoreHorizontalIcon, CalendarIcon, CheckIcon, ArrowUpRightIcon, TrashIcon } from "@/shared/components/icons";
+import { GoogleIcon } from "@/shared/components/google-icon";
+import { PALETTE } from "@/shared/lib/color-tokens";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/shared/ui/sidebar";
 import { SIDEBAR_NAV_ROW_INTERACTION_CLASS_NAME, SidebarNavItemAction } from "@/shared/ui/sidebar-nav-item-action";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/shared/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/shared/ui/dropdown-menu";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/shared/ui/alert-dialog";
+import { getApiErrorMessage } from "@/platform/network/api";
 import { calendarSelectionKey } from "./calendar-selection";
 export { calendarSelectionKey } from "./calendar-selection";
-export function CalendarList({ calendars, preferences, onPreferences, disabled }: { calendars: CalendarRecord[]; preferences: CalendarPreferences; onPreferences: (preferences: CalendarPreferences) => void; disabled: boolean }) {
-  return <SidebarMenu>{calendars.map(calendar => {
-    const key = calendarSelectionKey(calendar.bindingId, calendar.id), hidden = preferences.hiddenCalendarKeys.includes(key);
-    const toggle = () => onPreferences({ ...preferences, hiddenCalendarKeys: hidden ? preferences.hiddenCalendarKeys.filter(id => id !== key) : [...preferences.hiddenCalendarKeys, key] });
-    return <SidebarMenuItem key={key}><div className="group/nav-row relative">
-      <SidebarMenuButton disabled={disabled} onClick={toggle} aria-pressed={!hidden} title={calendar.name} className={`${SIDEBAR_NAV_ROW_INTERACTION_CLASS_NAME} pr-16`}><CalendarIcon className="text-palette-blue" /><span className="min-w-0 flex-1 truncate">{calendar.name}</span>{preferences.defaultCalendarKey === key && <span className="text-xs text-content-secondary">Default</span>}</SidebarMenuButton>
-      <DropdownMenu><DropdownMenuTrigger asChild><SidebarNavItemAction variant="menu" style={{ right: 30 }} aria-label={`Options for ${calendar.name}`}><MoreHorizontalIcon /></SidebarNavItemAction></DropdownMenuTrigger><DropdownMenuContent side="right" align="start"><DropdownMenuItem disabled={disabled || !calendar.permissions.write || preferences.defaultCalendarKey === key} onSelect={() => onPreferences({ ...preferences, defaultCalendarKey: key })}><CheckIcon />Make default calendar</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
-      <SidebarNavItemAction variant="menu" disabled={disabled} className={hidden ? "opacity-100" : ""} aria-label={`${hidden ? "Show" : "Hide"} ${calendar.name}`} onClick={toggle}>{hidden ? <EyeOffIcon /> : <EyeIcon />}</SidebarNavItemAction>
-    </div></SidebarMenuItem>;
-  })}</SidebarMenu>;
+const colors: CalendarColor[] = ["red", "orange", "yellow", "green", "blue", "purple", "gray"];
+const colorName = (color: CalendarColor) => color === "gray" ? "Grey" : PALETTE[color].name;
+type Props = { calendars: CalendarRecord[]; allCalendars: CalendarRecord[]; preferences: CalendarPreferences; onPreferences: (preferences: CalendarPreferences) => Promise<unknown>; disabled: boolean };
+
+export function CalendarList(props: Props) {
+  return <SidebarMenu>{props.calendars.filter(calendar => !props.preferences.removedCalendarKeys?.includes(calendarSelectionKey(calendar.bindingId, calendar.id))).map(calendar => <CalendarRow key={calendarSelectionKey(calendar.bindingId, calendar.id)} {...props} calendar={calendar} />)}</SidebarMenu>;
+}
+
+function CalendarRow({ calendar, allCalendars, preferences, onPreferences, disabled }: Props & { calendar: CalendarRecord }) {
+  const key = calendarSelectionKey(calendar.bindingId, calendar.id), hidden = preferences.hiddenCalendarKeys.includes(key);
+  const color = preferences.calendarColors?.[key] ?? "blue";
+  const [removing, setRemoving] = useState(false), [pending, setPending] = useState(false), [error, setError] = useState<unknown>();
+  const row = useRef<HTMLButtonElement>(null), completed = useRef(false);
+  const save = (next: CalendarPreferences) => { void onPreferences(next).catch(() => {}); };
+  const toggle = () => save({ ...preferences, hiddenCalendarKeys: hidden ? preferences.hiddenCalendarKeys.filter(id => id !== key) : [...preferences.hiddenCalendarKeys, key] });
+  return <SidebarMenuItem><div className="group/nav-row relative">
+    <SidebarMenuButton ref={row} disabled={disabled} onClick={toggle} aria-pressed={!hidden} title={calendar.name} className={`${SIDEBAR_NAV_ROW_INTERACTION_CLASS_NAME} pr-16`}>
+      <CalendarIcon className={PALETTE[color].textClass} /><span className="min-w-0 flex-1 truncate">{calendar.name}</span>
+      {preferences.defaultCalendarKey === key && <span className="text-xs text-content-secondary">Default</span>}
+    </SidebarMenuButton>
+    <DropdownMenu defaultSubDisplayMode="inline">
+      <DropdownMenuTrigger asChild><SidebarNavItemAction variant="menu" style={{ right: 30 }} aria-label={`Options for ${calendar.name}`}><MoreHorizontalIcon /></SidebarNavItemAction></DropdownMenuTrigger>
+      <DropdownMenuContent side="right" align="start" className="w-64" onCloseAutoFocus={event => { if (removing) event.preventDefault(); }}>
+        <DropdownMenuSub title="Color"><DropdownMenuSubTrigger disabled={disabled}><span className={`size-4 rounded-sm ${PALETTE[color].swatchClass}`} /><span className="flex-1">Color</span><span className="text-content-secondary">{colorName(color)}</span></DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>{colors.map(option => <DropdownMenuItem key={option} disabled={disabled} onSelect={() => save({ ...preferences, calendarColors: { ...preferences.calendarColors, [key]: option } })}><span className={`size-4 rounded-sm ${PALETTE[option].swatchClass}`} /><span className="flex-1">{colorName(option)}</span>{option === color && <CheckIcon />}</DropdownMenuItem>)}</DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem disabled={disabled || !calendar.permissions.write || preferences.defaultCalendarKey === key} onSelect={() => save({ ...preferences, defaultCalendarKey: key })}><CalendarIcon />Make default calendar</DropdownMenuItem>
+        <DropdownMenuItem disabled={disabled} onSelect={() => save({ ...preferences, hiddenCalendarKeys: allCalendars.map(c => calendarSelectionKey(c.bindingId, c.id)).filter(id => id !== key) })}><EyeIcon />Show only this calendar</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild><a href="https://calendar.google.com/calendar/u/0/r/settings" target="_blank" rel="noopener noreferrer"><GoogleIcon /><span className="flex-1">Google Calendar settings</span><ArrowUpRightIcon /></a></DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" disabled={disabled} onSelect={() => { setError(undefined); setRemoving(true); }}><TrashIcon />Remove calendar from list</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+    <SidebarNavItemAction variant="menu" disabled={disabled} className={hidden ? "opacity-100" : ""} aria-label={`${hidden ? "Show" : "Hide"} ${calendar.name}`} onClick={toggle}>{hidden ? <EyeOffIcon /> : <EyeIcon />}</SidebarNavItemAction>
+  </div>
+  <AlertDialog open={removing} onOpenChange={open => { if (!pending) setRemoving(open); }}>
+    <AlertDialogContent onCloseAutoFocus={event => { event.preventDefault(); if (!completed.current) row.current?.focus(); else document.getElementById(`calendar-account-${calendar.bindingId}`)?.focus(); }}>
+      <AlertDialogHeader><AlertDialogTitle>Remove this calendar from Zilobase?</AlertDialogTitle><AlertDialogDescription>You can restore ‘{calendar.name}’ in Calendar settings. This won’t delete it or its events from Google Calendar. To temporarily hide it, use the eye icon next to the calendar.</AlertDialogDescription></AlertDialogHeader>
+      {error ? <p role="alert" className="text-sm text-feedback-danger-text">{getApiErrorMessage(error)}</p> : null}
+      <AlertDialogFooter><AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel><AlertDialogAction variant="destructive" disabled={pending || disabled} onClick={event => {
+        event.preventDefault(); if (pending) return; setPending(true); setError(undefined);
+        void onPreferences({ ...preferences, removedCalendarKeys: [...new Set([...(preferences.removedCalendarKeys ?? []), key])] }).then(() => { completed.current = true; setRemoving(false); requestAnimationFrame(() => document.getElementById(`calendar-account-${calendar.bindingId}`)?.focus()); }).catch(setError).finally(() => setPending(false));
+      }}>{pending ? "Removing…" : "Remove calendar"}</AlertDialogAction></AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog></SidebarMenuItem>;
 }

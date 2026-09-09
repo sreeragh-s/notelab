@@ -28,7 +28,9 @@ export type CalendarEventWriteRequest = {
   recurrenceScope?: "occurrence" | "following" | "series"; createMeet?: boolean;
 }
 export type CalendarMutationResponse = { operationId: string; status: "pending" | "ambiguous" | "succeeded" | "failed"; event?: CalendarEvent; error?: string }
+export type CalendarColor = "red" | "orange" | "yellow" | "green" | "blue" | "purple" | "gray"
 export type CalendarPreferences = {
+  calendarColors?: Record<string, CalendarColor>; removedCalendarKeys?: string[];
   view: CalendarView; hiddenCalendarKeys: string[]; defaultCalendarKey: string | null;
   weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6; showWeekends: boolean; showDeclined: boolean;
   showWeekNumbers: boolean; timeFormat: "12" | "24"; timeZone: string; secondaryTimeZones: string[]; remindersEnabled: boolean;

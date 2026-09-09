@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { calendarDays, todayInZone, dayInstant, addCalendarDays, shiftCalendarPeriod, calendarEventKey, eventInstant, eventClock, calendarApiBasePath, type CalendarConnection, type CalendarEvent, type CalendarPreferences, type CalendarRecord, type CalendarView } from "@zilobase/features/calendar";
 import { useCalendarCache } from "../sync/use-calendar-cache";
-import { calendarSelectionKey, resolveDefaultCalendar } from "../connections/calendar-selection";
+import { calendarSelectionKey, calendarIsVisible, resolveDefaultCalendar } from "../connections/calendar-selection";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
@@ -41,7 +41,7 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
   const [searchEvents, setSearchEvents] = useState<CalendarEvent[] | null>(null), [searchError, setSearchError] = useState<unknown>();
   const onData = useCallback((binding: string, data: Snapshot) => setSnapshots(current => ({ ...current, [binding]: data })), []);
   const data = connections.flatMap(c => snapshots[c.bindingId] ? [snapshots[c.bindingId]!] : []);
-  const events = data.flatMap(d => d.events).filter(event => !preferences.hiddenCalendarKeys.includes(calendarSelectionKey(event.bindingId, event.calendarId)) && (preferences.showDeclined || !event.attendees.some(a => a.self && a.responseStatus === "declined")));
+  const events = data.flatMap(d => d.events).filter(event => calendarIsVisible(preferences, event.bindingId, event.calendarId) && (preferences.showDeclined || !event.attendees.some(a => a.self && a.responseStatus === "declined")));
   const online = data.every(d => d.online), [now, setNow] = useState(Date.now());
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 60_000); return () => clearInterval(timer) }, []);
   const setPeriod = useCallback((next: string, nextView: CalendarView = view) => { void navigate({ to: "/calendar", search: { date: next, view: nextView } }) }, [navigate, view]);
@@ -56,7 +56,7 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
   useEffect(() => {
     let active = true; setSearchEvents(null); setSearchError(undefined);
     if (!query.trim() || !online) return;
-    const timer = setTimeout(() => { void Promise.all(connections.flatMap(connection => (snapshots[connection.bindingId]?.calendars ?? []).filter(c => !preferences.hiddenCalendarKeys.includes(calendarSelectionKey(connection.bindingId, c.id))).map(async calendar => {
+    const timer = setTimeout(() => { void Promise.all(connections.flatMap(connection => (snapshots[connection.bindingId]?.calendars ?? []).filter(c => calendarIsVisible(preferences, connection.bindingId, c.id)).map(async calendar => {
       const rows: CalendarEvent[] = []; let pageToken: string | null = null;
       do {
         const params: URLSearchParams = new URLSearchParams({ calendarId: calendar.id, start, end, q: query.trim(), ...(pageToken ? { pageToken } : {}) });
@@ -66,8 +66,8 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
       return rows;
     }))).then(results => { if (active) setSearchEvents(results.flat()) }).catch(error => { if (active) setSearchError(error) }) }, 350);
     return () => { active = false; clearTimeout(timer) };
-  }, [query, online, start, end, connections, preferences.hiddenCalendarKeys]);
-  const visible = query ? (searchEvents ?? events.filter(e => `${e.title} ${e.description} ${e.location}`.toLowerCase().includes(query.toLowerCase()))) : events;
+  }, [query, online, start, end, connections, preferences.hiddenCalendarKeys, preferences.removedCalendarKeys]);
+  const visible = query ? (searchEvents?.filter(event => calendarIsVisible(preferences, event.bindingId, event.calendarId)) ?? events.filter(e => `${e.title} ${e.description} ${e.location}`.toLowerCase().includes(query.toLowerCase()))) : events;
   const eventsByDay = useMemo(() => {
     const periods = loadedDays.map(day => ({ day, start: Date.parse(dayInstant(day, preferences.timeZone)), end: Date.parse(dayInstant(addCalendarDays(day, 1), preferences.timeZone)), events: [] as CalendarEvent[] }));
     for (const event of visible) {
@@ -92,6 +92,8 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
     try { await runCalendarMutation({ database: snapshot.database, event, action: "update", write: { operationId: crypto.randomUUID(), etag: event.etag, sendUpdates: "all", event: { start: event.start, end: event.end } } }) } catch (error) { toast.error(getApiErrorMessage(error)) }
   };
   const color = (event: CalendarEvent) => {
+    const override = preferences.calendarColors?.[calendarSelectionKey(event.bindingId, event.calendarId)];
+    if (!event.colorId && override) return PALETTE[override];
     const providerColor = event.colorId ?? data.flatMap(d => d.calendars).find(c => c.id === event.calendarId && c.bindingId === event.bindingId)?.colorId;
     const hues: ColorTokenId[] = ["blue", "purple", "green", "purple", "red", "yellow", "orange", "blue", "gray", "blue", "green", "red"];
     return PALETTE[hues[Number(providerColor ?? 0) % hues.length] ?? "blue"];
@@ -102,7 +104,7 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
     {connections.map(c => <AccountData key={c.bindingId} connection={c} userId={userId} start={cacheStart} end={cacheEnd} onData={onData} />)}
     <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-stroke-default p-3"><Button variant="outline" onClick={() => setPeriod(todayInZone(preferences.timeZone))}>Today</Button><Button variant="ghost" size="icon" aria-label="Previous period" onClick={() => setPeriod(shiftCalendarPeriod(date, view, -1))}><ChevronLeftIcon /></Button><Button variant="ghost" size="icon" aria-label="Next period" onClick={() => setPeriod(shiftCalendarPeriod(date, view, 1))}><ChevronRightIcon /></Button>
       <Popover><PopoverTrigger asChild><Button variant="ghost">{new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`))}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={new Date(`${date}T12:00:00`)} onSelect={day => { if (day) setPeriod(`${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`) }} /></PopoverContent></Popover>
-      <Button disabled={!online || !data.some(d => d.calendars.some(c => c.permissions.write))} onClick={() => create()}>Create event</Button><Input className="ml-auto w-44" aria-label="Search calendar" placeholder="Search events" value={query} onChange={e => setQuery(e.target.value)} /><Select value={view} onValueChange={next => setPeriod(date, next as CalendarView)}><SelectTrigger className="w-28"><SelectValue /></SelectTrigger><SelectContent>{(["day", "week", "month", "agenda"] as const).map(v => <SelectItem key={v} value={v}>{v[0]!.toUpperCase() + v.slice(1)}</SelectItem>)}</SelectContent></Select>
+      <Button disabled={!online || !Boolean(resolveDefaultCalendar(data.flatMap(d => d.calendars), preferences))} onClick={() => create()}>Create event</Button><Input className="ml-auto w-44" aria-label="Search calendar" placeholder="Search events" value={query} onChange={e => setQuery(e.target.value)} /><Select value={view} onValueChange={next => setPeriod(date, next as CalendarView)}><SelectTrigger className="w-28"><SelectValue /></SelectTrigger><SelectContent>{(["day", "week", "month", "agenda"] as const).map(v => <SelectItem key={v} value={v}>{v[0]!.toUpperCase() + v.slice(1)}</SelectItem>)}</SelectContent></Select>
     </div>
     <CalendarStatus data={data} online={online} zones={[preferences.timeZone, ...preferences.secondaryTimeZones]} error={searchError} />
     {view === "agenda" || query ? <div data-calendar-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4">{days.map(day => { const rows = eventsByDay[day] ?? []; return <section key={day} className="mb-5"><h2 className="mb-2 text-sm font-medium">{day}</h2>{rows.length ? rows.map(card) : <p className="text-xs text-content-secondary">No events</p>}</section> })}</div> : view === "month" ? <CalendarMonthView days={days} eventsByDay={eventsByDay} preferences={preferences} online={online} writable={event => data.flatMap(d => d.calendars).some(c => c.id === event.calendarId && c.bindingId === event.bindingId && c.permissions.write)} card={card} onDay={day => setPeriod(day, "day")} onChange={event => void changeGeometry(event)} /> : <CalendarPeriodScroller periods={periods} periodKey={`${view}:${date}`} onPeriod={direction => setPeriod(shiftCalendarPeriod(date, view, direction))} eventsByDay={eventsByDay} preferences={preferences} now={now} online={online} scrollRef={gridScroll} card={card} writable={event => data.flatMap(d => d.calendars).some(c => c.id === event.calendarId && c.bindingId === event.bindingId && c.permissions.write)} onDay={day => setPeriod(day, "day")} onCreate={create} onChange={event => void changeGeometry(event)} background={event => color(event).backgroundClass} />}
