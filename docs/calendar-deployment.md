@@ -17,6 +17,13 @@ uses `https://api.zilobase.com/calendar/oauth/google/callback`. These server-sid
 flows do not require authorized JavaScript origins. Desktop uses the same Google
 callbacks; its application handoff is not a Google redirect URI.
 
+For local testing, set `MAIL_ENABLED=true`, `VITE_FEATURE_MAIL=true`,
+`CALENDAR_ENABLED=true`, and `VITE_FEATURE_CALENDAR=true` in each development
+environment file. `CALENDAR_ENABLED_WORKSPACE_IDS=*` allows all workspaces in
+the isolated local database. Restart the local API, background runner, and web
+development server after changing these settings. Production uses the pilot
+allowlist described below.
+
 1. Apply the normal additive database migrations (`npm run db:migrate`), including Calendar migrations 0087–0089. Take the normal database backup first. Do not undo migrations to disable rollout.
 2. Enable the Google Calendar API in a dedicated Google OAuth project/client. Register the exact canonical API origin plus `/calendar/oauth/google/callback` as an authorized redirect URI. Desktop uses the same web callback and then the existing `zilobase://open` handoff. Configure the normal canonical API/web origins for the deployment.
 3. Set server `CALENDAR_GOOGLE_CLIENT_ID`, `CALENDAR_GOOGLE_CLIENT_SECRET`, and `CALENDAR_TOKEN_ENCRYPTION_KEY`. The encryption key must be an independent base64-encoded 32-byte random key; keep it stable and in the deployment secret store. Mail credentials are not fallbacks. Back up the key securely; replacing it requires account reconnection.
