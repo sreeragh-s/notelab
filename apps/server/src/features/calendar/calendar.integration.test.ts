@@ -107,10 +107,10 @@ test.skipIf(!enabled)("a split recovers a committed successor after response los
   const gateway = new CalendarGateway("fixture", async (url, options) => {
     const id = decodeURIComponent(new URL(String(url)).pathname.split("/").at(-1)!);
     if (options?.method === "PUT") { updates++; const body = JSON.parse(String(options.body)); store.set(id, { ...body, etag: "m2" }); return Response.json(store.get(id)) }
-    if (options?.method === "POST") { inserts++; const body = JSON.parse(String(options.body)); store.set(body.id, { ...body, etag: "t1" }); throw new TypeError("response lost after insert") }
+    if (options?.method === "POST") { inserts++; const body = JSON.parse(String(options.body)); expect(body.conferenceData.createRequest.conferenceSolutionKey.type).toBe("hangoutsMeet"); store.set(body.id, { ...body, etag: "t1" }); throw new TypeError("response lost after insert") }
     return store.has(id) ? Response.json(store.get(id)) : Response.json({}, { status: 404 });
   });
-  const input = { userId, workspaceId, bindingId: binding!.id, calendarId: "primary", eventId: "instance", action: "update" as const, write: { operationId: randomUUID(), etag: "i1", sendUpdates: "all" as const, recurrenceScope: "following" as const, event: { title: "Later meetings" } } };
+  const input = { userId, workspaceId, bindingId: binding!.id, calendarId: "primary", eventId: "instance", action: "update" as const, write: { operationId: randomUUID(), etag: "i1", sendUpdates: "all" as const, recurrenceScope: "following" as const, createMeet: true, event: { title: "Later meetings" } } };
   expect((await runWithDb(database!, () => mutateCalendarEvent({}, input, gateway))).status).toBe("ambiguous");
   const result = await runWithDb(database!, () => reconcileCalendarOperation({}, { userId, workspaceId, operationId: input.write.operationId }, gateway));
   expect(result?.status).toBe("succeeded"); expect(inserts).toBe(1); expect(updates).toBe(1);

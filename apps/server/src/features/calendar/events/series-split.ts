@@ -14,10 +14,13 @@ async function loadSeries(input: CalendarMutationInput, gateway: CalendarGateway
   const occurrence = googleEventSchema.parse(await gateway.request(`${path}/${encodeURIComponent(input.eventId!)}`));
   if (!occurrence.recurringEventId || !occurrence.originalStartTime || occurrence.etag !== input.write.etag) throw new CalendarProviderError(412, "series_occurrence_changed");
   const head = googleEventSchema.parse(await gateway.request(`${path}/${encodeURIComponent(occurrence.recurringEventId)}`));
+  validateSeries(head);
+  return { head, occurrence };
+}
+function validateSeries(head: GoogleCalendarEvent) {
   if (head.eventType && head.eventType !== "default") throw new CalendarProviderError(403, "specialized_event_read_only");
   if (head.organizer?.self !== true) throw new CalendarProviderError(403, "series_edit_not_allowed");
   if (!head.start || !head.recurrence) throw new CalendarProviderError(409, "series_unavailable");
-  return { head, occurrence };
 }
 function precedes(item: unknown, original: CalendarEventTime) {
   const event = googleEventSchema.parse(item), value = event.originalStartTime ?? event.start;
@@ -38,15 +41,18 @@ async function countPreceding(head: GoogleCalendarEvent, original: CalendarEvent
 }
 async function splitSteps(input: CalendarMutationInput, head: GoogleCalendarEvent, occurrence: GoogleCalendarEvent, rules: { head: string[]; tail: string[] }, zone: string, first: boolean): Promise<SplitSteps> {
   const tailId = `cs${await sha256Hex(`${input.bindingId}:${input.write.operationId}`)}`;
-  const { etag: _etag, id: _id, recurringEventId: _series, originalStartTime: _original, iCalUID: _uid, ...tailSource } = head;
   const headBody = first ? { ...head, ...providerEventPatch(input.write) } : { ...head, recurrence: rules.head };
-  const tailBody = first || input.action === "delete" ? null : markOperation({ ...tailSource, ...providerEventPatch(input.write), id: tailId, start: input.write.event.start ?? occurrence.start, end: input.write.event.end ?? occurrence.end, recurrence: input.write.event.recurrence ?? rules.tail }, input.write.operationId);
-  if (input.write.createMeet) {
-    const target = first ? headBody : tailBody;
-    if (target) Object.assign(target, { conferenceData: { createRequest: { requestId: input.write.operationId, conferenceSolutionKey: { type: "hangoutsMeet" } } } });
-  }
+  const tailBody = first || input.action === "delete" ? null : successorBody(input, head, occurrence, rules.tail, tailId);
+  applySeriesConference(input.write, first ? headBody : tailBody);
   if (tailBody) validateEventInterval(tailBody as CalendarWrite["event"]);
   return { action: "split", headId: head.id, headEtag: head.etag!, headBody: markOperation(headBody, input.write.operationId), tailBody, headDone: false, zone, sendUpdates: input.write.sendUpdates, headOnly: first, deleteHead: first && input.action === "delete" };
+}
+function successorBody(input: CalendarMutationInput, head: GoogleCalendarEvent, occurrence: GoogleCalendarEvent, recurrence: string[], id: string) {
+  const { etag: _etag, id: _id, recurringEventId: _series, originalStartTime: _original, iCalUID: _uid, ...tailSource } = head;
+  return markOperation({ ...tailSource, ...providerEventPatch(input.write), id, start: input.write.event.start ?? occurrence.start, end: input.write.event.end ?? occurrence.end, recurrence: input.write.event.recurrence ?? recurrence }, input.write.operationId);
+}
+function applySeriesConference(write: CalendarWrite, target: Record<string, unknown> | null) {
+  if (write.createMeet && target) target.conferenceData = { createRequest: { requestId: write.operationId, conferenceSolutionKey: { type: "hangoutsMeet" } } };
 }
 async function reserveSplit(accountId: string, input: CalendarMutationInput, steps: SplitSteps, hash: string) {
   await db.transaction(async tx => {
