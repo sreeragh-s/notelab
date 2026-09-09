@@ -39,7 +39,7 @@ export function register({ assert, loadModule, test }) {
     assert.equal(first.defaultLayout.tabs[0].sections[2].sort, "alphabetical")
   })
 
-  test("sidebar normalization enforces locked Home, AI, and Mail tabs with payload caps", async () => {
+  test("sidebar normalization enforces locked Home, AI, Mail, and Calendar tabs with payload caps", async () => {
     const { normalizeSidebarConfig } = await loadModule(configPath)
     const tabs = Array.from({ length: 12 }, (_, index) => ({
       icon: index === 0 ? "<script>" : "star",
@@ -71,6 +71,8 @@ export function register({ assert, loadModule, test }) {
     assert.equal(config.defaultLayout.tabs[2].id, "mail")
     assert.equal(config.defaultLayout.tabs[2].name, "Mail")
     assert.equal(config.defaultLayout.tabs[2].icon, "mail")
+    assert.equal(config.defaultLayout.tabs[3].id, "calendar")
+    assert.equal(config.defaultLayout.tabs[3].name, "Calendar")
   })
 
   test("shared pages and teamspaces are independent sidebar sections", async () => {
@@ -184,7 +186,7 @@ export function register({ assert, loadModule, test }) {
       taskDatabaseIds: [],
     })
 
-    const [home, ai, mail, custom] = layout.tabs
+    const [home, ai, mail, calendar, custom] = layout.tabs
     assert.deepEqual(home.shortcuts, [])
     assert.deepEqual(home.sections, [])
     assert.deepEqual(custom.shortcuts, [])
@@ -194,10 +196,26 @@ export function register({ assert, loadModule, test }) {
     assert.equal(ai.shortcuts[0].label, "Start chat")
     assert.deepEqual(ai.sections.map((section) => section.kind), ["aiChats"])
     assert.equal(ai.sections[0].limit, 20)
+    assert.deepEqual(calendar, { icon: "calendar", id: "calendar", name: "Calendar", sections: [], shortcuts: [] })
     assert.equal(mail.name, "Mail")
     assert.deepEqual(mail.shortcuts.map((shortcut) => shortcut.id), ["mail-inbox", "mail-compose"])
     assert.equal(mail.shortcuts[0].label, "Primary")
     assert.deepEqual(mail.sections, [])
+  })
+
+  test("Calendar is restored once in saved layouts and remains a fixed route tab", async () => {
+    const { normalizeSidebarWorkspaceLayout, isFixedSidebarTabId, isStaticSidebarTabId } = await loadModule(configPath)
+    const layout = normalizeSidebarWorkspaceLayout({
+      tabs: [
+        { id: "calendar", name: "Renamed", icon: "star", sections: [{ id: "pages", kind: "recents" }], shortcuts: [{ id: "tasks", target: { type: "route", route: "tasks" } }] },
+        { id: "calendar", name: "Duplicate", sections: [], shortcuts: [] },
+      ],
+    })
+    assert.deepEqual(layout.tabs.map((tab) => tab.id), ["home", "ai", "mail", "calendar"])
+    assert.deepEqual(layout.tabs[3], { id: "calendar", name: "Calendar", icon: "calendar", sections: [], shortcuts: [] })
+    assert.deepEqual(normalizeSidebarWorkspaceLayout(layout), layout)
+    assert.equal(isFixedSidebarTabId("calendar"), true)
+    assert.equal(isStaticSidebarTabId("calendar"), true)
   })
 
   test("Mail restores Compose when customization attempts to remove it", async () => {
@@ -232,9 +250,9 @@ export function register({ assert, loadModule, test }) {
     })
     const safeSvg = '<svg viewBox="0 0 24 24"><path d="M1 1h2v2z" /></svg>'
 
-    assert.equal(normalizeSidebarWorkspaceLayout(makeLayout(safeSvg)).tabs[3].icon, safeSvg)
+    assert.equal(normalizeSidebarWorkspaceLayout(makeLayout(safeSvg)).tabs[4].icon, safeSvg)
     assert.equal(
-      normalizeSidebarWorkspaceLayout(makeLayout('<svg onload="alert(1)"></svg>')).tabs[3].icon,
+      normalizeSidebarWorkspaceLayout(makeLayout('<svg onload="alert(1)"></svg>')).tabs[4].icon,
       "circle",
     )
   })

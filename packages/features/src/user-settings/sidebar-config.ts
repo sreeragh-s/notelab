@@ -165,6 +165,7 @@ export const defaultSidebarWorkspaceLayout: SidebarWorkspaceLayout = {
       sections: [],
       shortcuts: defaultMailShortcuts,
     },
+    { icon: "calendar", id: "calendar", name: "Calendar", sections: [], shortcuts: [] },
   ],
   taskDatabaseIds: [],
 }
@@ -262,6 +263,7 @@ export function normalizeSidebarWorkspaceLayout(value: unknown): SidebarWorkspac
       home,
       ai,
       mail,
+      { icon: "calendar", id: "calendar", name: "Calendar", sections: [], shortcuts: [] },
       ...tabs
         .filter((tab) => !isFixedSidebarTabId(tab.id))
         .map(normalizeWorkspaceTab),
@@ -333,11 +335,11 @@ function normalizeShortcut(value: unknown): SidebarShortcut | null {
 }
 
 export function isFixedSidebarTabId(tabId: string) {
-  return tabId === "home" || tabId === "ai" || tabId === "mail"
+  return tabId === "home" || tabId === "ai" || tabId === "mail" || tabId === "calendar"
 }
 
 export function isStaticSidebarTabId(tabId: string) {
-  return tabId === "ai" || tabId === "mail"
+  return tabId === "ai" || tabId === "mail" || tabId === "calendar"
 }
 
 export function isRequiredSidebarShortcut(tabId: string, shortcut: SidebarShortcut) {

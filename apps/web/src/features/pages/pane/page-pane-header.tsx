@@ -8,6 +8,7 @@ import {
   Layers3Icon,
   LockIcon,
   MailIcon,
+  CalendarIcon,
   Maximize2,
   UsersIcon,
 } from "@/shared/components/icons";
@@ -390,6 +391,10 @@ function AppBreadcrumbs({ pathname }: { pathname: string }) {
         </BreadcrumbList>
       </Breadcrumb>
     );
+  }
+
+  if (pathname === "/calendar") {
+    return <Breadcrumb><BreadcrumbList><BreadcrumbItem><BreadcrumbPage className="flex items-center gap-1.5"><CalendarIcon className="size-4" />Calendar</BreadcrumbPage></BreadcrumbItem></BreadcrumbList></Breadcrumb>;
   }
 
   if (pathname === "/ai") {

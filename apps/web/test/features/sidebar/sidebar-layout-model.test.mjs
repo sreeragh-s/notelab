@@ -20,6 +20,7 @@ export function register({ assert, loadModule, test }) {
     assert.deepEqual(moved.tabs[0].shortcuts.map((item) => item.id), ["one"])
     assert.deepEqual(moved.tabs[2].shortcuts.map((item) => item.id), ["two"])
     assert.equal(moveLayoutEntry(layout, "home", "ai", "shortcuts", "two"), layout)
+    assert.equal(moveLayoutEntry(layout, "home", "calendar", "shortcuts", "two"), layout)
   })
 
   test("exact shortcuts are deduplicated only within the current tab", async () => {

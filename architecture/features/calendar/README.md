@@ -20,7 +20,7 @@ The disposable PostgreSQL runner is `node scripts/calendar/test-integration.mjs`
 
 ## Web shell
 
-The lazy `/calendar` screen uses the existing workspace shell and shared controls. Account queries are scoped by workspace, have finite freshness and surface errors. Preferences persist per member/workspace with IANA zone validation. The application sidebar offers Calendar only under its independent web feature flag.
+The lazy `/calendar` screen uses the existing workspace shell and shared controls. Account queries are scoped by workspace, have finite freshness and surface errors. Preferences persist per member/workspace with IANA zone validation. The application sidebar offers a fixed Calendar tab beside Mail only under its independent web feature flag. Route navigation, including OAuth returns, selects that tab. The screen uses the same pane shell and sidebar toggle as Mail, centering the Google Calendar connection prompt when no accounts are connected. The lazily loaded [account sidebar](../../../apps/web/src/features/calendar/connections/calendar-accounts-sidebar.tsx) renders connected accounts, calendar visibility, reconnect and disconnect controls in the application sidebar; the schedule fills the center pane.
 
 ## Synchronization
 
