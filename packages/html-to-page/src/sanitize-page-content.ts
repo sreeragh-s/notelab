@@ -46,6 +46,19 @@ function sanitizeNode(node: PageDocumentNode): PageDocumentNode[] {
     return node.content?.flatMap((child) => sanitizeNode(child)) ?? []
   }
 
+  const media = sanitizeMediaNode(node)
+  if (media) return media
+
+  return [
+    {
+      ...node,
+      marks: sanitizeMarks(node.marks),
+      content: node.content?.flatMap((child) => sanitizeNode(child)),
+    },
+  ]
+}
+
+function sanitizeMediaNode(node: PageDocumentNode): PageDocumentNode[] | null {
   if (node.type === "imageBlock") {
     const src = stringAttr(node.attrs, "src")
     if (!isAllowedImageUrl(src)) return []
@@ -65,26 +78,24 @@ function sanitizeNode(node: PageDocumentNode): PageDocumentNode[] {
   }
 
   if (node.type === "bookmarkBlock") {
-    const href = stringAttr(node.attrs, "href")
-    if (!isAllowedHttpUrl(href)) return []
-    return [
-      {
-        ...node,
-        attrs: {
-          ...node.attrs,
-          href,
-          favicon: optionalAllowedUrl(node.attrs?.favicon, isAllowedHttpUrl),
-          image: optionalAllowedUrl(node.attrs?.image, isAllowedImageUrl),
-        },
-      },
-    ]
+    return sanitizeBookmarkNode(node)
   }
 
+  return null
+}
+
+function sanitizeBookmarkNode(node: PageDocumentNode): PageDocumentNode[] {
+  const href = stringAttr(node.attrs, "href")
+  if (!isAllowedHttpUrl(href)) return []
   return [
     {
       ...node,
-      marks: sanitizeMarks(node.marks),
-      content: node.content?.flatMap((child) => sanitizeNode(child)),
+      attrs: {
+        ...node.attrs,
+        href,
+        favicon: optionalAllowedUrl(node.attrs?.favicon, isAllowedHttpUrl),
+        image: optionalAllowedUrl(node.attrs?.image, isAllowedImageUrl),
+      },
     },
   ]
 }

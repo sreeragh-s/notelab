@@ -604,6 +604,7 @@
     "apps/web/src/features/teamspaces/model/teamspace-sidebar-permissions.ts",
     "apps/web/src/shared/config/feature-flags.ts",
     "apps/web/src/features/pages/pane/page-side-pane.tsx",
+    "apps/web/src/features/editor/drag-drop/pending-page-embed.ts",
     "apps/web/src/features/editor/drag-drop/block-drag.ts",
     "apps/web/src/features/editor/drag-drop/column-drag.ts",
     "apps/web/src/features/editor/drag-drop/table-drag.ts",

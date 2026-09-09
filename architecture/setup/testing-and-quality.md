@@ -20,3 +20,8 @@ The initial verification at b96f5c3d passed workspace typechecks, web tests, pac
 The initial dependency exceptions are recorded in the history of [Fallow](../../.fallowrc.json): desktop/offline cross-imports, web feature imports of app composition, editor/page/database/AI imports, broad server feature-to-feature imports, and runtime declarations importing feature-owned types. The current configuration narrows these in each owning migration; preserve the identity health baseline and existing thresholds.
 
 Shared mutation tests render real hooks with React DOM's server renderer and execute their MutationObservers against an isolated QueryClient. The renderer is a test dependency pinned to the web workspace's existing version. These tests cover optimistic writes before transport, rollback of source/target caches, publication invalidation, and template navigation refresh; the latter replaces the old source-string assertion.
+
+Pull requests gate newly introduced Fallow findings; main pushes and scheduled
+runs execute the complete `verify:architecture` suite. Modules loaded by the web
+harness through `loadModule()` must be recorded in Fallow’s `dynamicallyLoaded`
+list, including the pending-page-embed plugin exercised by editor drag/drop tests.

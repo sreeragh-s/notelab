@@ -46,10 +46,7 @@ export function useKanbanGroupActions(options: KanbanGroupOption[]) {
     setTrashing(true)
     try {
       // Each page goes through the shared recoverable deletion and cache flow.
-      let failed = 0
-      for (const pageId of pageIds) {
-        try { await deletePage.mutateAsync(pageId) } catch { failed++ }
-      }
+      const failed = await deleteGroupPages(pageIds, deletePage.mutateAsync)
       if (failed) toast.error(`${failed} page${failed === 1 ? "" : "s"} couldn't be moved to Trash. You can retry.`)
       else { setTrashGroup(null); toast.success("Pages moved to Trash") }
     } finally { setTrashing(false) }
@@ -107,4 +104,12 @@ export function DatabaseKanbanGroupDialogs({ actions }: { actions: GroupActions 
       </AlertDialogContent>
     </AlertDialog>
   </>
+}
+
+async function deleteGroupPages(pageIds: string[], remove: (id: string) => Promise<unknown>) {
+  let failed = 0
+  for (const id of pageIds) {
+    try { await remove(id) } catch { failed++ }
+  }
+  return failed
 }

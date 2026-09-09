@@ -136,3 +136,23 @@ test("extractClipMetadata reads open graph and json-ld", () => {
   expect(metadata.domain).toBe("example.com")
   expect(metadata.wordCount).toBeGreaterThan(0)
 })
+
+test("metadata keeps precedence and reads nested JSON-LD after malformed scripts", () => {
+  const document = new DOMParser().parseFromString(`<html><head>
+    <title>Fallback</title><meta property="og:title" content="Preferred">
+    <script type="application/ld+json">invalid</script>
+    <script type="application/ld+json">{"@graph":[{"author":{"name":"Ada"},"datePublished":"2026-09-01"}]}</script>
+  </head><body>Body text</body></html>`, "text/html")
+  expect(extractClipMetadata(document, "https://example.com/post")).toMatchObject({
+    title: "Preferred", author: "Ada", published: "2026-09-01", domain: "example.com",
+  })
+})
+
+test("bookmark sanitization preserves safe links and removes unsafe auxiliary URLs", () => {
+  const document = sanitizePageContent({ type: "doc", content: [
+    { type: "bookmarkBlock", attrs: { href: "https://example.com", favicon: "javascript:alert(1)", image: "javascript:alert(2)" } },
+    { type: "bookmarkBlock", attrs: { href: "javascript:alert(3)" } },
+    { type: "videoBlock", attrs: { src: "javascript:alert(4)" } },
+  ] })
+  expect(document.content).toEqual([{ type: "bookmarkBlock", attrs: { href: "https://example.com", favicon: null, image: null } }])
+})

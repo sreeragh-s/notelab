@@ -17,8 +17,6 @@ const removedTags = new Set([
   "select",
 ])
 
-const allowedIframeTags = new Set(["iframe"])
-
 export function sanitizeHtml(html: string) {
   const parser = new DOMParser()
   const document = parser.parseFromString(
@@ -37,47 +35,56 @@ function sanitizeElement(root: Element) {
   for (const element of walker) {
     const tagName = element.tagName.toLowerCase()
 
-    if (tagName === "iframe") {
-      const src = element.getAttribute("src")
-      if (!isAllowedEmbedSrc(src)) {
-        element.remove()
-        continue
-      }
-      stripEventHandlers(element)
-      keepAttributes(element, ["src", "title", "width", "height", "allowfullscreen"])
-      continue
-    }
+    sanitizeHtmlElement(element, tagName)
+  }
+}
 
-    if (removedTags.has(tagName) && !allowedIframeTags.has(tagName)) {
+function sanitizeHtmlElement(element: Element, tagName: string) {
+  if (tagName === "iframe") {
+    sanitizeIframe(element)
+    return
+  }
+
+  if (removedTags.has(tagName)) {
+    element.remove()
+    return
+  }
+
+  stripEventHandlers(element)
+
+  if (tagName === "a") {
+    const href = element.getAttribute("href")
+    if (!isAllowedHttpUrl(href)) {
+      unwrap(element)
+    }
+    return
+  }
+
+  if (tagName === "img") {
+    const src = element.getAttribute("src")
+    if (!isAllowedImageUrl(src)) {
       element.remove()
-      continue
     }
+    return
+  }
 
-    stripEventHandlers(element)
-
-    if (tagName === "a") {
-      const href = element.getAttribute("href")
-      if (!isAllowedHttpUrl(href)) {
-        unwrap(element)
-      }
-      continue
-    }
-
-    if (tagName === "img") {
-      const src = element.getAttribute("src")
-      if (!isAllowedImageUrl(src)) {
-        element.remove()
-      }
-      continue
-    }
-
-    if (tagName === "video") {
-      const src = element.getAttribute("src")
-      if (!isAllowedHttpUrl(src)) {
-        element.remove()
-      }
+  if (tagName === "video") {
+    const src = element.getAttribute("src")
+    if (!isAllowedHttpUrl(src)) {
+      element.remove()
     }
   }
+}
+
+function sanitizeIframe(element: Element) {
+  const src = element.getAttribute("src")
+  if (!isAllowedEmbedSrc(src)) {
+    element.remove()
+    return
+  }
+  stripEventHandlers(element)
+  keepAttributes(element, ["src", "title", "width", "height", "allowfullscreen"])
+  return
 }
 
 function stripEventHandlers(element: Element) {

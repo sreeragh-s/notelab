@@ -130,6 +130,10 @@ function blockNodeToJson(node: Node): JSONContent[] {
   const element = node as Element
   const tagName = element.tagName.toLowerCase()
 
+  return simpleBlockElementToJson(element, tagName) ?? nestedBlockElementToJson(element, tagName)
+}
+
+function simpleBlockElementToJson(element: Element, tagName: string): JSONContent[] | null {
   if (/^h[1-6]$/.test(tagName)) {
     return [
       {
@@ -167,6 +171,10 @@ function blockNodeToJson(node: Node): JSONContent[] {
     return [{ type: "horizontalRule" }]
   }
 
+  return null
+}
+
+function nestedBlockElementToJson(element: Element, tagName: string): JSONContent[] {
   if (tagName === "ul" && element.getAttribute("data-type") === "taskList") {
     return [
       {
@@ -242,6 +250,19 @@ function withInlineContent(element: Element): Pick<JSONContent, "content"> {
   return content.length > 0 ? { content } : {}
 }
 
+function appendInlineMarks(element: Element, tagName: string, nextMarks: NonNullable<JSONContent["marks"]>) {
+  if (tagName === "strong" || tagName === "b") {
+    nextMarks.push({ type: "bold" })
+  } else if (tagName === "em" || tagName === "i") {
+    nextMarks.push({ type: "italic" })
+  } else if (tagName === "code") {
+    nextMarks.push({ type: "code" })
+  } else if (tagName === "a") {
+    nextMarks.push({ type: "link", attrs: { href: element.getAttribute("href"), target: null, rel: null, class: null } })
+  }
+
+}
+
 function inlineNodeToJson(node: Node, marks: JSONContent["marks"] = []): JSONContent[] {
   if (node.nodeType === 3) {
     const text = node.textContent ?? ""
@@ -256,17 +277,8 @@ function inlineNodeToJson(node: Node, marks: JSONContent["marks"] = []): JSONCon
   const tagName = element.tagName.toLowerCase()
   const nextMarks = [...(marks ?? [])]
 
-  if (tagName === "strong" || tagName === "b") {
-    nextMarks.push({ type: "bold" })
-  } else if (tagName === "em" || tagName === "i") {
-    nextMarks.push({ type: "italic" })
-  } else if (tagName === "code") {
-    nextMarks.push({ type: "code" })
-  } else if (tagName === "a") {
-    nextMarks.push({ type: "link", attrs: { href: element.getAttribute("href"), target: null, rel: null, class: null } })
-  } else if (tagName === "br") {
-    return [{ type: "hardBreak" }]
-  }
+  appendInlineMarks(element, tagName, nextMarks)
+  if (tagName === "br") return [{ type: "hardBreak" }]
 
   return Array.from(element.childNodes).flatMap((child) => inlineNodeToJson(child, nextMarks))
 }

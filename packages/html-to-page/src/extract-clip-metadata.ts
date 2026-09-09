@@ -9,12 +9,7 @@ export function extractClipMetadata(document: Document, pageUrl: string): ClipMe
     document.querySelector('link[rel="canonical"]')?.getAttribute("href"),
     pageUrl,
   )
-  const title =
-    metaContent(document, "og:title") ??
-    metaContent(document, "twitter:title") ??
-    document.querySelector("title")?.textContent?.trim() ??
-    url?.hostname ??
-    pageUrl
+  const title = clipTitle(document, pageUrl)
   const description =
     metaContent(document, "og:description") ??
     metaContent(document, "twitter:description") ??
@@ -24,21 +19,9 @@ export function extractClipMetadata(document: Document, pageUrl: string): ClipMe
     metaContent(document, "twitter:image"),
     pageUrl,
   )
-  const favicon = firstAllowedHttp(
-    document.querySelector('link[rel="icon"]')?.getAttribute("href"),
-    document.querySelector('link[rel="shortcut icon"]')?.getAttribute("href"),
-    document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute("href"),
-    pageUrl,
-  )
+  const favicon = clipFavicon(document, pageUrl)
   const site = metaContent(document, "og:site_name")
-  const author =
-    namedMeta(document, "author") ??
-    jsonLdString(document, "author") ??
-    jsonLdString(document, "creator")
-  const published =
-    metaContent(document, "article:published_time") ??
-    namedMeta(document, "date") ??
-    jsonLdString(document, "datePublished")
+  const { author, published } = clipAttribution(document)
   const schemaType = jsonLdType(document)
   const selectionText = document.getSelection?.()?.toString().trim() || null
   const text = document.body?.textContent?.replace(/\s+/g, " ").trim() ?? ""
@@ -60,6 +43,37 @@ export function extractClipMetadata(document: Document, pageUrl: string): ClipMe
   }
 }
 
+function clipAttribution(document: Document) {
+  const author =
+    namedMeta(document, "author") ??
+    jsonLdString(document, "author") ??
+    jsonLdString(document, "creator")
+  const published =
+    metaContent(document, "article:published_time") ??
+    namedMeta(document, "date") ??
+    jsonLdString(document, "datePublished")
+  return { author, published }
+}
+
+function clipTitle(document: Document, pageUrl: string) {
+  return (
+    metaContent(document, "og:title") ??
+    metaContent(document, "twitter:title") ??
+    document.querySelector("title")?.textContent?.trim() ??
+    parseAbsoluteUrl(pageUrl)?.hostname ??
+    pageUrl
+  )
+}
+
+function clipFavicon(document: Document, pageUrl: string) {
+  return firstAllowedHttp(
+    document.querySelector('link[rel="icon"]')?.getAttribute("href"),
+    document.querySelector('link[rel="shortcut icon"]')?.getAttribute("href"),
+    document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute("href"),
+    pageUrl,
+  )
+}
+
 function metaContent(document: Document, property: string) {
   return (
     document
@@ -75,15 +89,21 @@ function namedMeta(document: Document, name: string) {
   return document.querySelector(`meta[name="${name}"]`)?.getAttribute("content")?.trim() || null
 }
 
+function jsonLdText(value: unknown): string | null {
+  if (typeof value === "string" && value.trim()) return value.trim()
+  if (value && typeof value === "object" && "name" in value && typeof value.name === "string") {
+    return value.name
+  }
+  return null
+}
+
 function jsonLdString(document: Document, key: string) {
   for (const script of document.querySelectorAll('script[type="application/ld+json"]')) {
     try {
       const data = JSON.parse(script.textContent ?? "")
       const value = readJsonLd(data, key)
-      if (typeof value === "string" && value.trim()) return value.trim()
-      if (value && typeof value === "object" && "name" in value && typeof value.name === "string") {
-        return value.name
-      }
+      const text = jsonLdText(value)
+      if (text !== null) return text
     } catch {
       continue
     }
@@ -112,10 +132,11 @@ function readJsonLd(data: unknown, key: string): unknown {
     }
     return null
   }
-  if (data && typeof data === "object" && key in data) {
+  if (!data || typeof data !== "object") return null
+  if (key in data) {
     return (data as Record<string, unknown>)[key]
   }
-  if (data && typeof data === "object" && "@graph" in data) {
+  if ("@graph" in data) {
     return readJsonLd((data as { "@graph": unknown })["@graph"], key)
   }
   return null

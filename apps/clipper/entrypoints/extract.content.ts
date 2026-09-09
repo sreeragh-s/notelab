@@ -22,7 +22,17 @@ function extractPage(captureMode: ClipCaptureMode): ExtractResult {
     ? fragmentHtml(selection.getRangeAt(0).cloneContents())
     : ""
   const selectionPresent = Boolean(selectionHtml.trim() || selection?.toString().trim())
-  const html =
+  const html = captureHtml(captureMode, selectionHtml, selection)
+
+  return {
+    html,
+    metadata: extractClipMetadata(document, location.href),
+    selectionPresent,
+  }
+}
+
+function captureHtml(captureMode: ClipCaptureMode, selectionHtml: string, selection: Selection | null) {
+  return (
     captureMode === "selection"
       ? selectionHtml || `<p>${escapeHtml(selection?.toString() ?? "")}</p>`
       : captureMode === "bookmark"
@@ -31,11 +41,7 @@ function extractPage(captureMode: ClipCaptureMode): ExtractResult {
           ? document.body?.innerHTML ?? ""
           : articleHtml()
 
-  return {
-    html,
-    metadata: extractClipMetadata(document, location.href),
-    selectionPresent,
-  }
+  )
 }
 
 function articleHtml() {
