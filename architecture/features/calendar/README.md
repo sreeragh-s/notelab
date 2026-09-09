@@ -36,7 +36,7 @@ The lazy `/calendar` screen uses the existing workspace shell and shared control
 
 ## Views and time
 
-The Calendar schedule composes account cache subscriptions into day/week grids, month cells and an agenda. Date/view and scoped event selection live in route search parameters. Event details render provider descriptions as text. [Time utilities](../../../packages/features/src/calendar/time.ts) use Temporal for IANA conversion, reject ambiguous/nonexistent input unless explicitly disambiguated, and preserve date-only all-day values. Overlap intervals are end-exclusive.
+The Calendar schedule composes account cache subscriptions into day/week grids, month cells and an agenda. Date/view and scoped event selection live in route search parameters. Day and Week use the [period scroller](../../../apps/web/src/features/calendar/views/calendar-period-scroller.tsx) to snap horizontally between adjacent periods, update the route after scrolling settles, and retain the vertical time position. The schedule loads the adjacent periods into the same bounded cache range. The fixed-height center pane gives Day, Week, Month and Agenda their own vertical scroll area; time-grid headers stay sticky while scrolling. Event details render provider descriptions as text. [Time utilities](../../../packages/features/src/calendar/time.ts) use Temporal for IANA conversion, reject ambiguous/nonexistent input unless explicitly disambiguated, and preserve date-only all-day values. Overlap intervals are end-exclusive.
 
 ## Event writes
 

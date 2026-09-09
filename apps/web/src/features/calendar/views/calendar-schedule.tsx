@@ -1,6 +1,6 @@
 import { CalendarEventSheet } from "./calendar-event-sheet";
 import { CalendarStatus } from "./calendar-status";
-import { CalendarTimeGrid } from "./calendar-time-grid";
+import { CalendarPeriodScroller } from "./calendar-period-scroller";
 import { CalendarMonthView } from "./calendar-month-view";
 import { runCalendarMutation } from "../events/calendar-mutations";
 import { toast } from "sonner";
@@ -29,8 +29,11 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
   const gridScroll = useRef<HTMLDivElement>(null);
   const search = useSearch({ from: "/app/calendar" }), navigate = useNavigate();
   const view = search.view ?? preferences.view, date = search.date ?? todayInZone(preferences.timeZone);
-  useEffect(() => { if (gridScroll.current) gridScroll.current.scrollTop = 7 * 48 }, [view, date]);
+  useEffect(() => { if (gridScroll.current) gridScroll.current.scrollTop = 7 * 48 }, [view]);
   const allDays = useMemo(() => calendarDays(date, view, preferences.weekStartsOn), [date, view, preferences.weekStartsOn]);
+  const periods = useMemo(() => [-1, 0, 1].map(direction => calendarDays(shiftCalendarPeriod(date, view, direction), view, preferences.weekStartsOn).filter(day => preferences.showWeekends || view === "day" || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()))), [date, view, preferences.weekStartsOn, preferences.showWeekends]);
+  const loadedDays = view === "day" || view === "week" ? periods.flat() : allDays;
+  const cacheStart = dayInstant(loadedDays[0]!, preferences.timeZone), cacheEnd = dayInstant(addCalendarDays(loadedDays.at(-1)!, 1), preferences.timeZone);
   const days = allDays.filter(day => preferences.showWeekends || view === "day" || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()));
   const start = dayInstant(allDays[0]!, preferences.timeZone), end = dayInstant(addCalendarDays(allDays.at(-1)!, 1), preferences.timeZone);
   const [snapshots, setSnapshots] = useState<Record<string, Snapshot>>({}), [query, setQuery] = useState(""), [selected, setSelected] = useState<CalendarEvent | null>(null);
@@ -66,13 +69,13 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
   }, [query, online, start, end, connections, preferences.hiddenCalendarKeys]);
   const visible = query ? (searchEvents ?? events.filter(e => `${e.title} ${e.description} ${e.location}`.toLowerCase().includes(query.toLowerCase()))) : events;
   const eventsByDay = useMemo(() => {
-    const periods = days.map(day => ({ day, start: Date.parse(dayInstant(day, preferences.timeZone)), end: Date.parse(dayInstant(addCalendarDays(day, 1), preferences.timeZone)), events: [] as CalendarEvent[] }));
+    const periods = loadedDays.map(day => ({ day, start: Date.parse(dayInstant(day, preferences.timeZone)), end: Date.parse(dayInstant(addCalendarDays(day, 1), preferences.timeZone)), events: [] as CalendarEvent[] }));
     for (const event of visible) {
       const from = Date.parse(eventInstant(event.start, preferences.timeZone)), until = Date.parse(eventInstant(event.end, preferences.timeZone));
       for (const period of periods) if (from < period.end && until > period.start) period.events.push(event);
     }
     return Object.fromEntries(periods.map(period => [period.day, period.events]));
-  }, [visible, days, preferences.timeZone]);
+  }, [visible, loadedDays, preferences.timeZone]);
   const open = (event: CalendarEvent) => { setEditing(false); setCreating(false); setSelected(event); void navigate({ to: "/calendar", search: { date, view, binding: event.bindingId, calendar: event.calendarId, event: event.eventId } }) };
   const create = (day = date, hour = 9, duration = 30) => {
     const writable = data.flatMap(d => d.calendars).filter(c => c.permissions.write);
@@ -96,13 +99,13 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
   const selection = selectionData(selected, snapshots, connections);
   const card = (event: CalendarEvent) => <Button key={calendarEventKey(event)} draggable={view === "month" && online && !event.start.date} onDragStart={e => e.dataTransfer.setData("text/calendar-event", calendarEventKey(event))} variant="ghost" className={`h-auto w-full justify-start overflow-hidden rounded-sm px-1.5 py-1 text-left text-xs font-normal ${color(event).backgroundClass} ${color(event).textClass}`} onClick={() => open(event)} title={event.title}><span className="truncate">{!event.start.date && <span className="mr-1 text-content-secondary">{eventClock(event.start, preferences.timeZone, preferences.timeFormat)}</span>}{event.title}</span></Button>;
   return <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-    {connections.map(c => <AccountData key={c.bindingId} connection={c} userId={userId} start={start} end={end} onData={onData} />)}
-    <div className="flex flex-wrap items-center gap-2 border-b border-stroke-default p-3"><Button variant="outline" onClick={() => setPeriod(todayInZone(preferences.timeZone))}>Today</Button><Button variant="ghost" size="icon" aria-label="Previous period" onClick={() => setPeriod(shiftCalendarPeriod(date, view, -1))}><ChevronLeftIcon /></Button><Button variant="ghost" size="icon" aria-label="Next period" onClick={() => setPeriod(shiftCalendarPeriod(date, view, 1))}><ChevronRightIcon /></Button>
+    {connections.map(c => <AccountData key={c.bindingId} connection={c} userId={userId} start={cacheStart} end={cacheEnd} onData={onData} />)}
+    <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-stroke-default p-3"><Button variant="outline" onClick={() => setPeriod(todayInZone(preferences.timeZone))}>Today</Button><Button variant="ghost" size="icon" aria-label="Previous period" onClick={() => setPeriod(shiftCalendarPeriod(date, view, -1))}><ChevronLeftIcon /></Button><Button variant="ghost" size="icon" aria-label="Next period" onClick={() => setPeriod(shiftCalendarPeriod(date, view, 1))}><ChevronRightIcon /></Button>
       <Popover><PopoverTrigger asChild><Button variant="ghost">{new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`))}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={new Date(`${date}T12:00:00`)} onSelect={day => { if (day) setPeriod(`${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`) }} /></PopoverContent></Popover>
       <Button disabled={!online || !data.some(d => d.calendars.some(c => c.permissions.write))} onClick={() => create()}>Create event</Button><Input className="ml-auto w-44" aria-label="Search calendar" placeholder="Search events" value={query} onChange={e => setQuery(e.target.value)} /><Select value={view} onValueChange={next => setPeriod(date, next as CalendarView)}><SelectTrigger className="w-28"><SelectValue /></SelectTrigger><SelectContent>{(["day", "week", "month", "agenda"] as const).map(v => <SelectItem key={v} value={v}>{v[0]!.toUpperCase() + v.slice(1)}</SelectItem>)}</SelectContent></Select>
     </div>
     <CalendarStatus data={data} online={online} zones={[preferences.timeZone, ...preferences.secondaryTimeZones]} error={searchError} />
-    {view === "agenda" || query ? <div className="flex-1 overflow-auto p-4">{days.map(day => { const rows = eventsByDay[day] ?? []; return <section key={day} className="mb-5"><h2 className="mb-2 text-sm font-medium">{day}</h2>{rows.length ? rows.map(card) : <p className="text-xs text-content-secondary">No events</p>}</section> })}</div> : view === "month" ? <CalendarMonthView days={days} eventsByDay={eventsByDay} preferences={preferences} online={online} writable={event => data.flatMap(d => d.calendars).some(c => c.id === event.calendarId && c.bindingId === event.bindingId && c.permissions.write)} card={card} onDay={day => setPeriod(day, "day")} onChange={event => void changeGeometry(event)} /> : <CalendarTimeGrid days={days} eventsByDay={eventsByDay} preferences={preferences} now={now} online={online} scrollRef={gridScroll} card={card} writable={event => data.flatMap(d => d.calendars).some(c => c.id === event.calendarId && c.bindingId === event.bindingId && c.permissions.write)} onDay={day => setPeriod(day, "day")} onCreate={create} onChange={event => void changeGeometry(event)} background={event => color(event).backgroundClass} />}
+    {view === "agenda" || query ? <div data-calendar-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4">{days.map(day => { const rows = eventsByDay[day] ?? []; return <section key={day} className="mb-5"><h2 className="mb-2 text-sm font-medium">{day}</h2>{rows.length ? rows.map(card) : <p className="text-xs text-content-secondary">No events</p>}</section> })}</div> : view === "month" ? <CalendarMonthView days={days} eventsByDay={eventsByDay} preferences={preferences} online={online} writable={event => data.flatMap(d => d.calendars).some(c => c.id === event.calendarId && c.bindingId === event.bindingId && c.permissions.write)} card={card} onDay={day => setPeriod(day, "day")} onChange={event => void changeGeometry(event)} /> : <CalendarPeriodScroller periods={periods} periodKey={`${view}:${date}`} onPeriod={direction => setPeriod(shiftCalendarPeriod(date, view, direction))} eventsByDay={eventsByDay} preferences={preferences} now={now} online={online} scrollRef={gridScroll} card={card} writable={event => data.flatMap(d => d.calendars).some(c => c.id === event.calendarId && c.bindingId === event.bindingId && c.permissions.write)} onDay={day => setPeriod(day, "day")} onCreate={create} onChange={event => void changeGeometry(event)} background={event => color(event).backgroundClass} />}
     <CalendarEventSheet selected={selection.event} database={selection.database} calendars={selection.calendars} online={online} editing={editing} creating={creating} zone={preferences.timeZone} timeFormat={preferences.timeFormat} onClose={() => { setSelected(null); setEditing(false); void navigate({ to: "/calendar", search: { date, view } }) }} onEdit={() => setEditing(true)} onDuplicate={() => { if (!selected) return; setSelected({ ...selected, eventId: `local-${crypto.randomUUID()}`, etag: "", title: `${selected.title} (copy)`, attendees: [], recurringEventId: undefined, originalStartTime: undefined, recurrence: undefined }); setCreating(true); setEditing(true) }} />
   </div>;
 }

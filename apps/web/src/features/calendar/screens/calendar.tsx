@@ -31,7 +31,7 @@ function CalendarWorkspace({ workspaceId }: { workspaceId: string }) {
       <PagePaneHeader className="min-w-0 flex-1" leadingControl={<MainPaneHeaderLeadingControl />} pathname="/calendar" showActions={false} />
       <Button variant="ghost" size="icon" aria-label="Calendar settings" onClick={() => setSettings(true)}><SettingsIcon /></Button>
     </PageSidePaneHeaderCell>}
-    body={<section className="flex min-h-0 flex-1 flex-col bg-surface-canvas text-content-primary" aria-label="Calendar">
+    body={<section className="flex h-full min-h-0 flex-1 flex-col bg-surface-canvas text-content-primary" aria-label="Calendar">
       {accounts.isPending ? <div className="p-6"><Skeleton className="h-24 w-full" /></div>
         : accounts.error ? <div role="alert" className="p-6"><p>{getApiErrorMessage(accounts.error)}</p><Button variant="outline" onClick={() => void accounts.refetch()}>Retry</Button></div>
         : !accounts.data?.connections.length ? <main className="grid min-h-0 flex-1 place-items-center px-6">

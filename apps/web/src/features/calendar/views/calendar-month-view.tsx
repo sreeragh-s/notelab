@@ -37,5 +37,5 @@ function CalendarMonthWeek(props: MonthProps) {
 }
 export function CalendarMonthView(props: MonthProps) {
   const columns = props.preferences.showWeekends ? 7 : 5, weeks = Array.from({ length: Math.ceil(props.days.length / columns) }, (_, i) => props.days.slice(i * columns, (i + 1) * columns));
-  return <div className="min-h-0 flex-1 overflow-auto">{weeks.map(days => <CalendarMonthWeek key={days[0]} {...props} days={days} />)}</div>;
+  return <div data-calendar-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">{weeks.map(days => <CalendarMonthWeek key={days[0]} {...props} days={days} />)}</div>;
 }

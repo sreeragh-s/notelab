@@ -103,3 +103,37 @@ test("realtime heartbeats and scoped invalidation refresh ranges", async ({ page
   socket.send(JSON.stringify({ type: "calendar.invalidate", workspaceId: "workspace", bindingId: "binding", calendarId: "primary", generation: 1, revision: 2 }));
   await expect.poll(() => ranges).toBeGreaterThan(0);
 });
+
+for (const view of ["day", "week"]) {
+  test(`${view} snaps between periods and preserves the vertical time position`, async ({ page }) => {
+    await page.evaluate(view => window.calendarFixture.navigate(view), view);
+    const pager = page.locator("[data-calendar-period-scroll]");
+    const activeGrid = page.locator('[data-calendar-period-scroll] > [aria-hidden="false"] [data-calendar-scroll]');
+    await expect(pager).toBeVisible();
+    await activeGrid.evaluate(element => { element.scrollTop = 240 });
+    await activeGrid.hover();
+    await page.mouse.wheel(await pager.evaluate(element => element.clientWidth), 0);
+    const nextDate = view === "day" ? "2026-09-10" : "2026-09-14";
+    await expect(page.getByRole("button", { name: `Create event ${nextDate} 9:00`, exact: true })).toBeAttached();
+    await expect.poll(() => activeGrid.evaluate(element => element.scrollTop)).toBe(240);
+    await expect.poll(() => pager.evaluate(element => Math.abs(element.scrollLeft - element.clientWidth))).toBeLessThan(2);
+    await pager.evaluate(element => element.scrollTo({ left: 0, behavior: "smooth" }));
+    const originalDate = view === "day" ? "2026-09-09" : "2026-09-07";
+    await expect(page.getByRole("button", { name: `Create event ${originalDate} 9:00`, exact: true })).toBeAttached();
+    await expect.poll(() => activeGrid.evaluate(element => element.scrollTop)).toBe(240);
+  });
+}
+
+test("every calendar view scrolls vertically in a short viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 480 });
+  for (const view of ["day", "week", "month", "agenda"]) {
+    await page.evaluate(view => window.calendarFixture.navigate(view), view);
+    const scroll = view === "day" || view === "week"
+      ? page.locator('[data-calendar-period-scroll] > [aria-hidden="false"] [data-calendar-scroll]')
+      : page.locator("[data-calendar-scroll]");
+    await expect(scroll).toBeVisible();
+    await expect.poll(() => scroll.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+    await scroll.evaluate(element => { element.scrollTop = 100 });
+    await expect.poll(() => scroll.evaluate(element => element.scrollTop)).toBe(100);
+  }
+});
