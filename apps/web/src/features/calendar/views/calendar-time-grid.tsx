@@ -7,7 +7,7 @@ export function TimeAxis({ day, preferences }: { day: string; preferences: Calen
   const zones = [preferences.timeZone, ...preferences.secondaryTimeZones];
   return <div>{Array.from({ length: 24 }, (_, hour) => <div key={hour} className="flex h-12 text-[10px] text-content-secondary">{zones.map(zone => <div className="w-14 pr-2 text-right" key={zone}>{eventClock({ dateTime: wallTime(day, `${String(hour).padStart(2, "0")}:00`, preferences.timeZone, "earlier"), timeZone: zone }, zone, preferences.timeFormat)}</div>)}</div>)}</div>;
 }
-function TimeGridDay(props: GridProps & { day: string; axisWidth: number }) {
+function TimeGridDay(props: GridProps & { day: string }) {
   const { day, preferences } = props, slot = useRef<{ y: number; hour: number } | null>(null);
   const dayWidth = (props.scrollRef.current?.clientWidth ?? 800) / props.days.length;
   const clock = new Intl.DateTimeFormat("en-GB", { timeZone: preferences.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(props.now)).split(":");
@@ -16,16 +16,15 @@ function TimeGridDay(props: GridProps & { day: string; axisWidth: number }) {
     {day === todayInZone(preferences.timeZone) && <div className="pointer-events-none absolute inset-x-0 border-t border-feedback-danger-text" style={{ top: (Number(clock[0]) * 60 + Number(clock[1])) * .8 }} />}
   </div>;
 }
-export function CalendarTimeGridHeader(props: GridProps) {
+export function CalendarTimeGridHeader(props: GridProps & { visibleDayCount: number }) {
   const { preferences, days } = props;
-  const axisWidth = 56 * (1 + preferences.secondaryTimeZones.length);
-  return <div data-calendar-grid-header className="z-20 grid shrink-0 border-b border-stroke-default bg-surface-canvas" style={{ gridTemplateColumns: `${axisWidth}px repeat(${days.length}, minmax(0, 1fr))` }}>
-    <div data-calendar-zone-labels className="flex text-[10px] text-content-secondary">{[preferences.timeZone, ...preferences.secondaryTimeZones].map(zone => <span key={zone} title={zone} className="w-14 truncate p-1">{zone.split("/").at(-1)}</span>)}</div>
-    {days.map(day => <div key={day} className="min-w-0 border-l border-stroke-default p-1"><Button size="sm" variant="ghost" className="w-full" onClick={() => props.onDay(day)}>{new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`))}</Button>{(props.eventsByDay[day] ?? []).filter(event => event.start.date).map(event => <DraggableEvent key={calendarEventKey(event)} event={event} zone={preferences.timeZone} dayWidth={(props.scrollRef.current?.clientWidth ?? 800) / days.length} disabled={!props.online || !props.writable(event)} onChange={props.onChange}>{props.card(event)}</DraggableEvent>)}</div>)}
+  return <div className="grid bg-surface-canvas" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}>
+    {days.map(day => <div data-calendar-date-header={day} key={day} className="min-w-0 border-l border-stroke-default p-1"><Button size="sm" variant="ghost" className="w-full" onClick={() => props.onDay(day)}>{new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`))}</Button></div>)}
+    {days.map(day => <div data-calendar-all-day={day} key={`all-day:${day}`} className="min-h-8 min-w-0 border-l border-t border-stroke-default p-1"><div className="grid max-h-24 gap-1 overflow-y-auto">{(props.eventsByDay[day] ?? []).filter(event => event.start.date).map(event => <DraggableEvent key={calendarEventKey(event)} event={event} zone={preferences.timeZone} dayWidth={(props.scrollRef.current?.clientWidth ?? 800) / props.visibleDayCount} disabled={!props.online || !props.writable(event)} onChange={props.onChange}>{props.card(event)}</DraggableEvent>)}</div></div>)}
   </div>;
 }
 export function CalendarTimeGrid(props: GridProps) {
   return <div data-calendar-scroll ref={props.scrollRef} onScroll={event => props.onScroll?.(event.currentTarget.scrollTop)} className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain [scrollbar-width:none]">
-    <div className="grid" style={{ gridTemplateColumns: `repeat(${props.days.length}, minmax(0, 1fr))` }}>{props.days.map(day => <TimeGridDay key={day} {...props} day={day} axisWidth={0} />)}</div>
+    <div className="grid" style={{ gridTemplateColumns: `repeat(${props.days.length}, minmax(0, 1fr))` }}>{props.days.map(day => <TimeGridDay key={day} {...props} day={day} />)}</div>
   </div>;
 }

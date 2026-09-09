@@ -108,7 +108,7 @@ for (const view of ["day", "week"]) {
   test(`${view} snaps between periods and preserves the vertical time position`, async ({ page }) => {
     await page.evaluate(view => window.calendarFixture.navigate(view), view);
     const pager = page.locator("[data-calendar-period-scroll]");
-    const activeGrid = page.locator('[data-calendar-period-scroll] > [aria-hidden="false"] [data-calendar-scroll]');
+    const activeGrid = page.locator('[data-calendar-period="1"] [data-calendar-scroll]');
     await expect(pager).toBeVisible();
     await activeGrid.evaluate(element => { element.scrollTop = 240 });
     await activeGrid.hover();
@@ -129,7 +129,7 @@ test("every calendar view scrolls vertically in a short viewport", async ({ page
   for (const view of ["day", "week", "month", "agenda"]) {
     await page.evaluate(view => window.calendarFixture.navigate(view), view);
     const scroll = view === "day" || view === "week"
-      ? page.locator('[data-calendar-period-scroll] > [aria-hidden="false"] [data-calendar-scroll]')
+      ? page.locator('[data-calendar-period="1"] [data-calendar-scroll]')
       : page.locator("[data-calendar-scroll]");
     await expect(scroll).toBeVisible();
     await expect.poll(() => scroll.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
@@ -156,7 +156,7 @@ for (const view of ["day", "week"]) test(`${view} pins headers and timezone rail
   await page.evaluate(view => window.calendarFixture.navigate(view), view);
   const header = page.locator("[data-calendar-grid-header]"), axis = page.locator("[data-calendar-time-axis]"), pager = page.locator("[data-calendar-period-scroll]");
   const headerBox = await header.boundingBox(), axisBox = await axis.boundingBox();
-  const active = page.locator('[data-calendar-period-scroll] > [aria-hidden="false"] [data-calendar-scroll]');
+  const active = page.locator('[data-calendar-period="1"] [data-calendar-scroll]');
   await active.evaluate(element => { element.scrollTop = 240 });
   await expect.poll(() => axis.evaluate(element => element.scrollTop)).toBe(240);
   await pager.evaluate(element => { element.scrollLeft = element.clientWidth * 2 });
@@ -331,4 +331,29 @@ test("the entire event card opens unified details with expandable participants",
     await page.evaluate(mode => document.documentElement.classList.toggle('dark', mode === 'dark'), mode);
     await page.screenshot({ animations: 'disabled', path: `.dev/calendar-e2e-results/event-details-${mode}.png` });
   }
+});
+
+
+test("week snaps by day and moves dates and all-day cells with the grid", async ({ page }) => {
+  const holiday = { ...event, eventId: 'holiday', title: 'All-day holiday', start: { date: '2026-09-09' }, end: { date: '2026-09-10' } };
+  await page.route('**/ranges?**', route => { const url = new URL(route.request().url()); return route.fulfill({ json: { calendarId: 'primary', start: url.searchParams.get('start'), end: url.searchParams.get('end'), generation: 2, revision: 10, events: [event, holiday], complete: true, nextPageToken: null } }); });
+  await page.reload();
+  const pager = page.locator('[data-calendar-period-scroll]');
+  const active = page.locator('[data-calendar-period="1"] [data-calendar-scroll]');
+  const header = page.locator('[data-calendar-date-header="2026-09-09"]');
+  const allDay = page.locator('[data-calendar-all-day="2026-09-09"]');
+  const slot = page.getByRole('button', { name: 'Create event 2026-09-09 9:00', exact: true });
+  await expect(page.getByText('All-day', { exact: true })).toBeVisible();
+  await expect(allDay.getByRole('button', { name: 'All-day holiday', exact: true })).toBeVisible();
+  const before = await header.boundingBox();
+  await pager.evaluate(element => { element.style.scrollSnapType = 'none'; element.scrollLeft += element.clientWidth / 14; });
+  await expect.poll(async () => Math.abs((await header.boundingBox()).x - (await slot.boundingBox()).x)).toBeLessThan(2);
+  expect((await header.boundingBox()).x).toBeLessThan(before.x - 20);
+  await expect.poll(async () => Math.abs((await allDay.boundingBox()).x - (await slot.boundingBox()).x)).toBeLessThan(2);
+  await pager.evaluate(element => { element.style.scrollSnapType = ''; element.scrollTo({ left: element.clientWidth * (1 + 1 / 7), behavior: 'smooth' }); });
+  await expect.poll(() => pager.evaluate(element => Math.abs(element.scrollLeft - element.clientWidth * (1 + 1 / 7)))).toBeLessThan(2);
+  await active.evaluate(element => { element.scrollTop = 400; });
+  expect((await header.boundingBox()).y).toBe(before.y);
+  await expect(page.getByText('All-day', { exact: true })).toBeVisible();
+  await page.screenshot({ animations: 'disabled', path: '.dev/calendar-e2e-results/day-column-scroll.png' });
 });

@@ -10,6 +10,7 @@ type Props = Omit<ComponentProps<typeof CalendarTimeGrid>, "days" | "onScroll"> 
 
 export function CalendarPeriodScroller({ periods, periodKey, onPeriod, ...grid }: Props) {
   const axis = useRef<HTMLDivElement>(null);
+  const header = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const adjacent = useMemo(() => [createRef<HTMLDivElement>(), createRef<HTMLDivElement>()], []);
   const settling = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -29,7 +30,8 @@ export function CalendarPeriodScroller({ periods, periodKey, onPeriod, ...grid }
     if (settling.current) clearTimeout(settling.current);
     navigating.current = false;
     element.scrollLeft = element.clientWidth;
-    const observer = new ResizeObserver(() => { element.scrollLeft = element.clientWidth; });
+    if (header.current) header.current.scrollLeft = element.scrollLeft;
+    const observer = new ResizeObserver(() => { element.scrollLeft = element.clientWidth; if (header.current) header.current.scrollLeft = element.scrollLeft; });
     observer.observe(element);
     return () => observer.disconnect();
   }, [periodKey]);
@@ -45,10 +47,16 @@ export function CalendarPeriodScroller({ periods, periodKey, onPeriod, ...grid }
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="shrink-0" onWheel={event => {
+      <div data-calendar-grid-header className="z-20 flex shrink-0 border-b border-stroke-default bg-surface-canvas" onWheel={event => {
         if (grid.scrollRef.current) grid.scrollRef.current.scrollTop += event.deltaY;
         viewport.current?.scrollBy({ left: event.deltaX });
-      }}><CalendarTimeGridHeader {...grid} days={periods[1]!} /></div>
+      }}>
+        <div className="flex shrink-0 flex-col" style={{ width: 56 * (1 + grid.preferences.secondaryTimeZones.length) }}>
+          <div data-calendar-zone-labels className="flex h-8 text-[10px] text-content-secondary">{[grid.preferences.timeZone, ...grid.preferences.secondaryTimeZones].map(zone => <span key={zone} title={zone} className="w-14 truncate p-1">{zone.split("/").at(-1)}</span>)}</div>
+          <div className="min-h-8 flex-1 border-t border-stroke-default px-1 py-1 text-right text-xs/relaxed whitespace-nowrap text-content-secondary">All-day</div>
+        </div>
+        <div ref={header} className="min-w-0 flex-1 overflow-hidden"><div className="w-[300%]"><CalendarTimeGridHeader {...grid} days={periods.flat()} visibleDayCount={periods[1]!.length} /></div></div>
+      </div>
       <div className="flex min-h-0 min-w-0 flex-1">
         <div data-calendar-time-axis ref={axis} className="shrink-0 overflow-hidden bg-surface-canvas" style={{ width: 56 * (1 + grid.preferences.secondaryTimeZones.length) }} onWheel={event => { if (grid.scrollRef.current) grid.scrollRef.current.scrollTop += event.deltaY; }}>
           <TimeAxis day={periods[1]![0]!} preferences={grid.preferences} />
@@ -59,7 +67,9 @@ export function CalendarPeriodScroller({ periods, periodKey, onPeriod, ...grid }
       data-calendar-period-scroll
       className="flex min-h-0 min-w-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain"
       onScroll={event => {
-        if (event.target !== event.currentTarget || navigating.current) return;
+        if (event.target !== event.currentTarget) return;
+        if (header.current) header.current.scrollLeft = event.currentTarget.scrollLeft;
+        if (navigating.current) return;
         if (Math.abs(event.currentTarget.scrollLeft - event.currentTarget.clientWidth) > 2) setPreparedPeriod(periodKey);
         if (settling.current) clearTimeout(settling.current);
         settling.current = setTimeout(() => {
@@ -73,7 +83,8 @@ export function CalendarPeriodScroller({ periods, periodKey, onPeriod, ...grid }
       }}
     >
       {periods.map((days, index) => (
-        <div key={index} aria-hidden={index !== 1} inert={index !== 1} className="flex h-full min-h-0 w-full min-w-0 shrink-0 snap-start snap-always flex-col">
+        <div key={index} data-calendar-period={index} aria-hidden={index !== 1 && preparedPeriod !== periodKey} inert={index !== 1 && preparedPeriod !== periodKey} className="relative flex h-full min-h-0 w-full min-w-0 shrink-0 flex-col">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex">{days.map(day => <div key={day} className="h-full min-w-0 flex-1 snap-start" />)}</div>
           {(index === 1 || preparedPeriod === periodKey) && <CalendarTimeGrid {...grid} days={days} scrollRef={index === 1 ? grid.scrollRef : adjacent[index === 0 ? 0 : 1]!} onScroll={syncVerticalScroll} />}
         </div>
       ))}
