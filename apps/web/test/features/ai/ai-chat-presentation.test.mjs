@@ -47,7 +47,7 @@ export function register({ readSource, assert, test }) {
     const headerSource = await readSource("/src/app/shell/content/app-header.tsx")
     const sidePaneSource = await readSource("/src/features/pages/pane/page-side-pane.tsx")
 
-    assert.match(layoutSource, /chatSidebarOpen \|\| isAiPage \|\| Boolean\(agentId\) \|\| isMailPage \? null/)
+    assert.match(layoutSource, /chatSidebarOpen \|\| isAiPage \|\| Boolean\(agentId\) \|\| pathname === "\/mail" \? null/)
     assert.match(sidePaneSource, /data-page-scroll-viewport/)
     assert.match(chatbotSource, /\[data-ai-scroll-shell\], \[data-page-scroll-viewport\]/)
     assert.match(chatbotSource, /isSidebar\s*\? undefined\s*:\s*"h-auto! overflow-visible! \[scrollbar-gutter:auto\]!"/)

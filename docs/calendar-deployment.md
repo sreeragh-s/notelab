@@ -110,3 +110,17 @@ a route-compatibility check: authentication middleware runs before routing.
 Verify an authenticated catalog request returns 200 after restarting. Do not
 suppress all 404s: missing or inaccessible provider resources still require
 attention. Cached schedules remain available during recovery.
+
+## Layout regression coverage
+
+The [Calendar browser fixture](../scripts/calendar/e2e/fixture.tsx) mounts the
+production workspace controller, padded pane header, resizable/mobile dock, and
+Calendar/AI visibility arbitration. Its AI content is a fixture; event details
+and editing use the production components. The browser suite covers topbar order
+and compact controls, eye-only visibility, muted names, action spacing, dialog
+cancellation/failure, draft retention across dock and breakpoint changes, nested
+keyboard controls, focus restoration, and scoped event deep links. It also keeps
+the snapping, pinned-header, continuous-Month, cache recovery and 1,000-event
+navigation checks. Tests intercept provider requests and do not start or restart
+the development application/API. Light/dark screenshots are emitted in the
+configured Playwright output directory for visual review.

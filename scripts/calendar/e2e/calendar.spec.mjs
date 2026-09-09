@@ -245,3 +245,62 @@ test("event deep links open the dock and explicit close clears selection", async
   await panel.getByRole('button', { name: 'Create event', exact: true }).click();
   await expect(page.getByLabel('Title', { exact: true })).toBeVisible();
 });
+
+test("dock resizes, nested controls retain Escape, and event close restores its trigger", async ({ page }) => {
+  const card = page.getByRole('button', { name: /Design review/ });
+  await card.click();
+  const panel = page.locator('[data-calendar-event-panel]');
+  const handle = page.locator('[data-slot="resizable-handle"]');
+  await expect(page.locator('#right-sidebar-dock')).not.toHaveAttribute('data-sidebar-transitioning', '');
+  const before = await panel.boundingBox(), grip = await handle.boundingBox();
+  await page.mouse.move(grip.x, grip.y + 100); await page.mouse.down();
+  await page.mouse.move(grip.x + 60, grip.y + 100, { steps: 6 }); await page.mouse.up();
+  await expect.poll(async () => (await panel.boundingBox()).width).toBeLessThan(before.width - 20);
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  expect((await page.getByLabel("Start date", { exact: true }).boundingBox()).width).toBeGreaterThan(180);
+  // A nested shared Select handles Escape without closing the event panel.
+  const select = panel.getByRole('combobox').filter({ hasNot: page.locator('[disabled]') }).last();
+  await select.click();
+  await page.keyboard.press('Escape');
+  await expect(panel).toHaveAttribute('aria-hidden', 'false');
+  for (const appearance of ['light', 'dark']) {
+    await page.evaluate(mode => document.documentElement.classList.toggle('dark', mode === 'dark'), appearance);
+    await page.screenshot({ animations: 'disabled', path: `.dev/calendar-e2e-results/dock-${appearance}.png` });
+  }
+  await page.getByRole('button', { name: 'Close calendar event panel' }).click();
+  await expect(card).toBeFocused();
+});
+
+test("superseded search failures cannot replace the current period error state", async ({ page }) => {
+  let release, failed;
+  await page.route('**/search?**', async route => {
+    const q = new URL(route.request().url()).searchParams.get('q');
+    if (q === 'old') {
+      await new Promise(resolve => { release = resolve; });
+      await route.fulfill({ status: 404, json: { message: 'Superseded search' } }); failed = true; return;
+    }
+    return route.fulfill({ json: { events: [event], nextPageToken: null } });
+  });
+  await expect(page.getByRole('button', { name: /Design review/ })).toBeVisible();
+  await page.getByRole('textbox', { name: 'Search calendar' }).fill('old');
+  await expect.poll(() => Boolean(release)).toBe(true);
+  await page.getByRole('textbox', { name: 'Search calendar' }).fill('Design');
+  await expect(page.getByRole('button', { name: /Design review/ })).toBeVisible();
+  release(); await expect.poll(() => failed).toBe(true);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test("catalog errors stay actionable while cached events survive and recovery clears them", async ({ page }) => {
+  await page.clock.install(); let socket;
+  await page.routeWebSocket('ws://localhost:1498/calendar-test-realtime', ws => { socket = ws; ws.send(JSON.stringify({ type: 'calendar.ready' })); });
+  await page.route('**/realtime-ticket', route => route.fulfill({ json: { websocketUrl: 'ws://localhost:1498/calendar-test-realtime', websocketProtocols: [], expiresAt: new Date(Date.now() + 300000).toISOString() } }));
+  await page.reload(); await expect(page.getByRole('button', { name: /Design review/ })).toBeVisible();
+  await expect.poll(() => Boolean(socket)).toBe(true);
+  await page.route('**/catalog', route => route.fulfill({ status: 404, json: { message: 'Calendar catalog unavailable' } }));
+  socket.send(JSON.stringify({ type: 'calendar.invalidate', workspaceId: 'workspace', bindingId: 'binding', calendarId: 'primary', generation: 1, revision: 2 }));
+  await expect(page.getByRole('alert')).toContainText('Calendar catalog unavailable');
+  await expect(page.getByRole('button', { name: /Design review/ })).toBeVisible();
+  await page.clock.fastForward(70_000);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Design review/ })).toBeVisible();
+});

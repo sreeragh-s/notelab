@@ -8,7 +8,7 @@ function useWorkspaceState() {
   const actions = useRef<PanelActions | null>(null);
   const trigger = useRef<HTMLElement | null>(null);
   const openPanel = useCallback(() => {
-    if (document.activeElement instanceof HTMLElement && !document.activeElement.closest("[data-calendar-event-panel]")) trigger.current = document.activeElement;
+    if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body && !document.activeElement.closest("[data-calendar-event-panel]")) trigger.current = document.activeElement;
     setPanelOpen(true);
   }, []);
   const closePanel = useCallback(() => {
@@ -17,7 +17,7 @@ function useWorkspaceState() {
   }, []);
   const suspendPanel = useCallback(() => setPanelOpen(false), []);
   const register = useCallback((value: PanelActions) => { actions.current = value; return () => { actions.current = null; }; }, []);
-  const reset = useCallback(() => { setPanelOpen(false); setQuery(""); actions.current = null; }, []);
+  const reset = useCallback(() => { setPanelOpen(false); setQuery(""); actions.current = null; trigger.current = null; }, []);
   const create = useCallback(() => actions.current?.create(), []);
   return useMemo(() => ({ panelElement, query, setQuery, panelOpen, openPanel, closePanel, suspendPanel, register, reset, create }), [panelElement, query, panelOpen, openPanel, closePanel, suspendPanel, register, reset, create]);
 }

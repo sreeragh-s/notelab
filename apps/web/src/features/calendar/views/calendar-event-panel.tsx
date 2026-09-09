@@ -29,7 +29,7 @@ export function CalendarEventPanel(props: PanelProps) {
       <h2 ref={heading} tabIndex={-1} className="min-w-0 flex-1 truncate text-sm font-medium outline-none">{event?.title || "Calendar event"}</h2>
       <Button variant="ghost" size="icon" aria-label="Close calendar event panel" onClick={props.onClose}><XIcon /></Button>
     </header>
-    <div className="min-h-0 flex-1 overflow-y-auto p-5">{event ? props.editing && props.database ? <EventEditor key={event.eventId} event={event} database={props.database} calendars={props.calendars} online={props.online} isNew={props.creating} onSaved={props.onClose} /> : <EventDetails {...props} selected={event} /> : <div className="grid gap-3 text-sm"><p className="text-content-secondary">Select an event to see its details.</p><Button onClick={workspace.create}>Create event</Button></div>}</div>
+    <div className="@container min-h-0 flex-1 overflow-y-auto p-5">{event ? props.editing && props.database ? <EventEditor key={event.eventId} event={event} database={props.database} calendars={props.calendars} online={props.online} isNew={props.creating} onSaved={props.onClose} /> : <EventDetails {...props} selected={event} /> : <div className="grid gap-3 text-sm"><p className="text-content-secondary">Select an event to see its details.</p><Button onClick={workspace.create}>Create event</Button></div>}</div>
   </div>, workspace.panelElement);
 }
 

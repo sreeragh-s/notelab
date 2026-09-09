@@ -178,12 +178,12 @@ test.skipIf(!enabled)("catalog refresh is mounted, scoped, and provider-independ
   vi.stubGlobal("fetch", fetchSpy);
   try {
     const path = `/workspaces/${workspaceId}/calendar/connections/${binding!.id}/catalog`;
-    const response = await runWithDb(database!, () => app.request(path));
+    const response = await runWithDb(database!, async () => app.request(path));
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.calendars).toEqual(expect.arrayContaining([expect.objectContaining({ id: "primary", bindingId: binding!.id })]));
     identity = otherUser;
-    expect((await runWithDb(database!, () => app.request(path))).status).toBe(404);
+    expect((await runWithDb(database!, async () => app.request(path))).status).toBe(404);
     expect(fetchSpy).not.toHaveBeenCalled();
   } finally { vi.unstubAllGlobals(); }
 });
