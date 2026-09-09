@@ -1,5 +1,5 @@
 import { createRef, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { CalendarTimeGrid } from "./calendar-time-grid";
+import { CalendarTimeGrid, CalendarTimeGridHeader, TimeAxis } from "./calendar-time-grid";
 import type { ComponentProps } from "react";
 
 type Props = Omit<ComponentProps<typeof CalendarTimeGrid>, "days" | "onScroll"> & {
@@ -9,6 +9,7 @@ type Props = Omit<ComponentProps<typeof CalendarTimeGrid>, "days" | "onScroll"> 
 };
 
 export function CalendarPeriodScroller({ periods, periodKey, onPeriod, ...grid }: Props) {
+  const axis = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const adjacent = useMemo(() => [createRef<HTMLDivElement>(), createRef<HTMLDivElement>()], []);
   const settling = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -17,7 +18,7 @@ export function CalendarPeriodScroller({ periods, periodKey, onPeriod, ...grid }
   const onPeriodRef = useRef(onPeriod);
   onPeriodRef.current = onPeriod;
   const syncVerticalScroll = (top: number) => {
-    for (const ref of [adjacent[0]!, grid.scrollRef, adjacent[1]!]) {
+    for (const ref of [axis, adjacent[0]!, grid.scrollRef, adjacent[1]!]) {
       if (ref.current && ref.current.scrollTop !== top) ref.current.scrollTop = top;
     }
   };
@@ -43,6 +44,15 @@ export function CalendarPeriodScroller({ periods, periodKey, onPeriod, ...grid }
   useEffect(() => () => { if (settling.current) clearTimeout(settling.current); }, []);
 
   return (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="shrink-0" onWheel={event => {
+        if (grid.scrollRef.current) grid.scrollRef.current.scrollTop += event.deltaY;
+        viewport.current?.scrollBy({ left: event.deltaX });
+      }}><CalendarTimeGridHeader {...grid} days={periods[1]!} /></div>
+      <div className="flex min-h-0 min-w-0 flex-1">
+        <div data-calendar-time-axis ref={axis} className="shrink-0 overflow-hidden bg-surface-canvas" style={{ width: 56 * (1 + grid.preferences.secondaryTimeZones.length) }} onWheel={event => { if (grid.scrollRef.current) grid.scrollRef.current.scrollTop += event.deltaY; }}>
+          <TimeAxis day={periods[1]![0]!} preferences={grid.preferences} />
+        </div>
     <div
       ref={viewport}
       aria-label="Calendar periods"
@@ -67,6 +77,8 @@ export function CalendarPeriodScroller({ periods, periodKey, onPeriod, ...grid }
           {(index === 1 || preparedPeriod === periodKey) && <CalendarTimeGrid {...grid} days={days} scrollRef={index === 1 ? grid.scrollRef : adjacent[index === 0 ? 0 : 1]!} onScroll={syncVerticalScroll} />}
         </div>
       ))}
+    </div>
+      </div>
     </div>
   );
 }
