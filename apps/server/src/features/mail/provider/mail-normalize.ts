@@ -100,6 +100,24 @@ export function parseMailAddresses(value?: string): MailAddress[] {
   })
 }
 
+function attachmentContentId(current: GmailPart) {
+  return headerValue(current, "content-id")?.replace(/^<|>$/g, "") ?? null
+}
+
+function attachmentMetadata(current: GmailPart, messageId: string, path: string): MailAttachmentMetadata {
+  const body = current.body ?? {}
+  const contentId = attachmentContentId(current)
+  return {
+    attachmentId: body.attachmentId ?? `local_part_${path}`,
+    contentId,
+    filename: current.filename?.trim() || "attachment",
+    inline: Boolean(contentId) || (headerValue(current, "content-disposition") ?? "").toLowerCase().startsWith("inline"),
+    messageId,
+    mimeType: current.mimeType ?? "application/octet-stream",
+    size: body.size ?? 0,
+  }
+}
+
 function collectMessageContent(part: GmailPart | undefined, messageId: string, includeBody: boolean) {
   const attachments: MailAttachmentMetadata[] = []
   let complete = true
@@ -116,16 +134,7 @@ function collectMessageContent(part: GmailPart | undefined, messageId: string, i
         if (current.mimeType === "text/plain" && text === null) text = decoded
       }
     } else if (current.body?.attachmentId || (current.body?.data !== undefined && (filename || headerValue(current, "content-disposition") || headerValue(current, "content-id")))) {
-      const contentId = headerValue(current, "content-id")?.replace(/^<|>$/g, "") ?? null
-      attachments.push({
-        attachmentId: current.body.attachmentId ?? `local_part_${path}`,
-        contentId,
-        filename: filename || "attachment",
-        inline: Boolean(contentId) || headerValue(current, "content-disposition")?.toLowerCase().startsWith("inline") === true,
-        messageId,
-        mimeType: current.mimeType ?? "application/octet-stream",
-        size: current.body.size ?? 0,
-      })
+      attachments.push(attachmentMetadata(current, messageId, path))
     }
     for (const [index, child] of (current.parts ?? []).entries()) walk(child, `${path}_${index}`)
   }

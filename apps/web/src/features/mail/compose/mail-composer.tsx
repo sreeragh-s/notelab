@@ -106,6 +106,14 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
     return () => window.clearTimeout(timer)
   }, [hasContent, online, serialized, sending])
 
+  const rejectSend = (error: unknown) => {
+    if (error instanceof ApiError && [400, 403, 413, 422].includes(error.status)) {
+      sendAttempt.current = null
+      operationId.current = crypto.randomUUID()
+    }
+    toast.error(getApiErrorMessage(error))
+  }
+
   const send = async () => {
     if (!online || busy.current || attachmentLoad.current) return
     busy.current = true
@@ -123,11 +131,7 @@ export function MailComposer({ onClose, onSent, onDraftChanged, online, seed, wo
       onClose()
       void Promise.resolve(onSent(response)).catch(() => toast.error("Message sent. Refresh the mailbox to update it."))
     } catch (error) {
-      if (error instanceof ApiError && [400, 403, 413, 422].includes(error.status)) {
-        sendAttempt.current = null
-        operationId.current = crypto.randomUUID()
-      }
-      toast.error(getApiErrorMessage(error))
+      rejectSend(error)
     } finally {
       busy.current = false
       setSending(false)

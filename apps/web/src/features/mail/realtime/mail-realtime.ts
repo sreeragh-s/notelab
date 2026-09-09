@@ -59,13 +59,14 @@ export function useMailRealtime(input: {
       synchronize: input.onSynchronize,
     })
 
+    const healthyPush = () => Boolean(input.pushAvailable && socket && socket.readyState === WebSocket.OPEN)
     const poll = async () => {
       if (stopped) return
       if (document.visibilityState === "visible" && navigator.onLine !== false) {
         try { pollFailures = await recover(input.pushAvailable ? 300_000 : 60_000) ? 0 : pollFailures + 1 }
         catch { pollFailures += 1 }
       }
-      if (!stopped) pollTimer = setTimeout(() => void poll(), mailPollDelay(Boolean(input.pushAvailable && socket && socket.readyState === WebSocket.OPEN), pollFailures))
+      if (!stopped) pollTimer = setTimeout(() => void poll(), mailPollDelay(healthyPush(), pollFailures))
     }
     pollTimer = setTimeout(() => void poll(), mailPollDelay(Boolean(input.pushAvailable), 0))
 

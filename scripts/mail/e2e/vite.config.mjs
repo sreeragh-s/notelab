@@ -13,7 +13,7 @@ export default defineConfig({
   envDir: false,
   plugins: [{
     name: "mail-baseline-fixture",
-    resolveId(id) { if (id === "mail-baseline") return "\0mail-baseline.tsx"; },
+    resolveId(id) { if (id === "virtual:mail-baseline") return "\0mail-baseline.tsx"; },
     async load(id) {
       if (id !== "\0mail-baseline.tsx") return;
       const source = execFileSync("git", ["show", "53498fbb^:apps/web/src/features/mail/compose/mail-composer.tsx"], { cwd: root, encoding: "utf8" })
