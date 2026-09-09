@@ -4,6 +4,7 @@ import { calendarBinding, calendarMutationReceipt, calendarNotificationOutbox, c
 import type { CalendarMutationResponse } from "@zilobase/features/calendar";
 import { CalendarProviderError } from "../provider/gateway";
 import type { CalendarMutationInput } from "./mutations";
+import { recordCalendarMetric } from "../metrics";
 export async function existingCalendarMutation(input: CalendarMutationInput, hash: string) {
   const [receipt] = await db.select().from(calendarMutationReceipt).where(eq(calendarMutationReceipt.id, input.write.operationId));
   if (!receipt) return null;
@@ -29,7 +30,7 @@ export async function failCalendarMutation(operationId: string, error: unknown) 
   const result: CalendarMutationResponse = { operationId, status: definite ? "failed" : "ambiguous", error: error instanceof CalendarProviderError ? error.code : "delivery_uncertain" };
   await db.update(calendarMutationReceipt).set({ status: result.status, result, updatedAt: new Date() }).where(eq(calendarMutationReceipt.id, operationId));
   if (definite) throw error;
-  return result;
+  recordCalendarMetric("ambiguous_write", 1, "failure"); return result;
 }
 export async function completeCalendarMutation(accountId: string, calendarId: string, result: CalendarMutationResponse, destination?: string) {
   await db.transaction(async tx => {

@@ -73,3 +73,7 @@ Cached range coverage can be composed from adjacent snapshots, so switching from
 The month view lays multi-day bars across weekly lanes with overflow details. Day/week grids support 15-minute creation, transient drag previews and all-day resizing; provider delivery occurs on drop. Indexed day bounds and cached time formatters keep cached navigation independent of event normalization costs. Separate editor, timing, status and layout modules keep these responsibilities isolated.
 
 Provider transport and durable receipt storage are separate from mutation orchestration. Pending writes serialize by provider account across workspace bindings. Moves first persist an operation marker with an ETag fence, allowing uncertain delivery to reconcile the destination safely. Following edits at the first occurrence update the existing series. Google Meet pending/failure states remain visible without treating a saved event as lost.
+
+## Rollout and observability
+
+The authenticated configuration endpoint reports boolean readiness for independent OAuth/encryption settings, callback/webhook URLs and background/realtime capabilities. Structured server metrics and local browser custom events contain numeric measurements and outcomes only, without event or user identifiers. [The deployment runbook](../../../docs/calendar-deployment.md) documents pilot configuration, automated gates, manual Google acceptance and reversible disablement. General availability stays disabled until live web/desktop acceptance passes.

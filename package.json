@@ -82,7 +82,9 @@
     "version:set": "node scripts/release/set-version.mjs",
     "test:architecture": "node --test scripts/refactor/check-architecture.test.mjs && node scripts/refactor/check-architecture.mjs",
     "test:mail:integration": "node scripts/mail/test-integration.mjs",
-    "test:mail:browser": "playwright test --config scripts/mail/e2e/playwright.config.mjs"
+    "test:mail:browser": "playwright test --config scripts/mail/e2e/playwright.config.mjs",
+    "test:calendar:integration": "node scripts/calendar/test-integration.mjs",
+    "test:calendar:browser": "playwright test --config scripts/calendar/e2e/playwright.config.mjs"
   },
   "dependencies": {
     "@dotenvx/dotenvx": "1.75.1",

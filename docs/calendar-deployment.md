@@ -1,0 +1,70 @@
+# Calendar v1 deployment and acceptance
+
+Calendar is a private Google Calendar client scoped to the signed-in user and selected workspace. It has independent rollout, OAuth credentials, storage and realtime protocols from Mail. The implementation is on `zilobase-calendar` in core and the cloud adapter. General availability remains disabled until the live acceptance checklist below passes.
+
+## Configure an isolated pilot
+
+1. Apply the normal additive database migrations (`npm run db:migrate`), including Calendar migrations 0087–0089. Take the normal database backup first. Do not undo migrations to disable rollout.
+2. Enable the Google Calendar API in a dedicated Google OAuth project/client. Register the exact canonical API origin plus `/calendar/oauth/google/callback` as an authorized redirect URI. Desktop uses the same web callback and then the existing `zilobase://open` handoff. Configure the normal canonical API/web origins for the deployment.
+3. Set server `CALENDAR_GOOGLE_CLIENT_ID`, `CALENDAR_GOOGLE_CLIENT_SECRET`, and `CALENDAR_TOKEN_ENCRYPTION_KEY`. The encryption key must be an independent base64-encoded 32-byte random key; keep it stable and in the deployment secret store. Mail credentials are not fallbacks. Back up the key securely; replacing it requires account reconnection.
+4. Set `CALENDAR_WEBHOOK_URL` to the publicly reachable HTTPS API origin plus `/calendar/google/webhook`. Preserve Google's `X-Goog-*` headers through the proxy. This endpoint authenticates channel secrets/resource identity; it does not use the user's browser session.
+5. Build the web client with `VITE_FEATURE_CALENDAR=true`. Set server `CALENDAR_ENABLED=true` and `CALENDAR_ENABLED_WORKSPACE_IDS` to an explicit comma-separated pilot workspace allowlist. Empty allowlists disable access. Reserve `*` for a separately approved general rollout.
+6. Keep the existing background maintenance runner active. `calendar.sync_recovery` runs every minute under the existing durable maintenance lease and advances sync, maintains watches and drains notification receipts. Node must attach `/calendar-realtime` and use the existing realtime bus; multi-instance deployments need the shared bus configuration. Proxies must support WebSocket upgrade and at least the 20-second heartbeat interval.
+7. For Cloudflare, deploy the matching adapter with its Calendar Durable Object migration, binding, background queue and cron configuration. Follow the adapter's `docs/calendar-deployment.md`; a core-only deployment cannot supply the Worker notification adapter.
+8. As a pilot user, request `GET /workspaces/:workspaceId/calendar/configuration`. All returned checks must pass. This authenticated endpoint exposes booleans only. It checks configuration presence/format and runtime capabilities; actual callback reachability and provider consent still require the live checks below.
+
+OAuth requests `openid`, `email`, `calendar.events`, `calendar.calendarlist`, and `calendar.calendars.readonly` (Calendar scopes use the `https://www.googleapis.com/auth/` prefix). Completion rejects missing required grants. Configure Google consent/test users and any required verification before expanding access. Do not log authorization codes, refresh tokens, event bodies, attendees or raw provider responses.
+
+## Automated gates
+
+Run these from core:
+
+```sh
+FALLOW_AUDIT_BASE=415caa0cbc427d2b5c81c4ed562e06064303e012 npm run verify:core
+npm run test:architecture
+npm run quality:web-bundle
+npm run verify:desktop
+npm run test:calendar:integration
+npm run test:calendar:browser
+```
+
+The integration runner creates, migrates and drops a disposable PostgreSQL database using the local Node development profile. It never runs the fixture against the application database. Browser acceptance uses an isolated fixture server and mocked provider transport with real IndexedDB, route interactions and sockets. It saves twelve theme screenshots and verifies that cached day/week/month navigation with 1,000 occurrences stays below 100 ms. These tests do not establish live Google acceptance.
+
+Run `npm run build` and `npm test` in the cloud adapter against the matching core checkout. The adapter suite includes real Worker Durable Object/socket tests. The audit base is the original core branch point (`415caa0c`), pinned because local `main` can move independently; inherited findings in older Mail/clipper work must not be mistaken for Calendar regressions. No audit thresholds are relaxed.
+
+## Live acceptance — required before general availability
+
+Use disposable calendars, two explicitly authorized Google accounts, and consenting test invitees. Record runtime/version, date, expected behavior and observed result for every row. Run the web checks on both Node and Worker deployments and the callback/notification checks on desktop.
+
+| Check | Required observation |
+| --- | --- |
+| OAuth | Connect two accounts, cancel consent, reconnect revoked credentials; web and desktop return to the correct server. Missing consent and replay fail safely. |
+| Isolation | Switch users/workspaces/accounts; neither private event contents nor cached details cross scope. Disconnect one account while the other remains usable. |
+| Views | Day/week/month/agenda, multi-day/all-day overlap, search within the displayed period, zones and DST produce consistent dates. Review all six theme families in light/dark and narrow layouts. |
+| Writes | Create, edit, duplicate, same-account move, delete, drag and resize. Exactly one write is sent on drop; offline controls are disabled. |
+| Guests and Meet | Send invitations only to consenting test users; change guests, RSVP and inspect Meet success/pending/failure. Retry a lost response without duplicate events or invitations. |
+| Recurrence | Edit one occurrence, following occurrences and the whole series; verify moved/cancelled exceptions, COUNT limits, DST and split recovery after restart. |
+| External changes | Edit/delete in Google; verify watch invalidation and local convergence. Disable push and verify provider recovery polling catches the change. |
+| Recovery | Expire tickets, interrupt sockets, suspend/resume the device, use multiple tabs, and lose connectivity. Cached periods remain readable and stale status stays explicit. |
+| Reminders | Navigate away from Calendar; one reminder appears across open tabs. Test permission denial, edited/cancelled events, wake-up and disconnect. No closed-app delivery is promised. |
+| Disable | Disable Calendar independently and confirm Mail continues working. Re-enable the pilot and verify reconnection/cache recovery. |
+
+Current automated acceptance is not a substitute for these live rows. No production deployment or live invitation delivery is part of the local implementation verification.
+
+## Operations and recovery
+
+Server metrics are structured `calendar.*` records containing only a numeric value and success/failure outcome. Browser metrics are local `zilobase:calendar:metric` custom events; an existing telemetry integration can subscribe without including identity or event data. Implemented measurements cover sync lag, cache hits, range latency, watch expiry, reconnects, throttling, ambiguous writes and reminders. Use these with the existing background runner health; configuration readiness does not prove the runner is executing.
+
+Investigate growing sync lag/watch expiry and repeated throttling before expanding the allowlist. Reconnect revoked accounts through settings. Leave ambiguous operation receipts intact: status reconciliation checks provider markers/ETags and deterministic IDs; do not generate replacement operation IDs to force a retry. Following-series edits resume their saved steps. Cached canonical data remains stale during expired-token recovery until a complete replacement generation commits.
+
+Disable access with `CALENDAR_ENABLED=false` and rebuild without `VITE_FEATURE_CALENDAR` when removing the UI. Preserve data and encryption keys for a reversible rollback. Disconnect while enabled to stop watches and remove the binding/cache; the account is removed only after its final binding is deleted. Existing short-lived realtime tickets expire; invalidation packets contain revision metadata only. Mail flags and OAuth configuration remain independent.
+
+## Supported boundaries
+
+Imported recurrence rules remain intact unless explicitly changed. Following edits support a single RRULE; complex imported rule sets require the external Google action. Following splits reset later exceptions to match Google's documented model. Search is bounded to the displayed period. Cached reading requires previously loaded periods. Provider mutations require connectivity, and system reminders require permission while an app window is running.
+
+Page/database integration, bookings, published availability, automatic blocking, offline writes, closed-app alarms, cross-account moves, bulk operations, calendar lifecycle/subscription management and ACL administration are outside v1.
+
+## References
+
+[CalendarCN](https://github.com/vmnog/calendarcn) informed interaction/layout design; no source code was copied. [Notion event workflows](https://www.notion.com/help/manage-your-calendars-and-events) and [settings](https://www.notion.com/help/notion-calendar-settings) informed product behavior. Provider rules follow Google's [incremental sync](https://developers.google.com/workspace/calendar/api/guides/sync) and [recurrence](https://developers.google.com/workspace/calendar/api/guides/recurringevents) documentation. Zilobase components and semantic tokens remain the visual source of truth.

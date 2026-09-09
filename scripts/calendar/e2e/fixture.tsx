@@ -14,3 +14,4 @@ const app = createRoute({ getParentRoute: () => root, id: "app", component: Outl
 const calendar = createRoute({ getParentRoute: () => app, path: "/calendar", validateSearch: (s: Record<string, unknown>) => s, component: () => <CalendarSchedule connections={connections} userId="user" preferences={preferences} /> });
 const router = createRouter({ routeTree: root.addChildren([app.addChildren([calendar])]), history: createMemoryHistory({ initialEntries: ["/calendar?date=2026-09-09&view=week"] }) });
 createRoot(document.getElementById("root")!).render(<QueryClientProvider client={new QueryClient()}><RouterProvider router={router} /></QueryClientProvider>);
+Object.assign(window, { calendarFixture: { navigate: (view: string, date = "2026-09-09") => router.navigate({ to: "/calendar", search: { view, date } }), offline: () => setConnectivityState("offline") } });

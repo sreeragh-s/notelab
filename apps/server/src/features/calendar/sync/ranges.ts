@@ -1,3 +1,4 @@
+import { recordCalendarMetric } from "../metrics";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../../../infrastructure/database";
@@ -21,7 +22,9 @@ async function storeSnapshot(row: Snapshot, prior: Snapshot | null) {
 export async function readCalendarRange(input: RangeInput, gateway: CalendarGateway): Promise<CalendarRangeResponse> {
   const prior = await loadSnapshot(input);
   if (prior && !prior.pageToken) return result(prior, input);
+  const began = performance.now();
   const response = await gateway.events(input.calendarId, { timeMin: input.start, timeMax: input.end, singleEvents: "true", maxResults: "500", ...(prior?.pageToken ? { pageToken: prior.pageToken } : {}) });
+  recordCalendarMetric("range_latency", performance.now() - began);
   const incoming = (response.items ?? []).map(raw => normalizeEvent(raw, { workspaceId: input.workspaceId, bindingId: input.bindingId, calendarId: input.calendarId }, input.timeZone));
   const base = prior ?? { id: crypto.randomUUID(), accountId: input.accountId, calendarId: input.calendarId, start: input.start, end: input.end, generation: input.generation, revision: input.revision, events: [] };
   const events = [...new Map([...base.events, ...incoming].map(event => [event.eventId, event])).values()];

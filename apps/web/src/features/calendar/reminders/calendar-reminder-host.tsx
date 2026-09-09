@@ -1,3 +1,4 @@
+import { emitCalendarMetric } from "../metrics";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "@zilobase/features/auth/react";
 import { useActiveWorkspaceId } from "@zilobase/features/workspaces/react";
@@ -33,6 +34,7 @@ function AccountReminders({ connection, userId, preferences }: { connection: Cal
         if (!active || !database.isOpen()) break;
         if (!await claimCalendarReminder(database, reminder, now) || !active) continue;
         const body = `${eventClock(reminder.event.start, preferences.timeZone, preferences.timeFormat)}${reminder.event.location ? ` · ${reminder.event.location}` : ""}`;
+        emitCalendarMetric("reminder", 1);
         toast(reminder.event.title, { description: body, duration: 15_000 });
         try { await deliverCalendarSystemNotification(reminder.event.title, body, reminder.key) } catch { /* In-app delivery remains available when system notifications fail. */ }
       }

@@ -1,3 +1,4 @@
+import { emitCalendarMetric } from "../metrics";
 import { calendarRecoveryDelay, validCalendarInvalidation } from "./recovery-model";
 import { calendarApiBasePath } from "@zilobase/features/calendar";
 import { apiFetch } from "@/platform/network/api";
@@ -47,6 +48,7 @@ export function startCalendarRecovery(database: CalendarDatabase, refresh: (reco
   };
   function scheduleReconnect() {
     if (stopped || !leader) return;
+    emitCalendarMetric("reconnect", 1);
     if (reconnect) clearTimeout(reconnect);
     reconnect = setTimeout(() => void connect(), Math.min(30_000, 1000 * 2 ** Math.min(reconnectAttempt++, 5)) * (0.8 + Math.random() * 0.2));
   }

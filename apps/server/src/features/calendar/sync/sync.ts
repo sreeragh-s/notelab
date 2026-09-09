@@ -1,3 +1,4 @@
+import { recordCalendarMetric } from "../metrics";
 import { and, eq, isNull, lt, or, sql, notInArray } from "drizzle-orm";
 import { db } from "../../../infrastructure/database";
 import { calendarAccount, calendarBinding, calendarEventRecord, calendarProviderCalendar, calendarNotificationOutbox } from "../../../infrastructure/database/schema";
@@ -25,6 +26,7 @@ export async function advanceCalendarSync(env: RuntimeEnv, accountId: string, ca
   const leaseId = crypto.randomUUID();
   const [state] = await db.update(calendarProviderCalendar).set({ leaseId, leaseExpiresAt: new Date(Date.now() + 60_000) }).where(and(scope, or(isNull(calendarProviderCalendar.leaseExpiresAt), lt(calendarProviderCalendar.leaseExpiresAt, new Date())))).returning();
   if (!state) return true;
+  recordCalendarMetric("sync_lag", syncLag(state.dirtyAt));
   try {
     const gateway = suppliedGateway ?? await createCalendarGateway(env, account);
     const response = await gateway.events(calendarId, syncParameters(state));
@@ -76,5 +78,6 @@ async function syncOwner(env: RuntimeEnv, accountId: string) {
 
 function syncParameters(state: { syncToken: string | null; pageToken: string | null }) { return { maxResults: "500", singleEvents: "false", showDeleted: "true", ...(state.syncToken ? { syncToken: state.syncToken } : {}), ...(state.pageToken ? { pageToken: state.pageToken } : {}) } }
 
+function syncLag(dirtyAt: Date | null) { return dirtyAt ? Math.max(0, Date.now() - dirtyAt.getTime()) : 0 }
 
 function nextSyncToken(response: { nextSyncToken?: string }, state: { syncToken: string | null }) { return response.nextSyncToken ?? state.syncToken }

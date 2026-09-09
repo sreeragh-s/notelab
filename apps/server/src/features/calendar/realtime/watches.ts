@@ -1,3 +1,4 @@
+import { recordCalendarMetric } from "../metrics";
 import { and, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "../../../infrastructure/database";
 import { calendarAccount, calendarBinding, calendarWatchChannel, calendarProviderCalendar } from "../../../infrastructure/database/schema";
@@ -53,6 +54,7 @@ export async function maintainCalendarWatches(env: RuntimeEnv) {
 
 async function retireChannels(channels: (typeof calendarWatchChannel.$inferSelect)[], desired: (string | null)[], gateway: CalendarGateway) {
       for (const channel of channels) {
+        recordCalendarMetric("watch_expiry", Math.max(0, channel.expiresAt.getTime() - Date.now()));
         const replacement = channels.some(c => c.id !== channel.id && c.calendarId === channel.calendarId && c.status === "active" && c.expiresAt > channel.expiresAt);
         if (!replacement && channel.expiresAt.getTime() > Date.now() && desired.includes(channel.calendarId)) continue;
         if (channel.resourceId) try { await gateway.request("/channels/stop", { method: "POST", body: JSON.stringify({ id: channel.id, resourceId: channel.resourceId }) }) } catch (error) { if (!(error instanceof CalendarProviderError && [404, 410].includes(error.status))) continue }

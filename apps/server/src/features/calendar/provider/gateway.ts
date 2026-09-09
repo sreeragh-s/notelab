@@ -1,3 +1,4 @@
+import { recordCalendarMetric } from "../metrics";
 import { z } from "zod";
 import type { CalendarEvent, CalendarEventTime, CalendarIdentity, CalendarRecord } from "@zilobase/features/calendar";
 export class CalendarProviderError extends Error {
@@ -21,6 +22,7 @@ export class CalendarGateway {
   async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     if (!path.startsWith("/") || path.startsWith("//")) throw new Error("Invalid Calendar provider path");
     const response = await this.fetcher(`https://www.googleapis.com/calendar/v3${path}`, { ...options, signal: AbortSignal.timeout(20_000), headers: { "content-type": "application/json", ...options.headers, authorization: `Bearer ${this.token}` } });
+    if (response.status === 429) recordCalendarMetric("throttling", 1, "failure");
     if (!response.ok) {
       const body = await response.json().catch(() => ({})) as { error?: { errors?: { reason?: string }[] } };
       throw new CalendarProviderError(response.status, body.error?.errors?.[0]?.reason ?? "provider_error", Number(response.headers.get("retry-after") ?? 0) * 1000);

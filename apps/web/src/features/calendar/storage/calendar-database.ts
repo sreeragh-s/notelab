@@ -1,3 +1,4 @@
+import { emitCalendarMetric } from "../metrics";
 import Dexie, { type EntityTable } from "dexie";
 import { calendarEventKey, eventOverlaps, type CalendarEvent, type CalendarRecord, type CalendarRangeResponse } from "@zilobase/features/calendar";
 export type CalendarCacheIdentity = { apiOrigin: string; userId: string; workspaceId: string; bindingId: string };
@@ -66,6 +67,7 @@ export async function readCalendarRangeCache(database: CalendarDatabase, calenda
     if (Date.parse(range.start) > coveredUntil) break;
     selected.push(range); coveredUntil = Date.parse(range.end); if (coveredUntil >= Date.parse(end)) break;
   }
+  emitCalendarMetric("cache_hit", coveredUntil >= Date.parse(end) ? 1 : 0);
   const ranges = selected.length ? selected : candidates;
   const state = await database.state.get(calendarId), calendar = await database.calendars.get(calendarId);
   const rows = await database.events.bulkGet([...new Set(ranges.flatMap(range => range.eventKeys))]);
