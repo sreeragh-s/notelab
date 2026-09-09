@@ -4,6 +4,19 @@ Calendar is a private Google Calendar client scoped to the signed-in user and se
 
 ## Configure an isolated pilot
 
+For source development, store encrypted Calendar credentials in core `.env.development`
+and the sibling cloud adapter's `.env.development`. Hosted production credentials
+belong in the adapter's encrypted `.env.production`; saving that file does not
+update live Workers. The deployment scripts inject Calendar secrets into both
+Workers when Calendar is enabled. Preserve existing token encryption keys.
+
+The default local Google redirect URIs are
+`http://localhost:3000/calendar/oauth/google/callback` (Node) and
+`http://127.0.0.1:3010/calendar/oauth/google/callback` (Worker). Hosted production
+uses `https://api.zilobase.com/calendar/oauth/google/callback`. These server-side
+flows do not require authorized JavaScript origins. Desktop uses the same Google
+callbacks; its application handoff is not a Google redirect URI.
+
 1. Apply the normal additive database migrations (`npm run db:migrate`), including Calendar migrations 0087–0089. Take the normal database backup first. Do not undo migrations to disable rollout.
 2. Enable the Google Calendar API in a dedicated Google OAuth project/client. Register the exact canonical API origin plus `/calendar/oauth/google/callback` as an authorized redirect URI. Desktop uses the same web callback and then the existing `zilobase://open` handoff. Configure the normal canonical API/web origins for the deployment.
 3. Set server `CALENDAR_GOOGLE_CLIENT_ID`, `CALENDAR_GOOGLE_CLIENT_SECRET`, and `CALENDAR_TOKEN_ENCRYPTION_KEY`. The encryption key must be an independent base64-encoded 32-byte random key; keep it stable and in the deployment secret store. Mail credentials are not fallbacks. Back up the key securely; replacing it requires account reconnection.
