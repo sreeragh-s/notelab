@@ -1,3 +1,5 @@
+import { CalendarWorkspaceProvider } from "@/features/calendar/workspace/calendar-workspace";
+import { CalendarToolbar } from "@/features/calendar/workspace/calendar-toolbar";
 import { ZilobaseFeaturesProvider, type ZilobaseAuthClient } from "@zilobase/features";
 import { apiFetch } from "@/platform/network/api";
 import { CalendarAccountsSidebar } from "@/features/calendar/connections/calendar-accounts-sidebar";
@@ -15,15 +17,16 @@ import "@/app/styles.css";
 setConnectivityState("online");
 const preferences = defaultCalendarPreferences("Asia/Kolkata");
 const connections = [{ workspaceId: "workspace", bindingId: "binding", accountId: "account", email: "calendar@example.test", status: "connected" as const, pushAvailable: false }];
+function FixtureSchedule(props: Parameters<typeof CalendarSchedule>[0]) { return <div className="flex min-w-0 flex-1 flex-col"><header className="flex h-12 shrink-0 justify-end px-3"><CalendarToolbar preferences={props.preferences} onSettings={() => {}} /></header><CalendarSchedule {...props} /></div>; }
 const root = createRootRoute({ component: () => <main style={{ height: "100vh" }} className="flex bg-surface-canvas text-content-primary"><Outlet /></main> });
 const app = createRoute({ getParentRoute: () => root, id: "app", component: Outlet });
 function SidebarFixture() {
   const current = useCalendarPreferences("workspace");
-  return <SidebarProvider><aside className="w-64 shrink-0 overflow-y-auto bg-surface-sidebar"><CalendarAccountsSidebar workspaceId="workspace" /><RemovedCalendars workspaceId="workspace" /></aside>{current.query.data && <CalendarSchedule connections={connections} userId="user" preferences={current.query.data} />}</SidebarProvider>;
+  return <SidebarProvider><aside className="w-64 shrink-0 overflow-y-auto bg-surface-sidebar"><CalendarAccountsSidebar workspaceId="workspace" /><RemovedCalendars workspaceId="workspace" /></aside>{current.query.data && <FixtureSchedule connections={connections} userId="user" preferences={current.query.data} />}</SidebarProvider>;
 }
-const calendar = createRoute({ getParentRoute: () => app, path: "/calendar", validateSearch: (s: Record<string, unknown>) => s, component: () => new URLSearchParams(window.location.search).has("sidebar") ? <SidebarFixture /> : <CalendarSchedule connections={connections} userId="user" preferences={preferences} /> });
+const calendar = createRoute({ getParentRoute: () => app, path: "/calendar", validateSearch: (s: Record<string, unknown>) => s, component: () => new URLSearchParams(window.location.search).has("sidebar") ? <SidebarFixture /> : <FixtureSchedule connections={connections} userId="user" preferences={preferences} /> });
 const router = createRouter({ routeTree: root.addChildren([app.addChildren([calendar])]), history: createMemoryHistory({ initialEntries: ["/calendar?date=2026-09-09&view=week"] }) });
 const queryClient = new QueryClient();
 const auth = { getSession: async () => ({ user: { id: "user" } }) } as ZilobaseAuthClient;
-createRoot(document.getElementById("root")!).render(<QueryClientProvider client={queryClient}><ZilobaseFeaturesProvider value={{ queryClient, auth, apiFetch }}><RouterProvider router={router} /></ZilobaseFeaturesProvider></QueryClientProvider>);
+createRoot(document.getElementById("root")!).render(<QueryClientProvider client={queryClient}><ZilobaseFeaturesProvider value={{ queryClient, auth, apiFetch }}><CalendarWorkspaceProvider><RouterProvider router={router} /></CalendarWorkspaceProvider></ZilobaseFeaturesProvider></QueryClientProvider>);
 Object.assign(window, { calendarFixture: { navigate: (view: string, date = "2026-09-09") => router.navigate({ to: "/calendar", search: { view, date } }), offline: () => setConnectivityState("offline") } });

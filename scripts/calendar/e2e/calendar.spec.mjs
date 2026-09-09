@@ -175,13 +175,13 @@ test("month scroll continues in both directions with bounded rows and stable anc
     await scroll.evaluate(element => { element.scrollTop = element.scrollHeight - element.clientHeight - 10 });
     await expect.poll(() => scroll.evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeGreaterThan(300);
   }
-  await expect(page.getByRole("button", { name: /2027/, exact: false }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: /2027/, exact: false }).first()).toBeVisible();
   expect(await page.locator("[data-calendar-week]").count()).toBeLessThanOrEqual(12);
   for (let index = 0; index < 8; index++) {
     await scroll.evaluate(element => { element.scrollTop = 20 });
     await expect.poll(() => scroll.evaluate(element => element.scrollTop)).toBe(596);
   }
   await page.evaluate(() => window.calendarFixture.navigate("month", "2026-09-09"));
-  await expect(page.getByRole("button", { name: "September 2026", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "September 2026", exact: true })).toBeVisible();
   await expect.poll(() => scroll.evaluate(element => element.scrollTop)).toBe(576);
 });

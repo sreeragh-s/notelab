@@ -79,3 +79,12 @@ Provider transport and durable receipt storage are separate from mutation orches
 ## Rollout and observability
 
 The authenticated configuration endpoint reports boolean readiness for independent OAuth/encryption settings, callback/webhook URLs and background/realtime capabilities. Structured server metrics and local browser custom events contain numeric measurements and outcomes only, without event or user identifiers. [The deployment runbook](../../../docs/calendar-deployment.md) documents pilot configuration, automated gates, manual Google acceptance and reversible disablement. General availability stays disabled until live web/desktop acceptance passes.
+
+## Workspace controls
+
+The [workspace controller](../../../apps/web/src/features/calendar/workspace/calendar-workspace.tsx)
+owns period-bounded search and panel actions. Date and view remain route parameters.
+The [toolbar](../../../apps/web/src/features/calendar/workspace/calendar-toolbar.tsx) is
+rendered in `PagePaneHeader`'s padded action slot, with compact search/navigation
+menus at narrow widths. The schedule renders a plain month heading and Create event;
+date picking remains in the left mini calendar.

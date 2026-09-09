@@ -1,6 +1,7 @@
+import { CalendarWorkspaceProvider } from "@/features/calendar/workspace/calendar-workspace";
 import { isFeatureEnabled } from "@/shared/config/feature-flags";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import type { Dispatch, ReactNode, SetStateAction } from "react"
+import type { ComponentProps, Dispatch, ReactNode, SetStateAction } from "react"
 import { Outlet, useNavigate, useRouter, useRouterState } from "@tanstack/react-router"
 import { ChevronsRightIcon, SidebarSimpleIcon } from "@/shared/components/icons"
 
@@ -189,7 +190,11 @@ function AppLayoutWithRoutePage({
   )
 }
 
-function AppLayoutContent({
+function AppLayoutContent(props: ComponentProps<typeof AppLayoutContentInner>) {
+  return <CalendarWorkspaceProvider><AppLayoutContentInner {...props} /></CalendarWorkspaceProvider>;
+}
+
+function AppLayoutContentInner({
   activeSettingsSection,
   children,
   isSettingsPage,
