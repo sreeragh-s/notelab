@@ -124,3 +124,15 @@ the snapping, pinned-header, continuous-Month, cache recovery and 1,000-event
 navigation checks. Tests intercept provider requests and do not start or restart
 the development application/API. Light/dark screenshots are emitted in the
 configured Playwright output directory for visual review.
+
+## Empty grid with successful range requests
+
+Check that each event in `/ranges` has structured `start` and `end` objects
+(`dateTime`/`timeZone` or `date`). A previous response mapper accidentally spread
+the request range over events, replacing these objects with range-boundary
+strings. Google snapshots remained correct, but the browser overlap filter
+could not place these malformed events. Update and restart the API, then reload
+Calendar and allow its next successful range refresh to replace affected cache
+entries. No Google reconnection or database migration is required. The integration
+suite checks provider time preservation through the response mapper and the
+same overlap/layout functions used by the browser.

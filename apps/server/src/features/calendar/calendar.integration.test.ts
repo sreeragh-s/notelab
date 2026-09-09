@@ -70,13 +70,21 @@ test.skipIf(!enabled)("sync advances only final checkpoints and range cursors is
   [state] = await database!.select().from(schema.calendarProviderCalendar);
   expect(state!.syncToken).toBe("checkpoint"); expect(state!.revision).toBe(1);
   let rangeCalls = 0;
-  const ranges = new CalendarGateway("fixture", async () => { rangeCalls++; return Response.json({ items: [], ...(rangeCalls === 1 ? { nextPageToken: "next" } : {}) }) });
+  const occurrence = { id: "range-occurrence", summary: "Weekly event", start: { dateTime: "2026-09-10T19:30:00+05:30", timeZone: "Asia/Kolkata" }, end: { dateTime: "2026-09-10T20:30:00+05:30", timeZone: "Asia/Kolkata" } };
+  const ranges = new CalendarGateway("fixture", async () => { rangeCalls++; return Response.json({ items: [occurrence], ...(rangeCalls === 1 ? { nextPageToken: "next" } : {}) }) });
   const input = { accountId: secondAccount, bindingId: binding!.id, workspaceId, calendarId: "primary", timeZone: "UTC", generation: 1, revision: 1, start: "2026-09-01T00:00:00Z", end: "2026-10-01T00:00:00Z" };
   const first = await runWithDb(database!, () => readCalendarRange(input, ranges));
   expect(first.complete).toBe(false);
   await expect(runWithDb(database!, () => readCalendarRange({ ...input, accountId: "other", pageToken: first.nextPageToken! }, ranges))).rejects.toThrow("expired_range_cursor");
   const final = await runWithDb(database!, () => readCalendarRange({ ...input, revision: 9, pageToken: first.nextPageToken! }, ranges));
   expect(final.complete).toBe(true); expect(final.revision).toBe(1);
+  expect(final.events).toHaveLength(1);
+  expect(final.events[0]!.start).toEqual(occurrence.start);
+  expect(final.events[0]!.end).toEqual(occurrence.end);
+  expect(final.events[0]).not.toHaveProperty("pageToken");
+  const { eventOverlaps, timedLayout } = await import("@zilobase/features/calendar");
+  expect(eventOverlaps(final.events[0]!, input.start, input.end, "UTC")).toBe(true);
+  expect(timedLayout(final.events, "2026-09-10", "UTC")[0]?.top).toBe(14 * 60);
 });
 
 import { mutateCalendarEvent, reconcileCalendarOperation } from "./events/mutations";

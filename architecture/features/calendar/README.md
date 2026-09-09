@@ -28,7 +28,7 @@ Calendar preference JSON also stores local color overrides and removed-calendar 
 
 [Incremental synchronization](../../../apps/server/src/features/calendar/sync/sync.ts) leases one provider page at a time, atomically commits canonical records and checkpoints, and emits a revision outbox record only at the final page. Expired tokens start a new generation; old records survive until the replacement completes. The [Calendar background handler](../../../apps/server/src/features/calendar/background.ts) advances unfinished calendars and drains committed outbox revisions immediately. Minute-based maintenance remains the durable recovery path. The existing `calendar.sync` task accepts an account/calendar pair, with a null calendar identifying a calendar-list refresh. Removed provider calendars produce a final invalidation before deletion.
 
-[Range retrieval](../../../apps/server/src/features/calendar/sync/ranges.ts) uses provider-expanded occurrences and ownership-bound, expiring snapshot cursors. Partial pages never replace complete browser ranges. Captured revisions prevent concurrent changes from being incorrectly acknowledged. Search does not change sync checkpoints.
+[Range retrieval](../../../apps/server/src/features/calendar/sync/ranges.ts) uses provider-expanded occurrences and ownership-bound, expiring snapshot cursors. Range responses rebind only workspace and binding identity; request-window fields must never overwrite an event’s structured start/end times. Partial pages never replace complete browser ranges. Captured revisions prevent concurrent changes from being incorrectly acknowledged. Search does not change sync checkpoints.
 
 ## Browser storage
 

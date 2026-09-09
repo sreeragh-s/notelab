@@ -33,5 +33,5 @@ export async function readCalendarRange(input: RangeInput, gateway: CalendarGate
   return result(row, input);
 }
 function result(row: Snapshot, input: { bindingId: string; workspaceId: string }): CalendarRangeResponse {
-  return { calendarId: row.calendarId, start: row.start, end: row.end, generation: row.generation, revision: row.revision, events: row.pageToken ? [] : row.events.map(event => ({ ...event, ...input })), complete: !row.pageToken, nextPageToken: row.pageToken ? row.id : null };
+  return { calendarId: row.calendarId, start: row.start, end: row.end, generation: row.generation, revision: row.revision, events: row.pageToken ? [] : row.events.map(event => ({ ...event, bindingId: input.bindingId, workspaceId: input.workspaceId })), complete: !row.pageToken, nextPageToken: row.pageToken ? row.id : null };
 }
