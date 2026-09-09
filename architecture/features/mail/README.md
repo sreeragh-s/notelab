@@ -18,7 +18,7 @@ Gmail accounts, bindings, index state and mail organization records are persiste
 
 ## Side effects, failures and recovery
 
-Sending, watch renewal and provider synchronization are external effects. Preserve per-user concurrency, checkpoints, receipts, reconnect_required states and duplicate-event handling. Mail routes apply private/no-store and referrer/security headers even on failures.
+Sending, watch renewal and provider synchronization are external effects. Preserve per-user concurrency, checkpoints, receipts, reconnect_required states and duplicate-event handling. Mail routes apply private/no-store and referrer/security headers even on failures. Gmail provider HTTP 403 failures remain request errors and do not mark accounts as disconnected: API configuration and policy failures do not establish credential revocation. HTTP 401 and refresh-token rejection still require reconnection. Google quota reasons in HTTP 403 and 429 responses (including multipart subresponses) become quota errors with a retry delay instead of authorization failures. Safe reads do not immediately replay quota failures. Metadata batches are limited to ten sequentially grouped requests. Index backfill advances twenty threads at a time, spaces successful advances by five seconds, and persists at least a sixty-second quota cooldown in its existing lease deadline with no owner token. Both HTTP-triggered and background advances honor that database deadline; quota failures preserve the backfill cursor.
 
 ## Focused guides
 

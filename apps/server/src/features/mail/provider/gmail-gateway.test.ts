@@ -285,3 +285,55 @@ test("attachment decoder stops oversized streams without retaining their bytes",
   )
   await assert.rejects(response.arrayBuffer(), /too large/)
 })
+
+for (const reason of ["accessNotConfigured", "domainPolicy", "forbidden"]) {
+  test(`Gmail ${reason} failure does not mark authorization revoked`, async () => {
+    const gateway = new GmailGateway("token", async () => Response.json({
+      error: { code: 403, errors: [{ reason }] },
+    }, { status: 403 }))
+    await assert.rejects(gateway.listLabels(), (error: unknown) =>
+      error instanceof GmailApiError && error.code === "provider_error" && error.status === 403,
+    )
+  })
+}
+
+test("Gmail unauthenticated requests still require reconnection", async () => {
+  const gateway = new GmailGateway("token", async () => new Response(null, { status: 401 }))
+  await assert.rejects(gateway.listLabels(), (error: unknown) =>
+    error instanceof GmailApiError && error.code === "authorization_revoked",
+  )
+})
+
+for (const reason of ["rateLimitExceeded", "userRateLimitExceeded", "dailyLimitExceeded"]) {
+  test(`Gmail 403 ${reason} reports quota without immediate replay`, async () => {
+    let calls = 0
+    const gateway = new GmailGateway("token", async () => {
+      calls++
+      return Response.json({ error: { errors: [{ reason }] } }, { status: 403, headers: { "retry-after": "120" } })
+    })
+    await assert.rejects(gateway.listLabels(), (error: unknown) => error instanceof GmailApiError && error.code === "quota_exceeded" && error.status === 429 && error.retryAfterMs === 120_000)
+    assert.equal(calls, 1)
+  })
+}
+
+test("Gmail quota in a successful batch envelope is not authorization revocation or replayed", async () => {
+  let calls = 0
+  const gateway = new GmailGateway("token", async () => {
+    calls++
+    return new Response('--batch\r\nContent-Type: application/http\r\n\r\nHTTP/1.1 403 Forbidden\r\nContent-Type: application/json\r\nRetry-After: 90\r\n\r\n{"error":{"errors":[{"reason":"rateLimitExceeded"}]}}\r\n--batch--\r\n', { headers: { "content-type": "multipart/mixed; boundary=batch" } })
+  })
+  await assert.rejects(gateway.getThreads(["thread"]), (error: unknown) => error instanceof GmailApiError && error.code === "quota_exceeded" && error.retryAfterMs === 90_000)
+  assert.equal(calls, 1)
+})
+
+test("Gmail indexing splits reads into small sequential batches", async () => {
+  const sizes: number[] = []
+  const gateway = new GmailGateway("token", async (_input, init) => {
+    const ids = [...String(init?.body).matchAll(/GET \/gmail\/v1\/users\/me\/threads\/([^?]+)\?/g)].map(match => match[1])
+    sizes.push(ids.length)
+    return new Response(ids.map(id => `--batch\r\nContent-Type: application/http\r\n\r\nHTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n${JSON.stringify({ id, messages: [] })}\r\n`).join("") + "--batch--\r\n", { headers: { "content-type": "multipart/mixed; boundary=batch" } })
+  })
+  const threads = await gateway.getThreads(Array.from({ length: 21 }, (_, i) => `thread-${i}`))
+  assert.deepEqual(sizes, [10, 10, 1])
+  assert.equal(threads.length, 21)
+})
