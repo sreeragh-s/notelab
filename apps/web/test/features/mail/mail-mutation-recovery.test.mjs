@@ -1,4 +1,20 @@
 export function register({ assert, loadModule, test }) {
+  test("cursor recovery preserves other folders and queues their verification", async () => {
+    const fake = await import("fake-indexeddb")
+    globalThis.indexedDB = fake.indexedDB
+    globalThis.IDBKeyRange = fake.IDBKeyRange
+    const { applyMailSyncResponse, openMailDatabase, destroyMailDatabase } = await loadModule("/apps/web/test/features/mail/mail-mutation-fixture.ts")
+    const db = await openMailDatabase({ apiOrigin: "https://recovery.test", bindingId: "recovery", connectionId: "c", userId: "u", workspaceId: "w" })
+    try {
+      await db.threads.put({ id: "archived", messageIds: ["old"], labelIds: [], internalDate: 1 })
+      await applyMailSyncResponse(db, { mode: "recovery", threads: [], messages: [], labels: [], deletedThreadIds: [], deletedMessageIds: [], historyId: "30", mailboxRevision: 3, nextPageToken: "page2" }, "inbox")
+      assert.ok(await db.threads.get("archived"))
+      assert.deepEqual((await db.syncState.get("primary")).pendingThreadReconciliationIds, ["archived"])
+      await applyMailSyncResponse(db, { mode: "full", threads: [], messages: [], labels: [], deletedThreadIds: [], deletedMessageIds: [], historyId: "20", mailboxRevision: 2, nextPageToken: null }, "inbox", { markViewLoaded: false, advanceHistory: false })
+      assert.equal((await db.syncState.get("primary")).historyId, "30")
+      assert.equal((await db.syncState.get("primary")).pageTokens.inbox, "page2")
+    } finally { await destroyMailDatabase(db.name) }
+  })
   test("mail mutation recovery distinguishes rejected writes from uncertain outcomes", async () => {
     const fake = await import("fake-indexeddb");
     globalThis.indexedDB = fake.indexedDB;
@@ -40,7 +56,7 @@ export function register({ assert, loadModule, test }) {
       };
       const input = { database, mailBasePath: "/mail/workspace", connectionId: "connection", view: "inbox" };
       await synchronizeMailCache(input, request);
-      assert.deepEqual(requests[0], { url: "/mail/workspace/sync", body: { connectionId: "connection", historyId: "10", view: "inbox", knownMessageIds: [], knownThreadIds: [] } });
+      assert.deepEqual(requests[0], { url: "/mail/workspace/sync", body: { connectionId: "connection", historyId: "10", view: "inbox" } });
       assert.equal((await database.syncState.get("primary")).historyId, "20");
       await synchronizeMailCache(input, request, { loadMore: true });
       assert.equal(requests[1].body.historyId, undefined);

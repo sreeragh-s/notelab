@@ -62,7 +62,7 @@ test("incremental synchronization walks every history page and returns upserts a
   assert.equal(result.threads[0]?.id, "thread-2")
 })
 
-test("expired history recovers the visible folder and validates known cache IDs", async () => {
+test("expired history never infers deletion from absence in one folder page", async () => {
   const gateway = fakeGateway({
     listHistory: async () => {
       throw new GmailApiError("expired", 409, "history_cursor_invalid")
@@ -77,8 +77,8 @@ test("expired history recovers the visible folder and validates known cache IDs"
   }, 9)
 
   assert.equal(result.mode, "recovery")
-  assert.deepEqual(result.deletedMessageIds, ["stale-message"])
-  assert.deepEqual(result.deletedThreadIds, ["stale-thread"])
+  assert.deepEqual(result.deletedMessageIds, [])
+  assert.deepEqual(result.deletedThreadIds, [])
   assert.equal(result.historyId, "200")
 })
 

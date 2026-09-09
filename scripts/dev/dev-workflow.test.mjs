@@ -1,3 +1,4 @@
+import { applyPublicDevelopmentOrigin } from "./public-origin.mjs";
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
@@ -12,11 +13,13 @@ import { coreDir, localProfiles } from "./config.mjs";
 import {
   createFromTemplateIfMissing,
   migrateGeneratedNodeEnvironment,
+  migrateGeneratedMailEnvironment,
   profileEnvironment,
 } from "./env.mjs";
 import {
   databaseResetStatements,
   effectiveProfile,
+  runtimeEnvironment,
   resetLocal,
   webCacheDirectory,
 } from "./local.mjs";
@@ -201,4 +204,35 @@ test("database reset runs drop and create outside a shared transaction", () => {
     () => databaseResetStatements("zilobase_node; DROP DATABASE postgres"),
     /name is invalid/,
   );
+});
+
+test("mail flags belong to the operator rather than generated infrastructure", async () => {
+  for (const profile of Object.values(localProfiles)) {
+    assert.equal(profileEnvironment(profile, {}).MAIL_ENABLED, undefined);
+  }
+  const directory = await mkdtemp(path.join(os.tmpdir(), "zilobase-mail-env-"));
+  const filename = path.join(directory, "node.env");
+  await writeFile(filename, 'MAIL_ENABLED="false"\nDATABASE_URL="preserved"\n');
+  assert.equal(await migrateGeneratedMailEnvironment(filename), true);
+  assert.deepEqual(parse(await readFile(filename, "utf8")), { DATABASE_URL: "preserved" });
+  assert.equal(await migrateGeneratedMailEnvironment(filename), false);
+});
+
+test("public mail development uses one origin without proxying back into its tunnel", () => {
+  for (const profile of Object.values(localProfiles)) {
+    const env = applyPublicDevelopmentOrigin({ ZILOBASE_DEV_PUBLIC_ORIGIN: "https://mail-dev.example.com" }, profile);
+    assert.equal(env.BETTER_AUTH_URL, env.CLIENT_URL);
+    assert.equal(env.VITE_API_URL, env.BETTER_AUTH_URL);
+    assert.equal(env.VITE_BACKEND_PROXY_TARGET, `http://${profile.apiHost}:${profile.apiPort}`);
+    assert.equal(env.NAVIGATION_REALTIME_WEBSOCKET_URL, "wss://mail-dev.example.com/navigation-realtime");
+  }
+  assert.throws(() => applyPublicDevelopmentOrigin({ ZILOBASE_DEV_PUBLIC_ORIGIN: "https://example.com/path" }, localProfiles.node), /HTTPS origin/);
+});
+
+test("mail readiness uses launcher origins rather than obsolete generated hostnames", () => {
+  for (const name of ["node", "worker"]) {
+    const env = { BETTER_AUTH_URL: "http://obsolete.zilobase.localhost:3000" };
+    const profile = effectiveProfile(name, env);
+    assert.equal(runtimeEnvironment(profile, env).BETTER_AUTH_URL, `http://${profile.apiHost}:${profile.apiPort}`);
+  }
 });

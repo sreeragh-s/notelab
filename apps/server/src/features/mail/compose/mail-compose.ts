@@ -1,4 +1,5 @@
-import { and, eq, lt } from "drizzle-orm"
+import { sha256Hex } from "../../../shared/crypto/sha256"
+import { and, eq, lt, inArray } from "drizzle-orm"
 import type {
   MailComposeRequest,
   MailDraftResponse,
@@ -42,7 +43,6 @@ export async function sendGmailComposition(input: {
   gateway: GmailGateway
   userId: string
 }): Promise<MailSendResponse> {
-  await cleanupExpiredGmailSendOperations()
   const mime = buildMailMime(input.compose, input.connection.email)
   const { operation, created } = await reserveSendOperation(input, mime.rfcMessageId)
 
@@ -54,14 +54,17 @@ export async function sendGmailComposition(input: {
     throw new GmailApiError("This message is still being sent. Retry shortly.", 409, "provider_error", true)
   }
 
+  let deliveryStarted = false
   try {
+    if (input.draftId) await updateGmailDraft(input.gateway, input.connection, input.draftId, input.compose)
+    deliveryStarted = true
     const sent = input.draftId
       ? await input.gateway.sendDraft(input.draftId)
       : await input.gateway.sendMessage(mailResource(mime.raw, input.compose.threadId))
     const id = requireMessageId(sent)
     return await completeSend(input.gateway, operation.id, id, false)
   } catch (error) {
-    if (isAmbiguousSendFailure(error)) {
+    if (deliveryStarted && isAmbiguousSendFailure(error)) {
       const recovered = await recoverSentMessage(input.gateway, operation.rfcMessageId)
       if (recovered) {
         return await completeSend(input.gateway, operation.id, recovered.id!, true)
@@ -73,7 +76,9 @@ export async function sendGmailComposition(input: {
 }
 
 export async function cleanupExpiredGmailSendOperations(now = new Date()) {
-  return db.delete(gmailSendOperation).where(lt(gmailSendOperation.expiresAt, now))
+  const expired = await db.select({ id: gmailSendOperation.id }).from(gmailSendOperation)
+    .where(and(lt(gmailSendOperation.expiresAt, now), inArray(gmailSendOperation.status, ["sent", "failed"]))).limit(500)
+  if (expired.length) await db.delete(gmailSendOperation).where(inArray(gmailSendOperation.id, expired.map((row) => row.id)))
 }
 
 async function requireDraft(gateway: GmailGateway, draft: GmailDraft, fallbackId?: string) {
@@ -82,7 +87,7 @@ async function requireDraft(gateway: GmailGateway, draft: GmailDraft, fallbackId
   return draft.message?.payload ? { ...draft, id } : gateway.getDraft(id)
 }
 
-function normalizeDraft(draft: GmailDraft): MailDraftResponse {
+export function normalizeDraft(draft: GmailDraft): MailDraftResponse {
   if (!draft.id || !draft.message) throw new GmailApiError("Gmail returned an invalid draft.", 502, "provider_error")
   return {
     draftId: draft.id,
@@ -106,7 +111,7 @@ function requireMessageId(message: GmailMessage) {
 }
 
 function isAmbiguousSendFailure(error: unknown) {
-  return error instanceof GmailApiError && error.retryable
+  return !(error instanceof GmailApiError) || error.retryable || error.status >= 500
 }
 
 function findOperation(id: string) {
@@ -123,11 +128,9 @@ function markOperation(id: string, status: "ambiguous" | "failed") {
 }
 
 async function claimRetry(operation: typeof gmailSendOperation.$inferSelect) {
-  if (operation.status !== "ambiguous" && operation.status !== "failed" && operation.status !== "pending") return false
-  const staleBefore = new Date(Date.now() - 2 * 60 * 1_000)
-  if (operation.status === "pending" && operation.updatedAt >= staleBefore) return false
-  const conditions = [eq(gmailSendOperation.id, operation.id), eq(gmailSendOperation.status, operation.status)]
-  if (operation.status === "pending") conditions.push(lt(gmailSendOperation.updatedAt, staleBefore))
+  // A pending process may have died after Google accepted delivery. Never replay it.
+  if (operation.status !== "failed" || !operation.compositionHash) return false
+  const conditions = [eq(gmailSendOperation.id, operation.id), eq(gmailSendOperation.status, "failed")]
   const claimed = await db.update(gmailSendOperation)
     .set({ status: "pending", updatedAt: new Date() })
     .where(and(...conditions))
@@ -135,7 +138,8 @@ async function claimRetry(operation: typeof gmailSendOperation.$inferSelect) {
   return claimed.length > 0
 }
 
-async function reserveSendOperation(input: { compose: MailComposeRequest; connection: GmailConnectionRow; userId: string }, rfcMessageId: string) {
+async function reserveSendOperation(input: { compose: MailComposeRequest; connection: GmailConnectionRow; userId: string; draftId?: string }, rfcMessageId: string) {
+  const compositionHash = await sha256Hex(JSON.stringify({ ...input.compose, draftId: undefined, clientOperationId: undefined }))
   let operation = await findOperation(input.compose.clientOperationId)
   let created = false
   if (operation && (operation.userId !== input.userId || operation.connectionId !== input.connection.id)) {
@@ -148,6 +152,8 @@ async function reserveSendOperation(input: { compose: MailComposeRequest; connec
     const now = new Date()
     const inserted = await db.insert(gmailSendOperation).values({
       connectionId: input.connection.id,
+      compositionHash,
+      draftId: input.draftId ?? null,
       expiresAt: new Date(now.getTime() + SEND_RECEIPT_TTL_MS),
       id: input.compose.clientOperationId,
       rfcMessageId: rfcMessageId,
@@ -161,10 +167,16 @@ async function reserveSendOperation(input: { compose: MailComposeRequest; connec
     }
   }
 
+  if (operation.compositionHash && (operation.compositionHash !== compositionHash || operation.draftId !== (input.draftId ?? null))) {
+    throw new GmailApiError("The mail operation cannot be changed after sending starts.", 409, "provider_error")
+  }
   return { operation, created }
 }
 
 async function completeSend(gateway: GmailGateway, operationId: string, messageId: string, reused: boolean): Promise<MailSendResponse> {
   await markOperationSent(operationId, messageId)
-  return { message: normalizeGmailMessage(await gateway.getMessage(messageId, "full"), true), reused }
+  let message: MailMessageRecord | null = null
+  try { message = normalizeGmailMessage(await gateway.getMessage(messageId, "full"), true) }
+  catch { /* Delivery is durable; clients can hydrate through ordinary synchronization. */ }
+  return { message, messageId, reused }
 }

@@ -1,3 +1,4 @@
+import { hydrateMailBody, base64MailBytes } from "./mail-content"
 import { eq } from "drizzle-orm"
 
 import { db } from "../../../infrastructure/database"
@@ -258,12 +259,14 @@ export class GmailGateway {
     )
   }
 
-  getThread(threadId: string, format: "full" | "metadata" = "metadata") {
+  async getThread(threadId: string, format: "full" | "metadata" = "metadata") {
     const params = new URLSearchParams({ format })
     if (format === "metadata") {
       for (const header of MAIL_METADATA_HEADERS) params.append("metadataHeaders", header)
     }
-    return this.json<GmailThread>(`/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?${params}`)
+    const thread = await this.json<GmailThread>(`/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?${params}`)
+    if (format === "full") for (const message of thread.messages ?? []) await hydrateMailBody(message, (id, attachment) => this.getAttachment(id, attachment))
+    return thread
   }
 
   async getThreads(threadIds: string[], format: "full" | "metadata" = "metadata") {
@@ -274,12 +277,13 @@ export class GmailGateway {
     return threads
   }
 
-  getMessage(messageId: string, format: "full" | "metadata" = "full") {
+  async getMessage(messageId: string, format: "full" | "metadata" = "full") {
     const params = new URLSearchParams({ format })
     if (format === "metadata") {
       for (const header of MAIL_METADATA_HEADERS) params.append("metadataHeaders", header)
     }
-    return this.json<GmailMessage>(`/gmail/v1/users/me/messages/${encodeURIComponent(messageId)}?${params}`)
+    const message = await this.json<GmailMessage>(`/gmail/v1/users/me/messages/${encodeURIComponent(messageId)}?${params}`)
+    return format === "full" ? hydrateMailBody(message, (id, attachment) => this.getAttachment(id, attachment)) : message
   }
 
   listMessages(input: {
@@ -299,8 +303,16 @@ export class GmailGateway {
     )
   }
 
-  getDraft(draftId: string) {
-    return this.json<GmailDraft>(`/gmail/v1/users/me/drafts/${encodeURIComponent(draftId)}?format=full`)
+  listDrafts(pageToken?: string) {
+    const query = new URLSearchParams({ maxResults: "100" })
+    if (pageToken) query.set("pageToken", pageToken)
+    return this.json<{ drafts?: GmailDraft[]; nextPageToken?: string }>(`/gmail/v1/users/me/drafts?${query}`)
+  }
+
+  async getDraft(draftId: string) {
+    const draft = await this.json<GmailDraft>(`/gmail/v1/users/me/drafts/${encodeURIComponent(draftId)}?format=full`)
+    if (draft.message) await hydrateMailBody(draft.message, (id, attachment) => this.getAttachment(id, attachment))
+    return draft
   }
 
   createDraft(input: { message: { raw: string; threadId?: string } }) {
@@ -406,7 +418,16 @@ export class GmailGateway {
     )
   }
 
-  getAttachment(messageId: string, attachmentId: string) {
+  async getAttachment(messageId: string, attachmentId: string): Promise<Response> {
+    if (/^local_part_0(?:_\d+)*$/.test(attachmentId)) {
+      const message = await this.json<GmailMessage>(`/gmail/v1/users/me/messages/${encodeURIComponent(messageId)}?format=full`)
+      let part = message.payload
+      for (const index of attachmentId.slice("local_part_0".length).split("_").filter(Boolean)) part = part?.parts?.[Number(index)]
+      if (part?.body?.data === undefined) throw new GmailApiError("Attachment no longer exists.", 404, "provider_error")
+      const bytes = base64MailBytes(part.body.data)
+      if (bytes.length > MAX_ATTACHMENT_DOWNLOAD_BYTES) throw new GmailApiError("Attachment is too large.", 413, "provider_error")
+      return new Response(bytes, { headers: { "content-type": part.mimeType ?? "application/octet-stream" } })
+    }
     return this.request(
       `/gmail/v1/users/me/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`,
     ).then(decodeGmailAttachmentResponse)

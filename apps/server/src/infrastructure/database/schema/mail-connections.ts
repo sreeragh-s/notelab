@@ -91,6 +91,8 @@ export const gmailSendOperation = pgTable(
       .notNull()
       .references(() => gmailAccount.id, { onDelete: "cascade" }),
     rfcMessageId: text("rfc_message_id").notNull(),
+    compositionHash: text("composition_hash"),
+    draftId: text("draft_id"),
     status: text("status").notNull().default("pending"),
     gmailMessageId: text("gmail_message_id"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),

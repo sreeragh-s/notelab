@@ -26,7 +26,8 @@ async function fullSync(
   mode: "full" | "recovery",
 ): Promise<MailSyncResponse> {
   const filter = viewFilter(request.view)
-  const [listed, labelResponse, profile] = await Promise.all([
+  const profile = await gateway.getProfile()
+  const [listed, labelResponse] = await Promise.all([
     gateway.listThreads({
       labelIds: filter.labelIds,
       maxResults: 50,
@@ -34,23 +35,18 @@ async function fullSync(
       query: [filter.query, request.query].filter(Boolean).join(" ") || undefined,
     }),
     gateway.listLabels(),
-    gateway.getProfile(),
   ])
   const normalized = await gateway.getThreads(
     (listed.threads ?? []).flatMap((thread) => thread.id ? [thread.id] : []),
     "metadata",
   )
   const records = normalized.map((thread) => normalizeGmailThread(thread))
-  const historyId = maxHistoryId(normalized.map((thread) => thread.historyId), profile.historyId ?? "0")
-  const currentMessageIds = new Set(records.flatMap((record) => record.messages.map((message) => message.id)))
-  const currentThreadIds = new Set(records.map((record) => record.summary.id))
+  const historyId = profile.historyId ?? "0"
   return {
-    deletedMessageIds: mode === "recovery"
-      ? (request.knownMessageIds ?? []).filter((id) => !currentMessageIds.has(id))
-      : [],
-    deletedThreadIds: mode === "recovery"
-      ? (request.knownThreadIds ?? []).filter((id) => !currentThreadIds.has(id))
-      : [],
+    // A page of a folder cannot prove that other cached messages were deleted.
+    // Device recovery revalidates those threads separately through their IDs.
+    deletedMessageIds: [],
+    deletedThreadIds: [],
     historyId,
     labels: normalizeGmailLabels(labelResponse.labels ?? []),
     mailboxRevision,
@@ -132,15 +128,4 @@ export function viewFilter(view: MailView) {
     case "trash": return { labelIds: ["TRASH"] }
     case "unread": return { labelIds: ["UNREAD"] }
   }
-}
-
-function maxHistoryId(values: Array<string | undefined>, fallback: string) {
-  return values.reduce<string>((maximum, value) => {
-    if (!value) return maximum
-    try {
-      return BigInt(value) > BigInt(maximum) ? value : maximum
-    } catch {
-      return maximum
-    }
-  }, fallback)
 }

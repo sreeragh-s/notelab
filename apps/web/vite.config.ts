@@ -26,7 +26,7 @@ const adapterWebSocketPaths = readAdapterWebSocketPaths(
   process.env.ZILOBASE_WEB_ADAPTER_WEBSOCKET_PATHS,
 );
 const backendTarget =
-  process.env.VITE_API_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:3000";
+  process.env.VITE_BACKEND_PROXY_TARGET ?? process.env.VITE_API_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:3000";
 const expectedWsProxyErrorCodes = new Set(["ECONNRESET", "EPIPE"]);
 
 function createBackendProxy(options: { ws?: boolean } = {}): ProxyOptions {
@@ -155,6 +155,7 @@ export default defineConfig(async () => ({
   server: {
     port: devPort,
     strictPort: true,
+    ...(process.env.VITE_DEV_PUBLIC_ORIGIN ? { allowedHosts: [new URL(process.env.VITE_DEV_PUBLIC_ORIGIN).hostname] } : {}),
     host: host || process.env.VITE_DEV_HOST || "0.0.0.0",
     // Local Node and Worker profiles reuse stable cache directories. Prevent a
     // browser from retaining an optimized-dependency response across a Vite
@@ -165,6 +166,13 @@ export default defineConfig(async () => ({
     },
     proxy: {
       "/health": createBackendProxy(),
+      "/ready": createBackendProxy(),
+      "/.well-known": createBackendProxy(),
+      "/mail/oauth/": createBackendProxy(),
+      "/mail/google/": createBackendProxy(),
+      "/mail-realtime": createBackendProxy({ ws: true }),
+      "/collaboration": createBackendProxy({ ws: true }),
+      "/navigation-realtime": createBackendProxy({ ws: true }),
       "/api": createBackendProxy(),
       ...Object.fromEntries(
         adapterWebSocketPaths.map((path) => [

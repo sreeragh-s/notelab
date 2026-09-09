@@ -44,22 +44,27 @@ export async function coordinateMailRecovery(input: {
   connectionId?: string
   locks?: LockManagerLike | null
   synchronize: () => Promise<unknown>
+  storage?: StorageLike | null
+  now?: number
+  minIntervalMs?: number
 }) {
   const locks = input.locks === undefined ? browserLocks() : input.locks
   const scope = input.bindingId ?? input.connectionId
   if (!scope) throw new Error("A mail binding is required.")
-  if (!locks) {
-    await input.synchronize()
-    return true
+  const storage = input.storage === undefined ? browserStorage() : input.storage
+  const key = `zilobase:mail:recovery:${scope}`
+  const synchronize = async () => {
+    const now = input.now ?? Date.now()
+    if (input.minIntervalMs && now - Number(storage?.getItem(key) ?? 0) < input.minIntervalMs) return true
+    const success = (await input.synchronize()) !== null
+    if (success) storage?.setItem(key, String(now))
+    return success
   }
+  if (!locks) return synchronize()
   return locks.request(
     `zilobase:mail:sync:${scope}`,
     { ifAvailable: true, mode: "exclusive" },
-    async (lock) => {
-      if (!lock) return false
-      await input.synchronize()
-      return true
-    },
+    async (lock) => lock ? synchronize() : false,
   )
 }
 

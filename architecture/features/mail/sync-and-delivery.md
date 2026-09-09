@@ -23,3 +23,46 @@ Server [mailbox synchronization](../../../apps/server/src/features/mail/sync/mai
 The [send tests](../../../apps/server/src/features/mail/compose/mail-compose.test.ts) cover stable-ID deduplication, draft delivery, cross-user/account rejection, fresh versus stale pending receipts, ambiguous recovery and definite provider failure/retry. [Cache recovery tests](../../../apps/web/test/features/mail/mail-mutation-recovery.test.mjs) use real Dexie operations with fake IndexedDB and a controlled transport to cover rollback/reconciliation and cursor/search behavior. They do not prove real provider delivery or PostgreSQL claim contention.
 
 [Mail overview](README.md).
+
+OAuth account credential upsert and workspace binding commit in one transaction. OAuth completion and disconnect serialize per Zilobase user using a PostgreSQL transaction advisory lock, so a concurrent binding cannot race last-binding revocation. Credential ciphertext repaired after an upsert conflict is never visible before commit.
+
+Draft list/detail routes preserve Gmail draft identity. Selecting an online Drafts row resumes the existing composer; attachments are fetched into transient memory. The composer draft session serializes writes and discard, and close waits for a successful save. Draft changes refresh mailbox queries.
+
+Send receipts bind the normalized composition hash and draft ID. Receipt recovery
+precedes draft updates. Pending/ambiguous operations are reconciled, never blindly
+replayed; definite failures can be claimed again. Successful responses include
+`messageId` even if `message` hydration is temporarily unavailable. Maintenance
+removes at most 500 expired terminal receipts per sweep; uncertain receipts remain.
+
+Reply seeds exclude the connected sender and preserve the last 100 threading references. Composer addresses round-trip quoted display names. Forwarding includes ordinary attachments, resolved in transient memory before opening the unchanged composer; Bcc is never copied into a reply or forward.
+
+The provider hydrates external text/HTML body parts before full-message normalization, respects MIME charsets, and decodes encoded headers. Embedded file parts use transient part-path download identifiers; body parts are not classified as attachments, and incomplete bodies are not marked fully cached.
+
+Visible online clients recover every 60 seconds without push and every five
+minutes with an active push watch/socket, with jitter and failure backoff.
+Recovery shares the revision lock across tabs. A per-cache queue coalesces equal
+requests and serializes views; late responses cannot replace active search state.
+Successful sync advances the server index and invalidates indexed list queries.
+Search/page snapshots cannot advance an existing history checkpoint. Provider
+retry delays suppress further requests; revoked authorization refreshes connection
+state. Connection responses expose additive `pushAvailable` capability.
+
+Expired history recovery queues cached threads outside the returned folder page for explicit reconciliation; absence in that page is not deletion evidence. Full thread snapshots remove messages no longer present. Initial sync captures its history watermark before listing, preventing changes during listing from being skipped. Ordinary incremental requests no longer enumerate every cached ID.
+
+Cached mailbox reads use an ordered cursor with a bounded result window; offline views page through that cache. Indexed rows seed missing thread summaries so actions work before a body is opened. Every mutation schedules index/list reconciliation, including partial failures. HTML-only drafts and forwards convert their complete body to text for the existing plain-text composer.
+
+Browser acceptance exercises the actual composer and receive hook with controlled
+transport, including byte-identical styled screenshots against the prior composer.
+An opt-in PostgreSQL integration suite verifies Hono routes, concurrent send claims,
+and OAuth transaction credentials in a disposable migrated database. See the
+[Gmail runbook](../../../docs/mail/gmail-deployment.md) for commands and live gates.
+Open conversations reload newly synchronized partial messages without requiring
+selection to change. Definite send rejection permits editing; uncertain sends keep
+their original composition frozen for recovery.
+
+Reconnecting an existing account preserves its monotonic mailbox revision so clients
+with persisted notification checkpoints continue accepting subsequent revisions.
+
+The mail browser fixture is an explicit audit entrypoint and loads the historical
+composer through a Vite virtual module. Its browser and PostgreSQL harness
+dependencies are declared as root development dependencies.

@@ -84,7 +84,7 @@ export function register({ assert, loadModule, readSource, test }) {
     assert.match(mailSource, /<PageSidePaneShell[\s\S]*<PageSidePaneLayout/)
     assert.match(mailSource, /<PageSidePaneHeaderCell[\s\S]*side="main"[\s\S]*<PagePaneHeader[\s\S]*leadingControl=\{<MainPaneHeaderLeadingControl \/>\}[\s\S]*showActions=\{false\}/)
     assert.match(mailSource, /<PageSidePaneHeaderCell side="side"[\s\S]*<ConversationToolbar/)
-    assert.match(mailSource, /onOpenThread=\{setSelection\}[\s\S]*onOpen=\{\(\) => onOpenThread\(thread\.id\)\}/)
+    assert.match(mailSource, /onOpenThread=\{\(id\) => void openMailboxThread\(id\)\}[\s\S]*onOpen=\{\(\) => onOpenThread\(thread\.id\)\}/)
     assert.match(mailSource, /onPrefetchThread=\{\(threadId\) => void controller\.prefetchThread\(threadId\)\}[\s\S]*onPrefetch=\{\(\) => onPrefetchThread\(thread\.id\)\}/)
     assert.match(mailSource, /onFocus=\{onPrefetch\}[\s\S]*onPointerEnter=\{onPrefetch\}/)
     assert.match(mailSource, /Promise\.all\(\[worker\(\), worker\(\)\]\)/)

@@ -1,3 +1,7 @@
+import { readCachedMailThreads } from "../storage/mail-cache-query"
+import { useQueryClient } from "@tanstack/react-query"
+import { invalidateMailListQueries, mailKeys } from "@zilobase/features/mail"
+import { runMailSyncOnce } from "./sync-queue"
 import { synchronizeMailCache } from "./mail-cache-sync"
 import { isDefiniteMailMutationFailure, runMailThreadMutation, runMailMessageMutation } from "./mail-mutations"
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
@@ -24,7 +28,13 @@ export function useMailController(input: {
   userId: string
   view: MailView
 }) {
+  const queryClient = useQueryClient()
+  const retryAt = useRef(0)
+  const revoked = useRef(false)
+  const latestScope = useRef("")
+  latestScope.current = `${input.connection.bindingId}:${input.view}:${input.query}`
   const mailBasePath = mailApiBasePath(input.connection.workspaceId)
+  const [cacheLimit, setCacheLimit] = useState(50)
   const [database, setDatabase] = useState<MailDatabase | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [mutating, setMutating] = useState(false)
@@ -70,8 +80,8 @@ export function useMailController(input: {
   ])
 
   const cachedThreads = useLiveQuery(
-    () => database ? database.threads.orderBy("internalDate").reverse().toArray() : [],
-    [database],
+    () => database ? readCachedMailThreads(database, input.view, cacheLimit + 1, input.filter, input.query) : [],
+    [database, input.view, input.filter, input.query, cacheLimit],
     [],
   )
   const syncState = useLiveQuery(
@@ -87,19 +97,36 @@ export function useMailController(input: {
 
   const runSync = useCallback(async (options: { loadMore?: boolean; search?: string } = {}) => {
     if (!database || !input.connection.connectionId || !online) return null
+    if (revoked.current || Date.now() < retryAt.current) return null
+    const scope = latestScope.current
     setSyncing(true)
     setError(null)
     try {
-      const { response, isSearch } = await synchronizeMailCache({ database, mailBasePath, connectionId: input.connection.connectionId, view: input.view }, apiFetch, options)
-      setSearchResultIds(isSearch ? response.threads.map((thread) => thread.id) : null)
+      const { response, isSearch } = await runMailSyncOnce(database.name, JSON.stringify([input.view, options]), async () => {
+        const result = await synchronizeMailCache({ database, mailBasePath, connectionId: input.connection.connectionId!, view: input.view }, apiFetch, options)
+        if (!result.isSearch) {
+          await apiFetch(`${mailBasePath}/index/advance`, { method: "POST" })
+          await invalidateMailListQueries(queryClient, { bindingId: input.connection.bindingId, workspaceId: input.connection.workspaceId })
+        }
+        return result
+      })
+      if (latestScope.current === scope) setSearchResultIds(isSearch ? response.threads.map((thread) => thread.id) : null)
       return response
     } catch (syncError) {
-      setError(syncError)
+      if (syncError instanceof ApiError) {
+        const body = syncError.body as { retryAfterMs?: number; code?: string } | null
+        if (body?.retryAfterMs) retryAt.current = Date.now() + body.retryAfterMs
+        if (body?.code === "authorization_revoked") {
+          revoked.current = true
+          void queryClient.invalidateQueries({ queryKey: mailKeys.connection(input.connection.workspaceId) })
+        }
+      }
+      if (latestScope.current === scope) setError(syncError)
       return null
     } finally {
-      setSyncing(false)
+      if (latestScope.current === scope) setSyncing(false)
     }
-  }, [database, input.connection.connectionId, input.view, online])
+  }, [database, input.connection.connectionId, input.connection.bindingId, input.connection.workspaceId, input.view, online, queryClient])
 
   useEffect(() => {
     if (!database || !online) return
@@ -119,7 +146,7 @@ export function useMailController(input: {
   }, [database, input.query, online, runSync])
 
   const threads = useMemo(() => {
-    const visible = (cachedThreads ?? []).filter((thread) => input.filter
+    const visible = (cachedThreads ?? []).slice(0, cacheLimit).filter((thread) => input.filter
       ? evaluateMailFilterExpression(mailFilterRecordFromThreadSummary(thread), input.filter)
       : threadMatchesView(thread, input.view))
     if (searchResultIds) {
@@ -133,7 +160,7 @@ export function useMailController(input: {
       thread.snippet,
       ...thread.participants.flatMap((participant) => [participant.name ?? "", participant.address]),
     ].some((value) => value.toLowerCase().includes(query)))
-  }, [cachedThreads, input.filter, input.query, input.view, searchResultIds])
+  }, [cachedThreads, cacheLimit, input.filter, input.query, input.view, searchResultIds])
 
   const loadThread = useCallback((threadId: string) => {
     if (!database) return
@@ -202,6 +229,7 @@ export function useMailController(input: {
       })
     } finally {
       setMutating(false)
+      void runSync()
     }
   }, [database, online, runSync])
 
@@ -227,6 +255,7 @@ export function useMailController(input: {
       throw mutationError
     } finally {
       setMutating(false)
+      void runSync()
     }
   }, [database, online, runSync])
 
@@ -246,6 +275,7 @@ export function useMailController(input: {
       })
     } finally {
       setMutating(false)
+      void runSync()
     }
   }, [database, online, runSync])
 
@@ -262,6 +292,7 @@ export function useMailController(input: {
       })
     } finally {
       setMutating(false)
+      void runSync()
     }
   }, [database, online, runSync])
 
@@ -281,6 +312,7 @@ export function useMailController(input: {
       })
     } finally {
       setMutating(false)
+      void runSync()
     }
   }, [database, online, runSync])
 
@@ -296,8 +328,9 @@ export function useMailController(input: {
       return label
     } finally {
       setMutating(false)
+      void runSync()
     }
-  }, [database, online])
+  }, [database, online, runSync])
 
   const updateLabel = useCallback(async (label: MailLabelRecord, input: MailLabelWriteRequest) => {
     if (!database || !online) throw new Error("Reconnect to manage Gmail labels.")
@@ -316,6 +349,7 @@ export function useMailController(input: {
       throw mutationError
     } finally {
       setMutating(false)
+      void runSync()
     }
   }, [database, online, runSync])
 
@@ -327,6 +361,7 @@ export function useMailController(input: {
       await deleteMailLabelFromCache(database, labelId)
     } finally {
       setMutating(false)
+      void runSync()
     }
   }, [database, online])
 
@@ -381,7 +416,7 @@ export function useMailController(input: {
     deleteLabel,
     downloadAttachment,
     error,
-    hasMore: Boolean(syncState?.pageTokens[input.view]),
+    hasMore: online ? Boolean(syncState?.pageTokens[input.view]) : (cachedThreads?.length ?? 0) > cacheLimit,
     labels: labels ?? [],
     loadInlineAttachment,
     modifyMessage,
@@ -391,7 +426,7 @@ export function useMailController(input: {
     openThread,
     prefetchThread,
     refresh: runSync,
-    loadMore: () => runSync({ loadMore: true }),
+    loadMore: () => { setCacheLimit((limit) => limit + 50); return online ? runSync({ loadMore: true }) : Promise.resolve(null) },
     syncing,
     threads,
     updateLabel,

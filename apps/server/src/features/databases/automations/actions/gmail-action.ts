@@ -123,12 +123,12 @@ export async function executeGmailAction(
       .set({
         errorCode: null,
         errorSummary: null,
-        providerReference: result.message.id,
+        providerReference: result.messageId,
         status: "succeeded",
         updatedAt: new Date(),
       })
       .where(eq(databaseAutomationDelivery.deliveryId, deliveryId));
-    return { deliveryId, providerReference: result.message.id, reused: result.reused };
+    return { deliveryId, providerReference: result.messageId, reused: result.reused };
   } catch (error) {
     const code = error instanceof GmailApiError ? error.code : "provider_error";
     if (error instanceof GmailApiError && error.code === "authorization_revoked") {

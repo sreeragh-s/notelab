@@ -12,3 +12,7 @@ The development CLI coordinates dependency containers and local processes. Node 
 - [Verification](../../scripts/dev/dev-workflow.test.mjs)
 
 Command definitions remain in [package scripts](../../package.json); consult them for the current invocation. [Architecture index](../README.md).
+
+Mail flags are operator-owned in each repository development environment; setup removes legacy generated `MAIL_ENABLED` overrides. The Gmail config checker accepts `--profile=node|worker` to inspect effective configuration.
+
+`ZILOBASE_DEV_PUBLIC_ORIGIN` selects an HTTPS same-origin tunnel profile for OAuth/push canaries. The tunnel targets Vite; `VITE_BACKEND_PROXY_TARGET` stays loopback so proxy traffic cannot loop. Desktop inherits the public API origin.

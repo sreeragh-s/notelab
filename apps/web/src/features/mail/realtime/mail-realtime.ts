@@ -1,3 +1,4 @@
+import { mailPollDelay } from "../sync/sync-queue"
 import { useEffect } from "react"
 
 import { apiFetch } from "@/platform/network/api"
@@ -29,12 +30,15 @@ export function useMailRealtime(input: {
   bindingId: string
   connectionId: string
   enabled: boolean
+  pushAvailable?: boolean
   onSynchronize: () => Promise<unknown>
   workspaceId: string
 }) {
   useEffect(() => {
-    if (!input.enabled || typeof WebSocket === "undefined") return
+    if (!input.enabled) return
     let socket: WebSocket | null = null
+    let pollTimer: ReturnType<typeof setTimeout> | null = null
+    let pollFailures = 0
     let stopped = false
     let reconnectAttempt = 0
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null
@@ -49,10 +53,22 @@ export function useMailRealtime(input: {
       revision,
       synchronize: input.onSynchronize,
     })
-    const recover = () => coordinateMailRecovery({
+    const recover = (minIntervalMs = 1_000) => coordinateMailRecovery({
+      minIntervalMs,
       bindingId: input.bindingId,
       synchronize: input.onSynchronize,
     })
+
+    const healthyPush = () => Boolean(input.pushAvailable && socket && socket.readyState === WebSocket.OPEN)
+    const poll = async () => {
+      if (stopped) return
+      if (document.visibilityState === "visible" && navigator.onLine !== false) {
+        try { pollFailures = await recover(input.pushAvailable ? 300_000 : 60_000) ? 0 : pollFailures + 1 }
+        catch { pollFailures += 1 }
+      }
+      if (!stopped) pollTimer = setTimeout(() => void poll(), mailPollDelay(healthyPush(), pollFailures))
+    }
+    pollTimer = setTimeout(() => void poll(), mailPollDelay(Boolean(input.pushAvailable), 0))
 
     const stopSocketTimers = () => {
       if (heartbeatTimer) clearInterval(heartbeatTimer)
@@ -69,7 +85,7 @@ export function useMailRealtime(input: {
       }, delay)
     }
     const connect = async () => {
-      if (stopped || navigator.onLine === false || socket) return
+      if (stopped || navigator.onLine === false || socket || typeof WebSocket === "undefined") return
       recordDesktopDiagnostic("mail.socket_state", { status: "started" })
       try {
         const ticketPath = `/workspaces/${encodeURIComponent(input.workspaceId)}/mail/realtime-ticket`
@@ -145,6 +161,7 @@ export function useMailRealtime(input: {
 
     return () => {
       stopped = true
+      if (pollTimer) clearTimeout(pollTimer)
       if (reconnectTimer) clearTimeout(reconnectTimer)
       stopSocketTimers()
       channel?.close()
@@ -156,6 +173,7 @@ export function useMailRealtime(input: {
   }, [
     input.bindingId,
     input.enabled,
+    input.pushAvailable,
     input.onSynchronize,
     input.workspaceId,
   ])

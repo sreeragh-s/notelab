@@ -126,11 +126,42 @@ export async function openMailDatabase(input: MailDatabaseIdentity, recoveryAtte
   }
 }
 
+async function resetRecoveryViews(database: MailDatabase, response: MailSyncResponse) {
+  const known = await database.threads.toCollection().primaryKeys()
+  const currentState = await database.syncState.get("primary")
+  const returned = new Set(response.threads.map((thread) => thread.id))
+  if (currentState) await database.syncState.put({ ...currentState, loadedViews: {}, pageTokens: {},
+    pendingThreadReconciliationIds: [...new Set([...(currentState.pendingThreadReconciliationIds ?? []), ...known.filter((id) => !returned.has(String(id))).map(String)])] })
+}
+
+async function updateSyncCheckpoint(
+  database: MailDatabase,
+  response: MailSyncResponse,
+  view: MailView,
+  options: { markViewLoaded?: boolean; advanceHistory?: boolean },
+) {
+  const current = await database.syncState.get("primary")
+  if (!current) throw new Error("Mail cache identity is missing.")
+  await database.syncState.put({
+    ...current,
+    historyId: options.advanceHistory === false ? current.historyId : newerMailHistoryId(current.historyId, response.historyId),
+    lastSyncedAt: Date.now(),
+    loadedViews: options.markViewLoaded === false
+      ? current.loadedViews
+      : { ...current.loadedViews, [view]: true },
+    mailboxRevision: Math.max(current.mailboxRevision, response.mailboxRevision),
+    pageTokens: options.markViewLoaded === false ? current.pageTokens : {
+      ...current.pageTokens,
+      [view]: response.nextPageToken ?? undefined,
+    },
+  })
+}
+
 export async function applyMailSyncResponse(
   database: MailDatabase,
   response: MailSyncResponse,
   view: MailView,
-  options: { markViewLoaded?: boolean } = {},
+  options: { markViewLoaded?: boolean; advanceHistory?: boolean } = {},
 ) {
   await database.transaction(
     "rw",
@@ -139,6 +170,9 @@ export async function applyMailSyncResponse(
     database.syncState,
     database.threads,
     async () => {
+      if (response.mode === "recovery") {
+        await resetRecoveryViews(database, response)
+      }
       if (response.labels.length) await database.labels.bulkPut(response.labels)
       if (response.messages.length) await mergeMessages(database, response.messages)
       if (response.threads.length) await database.threads.bulkPut(response.threads)
@@ -149,21 +183,7 @@ export async function applyMailSyncResponse(
         await database.threads.bulkDelete(response.deletedThreadIds)
       }
 
-      const current = await database.syncState.get("primary")
-      if (!current) throw new Error("Mail cache identity is missing.")
-      await database.syncState.put({
-        ...current,
-        historyId: response.historyId,
-        lastSyncedAt: Date.now(),
-        loadedViews: options.markViewLoaded === false
-          ? current.loadedViews
-          : { ...current.loadedViews, [view]: true },
-        mailboxRevision: response.mailboxRevision,
-        pageTokens: {
-          ...current.pageTokens,
-          [view]: response.nextPageToken ?? undefined,
-        },
-      })
+      await updateSyncCheckpoint(database, response, view, options)
     },
   )
 }
@@ -173,6 +193,9 @@ export async function upsertFullMailThread(
   input: { messages: MailMessageRecord[]; thread: MailThreadSummary },
 ) {
   await database.transaction("rw", database.messages, database.threads, async () => {
+    const known = await database.messages.where("threadId").equals(input.thread.id).primaryKeys()
+    const authoritative = new Set(input.thread.messageIds ?? input.messages.map((message) => message.id))
+    await database.messages.bulkDelete(known.filter((id) => !authoritative.has(String(id))))
     await mergeMessages(database, input.messages)
     await database.threads.put(input.thread)
   })
@@ -322,7 +345,7 @@ async function mergeMessages(
   await database.messages.bulkPut(
     messages.map((message, index) => {
       const cached = existing[index]
-      if (!cached?.hasFullBody || message.hasFullBody) return message
+      if (!cached?.hasFullBody || message.hasFullBody || (message.labelIds.includes("DRAFT") && cached.historyId !== message.historyId)) return message
       return {
         ...message,
         attachments: cached.attachments,
@@ -459,4 +482,10 @@ function requireIdentifier(value: string, kind: string) {
 
 function uniqueLimited(values: string[]) {
   return [...new Set(values)].slice(-100)
+}
+
+function newerMailHistoryId(current: string | null, incoming: string) {
+  if (!current) return incoming
+  try { return BigInt(current) > BigInt(incoming) ? current : incoming }
+  catch { return incoming }
 }

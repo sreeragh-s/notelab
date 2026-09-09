@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 
 import { coreDir, localProfiles, apiUrl } from "../dev/config.mjs";
+import { effectiveProfile, runtimeEnvironment } from "../dev/local.mjs";
 import { loadProfileEnvironment } from "../dev/env.mjs";
 
 const name = process.argv[2];
@@ -12,14 +13,15 @@ if (!profile) {
   process.exit(1);
 }
 
-const env = await loadProfileEnvironment(name);
+const loaded = await loadProfileEnvironment(name);
+const env = runtimeEnvironment(effectiveProfile(name, loaded), loaded);
 const desktopDir = path.join(coreDir, "apps", "desktop");
 const child = spawn(
   "npm",
   ["run", "tauri", "--", "dev", "--config", `src-tauri/tauri.${name}.conf.json`],
   {
     cwd: desktopDir,
-    env: { ...env, VITE_API_URL: apiUrl(profile) },
+    env: { ...env, VITE_API_URL: env.VITE_API_URL ?? apiUrl(profile) },
     stdio: "inherit",
   },
 );
