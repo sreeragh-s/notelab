@@ -1,14 +1,7 @@
+import { runCalendarSyncOnce } from "./calendar-sync-queue";
 import { calendarApiBasePath, type CalendarRangeResponse, type CalendarSyncResponse } from "@zilobase/features/calendar";
 import { applyCalendarRange, calendarRangeKey, evictCalendarRanges, type CalendarDatabase } from "../storage/calendar-database";
 type Transport = <T>(path: string, options?: RequestInit) => Promise<T>;
-const queues = new Map<string, Promise<unknown>>(), requests = new Map<string, Promise<unknown>>();
-export function runCalendarSyncOnce<T>(database: CalendarDatabase, requestKey: string, run: () => Promise<T>): Promise<T> {
-  const key = `${database.name}:${requestKey}`, existing = requests.get(key); if (existing) return existing as Promise<T>;
-  const request = (queues.get(database.name) ?? Promise.resolve()).catch(() => {}).then(run);
-  queues.set(database.name, request); requests.set(key, request);
-  void request.finally(() => { if (requests.get(key) === request) requests.delete(key); if (queues.get(database.name) === request) queues.delete(database.name) }).catch(() => {});
-  return request;
-}
 export async function synchronizeCalendarCache(database: CalendarDatabase, start: string, end: string, fetcher: Transport, recover = true) {
   return runCalendarSyncOnce(database, JSON.stringify([start, end, recover]), async () => {
     const base = `${calendarApiBasePath(database.identity.workspaceId)}/connections/${encodeURIComponent(database.identity.bindingId)}`;

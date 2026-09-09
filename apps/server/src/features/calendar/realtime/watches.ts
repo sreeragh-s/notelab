@@ -45,13 +45,29 @@ export async function maintainCalendarWatches(env: RuntimeEnv) {
   const accounts = await db.select().from(calendarAccount).where(eq(calendarAccount.status, "connected"));
   for (const account of accounts.slice(0, 100)) {
     try {
+      await maintainAccountWatches(account, env, address);
+    } catch { /* Durable registrations remain eligible for the next maintenance run. */ }
+  }
+  await db.delete(calendarWatchChannel).where(sql`${calendarWatchChannel.expiresAt} < now() - interval '1 day'`);
+}
+
+async function retireChannels(channels: (typeof calendarWatchChannel.$inferSelect)[], desired: (string | null)[], gateway: CalendarGateway) {
+      for (const channel of channels) {
+        const replacement = channels.some(c => c.id !== channel.id && c.calendarId === channel.calendarId && c.status === "active" && c.expiresAt > channel.expiresAt);
+        if (!replacement && channel.expiresAt.getTime() > Date.now() && desired.includes(channel.calendarId)) continue;
+        if (channel.resourceId) try { await gateway.request("/channels/stop", { method: "POST", body: JSON.stringify({ id: channel.id, resourceId: channel.resourceId }) }) } catch (error) { if (!(error instanceof CalendarProviderError && [404, 410].includes(error.status))) continue }
+        await db.delete(calendarWatchChannel).where(eq(calendarWatchChannel.id, channel.id));
+      }
+}
+
+async function maintainAccountWatches(account: typeof calendarAccount.$inferSelect, env: RuntimeEnv, address: string) {
       const binding = (await db.select().from(calendarBinding).where(eq(calendarBinding.accountId, account.id))).find(b => isCalendarFeatureEnabled(env, b.workspaceId));
-      if (!binding) continue;
+      if (!binding) return;
       let channels = await db.select().from(calendarWatchChannel).where(eq(calendarWatchChannel.accountId, account.id));
       const calendars = await db.select().from(calendarProviderCalendar).where(eq(calendarProviderCalendar.accountId, account.id));
       const desired = [null, ...calendars.filter(c => c.data.permissions.read && !c.data.permissions.freeBusyOnly).map(c => c.calendarId)];
       const listDirty = channels.find(c => c.calendarId === null && c.dirtyAt);
-      if (!listDirty && desired.every(id => channels.some(c => c.calendarId === id && c.expiresAt.getTime() > Date.now() + 3600_000 && c.status === "active"))) continue;
+      if (!listDirty && desired.every(id => channels.some(c => c.calendarId === id && c.expiresAt.getTime() > Date.now() + 3600_000 && c.status === "active"))) return;
       const gateway = await createCalendarGateway(env, account);
       if (listDirty) {
         await refreshCalendarList(account.id, binding.id, gateway);
@@ -59,13 +75,5 @@ export async function maintainCalendarWatches(env: RuntimeEnv) {
       }
       for (const id of desired) if (!channels.some(c => c.calendarId === id && c.expiresAt.getTime() > Date.now() + (c.status === "pending" ? 0 : 3600_000))) await startWatch(account.id, id, gateway, address);
       channels = await db.select().from(calendarWatchChannel).where(eq(calendarWatchChannel.accountId, account.id));
-      for (const channel of channels) {
-        const replacement = channels.some(c => c.id !== channel.id && c.calendarId === channel.calendarId && c.status === "active" && c.expiresAt > channel.expiresAt);
-        if (!replacement && channel.expiresAt.getTime() > Date.now() && desired.includes(channel.calendarId)) continue;
-        if (channel.resourceId) try { await gateway.request("/channels/stop", { method: "POST", body: JSON.stringify({ id: channel.id, resourceId: channel.resourceId }) }) } catch (error) { if (!(error instanceof CalendarProviderError && [404, 410].includes(error.status))) continue }
-        await db.delete(calendarWatchChannel).where(eq(calendarWatchChannel.id, channel.id));
-      }
-    } catch { /* Durable registrations remain eligible for the next maintenance run. */ }
-  }
-  await db.delete(calendarWatchChannel).where(sql`${calendarWatchChannel.expiresAt} < now() - interval '1 day'`);
+      await retireChannels(channels, desired, gateway);
 }

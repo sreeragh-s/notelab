@@ -21,3 +21,8 @@ test("Calendar credentials reject a different account and Mail-only keys", async
   await expect(decryptCalendarSecret(env, secret, { ...context, connectionId: "b" })).rejects.toThrow();
   await expect(encryptCalendarSecret({ GMAIL_TOKEN_ENCRYPTION_KEY: env.CALENDAR_TOKEN_ENCRYPTION_KEY }, "refresh", context)).rejects.toThrow();
 });
+
+test("conference failure remains distinct from a successfully saved event", () => {
+  const event = normalizeEvent({ id: "meeting", start: { date: "2026-09-09" }, end: { date: "2026-09-10" }, conferenceData: { createRequest: { status: { statusCode: "failure" } } } }, { workspaceId: "w", bindingId: "b", calendarId: "c" }, "UTC");
+  expect(event.status).toBe("confirmed"); expect(event.conferenceStatus).toBe("failure"); expect(event.conferenceUrl).toBeUndefined();
+});

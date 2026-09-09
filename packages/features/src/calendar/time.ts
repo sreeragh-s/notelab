@@ -18,8 +18,15 @@ export function calendarDays(date: string, view: CalendarView, weekStartsOn: num
   return Array.from({ length: view === "month" ? Math.ceil((offset + anchor.daysInMonth) / 7) * 7 : 7 }, (_, i) => start.add({ days: i }).toString());
 }
 export function shiftCalendarPeriod(date: string, view: CalendarView, direction: number) { return Temporal.PlainDate.from(date).add(view === "month" ? { months: direction } : { days: direction * (view === "day" ? 1 : view === "agenda" ? 30 : 7) }).toString() }
+const clockFormatters = new Map<string, Intl.DateTimeFormat>();
+function clockFormatter(zone: string, format: "12" | "24") {
+  const key = `${zone}:${format}`;
+  let formatter = clockFormatters.get(key);
+  if (!formatter) { formatter = new Intl.DateTimeFormat(undefined, { timeZone: zone, hour: "numeric", minute: "2-digit", hour12: format === "12" }); clockFormatters.set(key, formatter) }
+  return formatter;
+}
 export function eventClock(time: CalendarEventTime, zone: string, format: "12" | "24" = "24") {
-  return time.date ? "All day" : new Intl.DateTimeFormat(undefined, { timeZone: zone, hour: "numeric", minute: "2-digit", hour12: format === "12" }).format(new Date(time.dateTime!));
+  return time.date ? "All day" : clockFormatter(zone, format).format(new Date(time.dateTime!));
 }
 export function timedLayout(events: CalendarEvent[], date: string, zone: string) {
   const start = dayInstant(date, zone), end = dayInstant(addCalendarDays(date, 1), zone);

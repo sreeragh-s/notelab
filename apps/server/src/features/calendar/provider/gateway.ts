@@ -12,6 +12,7 @@ export const googleEventSchema = z.object({
   organizer: z.object({ email: z.string(), self: z.boolean().optional() }).passthrough().optional(),
   reminders: z.object({ useDefault: z.boolean(), overrides: z.array(z.object({ method: z.enum(["email", "popup"]), minutes: z.number() })).optional() }).optional(),
   transparency: z.enum(["opaque", "transparent"]).optional(), visibility: z.enum(["default", "public", "private", "confidential"]).optional(),
+  conferenceData: z.object({ createRequest: z.object({ status: z.object({ statusCode: z.enum(["pending", "success", "failure"]).optional() }).optional() }).passthrough().optional() }).passthrough().optional(),
   colorId: z.string().optional(), htmlLink: z.string().optional(), hangoutLink: z.string().optional(),
 }).passthrough();
 export type GoogleCalendarEvent = z.infer<typeof googleEventSchema>;
@@ -47,5 +48,7 @@ export function normalizeEvent(raw: unknown, scope: Omit<CalendarIdentity, "even
     if (event.status === "cancelled") return { date: "1970-01-01" };
     throw new CalendarProviderError(502, "invalid_event_time");
   };
-  return { ...scope, eventId: event.id, etag: event.etag ?? "", title: event.summary ?? "Untitled event", description: event.description ?? "", location: event.location ?? "", start: normalizeTime(event.start), end: normalizeTime(event.end), status: event.status ?? "confirmed", eventType: event.eventType ?? "default", recurringEventId: event.recurringEventId, originalStartTime: event.originalStartTime ? normalizeTime(event.originalStartTime) : undefined, recurrence: event.recurrence, attendees: event.attendees ?? [], organizer: event.organizer, reminders: event.reminders ?? { useDefault: true }, transparency: event.transparency ?? "opaque", visibility: event.visibility ?? "default", colorId: event.colorId ?? null, htmlLink: event.htmlLink ?? "", conferenceUrl: event.hangoutLink };
+  return { ...scope, eventId: event.id, etag: event.etag ?? "", title: event.summary ?? "Untitled event", description: event.description ?? "", location: event.location ?? "", start: normalizeTime(event.start), end: normalizeTime(event.end), status: event.status ?? "confirmed", eventType: event.eventType ?? "default", recurringEventId: event.recurringEventId, originalStartTime: event.originalStartTime ? normalizeTime(event.originalStartTime) : undefined, recurrence: event.recurrence, attendees: event.attendees ?? [], organizer: event.organizer, reminders: event.reminders ?? { useDefault: true }, transparency: event.transparency ?? "opaque", visibility: event.visibility ?? "default", colorId: event.colorId ?? null, htmlLink: event.htmlLink ?? "", conferenceUrl: event.hangoutLink, conferenceStatus: conferenceStatus(event) };
 }
+
+function conferenceStatus(event: GoogleCalendarEvent) { return event.conferenceData?.createRequest?.status?.statusCode }

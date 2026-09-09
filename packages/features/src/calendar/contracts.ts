@@ -14,7 +14,7 @@ export type CalendarEvent = CalendarIdentity & {
   attendees: CalendarAttendee[]; organizer?: { email: string; self?: boolean };
   reminders: { useDefault: boolean; overrides?: CalendarReminder[] };
   transparency: "opaque" | "transparent"; visibility: "default" | "public" | "private" | "confidential";
-  colorId: string | null; htmlLink: string; conferenceUrl?: string;
+  colorId: string | null; htmlLink: string; conferenceUrl?: string; conferenceStatus?: "pending" | "success" | "failure";
 }
 export type CalendarOccurrence = CalendarEvent
 export type CalendarView = "day" | "week" | "month" | "agenda"

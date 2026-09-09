@@ -30,8 +30,8 @@ export function useCalendarCache(connection: CalendarConnection, userId: string,
   const cached = useLiveQuery(async () => {
     if (!database) return { calendars: [], events: [], loaded: false, stale: true };
     const calendars = await database.calendars.toArray();
-    const ranges = await Promise.all(calendars.map(c => readCalendarRangeCache(database, c.id, start, end)));
-    return { calendars, events: ranges.flatMap(r => r.events), loaded: calendars.length > 0 && ranges.every(r => r.loaded), stale: ranges.some(r => r.stale) };
+    const ranges = await Promise.all(calendars.filter(c => c.permissions.read && !c.permissions.freeBusyOnly).map(c => readCalendarRangeCache(database, c.id, start, end)));
+    return { calendars, events: ranges.flatMap(r => r.events), loaded: Boolean(await database.state.get("last_recovery")) && ranges.every(r => r.loaded), stale: ranges.some(r => r.stale) };
   }, [database, start, end]);
   return { ...cached, database, refresh, error, syncing, online };
 }

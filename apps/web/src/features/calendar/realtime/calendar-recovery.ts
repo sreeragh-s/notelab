@@ -1,12 +1,7 @@
-import { calendarApiBasePath, type CalendarInvalidation } from "@zilobase/features/calendar";
+import { calendarRecoveryDelay, validCalendarInvalidation } from "./recovery-model";
+import { calendarApiBasePath } from "@zilobase/features/calendar";
 import { apiFetch } from "@/platform/network/api";
 import type { CalendarDatabase } from "../storage/calendar-database";
-export function calendarRecoveryDelay(healthy: boolean, failures = 0, random = Math.random()) { return Math.min(300_000, (healthy ? 300_000 : 60_000) * 2 ** Math.min(failures, 3)) * (0.9 + random * 0.2) }
-export function validCalendarInvalidation(value: unknown, scope: { workspaceId: string; bindingId: string }): value is CalendarInvalidation {
-  if (!value || typeof value !== "object") return false;
-  const e = value as Record<string, unknown>;
-  return e.type === "calendar.invalidate" && e.workspaceId === scope.workspaceId && e.bindingId === scope.bindingId && typeof e.calendarId === "string" && Number.isSafeInteger(e.revision) && Number(e.revision) >= 0 && Number.isSafeInteger(e.generation) && Number(e.generation) >= 1;
-}
 export function startCalendarRecovery(database: CalendarDatabase, refresh: (recover: boolean) => Promise<unknown>, isOnline: () => boolean) {
   const scope = database.identity, abort = new AbortController();
   const channel = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel(`${database.name}:realtime`);
@@ -26,6 +21,7 @@ export function startCalendarRecovery(database: CalendarDatabase, refresh: (reco
     else if (event.data?.type === "calendar.recover") void recover(false);
     else void invalidation(event.data);
   });
+  const receivedHealth = (type: string) => { lastPong = Date.now(); reconnectAttempt = 0; channel?.postMessage({ type: "calendar.health" }); if (type === "calendar.ready") void recover(true) };
   const connect = async () => {
     if (stopped || !leader || !isOnline()) return;
     try {
@@ -33,10 +29,10 @@ export function startCalendarRecovery(database: CalendarDatabase, refresh: (reco
       if (stopped || !leader) return;
       const ws = new WebSocket(ticket.websocketUrl, ticket.websocketProtocols); socket = ws;
       ws.onmessage = event => {
-        if (stopped || socket !== ws || typeof event.data !== "string" || event.data.length > 4096) return;
-        let value: unknown; try { value = JSON.parse(event.data) } catch { return }
-        const type = (value as { type?: string })?.type;
-        if (type === "calendar.ready" || type === "calendar.pong") { lastPong = Date.now(); reconnectAttempt = 0; channel?.postMessage({ type: "calendar.health" }); if (type === "calendar.ready") void recover(true) }
+        if (stopped || socket !== ws) return;
+        const value = decodeMessage(event.data); if (!value) return;
+        const type = value.type;
+        if (type === "calendar.ready" || type === "calendar.pong") { receivedHealth(type) }
         else if (validCalendarInvalidation(value, scope)) { channel?.postMessage(value); void invalidation(value) }
       };
       ws.onclose = () => { if (socket === ws) socket = null; lastPong = 0; scheduleReconnect() };
@@ -67,3 +63,5 @@ export function startCalendarRecovery(database: CalendarDatabase, refresh: (reco
   polling = setTimeout(() => void poll(), calendarRecoveryDelay(false));
   return () => { stopped = true; abort.abort(); socket?.close(); channel?.close(); clearInterval(heartbeat); clearTimeout(reconnect); clearTimeout(polling); window.removeEventListener("focus", wake); window.removeEventListener("online", wake); document.removeEventListener("visibilitychange", wake) };
 }
+
+function decodeMessage(data: unknown): { type?: string } | null { if (typeof data !== "string" || data.length > 4096) return null; try { const value: unknown = JSON.parse(data); return value && typeof value === "object" ? value : null } catch { return null } }

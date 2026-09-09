@@ -42,14 +42,14 @@ export async function applyCalendarRange(database: CalendarDatabase, response: C
   if (!response.complete || response.nextPageToken) return false;
   return database.transaction("rw", database.events, database.ranges, database.state, database.pending, async () => {
     const state = await database.state.get(response.calendarId);
-    if (state && (state.generation > response.generation || (state.generation === response.generation && state.revision > response.revision))) return false;
+    if (newerRevision(state, response)) return false;
     const key = calendarRangeKey(response.calendarId, response.start, response.end), prior = await database.ranges.get(key);
-    if (prior && (prior.generation > response.generation || (prior.generation === response.generation && prior.revision > response.revision))) return false;
+    if (newerRevision(prior, response)) return false;
     const pendingRows = await database.pending.toArray();
     const pending = new Set(pendingRows.map(row => row.eventKey));
     const events = response.events.filter(event => event.status !== "cancelled");
     for (const event of events) {
-      if (event.workspaceId !== database.identity.workspaceId || event.bindingId !== database.identity.bindingId || event.calendarId !== response.calendarId) throw new Error("Calendar response identity mismatch");
+      if (!matchesIdentity(event, database.identity, response.calendarId)) throw new Error("Calendar response identity mismatch");
       const eventKey = calendarEventKey(event); if (!pending.has(eventKey)) await database.events.put({ key: eventKey, event });
     }
     await database.ranges.put({ key, calendarId: response.calendarId, start: response.start, end: response.end, eventKeys: [...new Set([...events.map(calendarEventKey).filter(key => !pending.has(key)), ...pendingRows.filter(row => row.optimistic?.calendarId === response.calendarId && eventOverlaps(row.optimistic, response.start, response.end, row.optimistic.start.timeZone ?? "UTC")).map(row => row.eventKey)])], generation: response.generation, revision: response.revision, fetchedAt: Date.now(), accessedAt: Date.now() });
@@ -88,3 +88,6 @@ export async function evictCalendarRanges(database: CalendarDatabase, pinnedKeys
     await database.events.bulkDelete(orphaned);
   });
 }
+
+function newerRevision(prior: { generation: number; revision: number } | undefined, incoming: { generation: number; revision: number }) { return Boolean(prior && (prior.generation > incoming.generation || (prior.generation === incoming.generation && prior.revision > incoming.revision))) }
+function matchesIdentity(event: CalendarEvent, identity: CalendarCacheIdentity, calendarId: string) { return event.workspaceId === identity.workspaceId && event.bindingId === identity.bindingId && event.calendarId === calendarId }

@@ -26,7 +26,7 @@ for (const app of [calendarRoutes, calendarProviderRoutes]) {
   app.onError((error, c) => {
     if (error instanceof z.ZodError) return c.json({ message: "Invalid calendar request." }, 400);
     if (error instanceof CalendarAccessError) return c.json({ message: error.message }, error.status);
-    if (error instanceof CalendarProviderError) return c.json({ message: error.code, code: error.code, retryAfterMs: error.retryAfterMs }, error.status === 401 ? 401 : error.status === 403 ? 403 : error.status === 404 ? 404 : error.status === 409 ? 409 : error.status === 412 ? 412 : error.status === 429 ? 429 : error.status === 400 ? 400 : 502);
+    if (error instanceof CalendarProviderError) return c.json({ message: error.code, code: error.code, retryAfterMs: error.retryAfterMs }, calendarErrorStatus(error.status));
     return c.json({ message: "Calendar request failed." }, 500);
   });
 }
@@ -82,3 +82,6 @@ calendarProviderRoutes.post("/google/webhook", async c => {
  const accepted = await runWithDbEnv(c.env, () => acceptCalendarWebhook(c.req.raw.headers));
  return c.body(null, accepted ? 204 : 403);
 });
+
+
+function calendarErrorStatus(status: number): 400 | 401 | 403 | 404 | 409 | 412 | 429 | 502 { const supported = [400, 401, 403, 404, 409, 412, 429] as const; return supported.find(code => code === status) ?? 502 }

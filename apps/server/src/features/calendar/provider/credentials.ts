@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { getStringEnv, type RuntimeEnv } from "../../../shared/config/config"
 
 const CALENDAR_CREDENTIAL_KEY_VERSION = "v1"
@@ -123,20 +124,6 @@ function invalidKeyError() {
   )
 }
 
-function toArrayBuffer(bytes: Uint8Array) {
-  return bytes.buffer.slice(
-    bytes.byteOffset,
-    bytes.byteOffset + bytes.byteLength,
-  ) as ArrayBuffer
-}
-
-function bytesToBase64(bytes: Uint8Array) {
-  let binary = ""
-  for (const byte of bytes) binary += String.fromCharCode(byte)
-  return btoa(binary)
-}
-
-function base64ToBytes(value: string) {
-  const binary = atob(value)
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0))
-}
+function toArrayBuffer(bytes: Uint8Array) { return Uint8Array.from(bytes).buffer }
+function bytesToBase64(bytes: Uint8Array) { return Buffer.from(bytes).toString("base64") }
+function base64ToBytes(value: string) { return Uint8Array.from(atob(value), character => character.charCodeAt(0)) }

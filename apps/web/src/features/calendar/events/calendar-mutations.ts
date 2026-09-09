@@ -8,7 +8,7 @@ async function presentEvent(database: CalendarDatabase, event: CalendarEvent | u
   if (event && key) await database.events.put({ key, event });
   for (const range of await database.ranges.toArray()) {
     const eventKeys = range.eventKeys.filter(k => k !== removedKey && k !== key);
-    if (event && key && range.calendarId === event.calendarId && eventOverlaps(event, range.start, range.end, event.start.timeZone ?? "UTC")) eventKeys.push(key);
+    if (event && key && belongsToRange(event, range)) eventKeys.push(key);
     await database.ranges.put({ ...range, eventKeys });
   }
 }
@@ -32,7 +32,7 @@ export async function runCalendarMutation(input: { database: CalendarDatabase; a
     const result = await transport<CalendarMutationResponse>(path, { method: "POST", body: JSON.stringify({ ...write, destination: input.destination, responseStatus: input.responseStatus }) });
     await settle(database, pending, result); return result;
   } catch (error) {
-    const definite = error instanceof ApiError && error.status >= 400 && error.status < 500 && ![408, 429].includes(error.status);
+    const definite = definiteRejection(error);
     await settle(database, pending, { operationId: write.operationId, status: definite ? "failed" : "ambiguous" });
     throw error;
   }
@@ -45,3 +45,6 @@ export async function reconcileCalendarMutations(database: CalendarDatabase, tra
     } catch { return }
   }
 }
+
+function definiteRejection(error: unknown) { return error instanceof ApiError && error.status >= 400 && error.status < 500 && ![408, 429].includes(error.status) }
+function belongsToRange(event: CalendarEvent, range: { calendarId: string; start: string; end: string }) { return range.calendarId === event.calendarId && eventOverlaps(event, range.start, range.end, event.start.timeZone ?? "UTC") }

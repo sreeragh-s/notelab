@@ -19,21 +19,18 @@ export async function queueCalendarSync(env: RuntimeEnv, accountId: string, cale
   await dispatchBackgroundTasks(env, [createBackgroundTask({ env, kind: "calendar.sync", resourceId: JSON.stringify([accountId, calendarId]) })]);
 }
 export async function advanceCalendarSync(env: RuntimeEnv, accountId: string, calendarId: string, suppliedGateway?: CalendarGateway): Promise<boolean> {
-  const bindings = await db.select().from(calendarBinding).where(eq(calendarBinding.accountId, accountId));
-  const binding = bindings.find(row => isCalendarFeatureEnabled(env, row.workspaceId));
-  if (!binding) return false;
-  const [account] = await db.select().from(calendarAccount).where(eq(calendarAccount.id, accountId));
-  if (!account || account.status !== "connected") return false;
+  const owner = await syncOwner(env, accountId); if (!owner) return false;
+  const { account, binding } = owner;
   const scope = and(eq(calendarProviderCalendar.accountId, accountId), eq(calendarProviderCalendar.calendarId, calendarId));
   const leaseId = crypto.randomUUID();
   const [state] = await db.update(calendarProviderCalendar).set({ leaseId, leaseExpiresAt: new Date(Date.now() + 60_000) }).where(and(scope, or(isNull(calendarProviderCalendar.leaseExpiresAt), lt(calendarProviderCalendar.leaseExpiresAt, new Date())))).returning();
   if (!state) return true;
   try {
     const gateway = suppliedGateway ?? await createCalendarGateway(env, account);
-    const response = await gateway.events(calendarId, { maxResults: "500", singleEvents: "false", showDeleted: "true", ...(state.syncToken ? { syncToken: state.syncToken } : {}), ...(state.pageToken ? { pageToken: state.pageToken } : {}) });
+    const response = await gateway.events(calendarId, syncParameters(state));
     if (!response.nextPageToken && !response.nextSyncToken) throw new CalendarProviderError(502, "missing_sync_checkpoint");
     return await db.transaction(async tx => {
-      const [fenced] = await tx.update(calendarProviderCalendar).set({ pageToken: response.nextPageToken ?? null, syncToken: response.nextSyncToken ?? state.syncToken, leaseId: null, leaseExpiresAt: null,
+      const [fenced] = await tx.update(calendarProviderCalendar).set({ pageToken: response.nextPageToken ?? null, syncToken: nextSyncToken(response, state), leaseId: null, leaseExpiresAt: null,
         ...(response.nextPageToken ? {} : { revision: sql`${calendarProviderCalendar.revision} + 1`, dirtyAt: sql`case when ${calendarProviderCalendar.dirtyAt} = ${state.dirtyAt?.toISOString() ?? null}::timestamptz then null else ${calendarProviderCalendar.dirtyAt} end` })
       }).where(and(scope, eq(calendarProviderCalendar.leaseId, leaseId))).returning();
       if (!fenced) return true;
@@ -67,3 +64,17 @@ export async function advancePendingCalendars(env: RuntimeEnv) {
   const rows = await db.select().from(calendarProviderCalendar).where(or(sql`${calendarProviderCalendar.dirtyAt} is not null`, sql`${calendarProviderCalendar.pageToken} is not null`)).limit(10);
   for (const row of rows) await advanceCalendarSync(env, row.accountId, row.calendarId);
 }
+
+async function syncOwner(env: RuntimeEnv, accountId: string) {
+  const bindings = await db.select().from(calendarBinding).where(eq(calendarBinding.accountId, accountId));
+  const binding = bindings.find(row => isCalendarFeatureEnabled(env, row.workspaceId));
+  if (!binding) return null;
+  const [account] = await db.select().from(calendarAccount).where(eq(calendarAccount.id, accountId));
+  if (!account || account.status !== "connected") return null;
+  return { account, binding };
+}
+
+function syncParameters(state: { syncToken: string | null; pageToken: string | null }) { return { maxResults: "500", singleEvents: "false", showDeleted: "true", ...(state.syncToken ? { syncToken: state.syncToken } : {}), ...(state.pageToken ? { pageToken: state.pageToken } : {}) } }
+
+
+function nextSyncToken(response: { nextSyncToken?: string }, state: { syncToken: string | null }) { return response.nextSyncToken ?? state.syncToken }

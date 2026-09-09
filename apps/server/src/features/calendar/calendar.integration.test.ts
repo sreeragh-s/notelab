@@ -129,3 +129,30 @@ test.skipIf(!enabled)("webhooks authenticate early callbacks, deduplicate replay
   const [channel] = (await database!.select().from(schema.calendarWatchChannel)).filter(c => c.id === id);
   expect(channel!.messageNumber).toBe("1"); expect(channel!.dirtyAt).toBeInstanceOf(Date); expect(channel!.resourceId).toBe("resource");
 });
+
+test.skipIf(!enabled)("expired sync tokens preserve cached canonical events until recovery commits", async () => {
+  const env = { CALENDAR_ENABLED: "true", CALENDAR_ENABLED_WORKSPACE_IDS: workspaceId };
+  const before = await database!.select().from(schema.calendarEventRecord); expect(before.length).toBeGreaterThan(0);
+  const expired = new CalendarGateway("fixture", async () => Response.json({}, { status: 410 }));
+  await runWithDb(database!, () => advanceCalendarSync(env, secondAccount, "primary", expired));
+  expect(await database!.select().from(schema.calendarEventRecord)).toHaveLength(before.length);
+  const recovered = new CalendarGateway("fixture", async () => Response.json({ items: [], nextSyncToken: "recovered" }));
+  await runWithDb(database!, () => advanceCalendarSync(env, secondAccount, "primary", recovered));
+  expect(await database!.select().from(schema.calendarEventRecord)).toHaveLength(0);
+});
+
+test.skipIf(!enabled)("outbox retries failed publication and emits only currently owned scope metadata", async () => {
+  const { drainCalendarOutbox } = await import("./realtime/outbox");
+  const { runWithRuntimeAdapter } = await import("../../infrastructure/runtime/runtime-adapter");
+  const env = { CALENDAR_ENABLED: "true", CALENDAR_ENABLED_WORKSPACE_IDS: workspaceId };
+  await database!.update(schema.calendarNotificationOutbox).set({ nextAttemptAt: new Date(0) });
+  await runWithDb(database!, () => runWithRuntimeAdapter({ publishCalendarNotification: async () => { throw new Error("bus unavailable") } }, () => drainCalendarOutbox(env)));
+  const pending = await database!.select().from(schema.calendarNotificationOutbox);
+  expect(pending.length).toBeGreaterThan(0); expect(pending.every(row => row.attempts === 1)).toBe(true);
+  await database!.update(schema.calendarNotificationOutbox).set({ nextAttemptAt: new Date(0) });
+  const published: unknown[] = [];
+  await runWithDb(database!, () => runWithRuntimeAdapter({ publishCalendarNotification: async ({ event }) => { published.push(event) } }, () => drainCalendarOutbox(env)));
+  expect(await database!.select().from(schema.calendarNotificationOutbox)).toHaveLength(0);
+  expect(published.length).toBeGreaterThan(0);
+  for (const event of published) expect(Object.keys(event as object).sort()).toEqual(["accountId", "bindingId", "calendarId", "generation", "revision", "userId", "workspaceId"]);
+});

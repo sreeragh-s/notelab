@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { pgTable, text, timestamp, integer, jsonb, uniqueIndex, foreignKey, primaryKey, check } from "drizzle-orm/pg-core";
 import { user } from "./authentication";
 import { member } from "./workspaces";
-import type { CalendarEvent, CalendarRecord, CalendarPreferences, CalendarMutationResponse } from "@zilobase/features/calendar";
+import type { CalendarEvent, CalendarRecord, CalendarPreferences, CalendarMutationResponse } from "../../../shared/contracts/calendar";
 
 export const calendarAccount = pgTable("calendar_account", {
   id: text("id").primaryKey(), userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),

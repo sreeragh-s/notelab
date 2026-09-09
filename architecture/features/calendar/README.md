@@ -67,3 +67,9 @@ The lazy [application reminder host](../../../apps/web/src/features/calendar/rem
 In-app delivery is always available when reminders are enabled. System delivery uses browser Notification permission or the [Tauri notification plugin](https://v2.tauri.app/plugin/notification/), requested only from Calendar settings. The scheduler does not register closed-app alarms, service-worker push, or native scheduled notifications. Disconnection deletes its scoped cache and reminder claims; logout removes the session host.
 
 Cached range coverage can be composed from adjacent snapshots, so switching from a loaded month to a day or week reads existing occurrences immediately. The controller prefetches the current and adjacent monthly buckets after the active request. Eviction pins ranges containing unresolved mutations as well as the current request.
+
+## Acceptance corrections
+
+The month view lays multi-day bars across weekly lanes with overflow details. Day/week grids support 15-minute creation, transient drag previews and all-day resizing; provider delivery occurs on drop. Indexed day bounds and cached time formatters keep cached navigation independent of event normalization costs. Separate editor, timing, status and layout modules keep these responsibilities isolated.
+
+Provider transport and durable receipt storage are separate from mutation orchestration. Pending writes serialize by provider account across workspace bindings. Moves first persist an operation marker with an ETag fence, allowing uncertain delivery to reconcile the destination safely. Following edits at the first occurrence update the existing series. Google Meet pending/failure states remain visible without treating a saved event as lost.

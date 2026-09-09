@@ -83,7 +83,7 @@ export function attachNodeCalendarRealtimeRuntime(
   return {
     async destroy() {
       server.off("upgrade", upgrade)
-      await Promise.allSettled([...rooms.values()].map((room) => room.unsubscribe?.()))
+      for (const room of rooms.values()) { try { await room.unsubscribe?.() } catch { /* Close remaining rooms even when a bus subscription has failed. */ } }
       await websocket.close(1001, "Server shutting down")
     },
     async publishNotification(event: CalendarNotificationEvent) {

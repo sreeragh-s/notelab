@@ -5,6 +5,7 @@ import { toast } from "sonner";
 export function DraggableEvent({ event, zone, dayWidth, disabled, onChange, children }: { event: CalendarEvent; zone: string; dayWidth: number; disabled: boolean; onChange: (event: CalendarEvent) => void; children: ReactNode }) {
   const origin = useRef<{ x: number; y: number; resize: "start" | "end" | null } | null>(null), [offset, setOffset] = useState({ x: 0, y: 0 });
   const moved = useRef(false);
+  const allDay = Boolean(event.start.date);
   const down = (e: PointerEvent<HTMLDivElement>) => {
     if (disabled || e.button !== 0) return;
     const edge = (e.target as HTMLElement).closest("[data-resize]")?.getAttribute("data-resize") as "start" | "end" | undefined;
@@ -20,9 +21,11 @@ export function DraggableEvent({ event, zone, dayWidth, disabled, onChange, chil
     if (!origin.current) return;
     const x = e.clientX - origin.current.x, y = e.clientY - origin.current.y;
     if (Math.abs(x) + Math.abs(y) > 4) { moved.current = true; e.currentTarget.setPointerCapture(e.pointerId) }
-    if (moved.current) setOffset({ x: origin.current.resize ? 0 : x, y });
-    const scroll = e.currentTarget.closest("[data-calendar-scroll]"); if (scroll) { const box = scroll.getBoundingClientRect(); if (e.clientY > box.bottom - 40) scroll.scrollTop += 12; if (e.clientY < box.top + 40) scroll.scrollTop -= 12 }
+    if (moved.current) setOffset({ x: origin.current.resize && !allDay ? 0 : x, y: allDay ? 0 : y });
+    autoScroll(e.currentTarget, e.clientY);
   }} onPointerUp={finish} onPointerCancel={() => { origin.current = null; setOffset({ x: 0, y: 0 }) }} onClickCapture={e => { if (moved.current) { e.preventDefault(); e.stopPropagation(); moved.current = false } }}>
-    {!disabled && <div data-resize="start" className="absolute inset-x-0 top-0 z-10 h-1 cursor-ns-resize" />}{children}{!disabled && <div data-resize="end" className="absolute inset-x-0 bottom-0 z-10 h-1 cursor-ns-resize" />}
+    {!disabled && <div data-resize="start" className={allDay ? "absolute inset-y-0 left-0 z-10 w-1 cursor-ew-resize" : "absolute inset-x-0 top-0 z-10 h-1 cursor-ns-resize"} />}{children}{!disabled && <div data-resize="end" className={allDay ? "absolute inset-y-0 right-0 z-10 w-1 cursor-ew-resize" : "absolute inset-x-0 bottom-0 z-10 h-1 cursor-ns-resize"} />}
   </div>;
 }
+
+function autoScroll(element: HTMLElement, y: number) { const scroll = element.closest("[data-calendar-scroll]"); if (!scroll) return; const box = scroll.getBoundingClientRect(); if (y > box.bottom - 40) scroll.scrollTop += 12; if (y < box.top + 40) scroll.scrollTop -= 12 }
