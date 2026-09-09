@@ -16,11 +16,16 @@ function TimeGridDay(props: GridProps & { day: string }) {
     {day === todayInZone(preferences.timeZone) && <div className="pointer-events-none absolute inset-x-0 border-t border-feedback-danger-text" style={{ top: (Number(clock[0]) * 60 + Number(clock[1])) * .8 }} />}
   </div>;
 }
-export function CalendarTimeGridHeader(props: GridProps & { visibleDayCount: number }) {
+export function CalendarTimeGridHeader(props: GridProps & { visibleDayCount: number; allDayCollapsed: boolean; onExpandAllDay: () => void }) {
   const { preferences, days } = props;
   return <div className="grid bg-surface-canvas" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}>
     {days.map(day => <div data-calendar-date-header={day} key={day} className="min-w-0 border-l border-stroke-default p-1"><Button size="sm" variant="ghost" className="w-full" onClick={() => props.onDay(day)}>{new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`))}</Button></div>)}
-    {days.map(day => <div data-calendar-all-day={day} key={`all-day:${day}`} className="min-h-8 min-w-0 border-l border-t border-stroke-default p-1"><div className="grid max-h-24 gap-1 overflow-y-auto">{(props.eventsByDay[day] ?? []).filter(event => event.start.date).map(event => <DraggableEvent key={calendarEventKey(event)} event={event} zone={preferences.timeZone} dayWidth={(props.scrollRef.current?.clientWidth ?? 800) / props.visibleDayCount} disabled={!props.online || !props.writable(event)} onChange={props.onChange}>{props.card(event)}</DraggableEvent>)}</div></div>)}
+    {days.map(day => {
+      const events = (props.eventsByDay[day] ?? []).filter(event => event.start.date);
+      return <div data-calendar-all-day={day} key={`all-day:${day}`} className="min-h-8 min-w-0 border-l border-t border-stroke-default p-1">
+        {props.allDayCollapsed ? events.length > 0 && <Button size="sm" variant="ghost" className="w-full justify-start" aria-label={`Expand ${events.length} all-day ${events.length === 1 ? "event" : "events"} on ${day}`} onClick={props.onExpandAllDay}>{events.length} {events.length === 1 ? "event" : "events"}</Button> : <div className="grid max-h-24 gap-1 overflow-y-auto">{events.map(event => <DraggableEvent key={calendarEventKey(event)} event={event} zone={preferences.timeZone} dayWidth={(props.scrollRef.current?.clientWidth ?? 800) / props.visibleDayCount} disabled={!props.online || !props.writable(event)} onChange={props.onChange}>{props.card(event)}</DraggableEvent>)}</div>}
+      </div>;
+    })}
   </div>;
 }
 export function CalendarTimeGrid(props: GridProps) {

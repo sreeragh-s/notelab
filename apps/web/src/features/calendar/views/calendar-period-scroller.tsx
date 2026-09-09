@@ -1,5 +1,7 @@
 import { createRef, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { CalendarTimeGrid, CalendarTimeGridHeader, TimeAxis } from "./calendar-time-grid";
+import { Button } from "@/shared/ui/button";
+import { ChevronDownIcon, ChevronUpIcon } from "@/shared/components/icons";
 import type { ComponentProps } from "react";
 
 type Props = Omit<ComponentProps<typeof CalendarTimeGrid>, "days" | "onScroll"> & {
@@ -9,6 +11,8 @@ type Props = Omit<ComponentProps<typeof CalendarTimeGrid>, "days" | "onScroll"> 
 };
 
 export function CalendarPeriodScroller({ periods, periodKey, onPeriod, ...grid }: Props) {
+  const [allDayCollapsed, setAllDayCollapsed] = useState(false);
+  const allDayToggle = useRef<HTMLButtonElement>(null);
   const axis = useRef<HTMLDivElement>(null);
   const header = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
@@ -31,7 +35,13 @@ export function CalendarPeriodScroller({ periods, periodKey, onPeriod, ...grid }
     navigating.current = false;
     element.scrollLeft = element.clientWidth;
     if (header.current) header.current.scrollLeft = element.scrollLeft;
-    const observer = new ResizeObserver(() => { element.scrollLeft = element.clientWidth; if (header.current) header.current.scrollLeft = element.scrollLeft; });
+    let width = element.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (element.clientWidth === width) return;
+      width = element.clientWidth;
+      element.scrollLeft = width;
+      if (header.current) header.current.scrollLeft = element.scrollLeft;
+    });
     observer.observe(element);
     return () => observer.disconnect();
   }, [periodKey]);
@@ -53,9 +63,9 @@ export function CalendarPeriodScroller({ periods, periodKey, onPeriod, ...grid }
       }}>
         <div className="flex shrink-0 flex-col" style={{ width: 56 * (1 + grid.preferences.secondaryTimeZones.length) }}>
           <div data-calendar-zone-labels className="flex h-8 text-[10px] text-content-secondary">{[grid.preferences.timeZone, ...grid.preferences.secondaryTimeZones].map(zone => <span key={zone} title={zone} className="w-14 truncate p-1">{zone.split("/").at(-1)}</span>)}</div>
-          <div className="min-h-8 flex-1 border-t border-stroke-default px-1 py-1 text-right text-xs/relaxed whitespace-nowrap text-content-secondary">All-day</div>
+          <div className="min-h-8 flex-1 border-t border-stroke-default px-1 py-1 text-right text-xs/relaxed whitespace-nowrap text-content-secondary"><Button ref={allDayToggle} size="sm" variant="ghost" className="w-full gap-0 px-0 [&_svg]:size-2.5" aria-expanded={!allDayCollapsed} aria-label={allDayCollapsed ? "Expand all-day events" : "Collapse all-day events"} title={allDayCollapsed ? "Expand all-day events" : "Collapse all-day events"} onClick={() => setAllDayCollapsed(value => !value)}><span>All-day</span>{allDayCollapsed ? <ChevronDownIcon /> : <ChevronUpIcon />}</Button></div>
         </div>
-        <div ref={header} className="min-w-0 flex-1 overflow-hidden"><div className="w-[300%]"><CalendarTimeGridHeader {...grid} days={periods.flat()} visibleDayCount={periods[1]!.length} /></div></div>
+        <div ref={header} className="min-w-0 flex-1 overflow-hidden"><div className="w-[300%]"><CalendarTimeGridHeader {...grid} days={periods.flat()} visibleDayCount={periods[1]!.length} allDayCollapsed={allDayCollapsed} onExpandAllDay={() => { setAllDayCollapsed(false); allDayToggle.current?.focus(); }} /></div></div>
       </div>
       <div className="flex min-h-0 min-w-0 flex-1">
         <div data-calendar-time-axis ref={axis} className="shrink-0 overflow-hidden bg-surface-canvas" style={{ width: 56 * (1 + grid.preferences.secondaryTimeZones.length) }} onWheel={event => { if (grid.scrollRef.current) grid.scrollRef.current.scrollTop += event.deltaY; }}>
