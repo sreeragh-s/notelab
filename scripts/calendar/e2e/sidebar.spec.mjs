@@ -102,4 +102,9 @@ test("only the eye changes visibility and Default never overlaps actions", async
   const label = await name.getByText("Default", { exact: true }).boundingBox();
   const more = await page.getByRole("button", { name: "Options for Personal", exact: true }).boundingBox();
   expect(label.x + label.width).toBeLessThanOrEqual(more.x);
+  const rowBox = await name.boundingBox();
+  const eyeBox = await page.getByRole("button", { name: "Show Personal", exact: true }).boundingBox();
+  const center = box => box.y + box.height / 2;
+  expect(Math.abs(center(more) - center(rowBox))).toBeLessThan(1);
+  expect(Math.abs(center(eyeBox) - center(rowBox))).toBeLessThan(1);
 });

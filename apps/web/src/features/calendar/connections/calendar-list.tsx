@@ -32,7 +32,7 @@ function CalendarRow({ calendar, allCalendars, preferences, onPreferences, disab
       {preferences.defaultCalendarKey === key && <span className="shrink-0 overflow-visible! whitespace-nowrap text-xs text-content-secondary">Default</span>}
     </SidebarMenuButton>
     <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} defaultSubDisplayMode="inline">
-      <DropdownMenuTrigger asChild><SidebarNavItemAction variant="menu" style={{ position: "relative", top: "auto", right: "auto", transform: "none" }} className="w-0 shrink-0 overflow-hidden opacity-0 transition-[width,opacity] group-hover/nav-row:w-5 group-focus-within/nav-row:w-5 group-focus-within/nav-row:opacity-100 group-data-[menu-open]/nav-row:w-5 after:hidden!" aria-label={`Options for ${calendar.name}`}><MoreHorizontalIcon /></SidebarNavItemAction></DropdownMenuTrigger>
+      <DropdownMenuTrigger asChild><SidebarNavItemAction variant="menu" style={{ position: "relative", top: "auto", right: "auto", translate: "none" }} className="w-0 shrink-0 overflow-hidden opacity-0 transition-[width,opacity] group-hover/nav-row:w-5 group-focus-within/nav-row:w-5 group-focus-within/nav-row:opacity-100 group-data-[menu-open]/nav-row:w-5 after:hidden!" aria-label={`Options for ${calendar.name}`}><MoreHorizontalIcon /></SidebarNavItemAction></DropdownMenuTrigger>
       <DropdownMenuContent side="right" align="start" className="w-64" onCloseAutoFocus={event => { if (removing) event.preventDefault(); }}>
         <DropdownMenuSub title="Color"><DropdownMenuSubTrigger disabled={disabled}><span className={`size-4 rounded-sm ${PALETTE[color].swatchClass}`} /><span className="flex-1">Color</span><span className="text-content-secondary">{colorName(color)}</span></DropdownMenuSubTrigger>
           <DropdownMenuSubContent>{colors.map(option => <DropdownMenuItem key={option} disabled={disabled} onSelect={() => save({ ...preferences, calendarColors: { ...preferences.calendarColors, [key]: option } })}><span className={`size-4 rounded-sm ${PALETTE[option].swatchClass}`} /><span className="flex-1">{colorName(option)}</span>{option === color && <CheckIcon />}</DropdownMenuItem>)}</DropdownMenuSubContent>
@@ -46,7 +46,7 @@ function CalendarRow({ calendar, allCalendars, preferences, onPreferences, disab
         <DropdownMenuItem variant="destructive" disabled={disabled} onSelect={() => { setError(undefined); setRemoving(true); }}><TrashIcon />Remove calendar from list</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-    <SidebarNavItemAction variant="menu" disabled={disabled} style={{ position: "relative", top: "auto", right: "auto", transform: "none" }} className="shrink-0 opacity-100 after:hidden!" aria-pressed={!hidden} aria-label={`${hidden ? "Show" : "Hide"} ${calendar.name}`} onClick={toggle}>{hidden ? <EyeOffIcon /> : <EyeIcon />}</SidebarNavItemAction>
+    <SidebarNavItemAction variant="menu" disabled={disabled} style={{ position: "relative", top: "auto", right: "auto", translate: "none" }} className="shrink-0 opacity-100 after:hidden!" aria-pressed={!hidden} aria-label={`${hidden ? "Show" : "Hide"} ${calendar.name}`} onClick={toggle}>{hidden ? <EyeOffIcon /> : <EyeIcon />}</SidebarNavItemAction>
   </div>
   <AlertDialog open={removing} onOpenChange={open => { if (!pending) setRemoving(open); }}>
     <AlertDialogContent onCloseAutoFocus={event => { event.preventDefault(); if (!completed.current) row.current?.focus(); else document.getElementById(`calendar-account-${calendar.bindingId}`)?.focus(); }}>
