@@ -77,7 +77,7 @@ test("removal failure keeps the dialog and calendar, then allows retry", async (
 
 test("calendar menus use shared inline panels on a narrow sidebar", async ({ page }) => {
   await page.setViewportSize({ width: 700, height: 600 });
-  await page.getByRole("button", { name: "Personal Default", exact: true }).hover();
+  await page.getByRole("button", { name: "Personal Default", exact: true }).click();
   await page.getByRole("button", { name: "Options for Personal", exact: true }).click();
   await page.getByRole("menuitem", { name: /Color/ }).click();
   await expect(page.getByRole("button", { name: "Back from Color" })).toBeVisible();

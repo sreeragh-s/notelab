@@ -1,4 +1,5 @@
-import { CalendarWorkspaceProvider } from "@/features/calendar/workspace/calendar-workspace";
+import { useCalendarChatVisibility } from "../side-panel/use-calendar-chat-visibility";
+import { CalendarWorkspaceProvider, CalendarDockMount, useCalendarWorkspace } from "@/features/calendar/workspace/calendar-workspace";
 import { isFeatureEnabled } from "@/shared/config/feature-flags";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { ComponentProps, Dispatch, ReactNode, SetStateAction } from "react"
@@ -298,7 +299,8 @@ function AppLayoutContentInner({
     sidePaneDatabaseId,
     sidePanePageId,
   } = sidePaneState
-  const [chatSidebarOpen, setChatSidebarOpen] = useState(false)
+  const calendarWorkspace = useCalendarWorkspace();
+  const [chatSidebarOpen, setChatSidebarOpen] = useCalendarChatVisibility();
   const [chatPresentationMode, setChatPresentationMode] =
     useState<ChatPresentationMode>(readChatPresentationMode)
   const [discussionsSidebarOpen, setDiscussionsSidebarOpen] = useState(false)
@@ -351,6 +353,7 @@ function AppLayoutContentInner({
     }
   }, [editorCommentsOpenRequest, openDiscussionsSidebar])
   const primaryRightPanelOpen = Boolean(
+    calendarWorkspace.panelOpen ||
     (utilitySidebarOpen && utilitySidebar) ||
       pageLayoutSidebarOpen ||
       (discussionsEnabled && discussionsSidebarOpen),
@@ -398,7 +401,7 @@ function AppLayoutContentInner({
       closeSidePane()
     }
     setChatSidebarOpen(true)
-  }, [appSidebarOpen, closeSidePane])
+  }, [appSidebarOpen, closeSidePane, setChatSidebarOpen])
 
   useEffect(() => {
     if (pathname === "/ai" && chatSidebarOpen) {
@@ -679,6 +682,8 @@ function AppLayoutContentInner({
           </SidebarInset>
         </ResizablePanel>
         <RightSidebars
+          calendarOpen={calendarWorkspace.panelOpen}
+          calendarPanel={pathname === "/calendar" ? <CalendarDockMount /> : undefined}
           chatOpen={dockedChatOpen}
           chatPanel={dockedChatOpen ? chatPanel : null}
           discussionsEnabled={discussionsEnabled}
@@ -694,6 +699,8 @@ function AppLayoutContentInner({
         />
       </ResizablePanelGroup>
       <RightSidebarMobilePanels
+        calendarOpen={calendarWorkspace.panelOpen}
+        calendarPanel={pathname === "/calendar" ? <CalendarDockMount /> : undefined}
         chatOpen={chatSidebarOpen}
         chatPanel={chatPanel}
         discussionsEnabled={discussionsEnabled}
@@ -708,9 +715,10 @@ function AppLayoutContentInner({
           {chatPanel}
         </FloatingWidget>
       ) : null}
-      {chatSidebarOpen || isAiPage || Boolean(agentId) || isMailPage ? null : (
+      {chatSidebarOpen || isAiPage || Boolean(agentId) || pathname === "/mail" ? null : (
         <ChatSidebarTrigger
           adjacentSidebarOpen={
+            calendarWorkspace.panelOpen ||
             utilitySidebarOpen ||
             pageLayoutSidebarOpen ||
             (discussionsEnabled && discussionsSidebarOpen)

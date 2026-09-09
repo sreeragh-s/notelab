@@ -93,3 +93,15 @@ Calendar row buttons only receive focus. Visibility and its pressed state belong
 to the eye button; hidden names use the shared secondary text token. A flex action
 area allocates space for the eye and expands for the options button on hover,
 focus, or menu-open state, keeping the Default label intact.
+
+## Event dock
+
+The existing [details and editor](../../../apps/web/src/features/calendar/views/calendar-event-panel.tsx)
+render into a stable portal element owned by the workspace controller. Calendar
+registers close/create actions and retains event, mutation, and draft state. The
+shell mounts the element in its shared resizable dock or mobile overlay. Moving
+the same element between hosts preserves the editor across breakpoints and AI
+switches. Hidden content is inert. Calendar and AI are mutually exclusive even
+when AI uses its saved floating presentation; switching does not rewrite that
+preference. Explicit close clears route selection and restores trigger focus;
+leaving Calendar resets registration and search state.

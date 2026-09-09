@@ -185,3 +185,63 @@ test("month scroll continues in both directions with bounded rows and stable anc
   await expect(page.getByRole("heading", { name: "September 2026", exact: true })).toBeVisible();
   await expect.poll(() => scroll.evaluate(element => element.scrollTop)).toBe(576);
 });
+
+test("topbar uses the shared action slot and compact navigation", async ({ page }) => {
+  const header = page.locator('header').filter({ has: page.getByRole('button', { name: 'Calendar settings', exact: true }) });
+  await expect(header.getByRole('textbox', { name: 'Search calendar' })).toBeVisible();
+  await expect(header.getByRole('combobox', { name: 'Calendar view' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'September 2026', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'September 2026', exact: true })).toHaveCount(0);
+  const controls = ['Calendar event panel', 'Today', 'Previous period', 'Next period', 'Calendar settings'];
+  let right = 0;
+  for (const name of controls) {
+    const box = await header.getByRole('button', { name, exact: true }).boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(right); right = box.x + box.width;
+  }
+  const box = await header.boundingBox(); expect(box.x + box.width - right).toBeGreaterThanOrEqual(12);
+  await page.setViewportSize({ width: 600, height: 650 });
+  await expect(header.getByRole('textbox', { name: 'Search calendar' })).toBeHidden();
+  await header.getByRole('button', { name: 'Search events', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Search calendar' }).fill('Design');
+  await page.keyboard.press('Escape');
+  await header.getByRole('button', { name: 'Calendar navigation', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Next period', exact: true }).click();
+  expect((await header.boundingBox()).height).toBe(48);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test("Calendar dock retains drafts across AI, floating AI and mobile transitions", async ({ page }) => {
+  await page.getByRole('button', { name: 'Create event', exact: true }).click();
+  await page.getByLabel('Title', { exact: true }).fill('Preserved calendar draft');
+  const dock = page.locator('[data-calendar-event-panel]');
+  await expect(dock).toBeVisible();
+  await page.getByRole('button', { name: 'Open AI', exact: true }).click();
+  await expect(dock).toHaveAttribute('inert', '');
+  await expect(page.getByRole('heading', { name: 'Ask AI' })).toBeVisible();
+  await page.getByRole('button', { name: 'Toggle floating AI' }).click();
+  await expect(page.getByRole('complementary', { name: 'Floating AI' })).toBeVisible();
+  await page.getByRole('button', { name: 'Calendar event panel', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Ask AI' })).toBeHidden();
+  await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Preserved calendar draft');
+  await page.setViewportSize({ width: 600, height: 700 });
+  await expect(page.locator('#mobile-right-sidebar-primary')).toHaveAttribute('aria-hidden', 'false');
+  await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Preserved calendar draft');
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Preserved calendar draft');
+  await page.getByRole('button', { name: 'Close calendar event panel' }).click();
+  await expect(page.getByRole('button', { name: 'Calendar event panel', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Open AI', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: 'Floating AI' })).toBeVisible();
+});
+
+test("event deep links open the dock and explicit close clears selection", async ({ page }) => {
+  await page.evaluate(() => window.calendarFixture.select('event'));
+  await expect(page.getByRole('heading', { name: 'Design review', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Close calendar event panel' }).click();
+  expect(await page.evaluate(() => window.calendarFixture.search())).not.toHaveProperty('event');
+  await page.getByRole('button', { name: 'Calendar event panel', exact: true }).click();
+  const panel = page.locator('[data-calendar-event-panel]');
+  await expect(panel).toContainText('Select an event');
+  await panel.getByRole('button', { name: 'Create event', exact: true }).click();
+  await expect(page.getByLabel('Title', { exact: true })).toBeVisible();
+});

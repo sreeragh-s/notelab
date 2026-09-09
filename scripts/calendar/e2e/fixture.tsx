@@ -1,4 +1,11 @@
-import { CalendarWorkspaceProvider } from "@/features/calendar/workspace/calendar-workspace";
+import { useCalendarChatVisibility } from "@/app/shell/side-panel/use-calendar-chat-visibility";
+import { useState } from "react";
+import { RightSidebars, RightSidebarMobilePanels } from "@/app/shell/side-panel/right-sidebars";
+import { ResizablePanelGroup, ResizablePanel } from "@/shared/ui/resizable";
+import { PagePaneHeader } from "@/features/pages/pane/page-pane-header";
+import { useIsMobile } from "@/shared/hooks/use-mobile";
+import { Button } from "@/shared/ui/button";
+import { CalendarWorkspaceProvider, CalendarDockMount, useCalendarWorkspace } from "@/features/calendar/workspace/calendar-workspace";
 import { CalendarToolbar } from "@/features/calendar/workspace/calendar-toolbar";
 import { ZilobaseFeaturesProvider, type ZilobaseAuthClient } from "@zilobase/features";
 import { apiFetch } from "@/platform/network/api";
@@ -17,7 +24,22 @@ import "@/app/styles.css";
 setConnectivityState("online");
 const preferences = defaultCalendarPreferences("Asia/Kolkata");
 const connections = [{ workspaceId: "workspace", bindingId: "binding", accountId: "account", email: "calendar@example.test", status: "connected" as const, pushAvailable: false }];
-function FixtureSchedule(props: Parameters<typeof CalendarSchedule>[0]) { return <div className="flex min-w-0 flex-1 flex-col"><header className="flex h-12 shrink-0 justify-end px-3"><CalendarToolbar preferences={props.preferences} onSettings={() => {}} /></header><CalendarSchedule {...props} /></div>; }
+function FixtureSchedule(props: Parameters<typeof CalendarSchedule>[0]) {
+  const workspace = useCalendarWorkspace(), isMobile = useIsMobile();
+  const [chatOpen, setChat] = useCalendarChatVisibility();
+  const [floating, setFloating] = useState(false);
+  const chatPanel = <div aria-label="AI fixture" className="p-3"><h2>Ask AI</h2><Button onClick={() => setChat(false)}>Close AI</Button><Button onClick={() => setFloating(value => !value)}>Toggle floating AI</Button></div>;
+  const panels = { calendarOpen: workspace.panelOpen, calendarPanel: <CalendarDockMount />, chatOpen: chatOpen && (isMobile || !floating), chatPanel, discussionsEnabled: false, discussionsOpen: false, isMobile };
+  return <div className="flex min-w-0 flex-1 flex-col">
+    <ResizablePanelGroup orientation="horizontal"><ResizablePanel id="fixture-main" minSize="25%"><div className="flex h-full min-h-0 flex-col">
+      <PagePaneHeader pathname="/calendar" showBreadcrumb={false} leadingControl={<span>Calendar</span>} actions={<CalendarToolbar preferences={props.preferences} onSettings={() => {}} />} />
+      <CalendarSchedule {...props} />
+    </div></ResizablePanel><RightSidebars {...panels} navigationSidebarOpen={false} /></ResizablePanelGroup>
+    <RightSidebarMobilePanels {...panels} />
+    {chatOpen && floating && !isMobile && <aside aria-label="Floating AI" className="fixed right-0 top-12 z-50 bg-surface-canvas">{chatPanel}</aside>}
+    <Button className="fixed bottom-1 left-1 z-50" onClick={() => { setChat(true); }}>Open AI</Button>
+  </div>;
+}
 const root = createRootRoute({ component: () => <main style={{ height: "100vh" }} className="flex bg-surface-canvas text-content-primary"><Outlet /></main> });
 const app = createRoute({ getParentRoute: () => root, id: "app", component: Outlet });
 function SidebarFixture() {
@@ -29,4 +51,4 @@ const router = createRouter({ routeTree: root.addChildren([app.addChildren([cale
 const queryClient = new QueryClient();
 const auth = { getSession: async () => ({ user: { id: "user" } }) } as ZilobaseAuthClient;
 createRoot(document.getElementById("root")!).render(<QueryClientProvider client={queryClient}><ZilobaseFeaturesProvider value={{ queryClient, auth, apiFetch }}><CalendarWorkspaceProvider><RouterProvider router={router} /></CalendarWorkspaceProvider></ZilobaseFeaturesProvider></QueryClientProvider>);
-Object.assign(window, { calendarFixture: { navigate: (view: string, date = "2026-09-09") => router.navigate({ to: "/calendar", search: { view, date } }), offline: () => setConnectivityState("offline") } });
+Object.assign(window, { calendarFixture: { search: () => router.state.location.search, select: (event: string) => router.navigate({ to: "/calendar", search: { date: "2026-09-09", view: "week", binding: "binding", calendar: "primary", event } }), navigate: (view: string, date = "2026-09-09") => router.navigate({ to: "/calendar", search: { view, date } }), offline: () => setConnectivityState("offline") } });
