@@ -9,8 +9,8 @@ import { type CalendarItem, type CalendarSurfaceProps } from "./types";
 export function CalendarSurface({ items, date, view, preferences, onNavigate, onRangeChange, onSelect, onCreate, onChange, onError, renderItem }: CalendarSurfaceProps) {
   const scope = useId();
   const dragContext = useMemo(() => ({ scope, items: new Map(items.map(item => [item.id, item])) }), [scope, items]);
-  const allDays = useMemo(() => calendarDays(date, view, preferences.weekStartsOn), [date, view, preferences.weekStartsOn]);
-  const periods = useMemo(() => [-1, 0, 1].map(direction => calendarDays(shiftCalendarPeriod(date, view, direction), view, preferences.weekStartsOn).filter(day => preferences.showWeekends || view === "day" || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()))), [date, view, preferences.weekStartsOn, preferences.showWeekends]);
+  const allDays = useMemo(() => calendarDays(date, view, preferences.weekStartsOn, preferences.visibleDayCount, preferences.showWeekends), [date, view, preferences.weekStartsOn, preferences.visibleDayCount, preferences.showWeekends]);
+  const periods = useMemo(() => [-1, 0, 1].map(direction => calendarDays(shiftCalendarPeriod(date, view, direction, preferences.visibleDayCount, preferences.showWeekends), view, preferences.weekStartsOn, preferences.visibleDayCount, preferences.showWeekends).filter(day => preferences.showWeekends || view === "day" || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()))), [date, view, preferences.weekStartsOn, preferences.showWeekends, preferences.visibleDayCount]);
   const [monthDays, setMonthDays] = useState<string[]>([]);
   const loadedDays = useMemo(() => view === "day" || view === "week" ? periods.flat() : view === "month" && monthDays.length ? monthDays : allDays, [allDays, view, periods, monthDays]);
   const start = dayInstant(loadedDays[0]!, preferences.timeZone), end = dayInstant(addCalendarDays(loadedDays.at(-1)!, 1), preferences.timeZone);
@@ -22,7 +22,7 @@ export function CalendarSurface({ items, date, view, preferences, onNavigate, on
   const change = useCallback((item: CalendarItem) => { if (item.editable) onChange?.(item); }, [onChange]);
   const day = useCallback((next: string) => onNavigate(next, "day"), [onNavigate]);
   const navigateDate = useCallback((next: string) => onNavigate(next, view), [onNavigate, view]);
-  const navigatePeriod = useCallback((direction: number) => onNavigate(shiftCalendarPeriod(date, view, direction), view), [onNavigate, date, view]);
+  const navigatePeriod = useCallback((direction: number) => onNavigate(shiftCalendarPeriod(date, view, direction, preferences.visibleDayCount, preferences.showWeekends), view), [onNavigate, date, view, preferences.visibleDayCount, preferences.showWeekends]);
   const create = useCallback((day: string, hour: number, duration: number) => onCreate?.(day, hour, duration), [onCreate]);
   const card = useCallback((event: CalendarItem) => {
     const timed = !event.start.date && (view === "day" || view === "week");
@@ -32,6 +32,6 @@ export function CalendarSurface({ items, date, view, preferences, onNavigate, on
   }, [scope, view, writable, onSelect, renderItem, preferences.timeZone, preferences.timeFormat]);
   let content;
   if (view === "month") content = <CalendarMonthView date={date} onDate={navigateDate} onRangeChange={setMonthDays} days={days} eventsByDay={eventsByDay} preferences={preferences} online={Boolean(onChange)} writable={writable} card={card} onDay={day} onChange={change} onError={onError} />;
-  else content = <CalendarPeriodScroller view={view} canCreate={Boolean(onCreate)} periods={periods} periodKey={`${view}:${date}`} onPeriod={navigatePeriod} eventsByDay={eventsByDay} preferences={preferences} card={card} writable={writable} onDay={day} onCreate={create} onChange={change} onError={onError} />;
+  else content = <CalendarPeriodScroller view={view} canCreate={Boolean(onCreate)} periods={periods} periodKey={`${view}:${date}:${preferences.visibleDayCount ?? 7}:${preferences.showWeekends}`} onPeriod={navigatePeriod} eventsByDay={eventsByDay} preferences={preferences} card={card} writable={writable} onDay={day} onCreate={create} onChange={change} onError={onError} />;
   return <CalendarDragContext.Provider value={dragContext}>{content}</CalendarDragContext.Provider>;
 }

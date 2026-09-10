@@ -55,3 +55,20 @@ test("retired and absent views normalize to Week", async () => {
   assert.equal(normalizeCalendarView("month"), "month");
   assert.equal(normalizeCalendarView("day"), "day");
 });
+
+test("custom periods cover 1–31 days and page without overlaps across DST", async () => {
+  const { calendarDays, shiftCalendarPeriod } = await import("./time");
+  for (let count = 1; count <= 31; count++) {
+    for (const weekends of [true, false]) {
+      const date = "2026-03-07";
+      const days = calendarDays(date, "week", 1, count, weekends).filter(day => weekends || new Date(`${day}T12:00Z`).getUTCDay() % 6 !== 0);
+      assert.equal(days.length, count === 7 && !weekends ? 5 : count);
+      const next = calendarDays(shiftCalendarPeriod(date, "week", 1, count, weekends), "week", 1, count, weekends);
+      const previous = calendarDays(shiftCalendarPeriod(date, "week", -1, count, weekends), "week", 1, count, weekends);
+      assert.ok(previous.at(-1)! < days[0]!);
+      assert.ok(days.at(-1)! < next[0]!);
+      assert.ok(Number.isFinite(Date.parse(dayInstant(days[0]!, "America/New_York"))));
+    }
+  }
+  assert.deepEqual(calendarDays("2026-09-15", "week", 1), ["2026-09-14", "2026-09-15", "2026-09-16", "2026-09-17", "2026-09-18", "2026-09-19", "2026-09-20"]);
+});

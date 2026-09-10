@@ -1,3 +1,4 @@
+import { validateCalendarSearch } from "@/app/routing/search-validators";
 import { useCalendarChatVisibility } from "@/app/shell/side-panel/use-calendar-chat-visibility";
 import { useState } from "react";
 import { RightSidebars, RightSidebarMobilePanels } from "@/app/shell/side-panel/right-sidebars";
@@ -46,8 +47,10 @@ function SidebarFixture() {
   const current = useCalendarPreferences("workspace");
   return <SidebarProvider><aside className="w-64 shrink-0 overflow-y-auto bg-surface-sidebar"><CalendarAccountsSidebar workspaceId="workspace" /><RemovedCalendars workspaceId="workspace" /></aside>{current.query.data && <FixtureSchedule connections={connections} userId="user" preferences={current.query.data} />}</SidebarProvider>;
 }
-const calendar = createRoute({ getParentRoute: () => app, path: "/calendar", validateSearch: (s: Record<string, unknown>) => s, component: () => new URLSearchParams(window.location.search).has("sidebar") ? <SidebarFixture /> : <FixtureSchedule connections={connections} userId="user" preferences={preferences} /> });
-const router = createRouter({ routeTree: root.addChildren([app.addChildren([calendar])]), history: createMemoryHistory({ initialEntries: ["/calendar?date=2026-09-09&view=week"] }) });
+const calendar = createRoute({ getParentRoute: () => app, path: "/calendar", validateSearch: validateCalendarSearch, component: () => new URLSearchParams(window.location.search).has("sidebar") ? <SidebarFixture /> : <FixtureSchedule connections={connections} userId="user" preferences={preferences} /> });
+const history = createMemoryHistory({ initialEntries: [sessionStorage.getItem("calendar-fixture-route") ?? "/calendar?date=2026-09-09&view=week"] });
+history.subscribe(({ location }) => sessionStorage.setItem("calendar-fixture-route", location.href));
+const router = createRouter({ routeTree: root.addChildren([app.addChildren([calendar])]), history });
 const queryClient = new QueryClient();
 const auth = { getSession: async () => ({ user: { id: "user" } }) } as ZilobaseAuthClient;
 createRoot(document.getElementById("root")!).render(<QueryClientProvider client={queryClient}><ZilobaseFeaturesProvider value={{ queryClient, auth, apiFetch }}><CalendarWorkspaceProvider><RouterProvider router={router} /></CalendarWorkspaceProvider></ZilobaseFeaturesProvider></QueryClientProvider>);

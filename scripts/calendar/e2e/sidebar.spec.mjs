@@ -146,3 +146,17 @@ test("source collapse and order survive reload", async ({ page }) => {
   await account.click();
   await expect(page.locator('[data-calendar-row]').first()).toContainText(name);
 });
+
+test("custom day count persists through navigation and reload", async ({ page }) => {
+  await page.getByRole("button", { name: "Visible day count" }).click();
+  await page.getByLabel("Visible days (1–31)").fill("3");
+  await page.keyboard.press("Escape");
+  await expect(page.locator('[data-calendar-period="1"] [data-calendar-day-column]')).toHaveCount(3);
+  await page.getByRole("button", { name: "Next period", exact: true }).click();
+  await expect(page.locator('[data-calendar-period="1"] [data-calendar-day-column]')).toHaveCount(3);
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Visible day count" })).toContainText("3 days");
+  await page.locator('[aria-label="Choose calendar date"]').getByRole("button", { name: /September 15th, 2026/ }).click();
+  await expect(page.getByRole("button", { name: "Create event 2026-09-15 9:00", exact: true })).toBeVisible();
+  await expect(page.locator('[data-calendar-period="1"] [data-calendar-day-column]')).toHaveCount(3);
+});

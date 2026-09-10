@@ -4,7 +4,7 @@ import { todayInZone, type CalendarPreferences } from "@zilobase/features/calend
 import { DateCalendar } from "@/shared/ui/calendar";
 
 export function CalendarMiniCalendar({ preferences }: { preferences: CalendarPreferences }) {
-  const search = useSearch({ strict: false }) as { date?: string; view?: CalendarPreferences["view"] };
+  const search = useSearch({ strict: false }) as { days?: number; date?: string; view?: CalendarPreferences["view"] };
   const navigate = useNavigate();
   const date = search.date ?? todayInZone(preferences.timeZone);
   const selected = new Date(`${date}T12:00:00`);
@@ -14,6 +14,6 @@ export function CalendarMiniCalendar({ preferences }: { preferences: CalendarPre
     <DateCalendar className="w-full bg-transparent" mode="single" month={month} onMonthChange={setMonth}
       selected={selected} today={new Date(`${todayInZone(preferences.timeZone)}T12:00:00`)}
       weekStartsOn={preferences.weekStartsOn} showOutsideDays fixedWeeks
-      onSelect={day => { if (day) void navigate({ to: "/calendar", search: { view: search.view ?? preferences.view, date: `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}` } }) }} />
+      onSelect={day => { if (day) void navigate({ to: "/calendar", search: { days: search.days, view: search.view ?? preferences.view, date: `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}` } }) }} />
   </div>;
 }

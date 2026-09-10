@@ -11,7 +11,7 @@ Reference: [Notion Calendar documentation](https://www.notion.com/help/category/
 | 3 | Google connection onboarding | Implemented | Return-path test; OAuth replay/cancellation and reconnect deduplication integration tests; server/web typechecks; architecture checks. Live desktop OAuth acceptance pending. |
 | 4 | Source organization | Implemented | Source-order behavioral tests; preference schema tests; web typecheck; selection regression. |
 | 5 | Calendar-specific event panel | Implemented | Seven sidebar browser tests including independent pagination, selected-source creation, read-only creation denial and persistent ordering; source-order tests; web typecheck; architecture checks. |
-| 6 | Configurable multi-day views | Pending | — |
+| 6 | Configurable multi-day views | Implemented | Shared layout tests exercise all 31 counts with weekends on/off across DST; browser test covers count controls, navigation, reload and mini-calendar selection; web typecheck. |
 | 7 | Grid density | Pending | — |
 | 8 | General preferences | Pending | — |
 | 9 | Labeled time zones | Pending | — |

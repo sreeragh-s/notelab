@@ -26,7 +26,7 @@ export function CalendarSchedule({ connections, userId, preferences, preferenceW
   const { query } = workspace;
   const search = useSearch({ from: "/app/calendar" }), navigate = useNavigate();
   const view = normalizeCalendarView(search.view ?? preferences.view), date = search.date ?? todayInZone(preferences.timeZone);
-  const allDays = useMemo(() => calendarDays(date, view, preferences.weekStartsOn), [date, view, preferences.weekStartsOn]);
+  const allDays = useMemo(() => calendarDays(date, view, preferences.weekStartsOn, search.days, preferences.showWeekends), [date, view, preferences.weekStartsOn, search.days, preferences.showWeekends]);
   const [range, setRange] = useState<CalendarRange | null>(null);
   const cacheStart = range?.start ?? dayInstant(allDays[0]!, preferences.timeZone);
   const cacheEnd = range?.end ?? dayInstant(addCalendarDays(allDays.at(-1)!, 1), preferences.timeZone);
@@ -40,11 +40,11 @@ export function CalendarSchedule({ connections, userId, preferences, preferenceW
   const calendarsByKey = useMemo(() => new Map(calendars.map(c => [calendarSelectionKey(c.bindingId, c.id), c])), [calendars]);
   const events = useMemo(() => data.flatMap(d => d.events).filter(event => calendarIsVisible(preferences, event.bindingId, event.calendarId) && (preferences.showDeclined || !event.attendees.some(a => a.self && a.responseStatus === "declined"))), [data, preferences]);
   const online = data.every(d => d.online);
-  const setPeriod = useCallback((next: string, nextView: CalendarView = view) => { void navigate({ to: "/calendar", search: { date: next, view: nextView } }) }, [navigate, view]);
+  const setPeriod = useCallback((next: string, nextView: CalendarView = view) => { void navigate({ to: "/calendar", search: { date: next, view: nextView, days: search.days } }) }, [navigate, view, search.days]);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.defaultPrevented || (e.target as HTMLElement)?.closest("input,textarea,select,[contenteditable=true],[role=dialog],[role=alertdialog],[role=menu],[data-calendar-event-panel]") || e.metaKey || e.ctrlKey || e.altKey) return; if (e.key.toLowerCase() === "t") setPeriod(todayInZone(preferences.timeZone)); if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); setPeriod(shiftCalendarPeriod(date, view, e.key === "ArrowLeft" ? -1 : 1)) } };
+    const onKey = (e: KeyboardEvent) => { if (e.defaultPrevented || (e.target as HTMLElement)?.closest("input,textarea,select,[contenteditable=true],[role=dialog],[role=alertdialog],[role=menu],[data-calendar-event-panel]") || e.metaKey || e.ctrlKey || e.altKey) return; if (e.key.toLowerCase() === "t") setPeriod(todayInZone(preferences.timeZone)); if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); setPeriod(shiftCalendarPeriod(date, view, e.key === "ArrowLeft" ? -1 : 1, search.days, preferences.showWeekends)) } };
     window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
-  }, [date, view, preferences.timeZone, setPeriod]);
+  }, [date, view, preferences.timeZone, preferences.showWeekends, search.days, setPeriod]);
   useEffect(() => {
     if (!search.event || !search.binding || !search.calendar) return;
     const cached = events.find(e => e.eventId === search.event && e.bindingId === search.binding && e.calendarId === search.calendar); if (cached && !editing) setSelected(cached);
@@ -64,7 +64,7 @@ export function CalendarSchedule({ connections, userId, preferences, preferenceW
     return () => { active = false; clearTimeout(timer) };
   }, [query, online, start, end, connections, preferences.hiddenCalendarKeys, preferences.removedCalendarKeys]);
   const visible = useMemo(() => query ? (searchEvents?.filter(event => calendarIsVisible(preferences, event.bindingId, event.calendarId)) ?? events.filter(e => `${e.title} ${e.description} ${e.location}`.toLowerCase().includes(query.toLowerCase()))) : events, [query, searchEvents, events, preferences]);
-  const open = useCallback((event: CalendarEvent) => { workspace.showSource(null); workspace.openPanel(); setEditing(false); setCreating(false); setSelected(event); void navigate({ to: "/calendar", search: { date, view, binding: event.bindingId, calendar: event.calendarId, event: event.eventId } }) }, [workspace.openPanel, navigate, date, view]);
+  const open = useCallback((event: CalendarEvent) => { workspace.showSource(null); workspace.openPanel(); setEditing(false); setCreating(false); setSelected(event); void navigate({ to: "/calendar", search: { date, view, days: search.days, binding: event.bindingId, calendar: event.calendarId, event: event.eventId } }) }, [workspace.openPanel, navigate, date, view, search.days]);
   const create = useCallback((day = date, hour = 9, duration = 30, target?: CalendarRecord) => {
     const writable = calendars.filter(c => c.permissions.write);
     const calendar = target ?? resolveDefaultCalendar(writable, preferences);
@@ -87,7 +87,7 @@ export function CalendarSchedule({ connections, userId, preferences, preferenceW
     const hues: ColorTokenId[] = ["blue", "purple", "green", "purple", "red", "yellow", "orange", "blue", "gray", "blue", "green", "red"];
     return PALETTE[hues[Number(providerColor ?? 0) % hues.length] ?? "blue"];
   };
-  const close = () => { setSelected(null); setEditing(false); setCreating(false); void navigate({ to: "/calendar", search: { date, view } }); };
+  const close = () => { setSelected(null); setEditing(false); setCreating(false); void navigate({ to: "/calendar", search: { date, view, days: search.days } }); };
   useEffect(() => workspace.register({ close, create: () => create() }));
   useEffect(() => { if (search.event) workspace.openPanel(); }, [search.event, workspace.openPanel]);
   const sourceConnection = connections.find(connection => connection.bindingId === workspace.source?.bindingId);
@@ -119,7 +119,7 @@ export function CalendarSchedule({ connections, userId, preferences, preferenceW
       <Button className="shrink-0" disabled={!online || !Boolean(resolveDefaultCalendar(calendars, preferences))} onClick={() => create()}>Create event</Button>
     </div>
     <CalendarStatus data={data} online={online} error={searchError} />
-    <CalendarSurface items={items} date={date} view={view} preferences={preferences} onNavigate={setPeriod} onRangeChange={setRange} onSelect={selectItem} onCreate={online ? create : undefined} onChange={changeItem} onError={onGeometryError} />
+    <CalendarSurface items={items} date={date} view={view} preferences={{ ...preferences, visibleDayCount: search.days ?? 7 }} onNavigate={setPeriod} onRangeChange={setRange} onSelect={selectItem} onCreate={online ? create : undefined} onChange={changeItem} onError={onGeometryError} />
     {sourceConnection && sourceCalendar ? <CalendarSourcePanel key={`${sourceConnection.bindingId}:${sourceCalendar.id}`} connection={sourceConnection} calendar={sourceCalendar} allCalendars={calendars} userId={userId} preferences={preferences} preferenceWorkspaceId={preferenceWorkspaceId ?? connections[0]!.workspaceId} onSelect={open} onCreate={() => create(todayInZone(preferences.timeZone), 9, 30, sourceCalendar)} /> : <CalendarEventPanel selected={selection.event} database={selection.database} calendars={selection.calendars} online={online} editing={editing} creating={creating} zone={preferences.timeZone} timeFormat={preferences.timeFormat} onClose={workspace.closePanel} onEdit={() => setEditing(true)} onDuplicate={() => { if (!selected) return; setSelected({ ...selected, eventId: `local-${crypto.randomUUID()}`, etag: "", title: `${selected.title} (copy)`, attendees: [], recurringEventId: undefined, originalStartTime: undefined, recurrence: undefined }); setCreating(true); setEditing(true) }} />}
   </div>;
 }

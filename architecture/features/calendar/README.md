@@ -93,7 +93,7 @@ The authenticated configuration endpoint reports boolean readiness for independe
 ## Workspace controls
 
 The [workspace controller](../../../apps/web/src/features/calendar/workspace/calendar-workspace.tsx)
-owns period-bounded search and panel actions. Date and view remain route parameters.
+owns period-bounded search and panel actions. Date, view and optional `days` (1–31, default seven) remain route parameters. Custom week ranges start at the selected date; when weekends are hidden they count visible weekdays. The standard seven-day week retains week-start alignment and hides weekend columns. Shared date helpers drive toolbar/keyboard/swipe navigation and range loading so custom periods do not overlap. Mini-calendar and event navigation retain the count; Day and Month ignore it.
 The [toolbar](../../../apps/web/src/features/calendar/workspace/calendar-toolbar.tsx) is
 rendered in `PagePaneHeader`'s padded action slot, with compact search/navigation
 menus at narrow widths. The schedule renders a plain month heading on the leading edge and Create event on the trailing edge;
