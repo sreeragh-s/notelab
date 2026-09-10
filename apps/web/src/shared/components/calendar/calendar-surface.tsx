@@ -1,3 +1,5 @@
+import { useTimelineWindow } from "./use-timeline-window";
+import { CalendarTimeline } from "./calendar-timeline";
 import { CalendarDragContext } from "./drag-context";
 import { useId, useCallback, useEffect, useMemo, useState } from "react";
 import { addCalendarDays, calendarDays, dayInstant, eventClock, createEventIndex, shiftCalendarPeriod } from "@zilobase/features/calendar-layout";
@@ -6,7 +8,9 @@ import { CalendarMonthView } from "./calendar-month-view";
 import { CalendarPeriodScroller } from "./calendar-period-scroller";
 import { type CalendarItem, type CalendarSurfaceProps } from "./types";
 
-export function CalendarSurface({ loadingMessage, isRangeReady, onRequestRange, zoneControls, items, date, view, preferences, onNavigate, onRangeChange, onSelect, onCreate, onChange, onError, renderItem }: CalendarSurfaceProps) {
+export function CalendarSurface(props: CalendarSurfaceProps) {
+ const { loadingMessage, isRangeReady, onRequestRange, zoneControls, items, date, view, preferences, onNavigate, onRangeChange, onSelect, onCreate, onChange, onError, renderItem } = props;
+ const timeline = useTimelineWindow(props);
   const scope = useId();
   // Readiness checks revisit the same local-day boundaries on every cache update.
   const instant = useMemo(() => {
@@ -17,9 +21,9 @@ export function CalendarSurface({ loadingMessage, isRangeReady, onRequestRange, 
   const allDays = useMemo(() => calendarDays(date, view, preferences.weekStartsOn, preferences.visibleDayCount, preferences.showWeekends, preferences.alignStart), [date, view, preferences.weekStartsOn, preferences.visibleDayCount, preferences.showWeekends, preferences.alignStart]);
   const periods = useMemo(() => [-1, 0, 1].map(direction => calendarDays(shiftCalendarPeriod(date, view, direction, preferences.visibleDayCount, preferences.showWeekends, preferences.alignStart), view, preferences.weekStartsOn, preferences.visibleDayCount, preferences.showWeekends, preferences.alignStart).filter(day => preferences.showWeekends || view === "day" || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()))), [date, view, preferences.weekStartsOn, preferences.showWeekends, preferences.visibleDayCount, preferences.alignStart]);
   const [monthDays, setMonthDays] = useState<string[]>([]);
-  const loadedDays = useMemo(() => view === "day" || view === "week" ? periods.flat() : view === "month" && monthDays.length ? monthDays : allDays, [allDays, view, periods, monthDays]);
+  const loadedDays = timeline.days;
   const start = instant(loadedDays[0]!), end = instant(addCalendarDays(loadedDays.at(-1)!, 1));
-  useEffect(() => onRangeChange?.({ start, end }), [start, end, onRangeChange]);
+
   const days = useMemo(() => allDays.filter(day => preferences.showWeekends || view === "day" || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay())), [allDays, preferences.showWeekends, view]);
   const [indexEvents] = useState(() => createEventIndex<CalendarItem>());
   // A date jump can commit before the month scroller emits its replacement buffer.
@@ -41,6 +45,6 @@ export function CalendarSurface({ loadingMessage, isRangeReady, onRequestRange, 
   const requestDays = useCallback((days: string[], commit: () => void) => { if (onRequestRange) onRequestRange({ start: instant(days[0]!), end: instant(addCalendarDays(days.at(-1)!, 1)) }, commit); else commit(); }, [onRequestRange, instant]);
   let content;
   if (view === "month") content = <CalendarMonthView loadingMessage={loadingMessage} readyDays={readyDays} requestDays={requestDays} date={date} onDate={navigateDate} onRangeChange={setMonthDays} days={days} eventsByDay={eventsByDay} preferences={preferences} online={Boolean(onChange)} writable={writable} card={card} onDay={day} onChange={change} onError={onError} />;
-  else content = <CalendarPeriodScroller loadingMessage={loadingMessage} readyDays={readyDays} requestDays={requestDays} zoneControls={zoneControls} view={view} canCreate={Boolean(onCreate)} periods={periods} periodKey={`${view}:${date}:${preferences.visibleDayCount ?? 7}:${preferences.showWeekends}:${preferences.alignStart}`} onPeriod={navigatePeriod} eventsByDay={eventsByDay} preferences={preferences} card={card} writable={writable} onDay={day} onCreate={create} onChange={change} onError={onError} />;
+  else content = <CalendarTimeline loadingMessage={loadingMessage} beforeLoading={timeline.beforeLoading} afterLoading={timeline.afterLoading} zoneControls={zoneControls} canCreate={Boolean(onCreate)} days={timeline.days.filter(day => preferences.showWeekends || view === "day" || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()))} target={days[0]!} onViewport={timeline.report} onVisibleDate={next => { timeline.markEmitted(next); props.onVisibleDateChange?.(next); }} eventsByDay={eventsByDay} preferences={{ ...preferences, showWeekends: preferences.showWeekends || view === "day", visibleDayCount: view === "day" ? 1 : days.length }} card={card} writable={writable} onDay={day} onCreate={create} onChange={change} onError={onError} />;
   return <CalendarDragContext.Provider value={dragContext}>{content}</CalendarDragContext.Provider>;
 }

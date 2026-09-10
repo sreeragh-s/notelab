@@ -175,3 +175,5 @@ The [navigation controller](../../../apps/web/src/features/calendar/workspace/ca
 Range reads share overlapping jobs with two foreground slots per binding and four globally; prefetch leaves one slot free. Range requests use 1,000-event Google pages and forward read cancellation through the gateway timeout. Transient GET failures retry with bounded jitter; writes are never automatically retried by this transport.
 
 Date buffers are user/server-local advanced preferences (28 days per side for timed views, 56 for month, configurable 7–180). Requests split at 28 days, reduced to seven for calendars with paginated ranges. Cache pressure suspends speculative reads.
+
+The timed [continuous timeline](../../../apps/web/src/shared/components/calendar/calendar-timeline.tsx) virtualizes stable date columns with one native two-axis scroller. Column headers and timezone rails are sticky; the full-height day bodies no longer synchronize independent scroll positions. Width is derived from the visible day count, and extending coverage preserves a fractional date anchor.

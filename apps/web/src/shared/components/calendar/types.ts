@@ -34,6 +34,7 @@ export type CalendarSurfaceProps = {
   date: string;
   view: CalendarView;
   preferences: CalendarDisplayPreferences;
+  onVisibleDateChange?: (date: string) => void;
   onNavigate: (date: string, view: CalendarView) => void;
   onRangeChange?: (range: CalendarRange) => void;
   onSelect?: (item: CalendarItem) => void;
