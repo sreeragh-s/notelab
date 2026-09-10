@@ -11,6 +11,24 @@ export function register({ assert, loadModule, test }) {
     assert.equal(calls.length, 2);
     assert.equal(calls[1][0].slice(0, 10), "2026-09-10");
   });
+  test("range queue reserves foreground capacity and aborts unused reads", async () => {
+    const { requestCalendarIntervals } = await loadModule("/src/features/calendar/sync/calendar-range-queue.ts");
+    const started = []; const releases = [];
+    const run = async (_range, signal) => new Promise((resolve, reject) => { started.push(signal); releases.push(resolve); signal.addEventListener("abort", () => reject(new DOMException("cancelled", "AbortError")), { once: true }); });
+    const range = { start: "2026-09-01", end: "2026-09-02" };
+    const a = requestCalendarIntervals("capacity-a", "capacity", range, run);
+    const b = requestCalendarIntervals("capacity-b", "capacity", range, run);
+    const c = requestCalendarIntervals("capacity-c", "capacity", range, run, 10);
+    assert.equal(started.length, 2);
+    releases.shift()(); releases.shift()();
+    await Promise.all([a, c]);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(started.length, 3); releases.shift()(); await b;
+    const controller = new AbortController();
+    const last = requestCalendarIntervals("cancel-unused", "unused", range, run, 10, controller.signal);
+    controller.abort(); await assert.rejects(last, { name: "AbortError" });
+    assert.equal(started.at(-1).aborted, true);
+  });
   test("Calendar snapshots reject partial and cross-account data and keep empty coverage", async () => {
     const fake = await import("fake-indexeddb"); globalThis.indexedDB = fake.indexedDB; globalThis.IDBKeyRange = fake.IDBKeyRange;
     const { openCalendarDatabase, applyCalendarRange, readCalendarRangeCache, destroyCalendarDatabase } = await loadModule("/src/features/calendar/storage/calendar-database.ts");
@@ -26,6 +44,10 @@ export function register({ assert, loadModule, test }) {
       await assert.rejects(() => applyCalendarRange(a, { ...response, events: [{ workspaceId: "workspace", bindingId: "second", calendarId: "c", eventId: "e", status: "confirmed" }] }));
       assert.equal((await readCalendarRangeCache(a, "c", "2026-09-09T00:00:00Z", "2026-09-10T00:00:00Z")).loaded, true);
       assert.equal((await readCalendarRangeCache(a, "c", "2026-09-30T00:00:00Z", "2026-10-02T00:00:00Z")).loaded, false);
+      const event = { workspaceId: "workspace", bindingId: "binding", calendarId: "c", eventId: "removed", status: "confirmed", start: { date: "2026-09-09" }, end: { date: "2026-09-10" } };
+      await applyCalendarRange(a, { ...response, revision: 3, events: [event] });
+      await applyCalendarRange(a, { ...response, start: "2026-09-08T00:00:00Z", end: "2026-09-11T00:00:00Z", revision: 4 });
+      assert.equal((await readCalendarRangeCache(a, "c", response.start, response.end)).events.length, 0);
       assert.equal(b.isOpen(), true); await destroyCalendarDatabase(a.name); assert.equal(b.isOpen(), true);
     } finally { await destroyCalendarDatabase(a.name); await destroyCalendarDatabase(b.name) }
   });

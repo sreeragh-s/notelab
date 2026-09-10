@@ -35,15 +35,6 @@ function useCalendarClock(zone: string) {
   return { now, date: `${parts.year}-${parts.month}-${parts.day}`, top: (Number(parts.hour) * 60 + Number(parts.minute)) * .8 };
 }
 
-export const CurrentTime = memo(function CurrentTime({ day, zone, hourHeight = 48 }: { day: string; days: string[]; zone: string; hourHeight?: number }) {
-  const clock = useCalendarClock(zone);
-
-  const active = clock.date === day;
-  return <div data-calendar-now data-active={active} aria-hidden="true" className={`pointer-events-none absolute inset-x-0 z-20 bg-action-primary ${active ? "h-0.5" : "h-px opacity-20"}`} style={{ top: clock.top * hourHeight / 48 }}>
-    {active && <span className="absolute -top-1 left-0 h-2.5 w-0.5 bg-action-primary" />}
-  </div>;
-});
-
 export const CurrentTimeLabel = memo(function CurrentTimeLabel({ zone, secondaryZones, timeFormat, hourHeight = 48 }: { hourHeight?: number; days: string[]; zone: string; secondaryZones: string[]; timeFormat: "12" | "24" }) {
   const clock = useCalendarClock(zone);
 
@@ -62,5 +53,5 @@ export const CalendarDateLabel = memo(function CalendarDateLabel({ day, zone, mo
 export function TimelineCurrentTime({ days, columnWidth, zone, hourHeight, headerHeight }: { days: string[]; columnWidth: number; zone: string; hourHeight: number; headerHeight: number }) {
   const clock = useCalendarClock(zone);
   const index = days.indexOf(clock.date);
-  return <div data-calendar-now aria-hidden="true" className="pointer-events-none absolute inset-x-0 z-20 h-px bg-action-primary/20" style={{ top: headerHeight + clock.top * hourHeight / 48 }}>{index >= 0 && <span className="absolute h-0.5 bg-action-primary" style={{ left: index * columnWidth, width: columnWidth }} />}</div>;
+  return <div data-calendar-now aria-hidden="true" className="pointer-events-none absolute inset-x-0 z-20 h-px" style={{ top: headerHeight + clock.top * hourHeight / 48 }}><span className="absolute inset-0 bg-action-primary opacity-20" />{index >= 0 && <span className="absolute h-0.5 bg-action-primary" style={{ left: index * columnWidth, width: columnWidth }} />}</div>;
 }

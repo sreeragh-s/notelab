@@ -1,5 +1,5 @@
 import type { CalendarItem } from "./types";
-import { addCalendarDays, calendarDate, wallTime } from "@zilobase/features/calendar-layout";
+import { addCalendarDays, calendarDate, wallTime, civilDayOrdinal, dateFromRank, visibleDateRank } from "@zilobase/features/calendar-layout";
 export function shiftEventGeometry(event: CalendarItem, zone: string, days: number, minutes: number, resize: "start" | "end" | null = null): CalendarItem {
   if (event.start.date && event.end.date) {
     const start = resize === "end" ? event.start : { date: addCalendarDays(event.start.date, days) };
@@ -15,4 +15,10 @@ export function shiftEventGeometry(event: CalendarItem, zone: string, days: numb
   const start = resize === "end" ? event.start : move(event.start), end = resize === "start" ? event.end : move(event.end);
   if (Date.parse(end.dateTime!) - Date.parse(start.dateTime!) < 900_000) throw new Error("An event must last at least 15 minutes.");
   return { ...event, start, end };
+}
+
+export function calendarDragDisplacement(day: string, width: number, dx: number, dy: number, weekends: boolean, month: boolean, hourHeight: number) {
+  const rank = visibleDateRank(day, weekends) + Math.round(dx / Math.max(1, width)) + (month ? Math.round(dy / 144) * (weekends ? 7 : 5) : 0);
+  const target = dateFromRank(rank, weekends);
+  return { target, days: civilDayOrdinal(target) - civilDayOrdinal(day), minutes: month ? 0 : Math.round(dy / (hourHeight / 60) / 15) * 15 };
 }

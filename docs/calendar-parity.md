@@ -116,3 +116,5 @@ Correction acceptance (2026-09-10): all 66 Calendar browser scenarios pass. Cach
 - Month renderer: complete week extents and stable week keys replace four-week recentering. Manual acceptance covers prepend anchoring and scrollbar dragging.
 - Interactions: shared pointer ownership and continuous clock replace cell-owned lifetime; geometry unit tests cover weekend displacement and DST rejection. Manual acceptance covers cross-window drag and resize.
 - Navigation: viewport and explicit destination demands are separate; cached destinations commit without network waits. No date-loading overlay is rendered.
+- Pane retirement: mandatory snapping, previous-offset rollback, independent column scroll groups and date overlays are removed. Release remains under existing Calendar rollout; UI acceptance is pending.
+- Non-browser validation: 12 Calendar integration tests and package/web/server suites; runtime smoke is blocked by local `/demo/bootstrap` returning 404. Manual scrolling and desktop acceptance is still required.

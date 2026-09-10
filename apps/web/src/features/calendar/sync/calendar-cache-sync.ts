@@ -5,7 +5,7 @@ import { runCalendarSyncOnce } from "./calendar-sync-queue";
 import { calendarApiBasePath, type CalendarRangeResponse, type CalendarSyncResponse } from "@zilobase/features/calendar";
 import { applyCalendarRange, calendarBufferBudgetAvailable, calendarRangeKey, evictCalendarRanges, type CalendarDatabase } from "../storage/calendar-database";
 type Transport = <T>(path: string, options?: RequestInit) => Promise<T>;
-export async function synchronizeCalendarCache(database: CalendarDatabase, start: string, end: string, fetcher: Transport, recover = true, options: { missingOnly?: boolean; priority?: number; metadataLoaded?: boolean; hiddenKeys?: string[]; requestId?: string; isCurrent?: () => boolean; signal?: AbortSignal } = {}) {
+export async function synchronizeCalendarCache(database: CalendarDatabase, start: string, end: string, fetcher: Transport, recover = true, options: { missingOnly?: boolean; priority?: number; metadataLoaded?: boolean; hiddenKeys?: string[]; requestId?: string; isCurrent?: () => boolean; signal?: AbortSignal; accountId?: string } = {}) {
   return (async () => {
     if (options.isCurrent && !options.isCurrent()) return;
     const base = `${calendarApiBasePath(database.identity.workspaceId)}/connections/${encodeURIComponent(database.identity.bindingId)}`;
@@ -46,7 +46,7 @@ export async function synchronizeCalendarCache(database: CalendarDatabase, start
       for (const range of requested.flatMap(r => calendarRequestRanges(r.start, r.end, dense?.revision ? 7 : 28))) {
       if (options.isCurrent && !options.isCurrent()) return;
       if ((options.priority ?? 0) < 10 && !calendarBufferBudgetAvailable(database)) return;
-      await requestCalendarIntervals(`${database.name}:${calendar.id}`, database.name, range, async ({ start, end }, signal) => {
+      await requestCalendarIntervals(`${database.name}:${calendar.id}`, JSON.stringify([database.identity.apiOrigin, database.identity.userId, options.accountId ?? database.identity.bindingId]), range, async ({ start, end }, signal) => {
       const load = async () => {
       signal.throwIfAborted();
       const covered = await database.ranges.where("calendarId").equals(calendar.id).toArray();

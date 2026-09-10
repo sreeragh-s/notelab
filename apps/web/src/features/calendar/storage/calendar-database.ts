@@ -96,6 +96,12 @@ export async function evictCalendarRanges(database: CalendarDatabase, pinnedKeys
   retainedPins.set(database.name, new Set(pinnedKeys));
   const related = [...openDatabases.values()].filter(db => db.isOpen() && db.identity.apiOrigin === database.identity.apiOrigin && db.identity.userId === database.identity.userId);
   const snapshots = await Promise.all(related.map(async db => ({ db, ranges: await db.ranges.toArray(), events: await db.events.toArray(), pending: await db.pending.toArray() })));
+  for (const snapshot of snapshots) {
+    const retained = new Set([...snapshot.ranges.flatMap(range => range.eventKeys), ...snapshot.pending.map(row => row.eventKey)]);
+    const orphaned = snapshot.events.filter(row => !retained.has(row.key));
+    if (orphaned.length) await snapshot.db.events.bulkDelete(orphaned.map(row => row.key));
+    snapshot.events = snapshot.events.filter(row => retained.has(row.key));
+  }
   const encoder = new TextEncoder();
   let bytes = snapshots.reduce((sum, snapshot) => sum + encoder.encode(JSON.stringify(snapshot.events)).byteLength, 0);
   const candidates = snapshots.flatMap(snapshot => snapshot.ranges.map(range => ({ snapshot, range }))).sort((a, b) => a.range.accessedAt - b.range.accessedAt);

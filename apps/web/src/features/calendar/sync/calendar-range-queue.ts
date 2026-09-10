@@ -1,3 +1,4 @@
+import { emitCalendarMetric } from "../metrics";
 import { missingCalendarRanges, type CalendarWindow } from "./range-coverage";
 
 type Job = CalendarWindow & { scope: string; account: string; priority: number; active: boolean; consumers: number; controller: AbortController; promise: Promise<void>; resolve: () => void; reject: (error: unknown) => void; run: (range: CalendarWindow, signal: AbortSignal) => Promise<void> };
@@ -34,6 +35,7 @@ function subscribe(job: Job, signal?: AbortSignal) {
 export function requestCalendarIntervals(scope: string, account: string, range: CalendarWindow, run: Job["run"], priority = 0, signal?: AbortSignal) {
   if (signal?.aborted) return Promise.reject(new DOMException("Calendar read cancelled", "AbortError"));
   const overlaps = [...jobs].filter(j => j.scope === scope && !j.controller.signal.aborted && Date.parse(j.start) < Date.parse(range.end) && Date.parse(j.end) > Date.parse(range.start));
+  if (overlaps.length) emitCalendarMetric("duplicate_read", overlaps.length);
   for (const job of overlaps) job.priority = Math.max(job.priority, priority);
   for (const missing of missingCalendarRanges(range.start, range.end, overlaps)) {
     let resolve!: () => void, reject!: (error: unknown) => void;

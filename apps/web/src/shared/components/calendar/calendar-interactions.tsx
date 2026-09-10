@@ -1,23 +1,22 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type PointerEvent } from "react";
-import { civilDayOrdinal, dateFromRank, visibleDateRank } from "@zilobase/features/calendar-layout";
-import { shiftEventGeometry } from "./event-geometry";
+import { shiftEventGeometry, calendarDragDisplacement } from "./event-geometry";
 import type { CalendarItem } from "./types";
 
 type Begin = { event: CalendarItem; zone: string; hourHeight: number; resize: "start" | "end" | null; content: ReactNode; onChange: (item: CalendarItem) => void; onError?: (error: Error) => void };
 const InteractionContext = createContext<((pointer: PointerEvent<HTMLElement>, input: Begin) => void) | null>(null);
 export const useCalendarInteraction = () => useContext(InteractionContext);
 type Session = Begin & { pointer: number; x: number; y: number; clientX: number; clientY: number; scroll: HTMLElement; scrollX: number; scrollY: number; width: number; rect: DOMRect; day: string; moved: boolean; weekends: boolean; month: boolean };
-export function CalendarInteractionHost({ children, ready, weekends }: { children: ReactNode; ready: (first: string, last?: string) => boolean; weekends: boolean }) {
+export function CalendarInteractionHost({ children, ready, weekends, items }: { children: ReactNode; items: ReadonlyMap<string, CalendarItem>; ready: (first: string, last?: string) => boolean; weekends: boolean }) {
   const root = useRef<HTMLDivElement>(null), session = useRef<Session | null>(null), frame = useRef<number | null>(null);
   const [preview, setPreview] = useState<{ session: Session; x: number; y: number } | null>(null);
   const suppressClick = useRef(false);
+  const itemsRef = useRef(items); itemsRef.current = items;
   const readyRef = useRef(ready); readyRef.current = ready;
   const cancel = () => { if (frame.current !== null) cancelAnimationFrame(frame.current); frame.current = null; session.current = null; setPreview(null); };
   useEffect(() => () => { if (frame.current !== null) cancelAnimationFrame(frame.current); }, []);
   const geometry = (s: Session) => {
     const dx = s.clientX - s.x + s.scroll.scrollLeft - s.scrollX, dy = s.clientY - s.y + s.scroll.scrollTop - s.scrollY;
-    const target = dateFromRank(visibleDateRank(s.day, s.weekends) + Math.round(dx / s.width) + (s.month ? Math.round(dy / 144) * (s.weekends ? 7 : 5) : 0), s.weekends);
-    return { dx, dy, target, days: civilDayOrdinal(target) - civilDayOrdinal(s.day), minutes: Math.round(dy / (s.hourHeight / 60) / 15) * 15 };
+    return calendarDragDisplacement(s.day, s.width, dx, dy, s.weekends, s.month, s.hourHeight);
   };
   const tick = () => {
     const s = session.current; if (!s?.moved) { frame.current = null; return; }
@@ -49,6 +48,9 @@ export function CalendarInteractionHost({ children, ready, weekends }: { childre
     if (s.moved) {
       const move = geometry(s);
       try {
+        const box = s.scroll.getBoundingClientRect(), rail = Number(s.scroll.dataset.calendarRailWidth ?? 0);
+        if (s.clientX < box.left + rail || s.clientX > box.right || s.clientY < box.top || s.clientY > box.bottom) throw new Error("Drop the event inside the calendar to move it.");
+        if (!itemsRef.current.get(s.event.id)?.editable) throw new Error("This event is no longer editable.");
         const next = shiftEventGeometry(s.event, s.zone, move.days, s.event.start.date || s.month ? 0 : move.minutes, s.resize);
         if (!readyRef.current(move.target)) throw new Error("Those dates are still loading. The event was not moved.");
         s.onChange(next);

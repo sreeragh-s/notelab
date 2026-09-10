@@ -10,6 +10,7 @@ export type CalendarItem = CalendarSpan & {
   editable?: boolean;
 };
 export type CalendarDisplayPreferences = {
+  prefetchLeadMs?: number;
   bufferBefore?: number;
   bufferAfter?: number;
   timeZoneColumns?: { zone: string; label: string }[];
@@ -27,6 +28,7 @@ export type CalendarRange = { start: string; end: string };
 export type CalendarSurfaceProps = {
   /** IDs are unique within this instance. Replace items/arrays when data changes. */
   isRangeReady?: (range: CalendarRange) => boolean;
+  onMetric?: (name: "mounted_columns" | "edge_stall" | "layout_duration", value: number) => void;
   onViewportRangeChange?: (range: CalendarRange) => void;
   onRetryRange?: () => void;
   loadingMessage?: string;

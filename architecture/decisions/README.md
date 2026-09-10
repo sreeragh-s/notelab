@@ -3,3 +3,4 @@
 Record a lasting decision when its rejected alternatives explain the implementation. Use a numbered kebab-case filename and include status, context, decision, alternatives and consequences. Link the owning architecture guide and canonical implementation. Current behavior belongs in feature/platform guides; this directory preserves rationale.
 
 - [Scoped architecture documentation](0001-scoped-architecture-documentation.md)
+- [Continuous calendar timeline](0002-continuous-calendar-timeline.md)
