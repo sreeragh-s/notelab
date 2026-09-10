@@ -45,7 +45,7 @@ export const CalendarDayColumn = memo(function CalendarDayColumn({ day, periodDa
     element.addEventListener("wheel", wheel, { passive: false });
     return () => element.removeEventListener("wheel", wheel);
   }, [scrollGroup]);
-  return <section data-calendar-day-column={day} data-calendar-columns={1} className="flex h-full min-h-0 min-w-0 flex-1 snap-start flex-col border-l border-stroke-default">
+  return <section inert={!prepared} data-calendar-day-column={day} data-calendar-columns={1} className="flex h-full min-h-0 min-w-0 flex-1 snap-start flex-col border-l border-stroke-default">
     <header data-calendar-column-header ref={header} className="z-10 shrink-0 bg-surface-canvas">
       <div data-calendar-date-header={day} className="flex h-8 items-center px-1"><Button size="sm" variant="ghost" className="w-full" onClick={() => onDay(day)}><CalendarDateLabel day={day} zone={preferences.timeZone} /></Button></div>
       <div data-calendar-all-day={day} className="min-w-0 border-y border-stroke-default" style={{ height: "var(--calendar-all-day-height)" }}>

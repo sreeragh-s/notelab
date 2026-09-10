@@ -62,10 +62,14 @@ test("pointer bursts produce one preview update and cancel pending work", async 
   const card = first.getByRole("button", { name: /Plain meeting/ }).first();
   await expect(first.locator('[data-calendar-period-ready="true"]')).toHaveCount(3);
   await expect(card).toBeVisible();
+  await card.hover(); // Wait for actionable, stable geometry before capturing raw pointer coordinates.
   const box = await card.boundingBox();
   const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   await page.mouse.move(point.x, point.y); await page.mouse.down();
   const result = await card.locator("..").evaluate(async (element, point) => {
+    // Settle the browser capture transition before measuring the synthetic burst.
+    element.setPointerCapture(1);
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     let writes = 0;
     const observer = new MutationObserver(() => { writes++; });
     observer.observe(element, { attributes: true, attributeFilter: ["style"] });

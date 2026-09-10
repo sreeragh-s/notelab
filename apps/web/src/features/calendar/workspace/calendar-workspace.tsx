@@ -1,3 +1,4 @@
+import type { CalendarDestination } from "./calendar-navigation";
 import { createContext, useContext, useState, useRef, useCallback, useMemo, useLayoutEffect, type ReactNode } from "react";
 
 export type CalendarCommand = { id: string; label: string; run: () => void; disabled?: boolean; shortcut?: string };
@@ -10,6 +11,9 @@ function useWorkspaceState() {
   const [source, setSource] = useState<{ bindingId: string; calendarId: string } | null>(null);
   const [query, setQuery] = useState("");
   const [panelOpen, setPanelOpen] = useState(false);
+  const navigation = useRef<((destination: CalendarDestination, commit: () => void) => void) | null>(null);
+  const registerNavigation = useCallback((handler: (destination: CalendarDestination, commit: () => void) => void) => { navigation.current = handler; return () => { if (navigation.current === handler) navigation.current = null; }; }, []);
+  const navigateCalendar = useCallback((destination: CalendarDestination, commit: () => void) => { if (navigation.current) navigation.current(destination, commit); else commit(); }, []);
   const actions = useRef<PanelActions | null>(null);
   const trigger = useRef<HTMLElement | null>(null);
   const openPanel = useCallback(() => {
@@ -25,7 +29,7 @@ function useWorkspaceState() {
   const register = useCallback((value: PanelActions) => { actions.current = value; return () => { actions.current = null; }; }, []);
   const reset = useCallback(() => { setFeatureCommands([]); setTravelZone(null); setTravelPickerOpen(false); setPanelOpen(false); setSource(null); setQuery(""); actions.current = null; trigger.current = null; }, []);
   const create = useCallback(() => actions.current?.create(), []);
-  return useMemo(() => ({ travelPickerOpen, setTravelPickerOpen, featureCommands, setFeatureCommands, travelZone, setTravelZone, source, showSource, panelElement, query, setQuery, panelOpen, openPanel, closePanel, suspendPanel, register, reset, create }), [travelPickerOpen, featureCommands, travelZone, source, showSource, panelElement, query, panelOpen, openPanel, closePanel, suspendPanel, register, reset, create]);
+  return useMemo(() => ({ navigateCalendar, registerNavigation, travelPickerOpen, setTravelPickerOpen, featureCommands, setFeatureCommands, travelZone, setTravelZone, source, showSource, panelElement, query, setQuery, panelOpen, openPanel, closePanel, suspendPanel, register, reset, create }), [travelPickerOpen, featureCommands, travelZone, source, showSource, panelElement, query, panelOpen, openPanel, closePanel, suspendPanel, register, reset, create]);
 }
 const CalendarWorkspaceContext = createContext<ReturnType<typeof useWorkspaceState> | null>(null);
 export function CalendarWorkspaceProvider({ children }: { children: ReactNode }) {

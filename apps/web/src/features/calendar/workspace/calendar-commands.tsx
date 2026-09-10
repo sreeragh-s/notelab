@@ -11,7 +11,8 @@ export function CalendarCommands({ preferences, onPreferences, onSettings, onSea
   const workspace = useCalendarWorkspace(), navigate = useNavigate(), search = useSearch({ from: "/app/calendar" });
   const [mode, setMode] = useState<"commands" | "help" | null>(null), [pending, setPending] = useState(false);
   const view = normalizeCalendarView(search.view ?? preferences.view), date = search.date ?? todayInZone(workspace.travelZone ?? preferences.timeZone);
-  const period = (date: string, nextView: CalendarView = view, align = search.align) => void navigate({ to: "/calendar", search: { date, view: nextView, days: search.days, align } });
+  const route = (search: import("./calendar-navigation").CalendarDestination) => workspace.navigateCalendar(search, () => { void navigate({ to: "/calendar", search }); });
+  const period = (date: string, nextView: CalendarView = view, align = search.align) => route({ date, view: nextView, days: search.days, align });
   const save = async (value: CalendarPreferences) => { if (!onPreferences || pending) return; setPending(true); try { await onPreferences(value); } catch (error) { toast.error(getApiErrorMessage(error)); } finally { setPending(false); } };
   const commands: CalendarCommand[] = [
     { id: "today", label: "Go to today", shortcut: "T", run: () => period(todayInZone(workspace.travelZone ?? preferences.timeZone), view, preferences.todayAlignment === "start" || undefined) },
@@ -22,7 +23,7 @@ export function CalendarCommands({ preferences, onPreferences, onSettings, onSea
     { id: "search", label: "Search calendar events", run: onSearch },
     { id: "panel", label: workspace.panelOpen ? "Close event panel" : "Open event panel", run: () => workspace.panelOpen ? workspace.closePanel() : workspace.openPanel() },
     { id: "settings", label: "Calendar settings", run: onSettings },
-    ...([-1, 1] as const).map(direction => ({ id: `days:${direction}`, label: direction > 0 ? "Show more days" : "Show fewer days", disabled: view !== "week" || (search.days ?? 7) + direction < 1 || (search.days ?? 7) + direction > 31, run: () => void navigate({ to: "/calendar", search: { date, view, align: search.align, days: (search.days ?? 7) + direction } }) })),
+    ...([-1, 1] as const).map(direction => ({ id: `days:${direction}`, label: direction > 0 ? "Show more days" : "Show fewer days", disabled: view !== "week" || (search.days ?? 7) + direction < 1 || (search.days ?? 7) + direction > 31, run: () => route({ date, view, align: search.align, days: (search.days ?? 7) + direction }) })),
     ...([{ label: "Taller hours", height: Math.min(120, (preferences.hourHeight ?? 48) + 8) }, { label: "Denser hours", height: Math.max(32, (preferences.hourHeight ?? 48) - 8) }, { label: "Reset hour height", height: 48 }].map(({ label, height }) => ({ id: label, label, disabled: !onPreferences || pending, run: () => void save({ ...preferences, hourHeight: height }) }))),
     ...(["showWeekends", "showDeclined", "showWeekNumbers"] as const).map(key => ({ id: key, label: `${preferences[key] ? "Hide" : "Show"} ${key === "showWeekends" ? "weekends" : key === "showDeclined" ? "declined events" : "week numbers"}`, disabled: !onPreferences || pending, run: () => void save({ ...preferences, [key]: !preferences[key] }) })),
     ...(preferences.timeZoneColumns ?? [preferences.timeZone, ...preferences.secondaryTimeZones].map(zone => ({ zone, label: zone }))).map(column => ({ id: `zone:${column.zone}`, label: `Make ${column.label} the primary time zone`, disabled: !onPreferences || pending || preferences.timeZone === column.zone, run: () => void save(calendarTravelPreferences(preferences, column.zone)) })),

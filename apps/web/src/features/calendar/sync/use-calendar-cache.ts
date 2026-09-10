@@ -1,5 +1,6 @@
+import { coversCalendarRange, type CalendarWindow } from "./range-coverage";
 import { useQueryClient } from "@tanstack/react-query";
-import { calendarKeys } from "@zilobase/features/calendar";
+import { calendarEventKey, calendarKeys } from "@zilobase/features/calendar";
 import { startCalendarRecovery } from "../realtime/calendar-recovery";
 import { reconcileCalendarMutations } from "../events/calendar-mutations";
 import { useEffect, useState, useCallback, useSyncExternalStore, useRef } from "react";
@@ -8,8 +9,11 @@ import type { CalendarConnection } from "@zilobase/features/calendar";
 import { apiFetch, toApiUrl } from "@/platform/network/api";
 import { getConnectivityState, subscribeConnectivity } from "@/features/offline/model";
 import { openCalendarDatabase, readCalendarRangeCache, type CalendarDatabase } from "../storage/calendar-database";
-import { synchronizeCalendarCache, prefetchCalendarMonths } from "./calendar-cache-sync";
-export function useCalendarCache(connection: CalendarConnection, userId: string, start: string, end: string) {
+import { synchronizeCalendarCache } from "./calendar-cache-sync";
+export function useCalendarCache(connection: CalendarConnection, userId: string, start: string, end: string, options?: { target?: CalendarWindow | null; hiddenKeys: string[] }) {
+  const targetStart = options?.target?.start, targetEnd = options?.target?.end;
+  const hiddenKey = JSON.stringify(options?.hiddenKeys ?? []);
+  const requestKey = JSON.stringify([userId, connection.workspaceId, connection.bindingId, start, end, targetStart, targetEnd, hiddenKey]);
   const client = useQueryClient();
   const [database, setDatabase] = useState<CalendarDatabase | null>(null), [error, setError] = useState<unknown>(), [syncing, setSyncing] = useState(false);
   const online = useSyncExternalStore(subscribeConnectivity, () => getConnectivityState() === "online", () => true);
@@ -19,22 +23,39 @@ export function useCalendarCache(connection: CalendarConnection, userId: string,
     return () => { active = false };
   }, [connection.bindingId, connection.workspaceId, userId]);
   const activeRequest = useRef(0);
-  useEffect(() => { activeRequest.current++; return () => { activeRequest.current++ } }, [database, start, end, online]);
-  const refresh = useCallback(async (recover = true) => {
+  useEffect(() => { activeRequest.current++; return () => { activeRequest.current++ } }, [database, requestKey, online]);
+  const refresh = useCallback(async (recover = true, missingOnly = false) => {
     if (!database || !online) return null;
     const generation = ++activeRequest.current; setSyncing(true);
-    try { await synchronizeCalendarCache(database, start, end, apiFetch, recover); if (database.isOpen()) client.setQueryData(calendarKeys.calendars(connection), { calendars: await database.calendars.toArray() }); if (generation === activeRequest.current) setError(undefined); return true } catch (cause) { if (generation === activeRequest.current) setError(cause); return null } finally { if (generation === activeRequest.current) setSyncing(false) }
-  }, [database, start, end, online]);
-  useEffect(() => { void refresh() }, [refresh]);
-  useEffect(() => { if (!database || !online) return; const timer = setTimeout(() => void prefetchCalendarMonths(database, start, end, apiFetch).catch(() => {}), 1500); return () => clearTimeout(timer) }, [database, online, start, end]);
+    try {
+      const hiddenKeys: string[] = JSON.parse(hiddenKey);
+      if (targetStart && targetEnd) await synchronizeCalendarCache(database, targetStart, targetEnd, apiFetch, recover, { missingOnly: true, hiddenKeys, priority: 10, requestId: `${requestKey}:${generation}:target`, isCurrent: () => generation === activeRequest.current });
+      if (generation !== activeRequest.current) return null;
+      await synchronizeCalendarCache(database, start, end, apiFetch, targetStart ? false : recover, { missingOnly, metadataLoaded: Boolean(targetStart), hiddenKeys, requestId: `${requestKey}:${generation}`, isCurrent: () => generation === activeRequest.current }); if (database.isOpen()) client.setQueryData(calendarKeys.calendars(connection), { calendars: await database.calendars.toArray() }); if (generation === activeRequest.current) setError(undefined); return true } catch (cause) { if (generation === activeRequest.current) setError(cause); return null } finally { if (generation === activeRequest.current) setSyncing(false) }
+  }, [database, requestKey, online]);
+  useEffect(() => { void refresh(true, Boolean(options)) }, [refresh]);
+
   const refreshRef = useRef(refresh); refreshRef.current = refresh;
   useEffect(() => { if (!database || !online) return; return startCalendarRecovery(database, recover => refreshRef.current(recover), () => getConnectivityState() === "online") }, [database, online]);
   useEffect(() => { if (!database || !online) return; void reconcileCalendarMutations(database); const timer = setInterval(() => void reconcileCalendarMutations(database), 30_000); return () => clearInterval(timer) }, [database, online]);
   const cached = useLiveQuery(async () => {
-    if (!database) return { calendars: [], events: [], loaded: false, stale: true };
+    if (!database || database.identity.userId !== userId || database.identity.workspaceId !== connection.workspaceId || database.identity.bindingId !== connection.bindingId) return { requestKey, calendars: [], events: [], coverage: [], catalogLoaded: false, loaded: false, stale: true };
+    // Events and the coverage that unlocks navigation must come from one snapshot.
+    return database.transaction("r", database.calendars, database.ranges, database.events, database.state, async () => {
     const calendars = await database.calendars.toArray();
-    const ranges = await Promise.all(calendars.filter(c => c.permissions.read && !c.permissions.freeBusyOnly).map(c => readCalendarRangeCache(database, c.id, start, end)));
-    return { calendars, events: ranges.flatMap(r => r.events), loaded: Boolean(await database.state.get("last_recovery")) && ranges.every(r => r.loaded), stale: ranges.some(r => r.stale) };
-  }, [database, start, end]);
-  return { ...cached, database, refresh, error, syncing, online };
+    const hidden = new Set<string>(JSON.parse(hiddenKey));
+    const windows = [{ start, end }, ...(targetStart && targetEnd ? [{ start: targetStart, end: targetEnd }] : [])];
+    const readable = calendars.filter(c => c.permissions.read && !c.permissions.freeBusyOnly && !hidden.has(JSON.stringify([c.bindingId, c.id])));
+    const results = await Promise.all(readable.map(async c => {
+      const ranges = await Promise.all(windows.map(w => readCalendarRangeCache(database, c.id, w.start, w.end)));
+      const stored = await database.ranges.where("calendarId").equals(c.id).toArray();
+      // Coverage is restricted to event windows actually materialized by this read.
+      const coverage = stored.flatMap(r => windows.flatMap(w => { const a = Math.max(Date.parse(r.start), Date.parse(w.start)), b = Math.min(Date.parse(r.end), Date.parse(w.end)); return a < b ? [{ start: new Date(a).toISOString(), end: new Date(b).toISOString() }] : []; }));
+      return { ranges, calendarId: c.id, coverage };
+    }));
+    const known = Boolean(await database.state.get("last_recovery"));
+    return { requestKey, calendars, events: [...new Map(results.flatMap(r => r.ranges.flatMap(r => r.events)).map(e => [calendarEventKey(e), e])).values()], coverage: results.map(r => ({ calendarId: r.calendarId, ranges: r.coverage })), loaded: known && results.every(r => coversCalendarRange(r.coverage, { start, end })), catalogLoaded: known, stale: results.some(r => r.ranges.some(r => r.stale)) };
+    });
+  }, [database, requestKey]);
+  return { events: cached?.events, calendars: cached?.calendars, coverage: cached?.coverage, catalogLoaded: cached?.catalogLoaded, loaded: cached?.loaded, stale: cached?.stale, requestKey: cached?.requestKey, database, refresh, error, syncing, online };
 }

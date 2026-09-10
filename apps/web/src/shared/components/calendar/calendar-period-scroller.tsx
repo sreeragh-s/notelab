@@ -5,6 +5,9 @@ import { TimeAxis } from "./calendar-time-axis";
 import { createCalendarScrollGroup } from "./calendar-scroll-group";
 import type { CalendarItem } from "./types";
 type Props = CalendarColumnActions & {
+  readyDays: (days: string[]) => boolean;
+  requestDays: (days: string[], commit: () => void) => void;
+  loadingMessage?: string;
   zoneControls?: ReactNode;
   periods: string[][];
   periodKey: string;
@@ -14,7 +17,7 @@ type Props = CalendarColumnActions & {
 };
 const EMPTY_ITEMS: CalendarItem[] = [];
 /** Day and Week differ only in the number of complete day columns per period. */
-export function CalendarPeriodScroller({ zoneControls, periods, periodKey, view, eventsByDay, onPeriod, ...actions }: Props) {
+export function CalendarPeriodScroller({ loadingMessage, readyDays, requestDays, zoneControls, periods, periodKey, view, eventsByDay, onPeriod, ...actions }: Props) {
   const hourHeight = actions.preferences.hourHeight ?? 48;
   const previousHourHeight = useRef(hourHeight);
   const [allDayCollapsed, setAllDayCollapsed] = useState(false);
@@ -22,6 +25,7 @@ export function CalendarPeriodScroller({ zoneControls, periods, periodKey, view,
   const [scrollGroup] = useState(() => createCalendarScrollGroup(7 * hourHeight));
   const settling = useRef<ReturnType<typeof setTimeout> | null>(null), navigating = useRef(false);
   const [preparedPeriod, setPreparedPeriod] = useState<string | null>(null);
+  const lastSafeLeft = useRef<number | null>(null);
   const onPeriodRef = useRef(onPeriod); onPeriodRef.current = onPeriod;
   const horizontal = useCallback((delta: number) => viewport.current?.scrollBy({ left: delta }), []);
   const expand = useCallback(() => { setAllDayCollapsed(false); allDayToggle.current?.focus(); }, []);
@@ -35,12 +39,11 @@ export function CalendarPeriodScroller({ zoneControls, periods, periodKey, view,
   useLayoutEffect(() => {
     const element = viewport.current; if (!element) return;
     if (settling.current) clearTimeout(settling.current);
-    navigating.current = false; element.scrollLeft = element.clientWidth;
+    navigating.current = false; element.scrollLeft = element.clientWidth; lastSafeLeft.current = element.clientWidth;
     let width = element.clientWidth;
     const observer = new ResizeObserver(() => { if (element.clientWidth !== width) { width = element.clientWidth; element.scrollLeft = width; } });
     observer.observe(element); return () => observer.disconnect();
   }, [periodKey]);
-  useEffect(() => { const timer = setTimeout(() => setPreparedPeriod(periodKey), 200); return () => clearTimeout(timer); }, [periodKey]);
   useEffect(() => () => { if (settling.current) clearTimeout(settling.current); }, []);
   return <div className="flex min-h-0 min-w-0 flex-1" style={{ "--calendar-all-day-height": `${allDayHeight}px` } as CSSProperties}>
     <div className="flex shrink-0 flex-col bg-surface-canvas" style={{ width: (zoneControls ? 24 : 0) + 56 * (1 + actions.preferences.secondaryTimeZones.length) }}>
@@ -54,7 +57,16 @@ export function CalendarPeriodScroller({ zoneControls, periods, periodKey, view,
     </div>
     <div ref={viewport} aria-label="Calendar periods" data-calendar-period-scroll className="flex min-h-0 min-w-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain" onScroll={event => {
       if (event.target !== event.currentTarget || navigating.current) return;
-      if (Math.abs(event.currentTarget.scrollLeft - event.currentTarget.clientWidth) > 2) setPreparedPeriod(periodKey);
+      const element = event.currentTarget;
+      const direction = element.scrollLeft < element.clientWidth - 2 ? -1 : element.scrollLeft > element.clientWidth + 2 ? 1 : 0;
+      if (direction && !readyDays(periods[direction + 1]!)) {
+        element.scrollLeft = lastSafeLeft.current ?? element.clientWidth;
+        if (settling.current) clearTimeout(settling.current);
+        requestDays(periods[direction + 1]!, () => onPeriodRef.current(direction));
+        return;
+      }
+      if (direction) { requestDays(periods[direction + 1]!, () => {}); setPreparedPeriod(periodKey); }
+      lastSafeLeft.current = element.scrollLeft;
       if (settling.current) clearTimeout(settling.current);
       settling.current = setTimeout(() => {
         const element = viewport.current; if (!element?.clientWidth) return;
@@ -64,8 +76,10 @@ export function CalendarPeriodScroller({ zoneControls, periods, periodKey, view,
       }, 150);
     }}>
       {periods.map((days, index) => {
-        const prepared = index === 1 || preparedPeriod === periodKey;
-        return <div key={index} data-calendar-period={index} data-calendar-period-ready={prepared} aria-hidden={!prepared} inert={!prepared} className="flex h-full min-h-0 w-full min-w-0 shrink-0">
+        const loaded = readyDays(days);
+        const prepared = loaded && (index === 1 || preparedPeriod === periodKey);
+        return <div key={index} data-calendar-period={index} data-calendar-period-ready={loaded} aria-busy={!loaded} className="relative flex h-full min-h-0 w-full min-w-0 shrink-0">
+          {!loaded && <div role="status" className="absolute inset-0 z-30 grid place-items-center bg-surface-canvas text-sm text-content-secondary">{loadingMessage ?? "Loading dates…"}</div>}
           {days.map(day => <CalendarDayColumn key={day} {...actions} day={day} periodDays={days} items={eventsByDay[day] ?? EMPTY_ITEMS} prepared={prepared} allDayCollapsed={allDayCollapsed} onExpandAllDay={expand} scrollGroup={scrollGroup} />)}
         </div>;
       })}

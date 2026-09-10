@@ -44,7 +44,7 @@ Calendar preference JSON also stores local color overrides and removed-calendar 
 
 [Dexie storage](../../../apps/web/src/features/calendar/storage/calendar-database.ts) isolates each server/user/workspace/binding. Completed range membership and event records commit together; older generations/revisions and cross-identity payloads are rejected. Cache reads distinguish unloaded, empty, and stale ranges. Monthly LRU eviction retains pending mutation records. App session composition closes Calendar and Mail databases before offline-store deletion. Account disconnect removes only its own Calendar cache.
 
-[Cache synchronization](../../../apps/web/src/features/calendar/sync/calendar-cache-sync.ts) serializes per binding and coalesces equal requests. IndexedDB is authoritative for event presentation; account and preference queries use TanStack Query.
+[Cache synchronization](../../../apps/web/src/features/calendar/sync/calendar-cache-sync.ts) serializes per binding and coalesces equal requests. Destination reads have priority over queued buffers; superseded work stops at request/range boundaries. Missing-only loads compose existing coverage and fetch holes without replacing completed snapshots with partial pages. Recovery refreshes still revalidate cached ranges. IndexedDB is authoritative for event presentation; account and preference queries use TanStack Query.
 
 ## Views and time
 
@@ -80,7 +80,7 @@ The lazy [application reminder host](../../../apps/web/src/features/calendar/rem
 
 In-app delivery is always available when reminders are enabled. System delivery uses browser Notification permission or the [Tauri notification plugin](https://v2.tauri.app/plugin/notification/), requested only from Calendar settings. The scheduler does not register closed-app alarms, service-worker push, or native scheduled notifications. Disconnection deletes its scoped cache and reminder claims; logout removes the session host.
 
-Cached range coverage can be composed from adjacent snapshots, so switching from a loaded month to a day or week reads existing occurrences immediately. The controller prefetches the current and adjacent monthly buckets after the active request. Eviction pins ranges containing unresolved mutations as well as the current request.
+Cached range coverage can be composed from adjacent snapshots, so switching from a loaded month to a day or week reads existing occurrences immediately. The controller prioritizes the destination viewport and buffers adjacent day/week periods or the month scroller’s bounded window with at least four weeks on either side. Background range extensions fetch missing coverage; an active provider request finishes before newer priority work takes over. Eviction pins ranges containing unresolved mutations as well as the current request.
 
 ## Acceptance corrections
 
@@ -161,3 +161,9 @@ The [day column](../../../apps/web/src/shared/components/calendar/calendar-day-c
 Day-column drags render an inert floating preview outside the scroll clips while the originating column retains pointer capture. This keeps cross-column movement visible; drop or cancellation removes the preview.
 
 Current-time decorations use the primary action color: a strong blue line and start tick in today's column, a faint line through the rest of its week, current-time badges on the timezone rail, and a filled date number for today in headers and month cells. Decorations follow the selected timezone, refresh on minute boundaries and resume/focus, and keep their clock state separate from event layout and card rendering.
+
+## Loaded-date navigation
+
+The [navigation controller](../../../apps/web/src/features/calendar/workspace/calendar-navigation.ts) accepts the latest destination from toolbar arrows, Today, commands, mini-calendar, view/day-count controls and scroll boundaries. It holds the current date until complete, materialized coverage exists for every visible readable calendar. Cached but stale dates remain usable during recovery. A successful empty response is coverage; missing pages are not. Pending navigation exposes loading, Retry and Cancel, and offline uncached destinations explain the boundary. Browser-history/date changes supersede earlier intent.
+
+[Cache subscriptions](../../../apps/web/src/features/calendar/sync/use-calendar-cache.ts) read separate buffered and destination windows without fetching the gap between distant dates. Snapshot keys include user, workspace, binding, interval and visibility. Events and coverage are read in one IndexedDB transaction. Coverage is clipped to windows whose events were actually materialized; hidden calendars do not block readiness, and enabling one requires its coverage. The shared calendar receives only readiness and request callbacks, never provider transport. Initial/deep-link unloaded cells display loading states. Day/week stops horizontal motion at unloaded periods but keeps hour scrolling available; month restores its last safe pixel offset until the requested weeks are ready. Offscreen day columns render on scroll demand, independently of data readiness. The event index includes the new date range while a month buffer is being replaced.

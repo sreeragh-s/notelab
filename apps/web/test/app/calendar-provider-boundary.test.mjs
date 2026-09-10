@@ -5,7 +5,7 @@ import { transform } from "esbuild";
 export function register({ assert, readSource, test }) {
   test("application sidebar and content share the Calendar workspace provider", async () => {
     const workspaceSource = await readSource("/src/features/calendar/workspace/calendar-workspace.tsx");
-    const workspace = await transform(workspaceSource.replace(/^import .*?;\n/, "").replaceAll("export ", ""), { loader: "tsx", jsx: "transform" });
+    const workspace = await transform(workspaceSource.replace(/^import .*?;\n/gm, "").replaceAll("export ", ""), { loader: "tsx", jsx: "transform" });
     const { CalendarWorkspaceProvider, useCalendarWorkspace } = new Function("React", ...Object.keys(React), `${workspace.code}; return { CalendarWorkspaceProvider, useCalendarWorkspace };`)(React, ...Object.values(React));
     const source = await readSource("/src/app/shell/content/app-layout.tsx");
     // Execute the real shell composition, replacing unrelated services and surfaces.

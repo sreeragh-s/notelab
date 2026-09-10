@@ -47,8 +47,10 @@ const CalendarMonthWeek = memo(function CalendarMonthWeek(props: MonthProps) {
 const WEEK_HEIGHT = 144;
 const SHIFT_WEEKS = 4;
 const initialWeek = (date: string, weekStartsOn: number) => addCalendarDays(calendarDays(date, "month", weekStartsOn)[0]!, -SHIFT_WEEKS * 7);
-export function CalendarMonthView(props: MonthProps & { date: string; onDate: (date: string) => void; onRangeChange: (days: string[]) => void }) {
+export function CalendarMonthView(props: MonthProps & { loadingMessage?: string; readyDays: (days: string[]) => boolean; requestDays: (days: string[], commit: () => void) => void; date: string; onDate: (date: string) => void; onRangeChange: (days: string[]) => void }) {
   const viewport = useRef<HTMLDivElement>(null);
+  const restoringTop = useRef<number | null>(null);
+  const lastSafeTop = useRef(SHIFT_WEEKS * WEEK_HEIGHT);
   const emittedDate = useRef<string | null>(null);
   const adjusting = useRef(false);
   const pendingTop = useRef<number | null>(SHIFT_WEEKS * WEEK_HEIGHT);
@@ -65,13 +67,13 @@ export function CalendarMonthView(props: MonthProps & { date: string; onDate: (d
     setStart(nextStart);
     if (nextStart === start) { adjusting.current = false; pendingTop.current = null; }
     const element = viewport.current;
-    if (element) { element.scrollTop = SHIFT_WEEKS * WEEK_HEIGHT; setPosition({ top: element.scrollTop, height: element.clientHeight }); }
+    if (element) { element.scrollTop = SHIFT_WEEKS * WEEK_HEIGHT; lastSafeTop.current = element.scrollTop; setPosition({ top: element.scrollTop, height: element.clientHeight }); }
   }, [props.date, props.preferences.weekStartsOn]);
   useLayoutEffect(() => {
     const element = viewport.current;
     if (!element) return;
     if (pendingTop.current !== null) { element.scrollTop = pendingTop.current; pendingTop.current = null; }
-    setPosition({ top: element.scrollTop, height: element.clientHeight });
+    lastSafeTop.current = element.scrollTop; setPosition({ top: element.scrollTop, height: element.clientHeight });
     adjusting.current = false;
   }, [start]);
   useEffect(() => {
@@ -86,6 +88,16 @@ export function CalendarMonthView(props: MonthProps & { date: string; onDate: (d
     const element = event.currentTarget;
     if (adjusting.current) return;
     const top = element.scrollTop;
+    if (restoringTop.current !== null) { const restored = restoringTop.current; restoringTop.current = null; if (Math.abs(top - restored) < 1) return; }
+    const visibleDays = days.slice(Math.floor(top / WEEK_HEIGHT) * 7, Math.min(days.length, Math.ceil((top + element.clientHeight) / WEEK_HEIGHT) * 7));
+    if (visibleDays.length && !props.readyDays(visibleDays)) {
+      restoringTop.current = lastSafeTop.current;
+      element.scrollTop = lastSafeTop.current;
+      props.requestDays(visibleDays, () => { if (element.isConnected) element.scrollTop = top; });
+      return;
+    }
+    props.requestDays(visibleDays, () => {});
+    lastSafeTop.current = top;
     // Exact offsets stay in the DOM/pendingTop; React only needs row boundaries.
     const height = element.clientHeight;
     setPosition(previous => Math.floor(previous.top / WEEK_HEIGHT) === Math.floor(top / WEEK_HEIGHT) && Math.ceil((previous.top + previous.height) / WEEK_HEIGHT) === Math.ceil((top + height) / WEEK_HEIGHT) && previous.height === height ? previous : { top, height });
@@ -95,7 +107,7 @@ export function CalendarMonthView(props: MonthProps & { date: string; onDate: (d
     if (shift) { adjusting.current = true; pendingTop.current = top - shift * WEEK_HEIGHT; setStart(addCalendarDays(start, shift * 7)); }
   }}>
     <div style={{ height: first * WEEK_HEIGHT }} aria-hidden="true" />
-    {weeks.slice(first, last).map(week => <div key={week[0]} data-calendar-week={week[0]}><CalendarMonthWeek {...props} days={week} /></div>)}
+    {weeks.slice(first, last).map(week => <div key={week[0]} data-calendar-week={week[0]}>{props.readyDays(week) ? <CalendarMonthWeek {...props} days={week} /> : <div role="status" aria-busy="true" className="grid h-36 place-items-center border-b border-stroke-default text-sm text-content-secondary">{props.loadingMessage ?? "Loading dates…"}</div>}</div>)}
     <div style={{ height: (windowWeeks - last) * WEEK_HEIGHT }} aria-hidden="true" />
   </div>;
 }

@@ -14,6 +14,7 @@ test.beforeEach(async ({ page }) => {
     return route.fulfill({ json: { events: [event], nextPageToken: null } });
   });
   await page.goto("/scripts/calendar/e2e/index.html");
+  await page.waitForFunction(() => Boolean(window.calendarFixture));
 });
 test("cached week opens details and switches views", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Design review/ })).toBeVisible();
@@ -121,6 +122,7 @@ for (const view of ["day", "week"]) {
     const pager = page.locator("[data-calendar-period-scroll]");
     const activeGrid = page.locator('[data-calendar-period="1"] [data-calendar-scroll]').first();
     await expect(pager).toBeVisible();
+    await expect(page.locator('[data-calendar-period="1"]')).toHaveAttribute("data-calendar-period-ready", "true");
     await activeGrid.evaluate(element => { element.scrollTop = 240 });
     await activeGrid.hover();
     await page.mouse.wheel(await pager.evaluate(element => element.clientWidth), 0);
@@ -143,6 +145,8 @@ test("every calendar view scrolls vertically in a short viewport", async ({ page
       ? page.locator('[data-calendar-period="1"] [data-calendar-scroll]').first()
       : page.locator("[data-calendar-scroll]");
     await expect(scroll).toBeVisible();
+    if (view === "month") await expect(scroll.getByRole("status")).toHaveCount(0);
+    else await expect(page.locator('[data-calendar-period="1"]')).toHaveAttribute("data-calendar-period-ready", "true");
     await expect.poll(() => scroll.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
     const target = view === "month" ? 700 : 100;
     await scroll.evaluate((element, top) => { element.scrollTop = top }, target);
@@ -184,13 +188,17 @@ test("month scroll continues in both directions with bounded rows and stable anc
   const scroll = page.locator("[data-calendar-month-scroll]");
   await expect(scroll).toBeVisible();
   for (let index = 0; index < 8; index++) {
+    const before = await page.locator("[data-calendar-week]").first().getAttribute("data-calendar-week");
     await scroll.evaluate(element => { element.scrollTop = element.scrollHeight - element.clientHeight - 10 });
+    await expect(page.locator("[data-calendar-week]").first()).not.toHaveAttribute("data-calendar-week", before);
     await expect.poll(() => scroll.evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeGreaterThan(300);
   }
   await expect(page.getByRole("heading", { name: /2027/, exact: false }).first()).toBeVisible();
   expect(await page.locator("[data-calendar-week]").count()).toBeLessThanOrEqual(12);
   for (let index = 0; index < 8; index++) {
+    const before = await page.locator("[data-calendar-week]").first().getAttribute("data-calendar-week");
     await scroll.evaluate(element => { element.scrollTop = 20 });
+    await expect(page.locator("[data-calendar-week]").first()).not.toHaveAttribute("data-calendar-week", before);
     await expect.poll(() => scroll.evaluate(element => element.scrollTop)).toBe(596);
   }
   await page.evaluate(() => window.calendarFixture.navigate("month", "2026-09-09"));

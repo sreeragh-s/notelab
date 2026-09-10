@@ -68,7 +68,8 @@ export async function readCalendarRangeCache(database: CalendarDatabase, calenda
     selected.push(range); coveredUntil = Date.parse(range.end); if (coveredUntil >= Date.parse(end)) break;
   }
   emitCalendarMetric("cache_hit", coveredUntil >= Date.parse(end) ? 1 : 0);
-  const ranges = selected.length ? selected : candidates;
+  // Read all overlapping snapshots even when a hole separates cached windows.
+  const ranges = candidates;
   const state = await database.state.get(calendarId), calendar = await database.calendars.get(calendarId);
   const rows = await database.events.bulkGet([...new Set(ranges.flatMap(range => range.eventKeys))]);
   return { events: rows.flatMap(row => row && eventOverlaps(row.event, start, end, calendar?.timeZone ?? "UTC") ? [row.event] : []), loaded: coveredUntil >= Date.parse(end), stale: coveredUntil < Date.parse(end) || !state || ranges.some(range => state.generation !== range.generation || state.revision > range.revision || Date.now() - range.fetchedAt > 300_000) };
