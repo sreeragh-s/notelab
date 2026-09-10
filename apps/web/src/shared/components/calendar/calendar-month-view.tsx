@@ -1,6 +1,7 @@
+import { CalendarOverflow } from "./calendar-agenda";
 import { CalendarDragContext } from "./drag-context";
 import { calendarItemKey, type CalendarItem, type CalendarDisplayPreferences } from "./types";
-import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { memo, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getISOWeek } from "date-fns";
 import { addCalendarDays, calendarDays, calendarDate } from "@zilobase/features/calendar-layout";
 import { Button } from "@/shared/ui/button";
@@ -22,8 +23,9 @@ function weekBars(days: string[], eventsByDay: MonthProps["eventsByDay"]) {
     return { event, start, end, lane };
   });
 }
-function CalendarMonthWeek(props: MonthProps) {
+const CalendarMonthWeek = memo(function CalendarMonthWeek(props: MonthProps) {
   const { days, eventsByDay, card, onDay, preferences, onChange } = props, container = useRef<HTMLDivElement>(null);
+  const dateFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", timeZone: "UTC" }), []);
   const drag = useContext(CalendarDragContext);
   const bars = useMemo(() => weekBars(days, eventsByDay), [days, eventsByDay]);
   const drop = (event: React.DragEvent, day: string) => {
@@ -36,12 +38,12 @@ function CalendarMonthWeek(props: MonthProps) {
     const daysMoved = Math.round((Date.parse(day) - Date.parse(calendarDate(source.start, preferences.timeZone))) / 86400000);
     try { onChange(shiftEventGeometry(source, preferences.timeZone, daysMoved, 0)) } catch (error) { props.onError?.(error instanceof Error ? error : new Error("Invalid event time")) }
   };
-  return <div ref={container} className="relative grid h-36 border-b border-stroke-default" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`, gridTemplateRows: "32px repeat(3, 26px) 26px" }}>
-    {days.map((day, index) => <div key={day} className="border-r border-stroke-default" style={{ gridColumn: index + 1, gridRow: "1 / 6" }} onDragOver={event => { if (props.online) event.preventDefault() }} onDrop={event => drop(event, day)}><Button size="sm" variant="ghost" onClick={() => onDay(day)}>{day.endsWith("-01") ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`)) : day.slice(-2)}{preferences.showWeekNumbers && index === 0 && <span className="ml-1 text-[10px] text-content-secondary">W{getISOWeek(new Date(`${day}T12:00:00Z`))}</span>}</Button></div>)}
+  return <div data-calendar-columns={days.length} ref={container} className="relative grid h-36 border-b border-stroke-default" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`, gridTemplateRows: "32px repeat(3, 26px) 26px" }}>
+    {days.map((day, index) => <div key={day} className="border-r border-stroke-default" style={{ gridColumn: index + 1, gridRow: "1 / 6" }} onDragOver={event => { if (props.online) event.preventDefault() }} onDrop={event => drop(event, day)}><Button size="sm" variant="ghost" onClick={() => onDay(day)}>{day.endsWith("-01") ? dateFormatter.format(new Date(`${day}T12:00:00Z`)) : day.slice(-2)}{preferences.showWeekNumbers && index === 0 && <span className="ml-1 text-[10px] text-content-secondary">W{getISOWeek(new Date(`${day}T12:00:00Z`))}</span>}</Button></div>)}
     {bars.filter(bar => bar.lane < 3).map(bar => <div key={calendarItemKey(bar.event)} className="z-10 min-w-0 px-0.5" style={{ gridColumn: `${bar.start + 1} / span ${bar.end - bar.start + 1}`, gridRow: bar.lane + 2 }}>{bar.event.start.date ? <DraggableEvent onError={props.onError} event={bar.event} zone={preferences.timeZone} dayWidth={(container.current?.clientWidth ?? 700) / days.length} disabled={!props.online || !props.writable(bar.event)} onChange={onChange}>{card(bar.event)}</DraggableEvent> : card(bar.event)}</div>)}
-    {days.map((day, index) => { const hidden = bars.filter(bar => bar.lane >= 3 && bar.start <= index && bar.end >= index); return hidden.length ? <div key={day} className="z-10 min-w-0" style={{ gridColumn: index + 1, gridRow: 5 }}><Popover><PopoverTrigger asChild><Button size="sm" variant="ghost">+{hidden.length} more</Button></PopoverTrigger><PopoverContent className="max-h-80 overflow-auto">{(eventsByDay[day] ?? []).map(card)}</PopoverContent></Popover></div> : null })}
+    {days.map((day, index) => { const hidden = bars.filter(bar => bar.lane >= 3 && bar.start <= index && bar.end >= index); return hidden.length ? <div key={day} className="z-10 min-w-0" style={{ gridColumn: index + 1, gridRow: 5 }}><Popover><PopoverTrigger asChild><Button size="sm" variant="ghost">+{hidden.length} more</Button></PopoverTrigger><PopoverContent className="max-h-80 overflow-auto"><CalendarOverflow items={eventsByDay[day] ?? []} card={card} /></PopoverContent></Popover></div> : null })}
   </div>;
-}
+}, (a, b) => a.days === b.days && a.days.every(day => a.eventsByDay[day] === b.eventsByDay[day]) && a.preferences === b.preferences && a.online === b.online && a.writable === b.writable && a.card === b.card && a.onDay === b.onDay && a.onChange === b.onChange && a.onError === b.onError);
 const WEEK_HEIGHT = 144;
 const SHIFT_WEEKS = 4;
 const initialWeek = (date: string, weekStartsOn: number) => addCalendarDays(calendarDays(date, "month", weekStartsOn)[0]!, -SHIFT_WEEKS * 7);
@@ -79,19 +81,21 @@ export function CalendarMonthView(props: MonthProps & { date: string; onDate: (d
   }, []);
   const first = Math.max(0, Math.floor(position.top / WEEK_HEIGHT) - 2);
   const last = Math.min(windowWeeks, Math.ceil((position.top + position.height) / WEEK_HEIGHT) + 2);
-  const weeks = Array.from({ length: last - first }, (_, index) => days.slice((first + index) * 7, (first + index + 1) * 7).filter(day => props.preferences.showWeekends || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay())));
+  const weeks = useMemo(() => Array.from({ length: windowWeeks }, (_, index) => days.slice(index * 7, (index + 1) * 7).filter(day => props.preferences.showWeekends || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()))), [days, windowWeeks, props.preferences.showWeekends]);
   return <div data-calendar-scroll data-calendar-month-scroll ref={viewport} className="min-h-0 flex-1 overflow-y-auto overscroll-y-none [overflow-anchor:none]" onScroll={event => {
     const element = event.currentTarget;
     if (adjusting.current) return;
     const top = element.scrollTop;
-    setPosition({ top, height: element.clientHeight });
+    // Exact offsets stay in the DOM/pendingTop; React only needs row boundaries.
+    const height = element.clientHeight;
+    setPosition(previous => Math.floor(previous.top / WEEK_HEIGHT) === Math.floor(top / WEEK_HEIGHT) && Math.ceil((previous.top + previous.height) / WEEK_HEIGHT) === Math.ceil((top + height) / WEEK_HEIGHT) && previous.height === height ? previous : { top, height });
     const visibleDate = addCalendarDays(start, Math.floor(top / WEEK_HEIGHT) * 7 + 3);
     if (visibleDate.slice(0, 7) !== props.date.slice(0, 7)) { emittedDate.current = visibleDate; props.onDate(visibleDate); }
     const shift = top < WEEK_HEIGHT ? -SHIFT_WEEKS : top + element.clientHeight > (windowWeeks - 2) * WEEK_HEIGHT ? SHIFT_WEEKS : 0;
     if (shift) { adjusting.current = true; pendingTop.current = top - shift * WEEK_HEIGHT; setStart(addCalendarDays(start, shift * 7)); }
   }}>
     <div style={{ height: first * WEEK_HEIGHT }} aria-hidden="true" />
-    {weeks.map(week => <div key={week[0]} data-calendar-week={week[0]}><CalendarMonthWeek {...props} days={week} /></div>)}
+    {weeks.slice(first, last).map(week => <div key={week[0]} data-calendar-week={week[0]}><CalendarMonthWeek {...props} days={week} /></div>)}
     <div style={{ height: (windowWeeks - last) * WEEK_HEIGHT }} aria-hidden="true" />
   </div>;
 }

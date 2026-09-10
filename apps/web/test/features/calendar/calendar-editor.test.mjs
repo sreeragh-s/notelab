@@ -14,7 +14,7 @@ export function register({ assert, loadModule, readSource, test }) {
     assert.doesNotMatch(grid, /(?<![\w-])overscroll-none(?![\w-])/);
     assert.match(pager, /overflow-x-auto overflow-y-hidden overscroll-x-contain/);
     assert.doesNotMatch(pager, /(?<![\w-])overscroll-none(?![\w-])/);
-    assert.match(await readSource("/src/shared/components/calendar/calendar-surface.tsx"), /overflow-y-auto overscroll-y-none p-4/);
+    assert.match(await readSource("/src/shared/components/calendar/calendar-agenda.tsx"), /overflow-y-auto overscroll-y-none p-4/);
     assert.match(schedule, /flex shrink-0 items-center justify-between gap-3 border-b/);
     assert.match(schedule, /<Button className="shrink-0"[\s\S]*?>Create event<\/Button>/);
   });

@@ -1,3 +1,4 @@
+import { CalendarAgenda } from "./calendar-agenda";
 import { CalendarDragContext } from "./drag-context";
 import { useId, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { addCalendarDays, calendarDays, dayInstant, eventClock, createEventIndex, shiftCalendarPeriod } from "@zilobase/features/calendar-layout";
@@ -20,8 +21,6 @@ export function CalendarSurface({ items, date, view, preferences, agenda = false
   const days = useMemo(() => allDays.filter(day => preferences.showWeekends || view === "day" || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay())), [allDays, preferences.showWeekends, view]);
   const [indexEvents] = useState(() => createEventIndex<CalendarItem>());
   const eventsByDay = useMemo(() => indexEvents(items, loadedDays, preferences.timeZone), [indexEvents, items, loadedDays, preferences.timeZone]);
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 60_000); return () => clearInterval(timer); }, []);
   const writable = useCallback((item: CalendarItem) => Boolean(item.editable && onChange), [onChange]);
   const change = useCallback((item: CalendarItem) => { if (item.editable) onChange?.(item); }, [onChange]);
   const day = useCallback((next: string) => onNavigate(next, "day"), [onNavigate]);
@@ -35,8 +34,8 @@ export function CalendarSurface({ items, date, view, preferences, agenda = false
     </Button>;
   }, [scope, agenda, view, writable, onSelect, renderItem, preferences.timeZone, preferences.timeFormat]);
   let content;
-  if (view === "agenda" || agenda) content = <div data-calendar-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-y-none p-4">{days.map(day => { const rows = eventsByDay[day] ?? []; return <section key={day} className="mb-5"><h2 className="mb-2 text-sm font-medium">{day}</h2>{rows.length ? rows.map(card) : <p className="text-xs text-content-secondary">No events</p>}</section>; })}</div>;
+  if (view === "agenda" || agenda) content = <CalendarAgenda days={days} eventsByDay={eventsByDay} card={card} />;
   else if (view === "month") content = <CalendarMonthView date={date} onDate={navigateDate} onRangeChange={setMonthDays} days={days} eventsByDay={eventsByDay} preferences={preferences} online={Boolean(onChange)} writable={writable} card={card} onDay={day} onChange={change} onError={onError} />;
-  else content = <CalendarPeriodScroller periods={periods} periodKey={`${view}:${date}`} onPeriod={navigatePeriod} eventsByDay={eventsByDay} preferences={preferences} now={now} online={Boolean(onChange)} scrollRef={gridScroll} card={card} writable={writable} onDay={day} onCreate={create} onChange={change} onError={onError} background={event => event.backgroundClass ?? ""} />;
+  else content = <CalendarPeriodScroller canCreate={Boolean(onCreate)} periods={periods} periodKey={`${view}:${date}`} onPeriod={navigatePeriod} eventsByDay={eventsByDay} preferences={preferences} online={Boolean(onChange)} scrollRef={gridScroll} card={card} writable={writable} onDay={day} onCreate={create} onChange={change} onError={onError} background={event => event.backgroundClass ?? ""} />;
   return <CalendarDragContext.Provider value={dragContext}>{content}</CalendarDragContext.Provider>;
 }

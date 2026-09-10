@@ -1,30 +1,40 @@
 import type { CalendarItem } from "./types";
-import { useRef, useState, type ReactNode, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type PointerEvent } from "react";
 
 import { shiftEventGeometry } from "./event-geometry";
 
 export function DraggableEvent({ event, zone, dayWidth, disabled, onChange, onError, children }: { event: CalendarItem; zone: string; dayWidth: number; disabled: boolean; onChange: (event: CalendarItem) => void; onError?: (error: Error) => void; children: ReactNode }) {
-  const origin = useRef<{ x: number; y: number; resize: "start" | "end" | null } | null>(null), [offset, setOffset] = useState({ x: 0, y: 0 });
+  const origin = useRef<{ x: number; y: number; resize: "start" | "end" | null; dayWidth: number } | null>(null), [offset, setOffset] = useState({ x: 0, y: 0 });
+  const frame = useRef<number | null>(null);
+  const preview = useRef({ x: 0, y: 0 });
+  const cancelPreview = () => { if (frame.current !== null) cancelAnimationFrame(frame.current); frame.current = null; };
+  useEffect(() => () => { if (frame.current !== null) cancelAnimationFrame(frame.current); }, []);
   const moved = useRef(false);
   const allDay = Boolean(event.start.date);
   const down = (e: PointerEvent<HTMLDivElement>) => {
     if (disabled || e.button !== 0) return;
     const edge = (e.target as HTMLElement).closest("[data-resize]")?.getAttribute("data-resize") as "start" | "end" | undefined;
-    origin.current = { x: e.clientX, y: e.clientY, resize: edge ?? null }; moved.current = false;
+    const column = e.currentTarget.closest<HTMLElement>("[data-calendar-columns]");
+    const measuredWidth = column ? column.clientWidth / Number(column.dataset.calendarColumns) : dayWidth;
+    origin.current = { dayWidth: measuredWidth, x: e.clientX, y: e.clientY, resize: edge ?? null }; moved.current = false;
   };
   const finish = (e: PointerEvent<HTMLDivElement>) => {
+    cancelPreview();
     const start = origin.current; origin.current = null; setOffset({ x: 0, y: 0 });
     if (!start || !moved.current) return;
     const dx = e.clientX - start.x, dy = e.clientY - start.y;
-    try { onChange(shiftEventGeometry(event, zone, Math.round(dx / Math.max(1, dayWidth)), Math.round(dy / .8 / 15) * 15, start.resize)) } catch (error) { onError?.(error instanceof Error ? error : new Error("Invalid event time")) }
+    try { onChange(shiftEventGeometry(event, zone, Math.round(dx / Math.max(1, start.dayWidth)), Math.round(dy / .8 / 15) * 15, start.resize)) } catch (error) { onError?.(error instanceof Error ? error : new Error("Invalid event time")) }
   };
   return <div className="relative h-full touch-none" style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }} onPointerDown={down} onPointerMove={e => {
     if (!origin.current) return;
     const x = e.clientX - origin.current.x, y = e.clientY - origin.current.y;
     if (Math.abs(x) + Math.abs(y) > 4) { moved.current = true; e.currentTarget.setPointerCapture(e.pointerId) }
-    if (moved.current) setOffset({ x: origin.current.resize && !allDay ? 0 : x, y: allDay ? 0 : y });
-    autoScroll(e.currentTarget, e.clientY);
-  }} onPointerUp={finish} onPointerCancel={() => { origin.current = null; setOffset({ x: 0, y: 0 }) }} onClickCapture={e => { if (moved.current) { e.preventDefault(); e.stopPropagation(); moved.current = false } }}>
+    if (moved.current) {
+      preview.current = { x: origin.current.resize && !allDay ? 0 : x, y: allDay ? 0 : y };
+      const element = e.currentTarget, pointerY = e.clientY;
+      if (frame.current === null) frame.current = requestAnimationFrame(() => { frame.current = null; setOffset(preview.current); autoScroll(element, pointerY); });
+    }
+  }} onPointerUp={finish} onPointerCancel={() => { cancelPreview(); moved.current = false; origin.current = null; setOffset({ x: 0, y: 0 }) }} onClickCapture={e => { if (moved.current) { e.preventDefault(); e.stopPropagation(); moved.current = false } }}>
     {!disabled && <div data-resize="start" className={allDay ? "absolute inset-y-0 left-0 z-10 w-1 cursor-ew-resize" : "absolute inset-x-0 top-0 z-10 h-1 cursor-ns-resize"} />}{children}{!disabled && <div data-resize="end" className={allDay ? "absolute inset-y-0 right-0 z-10 w-1 cursor-ew-resize" : "absolute inset-x-0 bottom-0 z-10 h-1 cursor-ns-resize"} />}
   </div>;
 }
