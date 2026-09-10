@@ -1,3 +1,5 @@
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { civilDayOrdinal } from "@zilobase/features/calendar-layout";
 import { CalendarDateLabel } from "./current-time";
 import { CalendarOverflow } from "./calendar-overflow";
 import { CalendarDragContext } from "./drag-context";
@@ -45,69 +47,37 @@ const CalendarMonthWeek = memo(function CalendarMonthWeek(props: MonthProps) {
   </div>;
 }, (a, b) => a.days === b.days && a.days.every(day => a.eventsByDay[day] === b.eventsByDay[day]) && a.preferences === b.preferences && a.online === b.online && a.writable === b.writable && a.card === b.card && a.onDay === b.onDay && a.onChange === b.onChange && a.onError === b.onError);
 const WEEK_HEIGHT = 144;
-const SHIFT_WEEKS = 4;
-const initialWeek = (date: string, weekStartsOn: number) => addCalendarDays(calendarDays(date, "month", weekStartsOn)[0]!, -SHIFT_WEEKS * 7);
-export function CalendarMonthView(props: MonthProps & { loadingMessage?: string; readyDays: (days: string[]) => boolean; requestDays: (days: string[], commit: () => void) => void; date: string; onDate: (date: string) => void; onRangeChange: (days: string[]) => void }) {
+export function CalendarMonthView(props: MonthProps & { loadingMessage?: string; beforeLoading: boolean; afterLoading: boolean; date: string; onDate: (date: string) => void; onViewport: (first: string, last: string) => void }) {
   const viewport = useRef<HTMLDivElement>(null);
-  const restoringTop = useRef<number | null>(null);
-  const lastSafeTop = useRef(SHIFT_WEEKS * WEEK_HEIGHT);
-  const emittedDate = useRef<string | null>(null);
-  const adjusting = useRef(false);
-  const pendingTop = useRef<number | null>(SHIFT_WEEKS * WEEK_HEIGHT);
-  const [start, setStart] = useState(() => initialWeek(props.date, props.preferences.weekStartsOn));
-  const [position, setPosition] = useState({ top: SHIFT_WEEKS * WEEK_HEIGHT, height: 900 });
-  const windowWeeks = Math.max(16, Math.ceil(position.height / WEEK_HEIGHT) + 8);
-  const days = useMemo(() => Array.from({ length: windowWeeks * 7 }, (_, index) => addCalendarDays(start, index)), [start, windowWeeks]);
-  useEffect(() => props.onRangeChange(days), [days, props.onRangeChange]);
+  const emitted = useRef<string | null>(null);
+  const previous = useRef<{ first: string; date: string } | null>(null);
+  const idle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pointer = useRef(false);
+  // Only complete weeks enter the physical extent; week identity includes hidden weekends.
+  const offset = (new Date(`${props.days[0]}T12:00:00Z`).getUTCDay() - props.preferences.weekStartsOn + 7) % 7;
+  const first = addCalendarDays(props.days[0]!, offset ? 7 - offset : 0);
+  const count = Math.max(1, Math.floor((civilDayOrdinal(props.days.at(-1)!) - civilDayOrdinal(first) + 1) / 7));
+  const weeks = useMemo(() => Array.from({ length: count }, (_, i) => Array.from({ length: 7 }, (_, day) => addCalendarDays(first, i * 7 + day))), [first, count]);
+  const virtual = useVirtualizer({ count, getScrollElement: () => viewport.current, estimateSize: () => WEEK_HEIGHT, overscan: 4, getItemKey: i => weeks[i]![0]! });
   useLayoutEffect(() => {
-    if (props.date === emittedDate.current) return;
-    pendingTop.current = SHIFT_WEEKS * WEEK_HEIGHT;
-    adjusting.current = true;
-    const nextStart = initialWeek(props.date, props.preferences.weekStartsOn);
-    setStart(nextStart);
-    if (nextStart === start) { adjusting.current = false; pendingTop.current = null; }
-    const element = viewport.current;
-    if (element) { element.scrollTop = SHIFT_WEEKS * WEEK_HEIGHT; lastSafeTop.current = element.scrollTop; setPosition({ top: element.scrollTop, height: element.clientHeight }); }
-  }, [props.date, props.preferences.weekStartsOn]);
-  useLayoutEffect(() => {
-    const element = viewport.current;
-    if (!element) return;
-    if (pendingTop.current !== null) { element.scrollTop = pendingTop.current; pendingTop.current = null; }
-    lastSafeTop.current = element.scrollTop; setPosition({ top: element.scrollTop, height: element.clientHeight });
-    adjusting.current = false;
-  }, [start]);
-  useEffect(() => {
     const element = viewport.current; if (!element) return;
-    const observer = new ResizeObserver(() => setPosition({ top: element.scrollTop, height: element.clientHeight }));
-    observer.observe(element); return () => observer.disconnect();
-  }, []);
-  const first = Math.max(0, Math.floor(position.top / WEEK_HEIGHT) - 2);
-  const last = Math.min(windowWeeks, Math.ceil((position.top + position.height) / WEEK_HEIGHT) + 2);
-  const weeks = useMemo(() => Array.from({ length: windowWeeks }, (_, index) => days.slice(index * 7, (index + 1) * 7).filter(day => props.preferences.showWeekends || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()))), [days, windowWeeks, props.preferences.showWeekends]);
-  return <div data-calendar-scroll data-calendar-month-scroll ref={viewport} className="min-h-0 flex-1 overflow-y-auto overscroll-y-none [overflow-anchor:none]" onScroll={event => {
+    const old = previous.current;
+    if (!old || old.date !== props.date && props.date !== emitted.current) element.scrollTop = Math.max(0, Math.floor((civilDayOrdinal(props.date) - civilDayOrdinal(first)) / 7) * WEEK_HEIGHT);
+    else if (old.first !== first) element.scrollTop += (civilDayOrdinal(old.first) - civilDayOrdinal(first)) / 7 * WEEK_HEIGHT;
+    previous.current = { first, date: props.date };
+  }, [first, props.date]);
+  useEffect(() => () => { if (idle.current) clearTimeout(idle.current); }, []);
+  return <div className="relative min-h-0 flex-1"><div data-calendar-scroll data-calendar-month-scroll ref={viewport} className="h-full overflow-y-auto overscroll-none [overflow-anchor:none] [scrollbar-gutter:stable]" onPointerDown={() => { pointer.current = true; }} onPointerUp={() => { pointer.current = false; }} onScroll={event => {
     const element = event.currentTarget;
-    if (adjusting.current) return;
-    const top = element.scrollTop;
-    if (restoringTop.current !== null) { const restored = restoringTop.current; restoringTop.current = null; if (Math.abs(top - restored) < 1) return; }
-    const visibleDays = days.slice(Math.floor(top / WEEK_HEIGHT) * 7, Math.min(days.length, Math.ceil((top + element.clientHeight) / WEEK_HEIGHT) * 7));
-    if (visibleDays.length && !props.readyDays(visibleDays)) {
-      restoringTop.current = lastSafeTop.current;
-      element.scrollTop = lastSafeTop.current;
-      props.requestDays(visibleDays, () => { if (element.isConnected) element.scrollTop = top; });
-      return;
-    }
-    props.requestDays(visibleDays, () => {});
-    lastSafeTop.current = top;
-    // Exact offsets stay in the DOM/pendingTop; React only needs row boundaries.
-    const height = element.clientHeight;
-    setPosition(previous => Math.floor(previous.top / WEEK_HEIGHT) === Math.floor(top / WEEK_HEIGHT) && Math.ceil((previous.top + previous.height) / WEEK_HEIGHT) === Math.ceil((top + height) / WEEK_HEIGHT) && previous.height === height ? previous : { top, height });
-    const visibleDate = addCalendarDays(start, Math.floor(top / WEEK_HEIGHT) * 7 + 3);
-    if (visibleDate.slice(0, 7) !== props.date.slice(0, 7)) { emittedDate.current = visibleDate; props.onDate(visibleDate); }
-    const shift = top < WEEK_HEIGHT ? -SHIFT_WEEKS : top + element.clientHeight > (windowWeeks - 2) * WEEK_HEIGHT ? SHIFT_WEEKS : 0;
-    if (shift) { adjusting.current = true; pendingTop.current = top - shift * WEEK_HEIGHT; setStart(addCalendarDays(start, shift * 7)); }
+    if (idle.current) clearTimeout(idle.current);
+    const top = element.scrollTop, height = element.clientHeight;
+    idle.current = setTimeout(() => {
+      if (pointer.current) return;
+      const firstIndex = Math.min(count - 1, Math.floor(top / WEEK_HEIGHT)), lastIndex = Math.min(count - 1, Math.floor((top + height - 1) / WEEK_HEIGHT));
+      const start = weeks[firstIndex]![0]!, end = weeks[lastIndex]![6]!;
+      props.onViewport(start, end); emitted.current = start; props.onDate(start);
+    }, 100);
   }}>
-    <div style={{ height: first * WEEK_HEIGHT }} aria-hidden="true" />
-    {weeks.slice(first, last).map(week => <div key={week[0]} data-calendar-week={week[0]}>{props.readyDays(week) ? <CalendarMonthWeek {...props} days={week} /> : <div role="status" aria-busy="true" className="grid h-36 place-items-center border-b border-stroke-default text-sm text-content-secondary">{props.loadingMessage ?? "Loading dates…"}</div>}</div>)}
-    <div style={{ height: (windowWeeks - last) * WEEK_HEIGHT }} aria-hidden="true" />
-  </div>;
+    <div className="relative" style={{ height: count * WEEK_HEIGHT }}>{virtual.getVirtualItems().map(row => <div key={row.key} data-calendar-week={weeks[row.index]![0]} className="absolute inset-x-0 top-0" style={{ transform: `translateY(${row.start}px)` }}><CalendarMonthWeek {...props} days={weeks[row.index]!.filter(day => props.preferences.showWeekends || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()))} /></div>)}</div>
+  </div>{props.beforeLoading && <div role="status" className="pointer-events-none absolute left-1 top-1 text-xs text-content-secondary">{props.loadingMessage ?? "Loading earlier dates…"}</div>}{props.afterLoading && <div role="status" className="pointer-events-none absolute bottom-1 right-1 text-xs text-content-secondary">{props.loadingMessage ?? "Loading later dates…"}</div>}</div>;
 }

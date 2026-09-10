@@ -113,3 +113,4 @@ Correction acceptance (2026-09-10): all 66 Calendar browser scenarios pass. Cach
 - Read delivery: provider gateway tests and typechecking validate abort propagation; range pagination retains complete-only publication.
 - Rolling buffers: advanced preferences isolate user/server settings; request chunks remain below the server limit and cache retention pins active ranges.
 - Timed renderer: independent date keys, shared native scroller and bounded column/event overscan; trackpad and sticky-header acceptance remains manual.
+- Month renderer: complete week extents and stable week keys replace four-week recentering. Manual acceptance covers prepend anchoring and scrollbar dragging.
