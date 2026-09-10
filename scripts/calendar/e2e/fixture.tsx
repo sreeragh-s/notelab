@@ -1,3 +1,5 @@
+import { CalendarSettings } from "@/features/calendar/preferences/calendar-settings";
+import { Dialog, DialogContent, DialogTitle } from "@/shared/ui/dialog";
 import { validateCalendarSearch } from "@/app/routing/search-validators";
 import { useCalendarChatVisibility } from "@/app/shell/side-panel/use-calendar-chat-visibility";
 import { useState } from "react";
@@ -28,14 +30,17 @@ const connections = [{ workspaceId: "workspace", bindingId: "binding", accountId
 function FixtureSchedule(props: Parameters<typeof CalendarSchedule>[0]) {
   const workspace = useCalendarWorkspace(), isMobile = useIsMobile();
   const [chatOpen, setChat] = useCalendarChatVisibility();
+  const settingsPreferences = useCalendarPreferences("workspace");
+  const [settings, setSettings] = useState(false);
   const [floating, setFloating] = useState(false);
   const chatPanel = <div aria-label="AI fixture" className="p-3"><h2>Ask AI</h2><Button onClick={() => setChat(false)}>Close AI</Button><Button onClick={() => setFloating(value => !value)}>Toggle floating AI</Button></div>;
   const panels = { calendarOpen: workspace.panelOpen, calendarPanel: <CalendarDockMount />, chatOpen: chatOpen && (isMobile || !floating), chatPanel, discussionsEnabled: false, discussionsOpen: false, isMobile };
   return <div className="flex min-w-0 flex-1 flex-col">
     <ResizablePanelGroup orientation="horizontal"><ResizablePanel id="fixture-main" minSize="25%"><div className="flex h-full min-h-0 flex-col">
-      <PagePaneHeader pathname="/calendar" showBreadcrumb={false} leadingControl={<span>Calendar</span>} actions={<CalendarToolbar preferences={props.preferences} onSettings={() => {}} />} />
+      <PagePaneHeader pathname="/calendar" showBreadcrumb={false} leadingControl={<span>Calendar</span>} actions={<CalendarToolbar preferences={props.preferences} onSettings={() => setSettings(true)} />} />
       <CalendarSchedule {...props} />
     </div></ResizablePanel><RightSidebars {...panels} navigationSidebarOpen={false} /></ResizablePanelGroup>
+    <Dialog open={settings} onOpenChange={setSettings}><DialogContent className="max-h-[85vh] overflow-y-auto"><DialogTitle>Calendar settings</DialogTitle><CalendarSettings value={settingsPreferences.query.data ?? props.preferences} pending={settingsPreferences.pending} onSave={data => settingsPreferences.save.mutate(data, { onSuccess: () => setSettings(false) })} /></DialogContent></Dialog>
     <RightSidebarMobilePanels {...panels} />
     {chatOpen && floating && !isMobile && <aside aria-label="Floating AI" className="fixed right-0 top-12 z-50 bg-surface-canvas">{chatPanel}</aside>}
     <Button className="fixed bottom-1 left-1 z-50" onClick={() => { setChat(true); }}>Open AI</Button>

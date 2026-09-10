@@ -86,6 +86,8 @@ The month view lays multi-day bars across weekly lanes with overflow details. Da
 
 Hour density persists in Calendar preferences (32–120 pixels per hour, default/reset 48), independently of application zoom. The day column, time axis, current-time decorations and drag/create geometry consume the same height. The scroll group rescales its time anchor before painting a density change; month layout is unaffected.
 
+General preferences include Today alignment, meeting-preview lead time and Google/Apple Maps selection, with navigation to existing application appearance/profile settings. Today actions record an optional aligned range in the route; ordinary week navigation retains its default alignment. The empty dock's [meeting preview](../../../apps/web/src/features/calendar/views/calendar-meeting-preview.tsx) reads authorized visible sources around today independently of the grid date, and applies the shared upcoming-meeting filter. [Context helpers](../../../packages/features/src/calendar/context.ts) bound the preview horizon and encode location text as a maps search parameter. This preview is not a reminder or an invitation notification.
+
 Provider transport and durable receipt storage are separate from mutation orchestration. Pending writes serialize by provider account across workspace bindings. Moves first persist an operation marker with an ETag fence, allowing uncertain delivery to reconcile the destination safely. Following edits at the first occurrence update the existing series. Google Meet pending/failure states remain visible without treating a saved event as lost.
 
 ## Rollout and observability

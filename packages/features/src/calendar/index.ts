@@ -7,3 +7,4 @@ export { calendarDate, dayInstant, addCalendarDays, todayInZone, wallTime, event
 
 export { calendarMetric, type CalendarMetricName } from "./telemetry";
 export { normalizeCalendarView } from "../calendar-layout/types";
+export { calendarLocationUrl, upcomingCalendarMeeting } from "./context";

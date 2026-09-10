@@ -31,3 +31,11 @@ test("grid density migrates old preferences and enforces usable bounds", () => {
   for (const hourHeight of [32, 48, 120]) expect(calendarPreferencesSchema.parse({ ...old, hourHeight }).hourHeight).toBe(hourHeight);
   for (const hourHeight of [0, 31, 121, 48.5]) expect(calendarPreferencesSchema.safeParse({ ...old, hourHeight }).success).toBe(false);
 });
+
+test("general preferences default safely and reject unsupported options", () => {
+  const parsed = calendarPreferencesSchema.parse(defaultCalendarPreferences());
+  expect(parsed).toMatchObject({ todayAlignment: "week", mapsProvider: "google", meetingPreviewMinutes: 15 });
+  expect(calendarPreferencesSchema.safeParse({ ...parsed, mapsProvider: "arbitrary" }).success).toBe(false);
+  expect(calendarPreferencesSchema.safeParse({ ...parsed, meetingPreviewMinutes: -1 }).success).toBe(false);
+  expect(calendarPreferencesSchema.safeParse({ ...parsed, meetingPreviewMinutes: 1441 }).success).toBe(false);
+});

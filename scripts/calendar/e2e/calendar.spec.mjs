@@ -416,3 +416,16 @@ test("retired agenda links open Week and the menu only offers supported views", 
   await expect(page.getByRole("option", { name: "Agenda", exact: true })).toHaveCount(0);
   await expect(page.getByRole("option")).toHaveCount(3);
 });
+
+test("meeting preview reads today independently of the displayed period", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-09-09T04:20:00Z") });
+  await page.route("**/ranges?**", route => { const url = new URL(route.request().url()); return route.fulfill({ json: { calendarId: "primary", start: url.searchParams.get("start"), end: url.searchParams.get("end"), generation: 1, revision: 1, events: [{ ...event, conferenceUrl: "https://meet.google.com/abc-defg-hij" }], complete: true, nextPageToken: null } }); });
+  await page.reload();
+  await page.evaluate(() => window.calendarFixture.navigate("week", "2026-10-15"));
+  await page.getByRole("button", { name: "Calendar event panel", exact: true }).click();
+  const upcoming = page.getByRole("region", { name: "Upcoming meeting", exact: true });
+  await expect(upcoming).toContainText("Design review");
+  await upcoming.getByRole("button").click();
+  await expect(page.getByRole("heading", { name: "Design review" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Studio", exact: true })).toHaveAttribute("href", /google.com\/maps\/search/);
+});

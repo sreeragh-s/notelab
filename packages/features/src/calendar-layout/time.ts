@@ -11,10 +11,10 @@ export function wallTime(date: string, time: string, zone: string, choice: "reje
 }
 export function eventInstant(time: CalendarEventTime, zone: string) { return time.date ? dayInstant(time.date, zone) : time.dateTime! }
 export function eventOverlaps(event: CalendarSpan, start: string, end: string, zone: string) { return Date.parse(eventInstant(event.start, zone)) < Date.parse(end) && Date.parse(eventInstant(event.end, zone)) > Date.parse(start) }
-export function calendarDays(date: string, view: CalendarView, weekStartsOn: number, dayCount = 7, showWeekends = true) {
+export function calendarDays(date: string, view: CalendarView, weekStartsOn: number, dayCount = 7, showWeekends = true, alignStart = false) {
   const anchor = Temporal.PlainDate.from(date);
   if (view === "day") return [date];
-  if (view === "week" && dayCount !== 7) {
+  if (view === "week" && (dayCount !== 7 || alignStart)) {
     const days: string[] = [];
     let day = anchor;
     while (days.length < Math.max(1, Math.min(31, Math.trunc(dayCount)))) {
@@ -27,9 +27,9 @@ export function calendarDays(date: string, view: CalendarView, weekStartsOn: num
   const offset = (first.dayOfWeek % 7 - weekStartsOn + 7) % 7, start = first.subtract({ days: offset });
   return Array.from({ length: view === "month" ? Math.ceil((offset + anchor.daysInMonth) / 7) * 7 : 7 }, (_, i) => start.add({ days: i }).toString());
 }
-export function shiftCalendarPeriod(date: string, view: CalendarView, direction: number, dayCount = 7, showWeekends = true) {
+export function shiftCalendarPeriod(date: string, view: CalendarView, direction: number, dayCount = 7, showWeekends = true, alignStart = false) {
   let anchor = Temporal.PlainDate.from(date);
-  if (view === "week" && dayCount !== 7 && !showWeekends) {
+  if (view === "week" && (dayCount !== 7 || alignStart) && !showWeekends) {
     while (anchor.dayOfWeek > 5) anchor = anchor.add({ days: 1 });
     let remaining = Math.abs(direction) * Math.max(1, Math.min(31, Math.trunc(dayCount)));
     while (remaining > 0) {

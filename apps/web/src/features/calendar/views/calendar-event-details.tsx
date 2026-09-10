@@ -1,3 +1,4 @@
+import { calendarLocationUrl } from "@zilobase/features/calendar";
 import { useState, type ReactNode } from "react";
 import { eventClock, eventInstant, type CalendarEvent, type CalendarRecord, type CalendarAttendee } from "@zilobase/features/calendar";
 import type { CalendarDatabase } from "../storage/calendar-database";
@@ -6,7 +7,7 @@ import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
 import { Clock, Globe2Icon, RotateCwIcon, UsersIcon, Video, MapPin, Bell, CalendarIcon, ArrowUpRightIcon } from "@/shared/components/icons";
 import { EventActions } from "../events/event-actions";
 
-type Props = { selected: CalendarEvent; database: CalendarDatabase | null; calendars: CalendarRecord[]; online: boolean; zone: string; timeFormat: "12" | "24"; onClose: () => void; onEdit: () => void; onDuplicate: () => void };
+type Props = { selected: CalendarEvent; database: CalendarDatabase | null; calendars: CalendarRecord[]; mapsProvider?: "google" | "apple"; online: boolean; zone: string; timeFormat: "12" | "24"; onClose: () => void; onEdit: () => void; onDuplicate: () => void };
 function Section({ children }: { children: ReactNode }) { return <section className="grid gap-3 border-b border-stroke-default px-3 py-3 last:border-0">{children}</section>; }
 function Row({ icon, children }: { icon: ReactNode; children: ReactNode }) { return <div className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-content-secondary [&>svg]:size-4">{icon}</span><div className="min-w-0 flex-1">{children}</div></div>; }
 const responseLabel = { accepted: "Accepted", declined: "Declined", tentative: "Maybe", needsAction: "Awaiting response" };
@@ -43,7 +44,7 @@ export function CalendarEventDetails(props: Props) {
       {event.conferenceStatus === "pending" && <p role="status">Google Meet is being created.</p>}
       {event.conferenceStatus === "failure" && <p role="alert">The event was saved, but Google Meet could not be created. Open Google Calendar to retry.</p>}
       {event.conferenceUrl && /^https:\/\//.test(event.conferenceUrl) && <Row icon={<Video />}><Button asChild variant="ghost" className="-ml-2 justify-start"><a href={event.conferenceUrl} target="_blank" rel="noopener noreferrer">{event.conferenceUrl.startsWith("https://meet.google.com/") ? "Google Meet" : "Join meeting"}<ArrowUpRightIcon /></a></Button></Row>}
-      {event.location && <Row icon={<MapPin />}><p className="break-words">{event.location}</p></Row>}
+      {event.location && <Row icon={<MapPin />}><a className="break-words underline" href={calendarLocationUrl(event.location, props.mapsProvider)} target="_blank" rel="noopener noreferrer">{event.location}</a></Row>}
       {event.description && <p className="whitespace-pre-wrap break-words text-content-secondary">{event.description}</p>}
     </Section>}
     <Section>

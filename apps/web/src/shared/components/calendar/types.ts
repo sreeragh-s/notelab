@@ -10,6 +10,7 @@ export type CalendarItem = CalendarSpan & {
   editable?: boolean;
 };
 export type CalendarDisplayPreferences = {
+  alignStart?: boolean;
   visibleDayCount?: number;
   hourHeight?: number;
   timeZone: string;

@@ -30,6 +30,7 @@ export type CalendarEventWriteRequest = {
 export type CalendarMutationResponse = { operationId: string; status: "pending" | "ambiguous" | "succeeded" | "failed"; event?: CalendarEvent; error?: string }
 export type CalendarColor = "red" | "orange" | "yellow" | "green" | "blue" | "purple" | "gray"
 export type CalendarPreferences = {
+  todayAlignment?: "week" | "start"; meetingPreviewMinutes?: number; mapsProvider?: "google" | "apple";
   hourHeight?: number;
   accountOrder?: string[]; calendarOrder?: string[]; collapsedAccountIds?: string[];
   calendarColors?: Record<string, CalendarColor>; removedCalendarKeys?: string[];

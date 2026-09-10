@@ -14,5 +14,5 @@ export const calendarKeys = {
   calendars: (scope: CalendarScope) => ["calendar", scope.workspaceId, scope.bindingId, "calendars"] as const,
 }
 export function defaultCalendarPreferences(timeZone = "UTC"): CalendarPreferences {
-  return { hourHeight: 48, accountOrder: [], calendarOrder: [], collapsedAccountIds: [], calendarColors: {}, removedCalendarKeys: [], view: "week", hiddenCalendarKeys: [], defaultCalendarKey: null, weekStartsOn: 1, showWeekends: true, showDeclined: false, showWeekNumbers: false, timeFormat: "24", timeZone, secondaryTimeZones: [], remindersEnabled: false }
+  return { todayAlignment: "week", meetingPreviewMinutes: 15, mapsProvider: "google", hourHeight: 48, accountOrder: [], calendarOrder: [], collapsedAccountIds: [], calendarColors: {}, removedCalendarKeys: [], view: "week", hiddenCalendarKeys: [], defaultCalendarKey: null, weekStartsOn: 1, showWeekends: true, showDeclined: false, showWeekNumbers: false, timeFormat: "24", timeZone, secondaryTimeZones: [], remindersEnabled: false }
 }

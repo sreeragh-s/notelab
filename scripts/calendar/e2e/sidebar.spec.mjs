@@ -160,3 +160,21 @@ test("custom day count persists through navigation and reload", async ({ page })
   await expect(page.getByRole("button", { name: "Create event 2026-09-15 9:00", exact: true })).toBeVisible();
   await expect(page.locator('[data-calendar-period="1"] [data-calendar-day-column]')).toHaveCount(3);
 });
+
+test("general preferences persist and Today uses the chosen alignment", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-09-10T09:00:00Z") });
+  await page.getByRole("button", { name: "Calendar settings", exact: true }).click();
+  await page.getByLabel("Today navigation", { exact: true }).click();
+  await page.getByRole("option", { name: "Align today at the start" }).click();
+  await page.getByLabel("Maps preference", { exact: true }).click();
+  await page.getByRole("option", { name: "Apple Maps", exact: true }).click();
+  await page.getByLabel("Meeting preview (minutes before)").fill("30");
+  await page.getByRole("button", { name: "Save preferences" }).click();
+  await page.getByRole("button", { name: "Today", exact: true }).click();
+  await expect(page.locator('[data-calendar-period="1"] [data-calendar-day-column]').first()).toHaveAttribute("data-calendar-day-column", "2026-09-10");
+  await page.reload();
+  await page.getByRole("button", { name: "Calendar settings", exact: true }).click();
+  await expect(page.getByLabel("Maps preference", { exact: true })).toContainText("Apple Maps");
+  await expect(page.getByLabel("Meeting preview (minutes before)")).toHaveValue("30");
+  await expect(page.getByRole("link", { name: "Profile settings" })).toHaveAttribute("href", "/settings/profile");
+});

@@ -13,7 +13,7 @@ Reference: [Notion Calendar documentation](https://www.notion.com/help/category/
 | 5 | Calendar-specific event panel | Implemented | Seven sidebar browser tests including independent pagination, selected-source creation, read-only creation denial and persistent ordering; source-order tests; web typecheck; architecture checks. |
 | 6 | Configurable multi-day views | Implemented | Shared layout tests exercise all 31 counts with weekends on/off across DST; browser test covers count controls, navigation, reload and mini-calendar selection; web typecheck. |
 | 7 | Grid density | Implemented | Browser test verifies preserved time anchor, quarter-hour creation, one-hour drag at double density and reset; preference migration/bounds tests; web typecheck. |
-| 8 | General preferences | Pending | — |
+| 8 | General preferences | Implemented | Preference persistence/Today-alignment browser test; shared preview exclusion and safe maps-link tests; schema bounds/defaults tests; web typecheck. Source: [General settings](https://www.notion.com/help/notion-calendar-settings). |
 | 9 | Labeled time zones | Pending | — |
 | 10 | Travel time zones | Pending | — |
 | 11 | Cross-period search | Pending | — |

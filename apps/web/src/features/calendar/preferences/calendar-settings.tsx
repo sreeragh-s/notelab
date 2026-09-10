@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { requestCalendarNotificationPermission } from "../reminders/notification-delivery";
 import { useState } from "react";
 import type { CalendarPreferences } from "@zilobase/features/calendar";
@@ -10,6 +11,10 @@ export function CalendarSettings({ value, onSave, pending }: { value: CalendarPr
   const [draft, setDraft] = useState(value);
   const [permission, setPermission] = useState("");
   return <form className="grid gap-4" onSubmit={event => { event.preventDefault(); onSave(draft) }}>
+    <Label>Today navigation<Select value={draft.todayAlignment ?? "week"} onValueChange={todayAlignment => setDraft({ ...draft, todayAlignment: todayAlignment as "week" | "start" })}><SelectTrigger aria-label="Today navigation"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="week">Go to today’s week</SelectItem><SelectItem value="start">Align today at the start</SelectItem></SelectContent></Select></Label>
+    <Label>Meeting preview (minutes before)<Input type="number" min={0} max={1440} value={draft.meetingPreviewMinutes ?? 15} onChange={event => setDraft({ ...draft, meetingPreviewMinutes: Number(event.target.value) })} /></Label>
+    <Label>Open locations in<Select value={draft.mapsProvider ?? "google"} onValueChange={mapsProvider => setDraft({ ...draft, mapsProvider: mapsProvider as "google" | "apple" })}><SelectTrigger aria-label="Maps preference"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="google">Google Maps</SelectItem><SelectItem value="apple">Apple Maps</SelectItem></SelectContent></Select></Label>
+    <div className="flex gap-2"><Button asChild variant="outline"><Link to="/settings/preferences">Appearance settings</Link></Button><Button asChild variant="outline"><Link to="/settings/profile">Profile settings</Link></Button></div>
     <Label>Hour height (pixels)<Input type="number" min={32} max={120} value={draft.hourHeight ?? 48} onChange={event => { const hourHeight = Number(event.target.value); if (Number.isInteger(hourHeight) && hourHeight >= 32 && hourHeight <= 120) setDraft({ ...draft, hourHeight }); }} /></Label>
     <div className="flex gap-2"><Button type="button" variant="outline" disabled={(draft.hourHeight ?? 48) <= 32} onClick={() => setDraft({ ...draft, hourHeight: Math.max(32, (draft.hourHeight ?? 48) - 8) })}>Denser hours</Button><Button type="button" variant="outline" disabled={(draft.hourHeight ?? 48) >= 120} onClick={() => setDraft({ ...draft, hourHeight: Math.min(120, (draft.hourHeight ?? 48) + 8) })}>Taller hours</Button><Button type="button" variant="ghost" onClick={() => setDraft({ ...draft, hourHeight: 48 })}>Reset hour height</Button></div>
     <Label>Primary time zone<Input value={draft.timeZone} onChange={event => setDraft({ ...draft, timeZone: event.target.value })} placeholder="Asia/Kolkata" /></Label>
