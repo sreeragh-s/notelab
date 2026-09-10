@@ -25,7 +25,7 @@ function weekBars(days: string[], eventsByDay: MonthProps["eventsByDay"]) {
 function CalendarMonthWeek(props: MonthProps) {
   const { days, eventsByDay, card, onDay, preferences, onChange } = props, container = useRef<HTMLDivElement>(null);
   const drag = useContext(CalendarDragContext);
-  const bars = weekBars(days, eventsByDay);
+  const bars = useMemo(() => weekBars(days, eventsByDay), [days, eventsByDay]);
   const drop = (event: React.DragEvent, day: string) => {
     event.preventDefault();
     let payload: unknown;

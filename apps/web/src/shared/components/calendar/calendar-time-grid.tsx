@@ -1,5 +1,5 @@
 import { calendarItemKey, type CalendarItem, type CalendarDisplayPreferences } from "./types";
-import { useRef, type ReactNode, type RefObject } from "react";
+import { useMemo, useRef, type ReactNode, type RefObject } from "react";
 import { eventClock, wallTime, todayInZone, timedLayout } from "@zilobase/features/calendar-layout";
 import { Button } from "@/shared/ui/button";
 import { DraggableEvent } from "./draggable-event";
@@ -10,10 +10,12 @@ export function TimeAxis({ day, preferences }: { day: string; preferences: Calen
 }
 function TimeGridDay(props: GridProps & { day: string }) {
   const { day, preferences } = props, slot = useRef<{ y: number; hour: number } | null>(null);
+  const events = props.eventsByDay[day];
+  const layout = useMemo(() => timedLayout(events ?? [], day, preferences.timeZone, calendarItemKey), [events, day, preferences.timeZone]);
   const dayWidth = (props.scrollRef.current?.clientWidth ?? 800) / props.days.length;
   const clock = new Intl.DateTimeFormat("en-GB", { timeZone: preferences.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(props.now)).split(":");
   return <div className="relative h-[1152px] border-l border-stroke-default">{Array.from({ length: 24 }, (_, hour) => <button key={hour} type="button" aria-label={`Create event ${day} ${hour}:00`} className="block h-12 w-full border-t border-data-grid text-left" onPointerDown={e => { slot.current = { y: e.clientY, hour: hour + Math.floor((e.clientY - e.currentTarget.getBoundingClientRect().top) / 12) / 4 }; e.currentTarget.setPointerCapture(e.pointerId) }} onPointerCancel={() => { slot.current = null }} onPointerUp={e => { const start = slot.current; slot.current = null; if (start) props.onCreate(day, start.hour, Math.max(30, Math.round(Math.max(0, e.clientY - start.y) / .8 / 15) * 15)) }} onKeyDown={e => { if (e.key === "Enter") props.onCreate(day, hour, 30) }} />)}
-    {timedLayout(props.eventsByDay[day] ?? [], day, preferences.timeZone, calendarItemKey).map(item => <div key={calendarItemKey(item.event)} className="absolute rounded-md" style={{ top: item.top * .8, height: Math.max(18, (item.bottom - item.top) * .8), left: `${item.column / item.columns * 100}%`, width: `${100 / item.columns}%` }}><DraggableEvent onError={props.onError} event={item.event} zone={preferences.timeZone} dayWidth={dayWidth} disabled={!props.online || !props.writable(item.event)} onChange={props.onChange}>{props.card(item.event)}</DraggableEvent></div>)}
+    {layout.map(item => <div key={calendarItemKey(item.event)} className="absolute rounded-md" style={{ top: item.top * .8, height: Math.max(18, (item.bottom - item.top) * .8), left: `${item.column / item.columns * 100}%`, width: `${100 / item.columns}%` }}><DraggableEvent onError={props.onError} event={item.event} zone={preferences.timeZone} dayWidth={dayWidth} disabled={!props.online || !props.writable(item.event)} onChange={props.onChange}>{props.card(item.event)}</DraggableEvent></div>)}
     {day === todayInZone(preferences.timeZone) && <div className="pointer-events-none absolute inset-x-0 border-t border-feedback-danger-text" style={{ top: (Number(clock[0]) * 60 + Number(clock[1])) * .8 }} />}
   </div>;
 }

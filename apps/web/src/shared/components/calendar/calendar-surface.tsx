@@ -1,6 +1,6 @@
 import { CalendarDragContext } from "./drag-context";
 import { useId, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { addCalendarDays, calendarDays, dayInstant, eventClock, eventInstant, shiftCalendarPeriod } from "@zilobase/features/calendar-layout";
+import { addCalendarDays, calendarDays, dayInstant, eventClock, createEventIndex, shiftCalendarPeriod } from "@zilobase/features/calendar-layout";
 import { Button } from "@/shared/ui/button";
 import { CalendarMonthView } from "./calendar-month-view";
 import { CalendarPeriodScroller } from "./calendar-period-scroller";
@@ -18,14 +18,8 @@ export function CalendarSurface({ items, date, view, preferences, agenda = false
   const start = dayInstant(loadedDays[0]!, preferences.timeZone), end = dayInstant(addCalendarDays(loadedDays.at(-1)!, 1), preferences.timeZone);
   useEffect(() => onRangeChange?.({ start, end }), [start, end, onRangeChange]);
   const days = useMemo(() => allDays.filter(day => preferences.showWeekends || view === "day" || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay())), [allDays, preferences.showWeekends, view]);
-  const eventsByDay = useMemo(() => {
-    const periods = loadedDays.map(day => ({ day, start: Date.parse(dayInstant(day, preferences.timeZone)), end: Date.parse(dayInstant(addCalendarDays(day, 1), preferences.timeZone)), events: [] as CalendarItem[] }));
-    for (const event of items) {
-      const from = Date.parse(eventInstant(event.start, preferences.timeZone)), until = Date.parse(eventInstant(event.end, preferences.timeZone));
-      for (const period of periods) if (from < period.end && until > period.start) period.events.push(event);
-    }
-    return Object.fromEntries(periods.map(period => [period.day, period.events]));
-  }, [items, loadedDays, preferences.timeZone]);
+  const [indexEvents] = useState(() => createEventIndex<CalendarItem>());
+  const eventsByDay = useMemo(() => indexEvents(items, loadedDays, preferences.timeZone), [indexEvents, items, loadedDays, preferences.timeZone]);
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 60_000); return () => clearInterval(timer); }, []);
   const writable = useCallback((item: CalendarItem) => Boolean(item.editable && onChange), [onChange]);

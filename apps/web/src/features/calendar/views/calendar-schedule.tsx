@@ -6,7 +6,7 @@ import { runCalendarMutation } from "../events/calendar-mutations";
 import { toast } from "sonner";
 import { newCalendarEvent } from "../events/event-editor";
 import { PALETTE, type ColorTokenId } from "@/shared/lib/color-tokens";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { calendarDays, todayInZone, dayInstant, addCalendarDays, shiftCalendarPeriod, calendarEventKey, calendarApiBasePath, type CalendarConnection, type CalendarEvent, type CalendarPreferences, type CalendarRecord, type CalendarView } from "@zilobase/features/calendar";
 import { useCalendarCache } from "../sync/use-calendar-cache";
@@ -35,6 +35,8 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
   const [searchEvents, setSearchEvents] = useState<CalendarEvent[] | null>(null), [searchError, setSearchError] = useState<unknown>();
   const onData = useCallback((binding: string, data: Snapshot) => setSnapshots(current => ({ ...current, [binding]: data })), []);
   const data = useMemo(() => connections.flatMap(c => snapshots[c.bindingId] ? [snapshots[c.bindingId]!] : []), [connections, snapshots]);
+  const calendars = useMemo(() => data.flatMap(d => d.calendars), [data]);
+  const calendarsByKey = useMemo(() => new Map(calendars.map(c => [calendarSelectionKey(c.bindingId, c.id), c])), [calendars]);
   const events = useMemo(() => data.flatMap(d => d.events).filter(event => calendarIsVisible(preferences, event.bindingId, event.calendarId) && (preferences.showDeclined || !event.attendees.some(a => a.self && a.responseStatus === "declined"))), [data, preferences]);
   const online = data.every(d => d.online);
   const setPeriod = useCallback((next: string, nextView: CalendarView = view) => { void navigate({ to: "/calendar", search: { date: next, view: nextView } }) }, [navigate, view]);
@@ -61,9 +63,9 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
     return () => { active = false; clearTimeout(timer) };
   }, [query, online, start, end, connections, preferences.hiddenCalendarKeys, preferences.removedCalendarKeys]);
   const visible = useMemo(() => query ? (searchEvents?.filter(event => calendarIsVisible(preferences, event.bindingId, event.calendarId)) ?? events.filter(e => `${e.title} ${e.description} ${e.location}`.toLowerCase().includes(query.toLowerCase()))) : events, [query, searchEvents, events, preferences]);
-  const open = (event: CalendarEvent) => { workspace.openPanel(); setEditing(false); setCreating(false); setSelected(event); void navigate({ to: "/calendar", search: { date, view, binding: event.bindingId, calendar: event.calendarId, event: event.eventId } }) };
-  const create = (day = date, hour = 9, duration = 30) => {
-    const writable = data.flatMap(d => d.calendars).filter(c => c.permissions.write);
+  const open = useCallback((event: CalendarEvent) => { workspace.openPanel(); setEditing(false); setCreating(false); setSelected(event); void navigate({ to: "/calendar", search: { date, view, binding: event.bindingId, calendar: event.calendarId, event: event.eventId } }) }, [workspace.openPanel, navigate, date, view]);
+  const create = useCallback((day = date, hour = 9, duration = 30) => {
+    const writable = calendars.filter(c => c.permissions.write);
     const calendar = resolveDefaultCalendar(writable, preferences);
     if (!calendar) return;
     const connection = connections.find(c => c.bindingId === calendar.bindingId)!;
@@ -71,16 +73,16 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
     try { seed = newCalendarEvent({ ...connection, calendarId: calendar.id, date: day, hour, timeZone: preferences.timeZone }); } catch (error) { toast.error(getApiErrorMessage(error)); return }
     workspace.openPanel();
     setSelected({ ...seed, end: { dateTime: new Date(Date.parse(seed.start.dateTime!) + duration * 60000).toISOString(), timeZone: preferences.timeZone } }); setEditing(true); setCreating(true);
-  };
-  const changeGeometry = async (event: CalendarEvent) => {
+  }, [date, calendars, preferences, connections, workspace.openPanel]);
+  const changeGeometry = useCallback(async (event: CalendarEvent) => {
     const snapshot = snapshots[event.bindingId]; if (!online || !snapshot?.database) return;
     if (event.recurringEventId || event.attendees.length) { workspace.openPanel(); setSelected(event); setCreating(false); setEditing(true); return }
     try { await runCalendarMutation({ database: snapshot.database, event, action: "update", write: { operationId: crypto.randomUUID(), etag: event.etag, sendUpdates: "all", event: { start: event.start, end: event.end } } }) } catch (error) { toast.error(getApiErrorMessage(error)) }
-  };
+  }, [snapshots, online, workspace.openPanel]);
   const color = (event: CalendarEvent) => {
     const override = preferences.calendarColors?.[calendarSelectionKey(event.bindingId, event.calendarId)];
     if (!event.colorId && override) return PALETTE[override];
-    const providerColor = event.colorId ?? data.flatMap(d => d.calendars).find(c => c.id === event.calendarId && c.bindingId === event.bindingId)?.colorId;
+    const providerColor = event.colorId ?? calendarsByKey.get(calendarSelectionKey(event.bindingId, event.calendarId))?.colorId;
     const hues: ColorTokenId[] = ["blue", "purple", "green", "purple", "red", "yellow", "orange", "blue", "gray", "blue", "green", "red"];
     return PALETTE[hues[Number(providerColor ?? 0) % hues.length] ?? "blue"];
   };
@@ -88,21 +90,33 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
   useEffect(() => workspace.register({ close, create: () => create() }));
   useEffect(() => { if (search.event) workspace.openPanel(); }, [search.event, workspace.openPanel]);
   const selection = selectionData(selected, snapshots, connections);
-  const items = useMemo<CalendarItem[]>(() => visible.map(event => ({
-    id: calendarEventKey(event), title: event.title, start: event.start, end: event.end,
-    ...color(event), dashed: event.attendees.some(a => a.self && a.responseStatus === "needsAction"),
-    editable: online && data.flatMap(d => d.calendars).some(c => c.id === event.calendarId && c.bindingId === event.bindingId && c.permissions.write),
-  })), [visible, data, preferences, online]);
-  const selectItem = (item: CalendarItem) => { const event = visible.find(event => calendarEventKey(event) === item.id); if (event) open(event); };
-  const changeItem = (item: CalendarItem) => { const event = visible.find(event => calendarEventKey(event) === item.id); if (event) void changeGeometry({ ...event, start: item.start, end: item.end }); };
+  const itemCache = useRef(new Map<string, CalendarItem>());
+  const previousItems = useRef<CalendarItem[]>([]);
+  const items = useMemo(() => {
+    const cache = new Map<string, CalendarItem>();
+    const next = visible.map(event => {
+      const id = calendarEventKey(event), style = color(event);
+      const candidate: CalendarItem = { id, title: event.title, start: event.start, end: event.end, backgroundClass: style.backgroundClass, textClass: style.textClass, dashed: event.attendees.some(a => a.self && a.responseStatus === "needsAction"), editable: online && Boolean(calendarsByKey.get(calendarSelectionKey(event.bindingId, event.calendarId))?.permissions.write) };
+      const old = itemCache.current.get(id);
+      const item = old && old.title === candidate.title && old.start === candidate.start && old.end === candidate.end && old.backgroundClass === candidate.backgroundClass && old.textClass === candidate.textClass && old.dashed === candidate.dashed && old.editable === candidate.editable ? old : candidate;
+      cache.set(id, item); return item;
+    });
+    itemCache.current = cache;
+    if (next.length === previousItems.current.length && next.every((item, index) => item === previousItems.current[index])) return previousItems.current;
+    previousItems.current = next; return next;
+  }, [visible, calendarsByKey, preferences.calendarColors, online]);
+  const originals = useMemo(() => new Map(visible.map(event => [calendarEventKey(event), event])), [visible]);
+  const selectItem = useCallback((item: CalendarItem) => { const event = originals.get(item.id); if (event) open(event); }, [originals, open]);
+  const changeItem = useCallback((item: CalendarItem) => { const event = originals.get(item.id); if (event) void changeGeometry({ ...event, start: item.start, end: item.end }); }, [originals, changeGeometry]);
+  const onGeometryError = useCallback((error: Error) => toast.error(error.message), []);
   return <div className="flex min-h-0 min-w-0 flex-1 flex-col">
     {connections.map(c => <AccountData key={c.bindingId} connection={c} userId={userId} start={cacheStart} end={cacheEnd} onData={onData} />)}
     <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stroke-default px-4 py-3">
       <h1 className="min-w-0 truncate text-xl font-semibold">{new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`))}</h1>
-      <Button className="shrink-0" disabled={!online || !Boolean(resolveDefaultCalendar(data.flatMap(d => d.calendars), preferences))} onClick={() => create()}>Create event</Button>
+      <Button className="shrink-0" disabled={!online || !Boolean(resolveDefaultCalendar(calendars, preferences))} onClick={() => create()}>Create event</Button>
     </div>
     <CalendarStatus data={data} online={online} error={searchError} />
-    <CalendarSurface items={items} date={date} view={view} agenda={Boolean(query)} preferences={preferences} onNavigate={setPeriod} onRangeChange={setRange} onSelect={selectItem} onCreate={online ? create : undefined} onChange={changeItem} onError={error => toast.error(error.message)} />
+    <CalendarSurface items={items} date={date} view={view} agenda={Boolean(query)} preferences={preferences} onNavigate={setPeriod} onRangeChange={setRange} onSelect={selectItem} onCreate={online ? create : undefined} onChange={changeItem} onError={onGeometryError} />
     <CalendarEventPanel selected={selection.event} database={selection.database} calendars={selection.calendars} online={online} editing={editing} creating={creating} zone={preferences.timeZone} timeFormat={preferences.timeFormat} onClose={workspace.closePanel} onEdit={() => setEditing(true)} onDuplicate={() => { if (!selected) return; setSelected({ ...selected, eventId: `local-${crypto.randomUUID()}`, etag: "", title: `${selected.title} (copy)`, attendees: [], recurringEventId: undefined, originalStartTime: undefined, recurrence: undefined }); setCreating(true); setEditing(true) }} />
   </div>;
 }

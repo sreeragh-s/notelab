@@ -1,3 +1,5 @@
+import { MinHeap } from "./min-heap";
+import { normalizeSpan } from "./normalize-span";
 import { Temporal } from "@js-temporal/polyfill";
 import type { CalendarTime as CalendarEventTime, CalendarSpan, CalendarView } from "./types";
 export function calendarDate(time: CalendarEventTime, zone: string) { return time.date ?? Temporal.Instant.from(time.dateTime!).toZonedDateTimeISO(zone).toPlainDate().toString() }
@@ -29,18 +31,21 @@ export function eventClock(time: CalendarEventTime, zone: string, format: "12" |
   return time.date ? "All day" : clockFormatter(zone, format).format(new Date(time.dateTime!));
 }
 export function timedLayout<T extends CalendarSpan>(events: T[], date: string, zone: string, key: (event: T) => string) {
-  const start = dayInstant(date, zone), end = dayInstant(addCalendarDays(date, 1), zone);
-  const items = events.filter(e => !e.start.date && eventOverlaps(e, start, end, zone)).map(event => {
-    const minutes = (time: CalendarEventTime) => { const z = Temporal.Instant.from(time.dateTime!).toZonedDateTimeISO(zone); return z.hour * 60 + z.minute };
-    return { event, top: Date.parse(event.start.dateTime!) < Date.parse(start) ? 0 : minutes(event.start), bottom: Date.parse(event.end.dateTime!) >= Date.parse(end) ? 1440 : minutes(event.end), column: 0, columns: 1 };
+  const start = Date.parse(dayInstant(date, zone)), end = Date.parse(dayInstant(addCalendarDays(date, 1), zone));
+  const items = events.filter(e => { const span = normalizeSpan(e, zone); return !e.start.date && span.from < end && span.until > start; }).map(event => {
+    const span = normalizeSpan(event, zone);
+    return { event, top: span.from < start ? 0 : span.startMinute, bottom: span.until >= end ? 1440 : span.endMinute, column: 0, columns: 1 };
   }).sort((a, b) => a.top - b.top || b.bottom - a.bottom || key(a.event).localeCompare(key(b.event)));
-  let group: typeof items = [], groupEnd = -1;
-  const finish = () => { const columns = Math.max(1, ...group.map(e => e.column + 1)); group.forEach(e => { e.columns = columns }); group = [] };
+  let group: typeof items = [], groupEnd = -1, nextColumn = 0;
+  const active = new MinHeap<{ bottom: number; column: number }>((a, b) => a.bottom - b.bottom);
+  const free = new MinHeap<number>((a, b) => a - b);
+  const finish = () => { for (const item of group) item.columns = Math.max(1, nextColumn); group = []; active.clear(); free.clear(); nextColumn = 0; };
   for (const item of items) {
     item.bottom = Math.max(item.top + 15, item.bottom);
-    if (item.top >= groupEnd) { finish(); groupEnd = -1 }
-    const occupied = new Set(group.filter(e => e.bottom > item.top).map(e => e.column));
-    while (occupied.has(item.column)) item.column++;
+    if (item.top >= groupEnd) { finish(); groupEnd = -1; }
+    while (active.peek() && active.peek()!.bottom <= item.top) free.push(active.pop()!.column);
+    item.column = free.pop() ?? nextColumn++;
+    active.push(item);
     group.push(item); groupEnd = Math.max(groupEnd, item.bottom);
   }
   finish(); return items;
