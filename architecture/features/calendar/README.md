@@ -88,6 +88,8 @@ Hour density persists in Calendar preferences (32–120 pixels per hour, default
 
 General preferences include Today alignment, meeting-preview lead time and Google/Apple Maps selection, with navigation to existing application appearance/profile settings. Today actions record an optional aligned range in the route; ordinary week navigation retains its default alignment. The empty dock's [meeting preview](../../../apps/web/src/features/calendar/views/calendar-meeting-preview.tsx) reads authorized visible sources around today independently of the grid date, and applies the shared upcoming-meeting filter. [Context helpers](../../../packages/features/src/calendar/context.ts) bound the preview horizon and encode location text as a maps search parameter. This preview is not a reminder or an invitation notification.
 
+[Time-zone controls](../../../apps/web/src/features/calendar/preferences/calendar-time-zones.tsx) manage up to four ordered, labeled columns. The first is primary; reorder/promotion derives the compatible primary and secondary zone fields on save. Preference parsing migrates existing strings to labeled entries without touching events. Labels are local display metadata and never enter provider writes.
+
 Provider transport and durable receipt storage are separate from mutation orchestration. Pending writes serialize by provider account across workspace bindings. Moves first persist an operation marker with an ETag fence, allowing uncertain delivery to reconcile the destination safely. Following edits at the first occurrence update the existing series. Google Meet pending/failure states remain visible without treating a saved event as lost.
 
 ## Rollout and observability

@@ -178,3 +178,23 @@ test("general preferences persist and Today uses the chosen alignment", async ({
   await expect(page.getByLabel("Meeting preview (minutes before)")).toHaveValue("30");
   await expect(page.getByRole("link", { name: "Profile settings" })).toHaveAttribute("href", "/settings/profile");
 });
+
+test("labeled zones add, rename, reorder and persist four columns", async ({ page }) => {
+  await page.getByRole("button", { name: "Calendar settings", exact: true }).click();
+  await page.getByLabel("Label for Asia/Kolkata").fill("Home");
+  for (const zone of ["Europe/London", "America/New_York", "UTC"]) {
+    await page.getByLabel("Add time zone", { exact: true }).fill(zone);
+    await page.getByRole("button", { name: "Add zone", exact: true }).click();
+  }
+  await expect(page.getByLabel("Add time zone", { exact: true })).toHaveCount(0);
+  await page.getByLabel("Label for Europe/London").fill("Team");
+  await page.getByRole("button", { name: "Move Europe/London up", exact: true }).click();
+  await page.getByRole("button", { name: "Save preferences" }).click();
+  await expect(page.locator('[data-calendar-zone-labels]')).toHaveText("TeamHomeNew YorkUTC");
+  await page.reload();
+  await expect(page.locator('[data-calendar-zone-labels]')).toHaveText("TeamHomeNew YorkUTC");
+  await page.getByRole("button", { name: "Calendar settings", exact: true }).click();
+  await page.getByRole("button", { name: "Remove UTC", exact: true }).click();
+  await page.getByRole("button", { name: "Save preferences" }).click();
+  await expect(page.locator('[data-calendar-zone-labels]')).toHaveText("TeamHomeNew York");
+});

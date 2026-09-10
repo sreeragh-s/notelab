@@ -4,7 +4,7 @@ import { calendarPreferencesSchema } from "./preferences";
 test("preferences validate IANA zones, week start and secondary axis limits", () => {
   expect(calendarPreferencesSchema.parse(defaultCalendarPreferences("Asia/Kolkata")).timeZone).toBe("Asia/Kolkata");
   expect(calendarPreferencesSchema.safeParse({ ...defaultCalendarPreferences(), timeZone: "invalid/zone" }).success).toBe(false);
-  expect(calendarPreferencesSchema.safeParse({ ...defaultCalendarPreferences(), secondaryTimeZones: ["UTC", "UTC", "UTC"] }).success).toBe(false);
+  expect(calendarPreferencesSchema.safeParse({ ...defaultCalendarPreferences(), secondaryTimeZones: ["UTC", "UTC", "UTC", "UTC"] }).success).toBe(false);
   expect(calendarPreferencesSchema.safeParse({ ...defaultCalendarPreferences(), weekStartsOn: 7 }).success).toBe(false);
 });
 test("old preferences normalize local display options and reject unsupported colors", () => {
@@ -38,4 +38,16 @@ test("general preferences default safely and reject unsupported options", () => 
   expect(calendarPreferencesSchema.safeParse({ ...parsed, mapsProvider: "arbitrary" }).success).toBe(false);
   expect(calendarPreferencesSchema.safeParse({ ...parsed, meetingPreviewMinutes: -1 }).success).toBe(false);
   expect(calendarPreferencesSchema.safeParse({ ...parsed, meetingPreviewMinutes: 1441 }).success).toBe(false);
+});
+
+test("labeled zones migrate old strings and promotion keeps ordered axes consistent", () => {
+  const old = { ...defaultCalendarPreferences("Asia/Kolkata"), secondaryTimeZones: ["Europe/London", "America/New_York"] };
+  const migrated = calendarPreferencesSchema.parse(old);
+  expect(migrated.timeZoneColumns).toEqual([{ zone: "Asia/Kolkata", label: "Kolkata" }, { zone: "Europe/London", label: "London" }, { zone: "America/New_York", label: "New York" }]);
+  const columns = [{ zone: "Europe/London", label: "Team" }, { zone: "Asia/Kolkata", label: "Home" }, { zone: "America/New_York", label: "Client" }, { zone: "UTC", label: "UTC" }];
+  const promoted = calendarPreferencesSchema.parse({ ...migrated, timeZoneColumns: columns });
+  expect(promoted.timeZone).toBe("Europe/London");
+  expect(promoted.secondaryTimeZones).toEqual(["Asia/Kolkata", "America/New_York", "UTC"]);
+  expect(calendarPreferencesSchema.safeParse({ ...old, timeZoneColumns: [...columns, { zone: "Asia/Tokyo", label: "Tokyo" }] }).success).toBe(false);
+  expect(calendarPreferencesSchema.safeParse({ ...old, timeZoneColumns: [columns[0], columns[0]] }).success).toBe(false);
 });
