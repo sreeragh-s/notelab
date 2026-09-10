@@ -1,3 +1,7 @@
+import { CalendarConnectionStatus } from "../connections/calendar-connection-status";
+import { useSearch, useNavigate } from "@tanstack/react-router";
+import { useSetActiveWorkspace } from "@zilobase/features/workspaces/react";
+import { useRef } from "react";
 import { CalendarToolbar } from "../workspace/calendar-toolbar";
 import { useCalendarWorkspace } from "../workspace/calendar-workspace";
 import { RemovedCalendars } from "../preferences/removed-calendars";
@@ -20,6 +24,17 @@ import { useCalendarPreferences } from "../preferences/use-calendar-preferences"
 import { CalendarSettings } from "../preferences/calendar-settings";
 export default function CalendarScreen() {
   const workspaceId = useActiveWorkspaceId();
+  const search = useSearch({ from: "/app/calendar" }), navigate = useNavigate();
+  const switchWorkspace = useSetActiveWorkspace(), attempted = useRef<string | null>(null);
+  const target = search.connection ? search.workspace : undefined;
+  useEffect(() => {
+    if (!target || target === workspaceId || attempted.current === target) return;
+    attempted.current = target; switchWorkspace.mutate(target);
+  }, [target, workspaceId, switchWorkspace.mutate]);
+  if (target && target !== workspaceId) return <div className="grid gap-3 p-6" role="status">
+    <p>{switchWorkspace.error ? getApiErrorMessage(switchWorkspace.error) : "Returning to your calendar workspace…"}</p>
+    {switchWorkspace.error && <><Button onClick={() => switchWorkspace.mutate(target)}>Retry</Button><Button variant="outline" onClick={() => void navigate({ to: "/calendar", search: {} })}>Open current workspace</Button></>}
+  </div>;
   return workspaceId ? <CalendarWorkspace key={workspaceId} workspaceId={workspaceId} /> : <p className="p-6 text-content-secondary">Select a workspace to open Calendar.</p>;
 }
 function CalendarWorkspace({ workspaceId }: { workspaceId: string }) {
@@ -36,6 +51,7 @@ function CalendarWorkspace({ workspaceId }: { workspaceId: string }) {
       <PagePaneHeader className="min-w-0 flex-1" leadingControl={<MainPaneHeaderLeadingControl />} pathname="/calendar" actions={preferences.query.data ? <CalendarToolbar preferences={preferences.query.data} onSettings={() => setSettings(true)} /> : <Button variant="ghost" size="icon" aria-label="Calendar settings" onClick={() => setSettings(true)}><SettingsIcon /></Button>} />
     </PageSidePaneHeaderCell>}
     body={<section className="flex h-full min-h-0 flex-1 flex-col bg-surface-canvas text-content-primary" aria-label="Calendar">
+      <CalendarConnectionStatus workspaceId={workspaceId} />
       {accounts.isPending ? <div className="p-6"><Skeleton className="h-24 w-full" /></div>
         : accounts.error ? <div role="alert" className="p-6"><p>{getApiErrorMessage(accounts.error)}</p><Button variant="outline" onClick={() => void accounts.refetch()}>Retry</Button></div>
         : !accounts.data?.connections.length ? <main className="grid min-h-0 flex-1 place-items-center px-6">

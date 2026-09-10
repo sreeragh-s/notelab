@@ -14,6 +14,8 @@ The disposable PostgreSQL runner is `node scripts/calendar/test-integration.mjs`
 
 ## Provider connection
 
+OAuth success and cancellation use a bounded [return-path contract](../../../packages/features/src/calendar/onboarding.ts) containing the initiating workspace. The web validates those parameters and uses the existing authorized workspace switch before displaying the result; desktop returns preserve instance/server identity. Cancelled attempts are consumed only once and must be unexpired. Success offers a default calendar and optional reminders; denied notification permission leaves in-app reminders available. Desktop connection controls explain browser completion and allow checking/restarting an interrupted flow.
+
 [Routes](../../../apps/server/src/features/calendar/routes.ts) require feature rollout, active membership and account ownership. Callback routes use expiring single-use OAuth state and PKCE. [Google OAuth](../../../apps/server/src/features/calendar/provider/oauth.ts) uses independent Calendar credentials and encrypted, owner-bound secrets. Google identity verification is shared platform code; Mail retains its published compatibility entrypoint.
 
 `CALENDAR_GOOGLE_CLIENT_ID`, `CALENDAR_GOOGLE_CLIENT_SECRET`, and a base64 32-byte `CALENDAR_TOKEN_ENCRYPTION_KEY` configure connections. Register `/calendar/oauth/google/callback` on the canonical API origin. Browser callbacks return to `/calendar`; desktop callbacks carry server/instance identity through the existing deep-link protocol. The combined Node runtime recognizes callback prefixes without treating the `/calendar` web screen as an API route.

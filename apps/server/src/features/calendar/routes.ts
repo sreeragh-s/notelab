@@ -7,18 +7,18 @@ import { acceptCalendarWebhook, stopCalendarWatches } from "./realtime/watches";
 import { calendarEventRoutes } from "./events/routes";
 import { calendarSyncRoutes } from "./sync/routes";
 import { calendarPreferenceRoutes } from "./preferences";
-import { Hono } from "hono";
+import { calendarConnectionReturnPath } from "@zilobase/features/calendar";
+import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { db, runWithDbEnv } from "../../infrastructure/database";
-import { calendarAccount, calendarBinding, calendarOauthAttempt } from "../../infrastructure/database/schema";
+import { calendarAccount, calendarBinding } from "../../infrastructure/database/schema";
 import { isCalendarFeatureEnabled, getCanonicalWebOrigin, getStringEnv } from "../../shared/config/config";
 import type { AppBindings } from "../../shared/types";
 import { requireCalendarMembership, CalendarAccessError, requireCalendarBinding, disconnectCalendarBinding } from "./connections/ownership";
-import { beginCalendarOAuth, completeCalendarOAuth, createCalendarGateway } from "./provider/oauth";
+import { beginCalendarOAuth, consumeCalendarOAuthAttempt, completeCalendarOAuth, createCalendarGateway } from "./provider/oauth";
 import { CalendarProviderError } from "./provider/gateway";
 import { getZilobaseDiscoveryDocument } from "../instance/service";
-import { sha256Hex } from "../../shared/crypto/sha256";
 export const calendarRoutes = new Hono<AppBindings>();
 export const calendarProviderRoutes = new Hono<AppBindings>();
 for (const app of [calendarRoutes, calendarProviderRoutes]) {
@@ -63,20 +63,12 @@ calendarRoutes.get("/connections/:bindingId/calendars", async c => {
 calendarProviderRoutes.get("/oauth/google/callback", async c => {
   const state = c.req.query("state"); if (!state) return c.json({ message: "Missing OAuth state." }, 400);
   if (c.req.query("error")) {
-    const hash = await sha256Hex(state);
-    await runWithDbEnv(c.env, () => db.update(calendarOauthAttempt).set({ consumedAt: new Date() }).where(eq(calendarOauthAttempt.stateHash, hash)));
-    return c.text("Calendar connection cancelled. Return to Zilobase.");
+    const attempt = await runWithDbEnv(c.env, () => consumeCalendarOAuthAttempt(c.env, state));
+    return finishCalendarConnection(c, attempt, "cancelled");
   }
   const code = c.req.query("code"); if (!code) return c.json({ message: "Missing OAuth code." }, 400);
   const result = await runWithDbEnv(c.env, () => completeCalendarOAuth(c.env, state, code));
-  if (result.clientKind === "desktop") {
-    const discovery = await getZilobaseDiscoveryDocument(c.env); const url = new URL("zilobase://open");
-    url.search = new URLSearchParams({ instance: discovery.instanceId, server: discovery.apiOrigin, path: "/calendar?connection=success" }).toString();
-    const safe = url.toString().replaceAll("&", "&amp;").replaceAll('"', "&quot;");
-    c.header("Content-Security-Policy", "default-src 'none'; base-uri 'none'; frame-ancestors 'none'");
-    return c.html(`<!doctype html><title>Calendar connected</title><p>Calendar connected.</p><a href="${safe}">Open Zilobase Desktop</a>`);
-  }
-  return c.redirect(new URL("/calendar?connection=success", getCanonicalWebOrigin(c.env)).toString());
+  return finishCalendarConnection(c, result, "success");
 });
 
 calendarRoutes.route("/", calendarPreferenceRoutes);
@@ -94,3 +86,14 @@ calendarProviderRoutes.post("/google/webhook", async c => {
 calendarRoutes.get("/configuration", c => { const runtime = getRuntimeAdapter(); return c.json(inspectCalendarConfiguration(c.env, { background: Boolean(runtime.dispatchBackgroundTasks), realtime: Boolean(runtime.publishCalendarNotification) })) });
 
 function calendarErrorStatus(status: number): 400 | 401 | 403 | 404 | 409 | 412 | 429 | 502 { const supported = [400, 401, 403, 404, 409, 412, 429] as const; return supported.find(code => code === status) ?? 502 }
+
+async function finishCalendarConnection(c: Context<AppBindings>, attempt: { clientKind: string; workspaceId: string }, outcome: "success" | "cancelled") {
+  const path = calendarConnectionReturnPath(attempt.workspaceId, outcome);
+  if (attempt.clientKind !== "desktop") return c.redirect(new URL(path, getCanonicalWebOrigin(c.env)).toString());
+  const discovery = await getZilobaseDiscoveryDocument(c.env), url = new URL("zilobase://open");
+  url.search = new URLSearchParams({ instance: discovery.instanceId, server: discovery.apiOrigin, path }).toString();
+  const safe = url.toString().replaceAll("&", "&amp;").replaceAll('"', "&quot;");
+  const title = outcome === "success" ? "Calendar connected" : "Calendar connection cancelled";
+  c.header("Content-Security-Policy", "default-src 'none'; base-uri 'none'; frame-ancestors 'none'");
+  return c.html(`<!doctype html><title>${title}</title><p>${title}.</p><a href="${safe}">Open Zilobase Desktop</a>`);
+}
