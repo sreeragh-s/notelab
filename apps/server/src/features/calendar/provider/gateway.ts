@@ -20,12 +20,23 @@ export type GoogleCalendarEvent = z.infer<typeof googleEventSchema>;
 export class CalendarGateway {
   constructor(private token: string, private fetcher: typeof fetch = fetch) {}
   async request<T>(path: string, options: RequestInit = {}): Promise<T> {
+    return this.deliver<T>(path, options, 0);
+  }
+  private async deliver<T>(path: string, options: RequestInit, attempt: number): Promise<T> {
     if (!path.startsWith("/") || path.startsWith("//")) throw new Error("Invalid Calendar provider path");
-    const response = await this.fetcher(`https://www.googleapis.com/calendar/v3${path}`, { ...options, signal: AbortSignal.timeout(20_000), headers: { "content-type": "application/json", ...options.headers, authorization: `Bearer ${this.token}` } });
+    const response = await this.fetcher(`https://www.googleapis.com/calendar/v3${path}`, { ...options, signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(20_000)]) : AbortSignal.timeout(20_000), headers: { "content-type": "application/json", ...options.headers, authorization: `Bearer ${this.token}` } });
     if (response.status === 429) recordCalendarMetric("throttling", 1, "failure");
     if (!response.ok) {
       const body = await response.json().catch(() => ({})) as { error?: { errors?: { reason?: string }[] } };
-      throw new CalendarProviderError(response.status, body.error?.errors?.[0]?.reason ?? "provider_error", Number(response.headers.get("retry-after") ?? 0) * 1000);
+      const reason = body.error?.errors?.[0]?.reason ?? "provider_error";
+      const header = response.headers.get("retry-after");
+      const retryAfterMs = header ? Math.max(0, Number.isFinite(Number(header)) ? Number(header) * 1000 : Date.parse(header) - Date.now()) : 0;
+      const transient = response.status === 429 || response.status >= 500 || response.status === 403 && ["rateLimitExceeded", "userRateLimitExceeded", "usageLimits"].includes(reason);
+      if ((!options.method || options.method === "GET") && transient && attempt < 3 && retryAfterMs <= 32_000) {
+        await waitForRetry(Math.max(retryAfterMs, Math.min(32_000, 1000 * 2 ** attempt + Math.random() * 1000)), options.signal);
+        return this.deliver<T>(path, options, attempt + 1);
+      }
+      throw new CalendarProviderError(response.status, reason, retryAfterMs);
     }
     return response.status === 204 ? undefined as T : await response.json() as T;
   }
@@ -38,8 +49,8 @@ export class CalendarGateway {
     } while (pageToken);
     return records;
   }
-  events(calendarId: string, params: Record<string, string>) {
-    return this.request<{ items?: GoogleCalendarEvent[]; nextPageToken?: string; nextSyncToken?: string }>(`/calendars/${encodeURIComponent(calendarId)}/events?${new URLSearchParams(params)}`);
+  events(calendarId: string, params: Record<string, string>, signal?: AbortSignal) {
+    return this.request<{ items?: GoogleCalendarEvent[]; nextPageToken?: string; nextSyncToken?: string }>(`/calendars/${encodeURIComponent(calendarId)}/events?${new URLSearchParams(params)}`, { signal });
   }
 }
 export function normalizeEvent(raw: unknown, scope: Omit<CalendarIdentity, "eventId">, zone: string): CalendarEvent {
@@ -54,3 +65,12 @@ export function normalizeEvent(raw: unknown, scope: Omit<CalendarIdentity, "even
 }
 
 function conferenceStatus(event: GoogleCalendarEvent) { return event.conferenceData?.createRequest?.status?.statusCode }
+
+function waitForRetry(ms: number, signal?: AbortSignal | null) {
+  return new Promise<void>((resolve, reject) => {
+    const abort = () => { clearTimeout(timer); signal?.removeEventListener("abort", abort); reject(new DOMException("Calendar read cancelled", "AbortError")); };
+    const timer = setTimeout(() => { signal?.removeEventListener("abort", abort); resolve(); }, ms);
+    signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) abort();
+  });
+}

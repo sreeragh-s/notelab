@@ -23,15 +23,21 @@ export function useCalendarCache(connection: CalendarConnection, userId: string,
     return () => { active = false };
   }, [connection.bindingId, connection.workspaceId, userId]);
   const activeRequest = useRef(0);
-  useEffect(() => { activeRequest.current++; return () => { activeRequest.current++ } }, [database, requestKey, online]);
+  const readController = useRef<AbortController | null>(null);
+  useEffect(() => { activeRequest.current++; return () => { activeRequest.current++; readController.current?.abort(); } }, [database, requestKey, online]);
   const refresh = useCallback(async (recover = true, missingOnly = false) => {
     if (!database || !online) return null;
-    const generation = ++activeRequest.current; setSyncing(true);
+    const generation = ++activeRequest.current;
+    const prior = readController.current;
+    const controller = new AbortController(); readController.current = controller;
+    // Give the replacement consumer an opportunity to join overlapping work.
+    queueMicrotask(() => prior?.abort());
+    setSyncing(true);
     try {
       const hiddenKeys: string[] = JSON.parse(hiddenKey);
-      if (targetStart && targetEnd) await synchronizeCalendarCache(database, targetStart, targetEnd, apiFetch, recover, { missingOnly: true, hiddenKeys, priority: 10, requestId: `${requestKey}:${generation}:target`, isCurrent: () => generation === activeRequest.current });
+      if (targetStart && targetEnd) await synchronizeCalendarCache(database, targetStart, targetEnd, apiFetch, recover, { missingOnly: true, hiddenKeys, priority: 10, signal: controller.signal, requestId: `${requestKey}:${generation}:target`, isCurrent: () => generation === activeRequest.current });
       if (generation !== activeRequest.current) return null;
-      await synchronizeCalendarCache(database, start, end, apiFetch, targetStart ? false : recover, { missingOnly, metadataLoaded: Boolean(targetStart), hiddenKeys, requestId: `${requestKey}:${generation}`, isCurrent: () => generation === activeRequest.current }); if (database.isOpen()) client.setQueryData(calendarKeys.calendars(connection), { calendars: await database.calendars.toArray() }); if (generation === activeRequest.current) setError(undefined); return true } catch (cause) { if (generation === activeRequest.current) setError(cause); return null } finally { if (generation === activeRequest.current) setSyncing(false) }
+      await synchronizeCalendarCache(database, start, end, apiFetch, targetStart ? false : recover, { missingOnly, signal: controller.signal, metadataLoaded: Boolean(targetStart), hiddenKeys, requestId: `${requestKey}:${generation}`, isCurrent: () => generation === activeRequest.current }); if (database.isOpen()) client.setQueryData(calendarKeys.calendars(connection), { calendars: await database.calendars.toArray() }); if (generation === activeRequest.current) setError(undefined); return true } catch (cause) { if (generation === activeRequest.current) setError(cause); return null } finally { if (generation === activeRequest.current) setSyncing(false) }
   }, [database, requestKey, online]);
   useEffect(() => { void refresh(true, Boolean(options)) }, [refresh]);
 

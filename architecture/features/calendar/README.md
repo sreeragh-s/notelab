@@ -171,3 +171,5 @@ The [navigation controller](../../../apps/web/src/features/calendar/workspace/ca
 ## Continuous timeline geometry
 
 [Timeline geometry](../../../packages/features/src/calendar-layout/timeline.ts) provides civil-date ranks, hidden-weekend mapping, fractional scroll anchors and contiguous coverage bounds independently of transport and rendering. Civil dates use Temporal rather than elapsed zoned milliseconds.
+
+Range reads share overlapping jobs with two foreground slots per binding and four globally; prefetch leaves one slot free. Range requests use 1,000-event Google pages and forward read cancellation through the gateway timeout. Transient GET failures retry with bounded jitter; writes are never automatically retried by this transport.

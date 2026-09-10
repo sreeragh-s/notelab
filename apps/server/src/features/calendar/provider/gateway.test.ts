@@ -26,3 +26,15 @@ test("conference failure remains distinct from a successfully saved event", () =
   const event = normalizeEvent({ id: "meeting", start: { date: "2026-09-09" }, end: { date: "2026-09-10" }, conferenceData: { createRequest: { status: { statusCode: "failure" } } } }, { workspaceId: "w", bindingId: "b", calendarId: "c" }, "UTC");
   expect(event.status).toBe("confirmed"); expect(event.conferenceStatus).toBe("failure"); expect(event.conferenceUrl).toBeUndefined();
 });
+
+test("range read cancellation reaches Google without changing mutation retry semantics", async () => {
+  const controller = new AbortController(); controller.abort();
+  const gateway = new CalendarGateway("secret", async (_url, init) => {
+    init?.signal?.throwIfAborted(); return Response.json({});
+  });
+  await expect(gateway.events("c", {}, controller.signal)).rejects.toMatchObject({ name: "AbortError" });
+  let calls = 0;
+  const writes = new CalendarGateway("secret", async () => { calls++; return Response.json({ error: { errors: [{ reason: "rateLimitExceeded" }] } }, { status: 429 }); });
+  await expect(writes.request("/calendars/c/events", { method: "POST" })).rejects.toMatchObject({ status: 429 });
+  expect(calls).toBe(1);
+});

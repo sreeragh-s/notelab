@@ -19,11 +19,11 @@ async function storeSnapshot(row: Snapshot, prior: Snapshot | null) {
   const [saved] = await db.update(calendarRangeSnapshot).set(row).where(and(eq(calendarRangeSnapshot.id, prior.id), eq(calendarRangeSnapshot.pageToken, prior.pageToken!))).returning();
   if (!saved) throw new CalendarProviderError(409, "range_cursor_advanced");
 }
-export async function readCalendarRange(input: RangeInput, gateway: CalendarGateway): Promise<CalendarRangeResponse> {
+export async function readCalendarRange(input: RangeInput, gateway: CalendarGateway, signal?: AbortSignal): Promise<CalendarRangeResponse> {
   const prior = await loadSnapshot(input);
   if (prior && !prior.pageToken) return result(prior, input);
   const began = performance.now();
-  const response = await gateway.events(input.calendarId, { timeMin: input.start, timeMax: input.end, singleEvents: "true", maxResults: "500", ...(prior?.pageToken ? { pageToken: prior.pageToken } : {}) });
+  const response = await gateway.events(input.calendarId, { timeMin: input.start, timeMax: input.end, singleEvents: "true", maxResults: "1000", ...(prior?.pageToken ? { pageToken: prior.pageToken } : {}) }, signal);
   recordCalendarMetric("range_latency", performance.now() - began);
   const incoming = (response.items ?? []).map(raw => normalizeEvent(raw, { workspaceId: input.workspaceId, bindingId: input.bindingId, calendarId: input.calendarId }, input.timeZone));
   const base = prior ?? { id: crypto.randomUUID(), accountId: input.accountId, calendarId: input.calendarId, start: input.start, end: input.end, generation: input.generation, revision: input.revision, events: [] };

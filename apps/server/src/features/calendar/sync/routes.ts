@@ -22,7 +22,7 @@ calendarSyncRoutes.get("/connections/:bindingId/ranges", async c => {
   const range = calendarRangeSchema.parse(c.req.query());
   const [state] = await db.select().from(calendarProviderCalendar).where(and(eq(calendarProviderCalendar.accountId, account.id), eq(calendarProviderCalendar.calendarId, range.calendarId)));
   if (!state || state.data.permissions.freeBusyOnly) throw new CalendarProviderError(403, "calendar_unavailable");
-  return c.json(await readCalendarRange({ ...range, accountId: account.id, bindingId: binding.id, workspaceId: binding.workspaceId, timeZone: state.data.timeZone, generation: state.generation, revision: state.revision }, await createCalendarGateway(c.env, account)));
+  return c.json(await readCalendarRange({ ...range, accountId: account.id, bindingId: binding.id, workspaceId: binding.workspaceId, timeZone: state.data.timeZone, generation: state.generation, revision: state.revision }, await createCalendarGateway(c.env, account), c.req.raw.signal));
 });
 calendarSyncRoutes.get("/connections/:bindingId/search", async c => {
   const { account, binding } = await requireCalendarBinding(c.get("user")!.id, c.req.param("workspaceId")!, c.req.param("bindingId"));
