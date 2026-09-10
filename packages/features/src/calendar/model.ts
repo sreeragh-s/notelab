@@ -8,6 +8,7 @@ export function calendarEventKey(identity: CalendarIdentity) {
 }
 export const calendarKeys = {
   all: ["calendar"] as const,
+  sources: (userId: string, workspaceId: string) => ["calendar", "sources", userId, workspaceId] as const,
   connections: (workspaceId: string) => ["calendar", workspaceId, "connections"] as const,
   preferences: (workspaceId: string) => ["calendar", workspaceId, "preferences"] as const,
   calendars: (scope: CalendarScope) => ["calendar", scope.workspaceId, scope.bindingId, "calendars"] as const,

@@ -1,4 +1,5 @@
 import { dispatchCalendarWebhook } from "./background";
+import { personalCalendarSources } from "./connections/catalog";
 import { inspectCalendarConfiguration } from "./configuration";
 import { getRuntimeAdapter } from "../../infrastructure/runtime/runtime-adapter";
 import { calendarRealtimeRoutes } from "./realtime/routes";
@@ -41,6 +42,10 @@ calendarRoutes.get("/connections", async c => {
   const rows = await db.select({ binding: calendarBinding, account: calendarAccount }).from(calendarBinding).innerJoin(calendarAccount, eq(calendarAccount.id, calendarBinding.accountId)).where(and(eq(calendarBinding.userId, c.get("user")!.id), eq(calendarBinding.workspaceId, c.req.param("workspaceId")!)));
   return c.json({ connections: rows.map(({ binding, account }) => ({ bindingId: binding.id, workspaceId: binding.workspaceId, accountId: account.id, email: account.email, status: account.status, pushAvailable: false })), providerConfigured: Boolean(getStringEnv(c.env, "CALENDAR_GOOGLE_CLIENT_ID") && getStringEnv(c.env, "CALENDAR_GOOGLE_CLIENT_SECRET") && getStringEnv(c.env, "CALENDAR_TOKEN_ENCRYPTION_KEY")) });
 });
+calendarRoutes.get("/sources", async c => c.json({
+  connections: await personalCalendarSources(c.env, c.get("user")!.id, c.req.param("workspaceId")!),
+  providerConfigured: Boolean(getStringEnv(c.env, "CALENDAR_GOOGLE_CLIENT_ID") && getStringEnv(c.env, "CALENDAR_GOOGLE_CLIENT_SECRET") && getStringEnv(c.env, "CALENDAR_TOKEN_ENCRYPTION_KEY")),
+}));
 calendarRoutes.post("/connections/google/start", async c => {
   const body = z.object({ client: z.enum(["web", "desktop"]) }).parse(await c.req.json());
   return c.json({ authorizationUrl: await beginCalendarOAuth(c.env, { userId: c.get("user")!.id, workspaceId: c.req.param("workspaceId")!, clientKind: body.client }) });

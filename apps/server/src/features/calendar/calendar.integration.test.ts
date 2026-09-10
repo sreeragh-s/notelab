@@ -213,3 +213,35 @@ test.skipIf(!enabled)("event capabilities reject unsupported writes before provi
   await expect(runWithDb(database!, () => mutateCalendarEvent({}, { ...input, action: "move", destination: "primary", write: { ...input.write, operationId: randomUUID() } }, gateway))).rejects.toThrow("event_move_not_allowed");
   expect(writes).toBe(0);
 });
+
+
+import { personalCalendarSources } from "./connections/catalog";
+test.skipIf(!enabled)("personal sources isolate owners, deduplicate accounts and reject expired memberships", async () => {
+  const remoteWorkspace = randomUUID(), expiredWorkspace = randomUUID(), remoteAccount = randomUUID(), privateAccount = randomUUID();
+  await database!.insert(schema.workspace).values([remoteWorkspace, expiredWorkspace].map(id => ({ id, name: "Other workspace", slug: id })));
+  await database!.insert(schema.member).values([
+    { id: randomUUID(), organizationId: remoteWorkspace, userId, role: "member" },
+    { id: randomUUID(), organizationId: remoteWorkspace, userId: otherUser, role: "member" },
+    { id: randomUUID(), organizationId: expiredWorkspace, userId, role: "temporary", accessExpiresAt: new Date(0) },
+  ]);
+  await database!.insert(schema.calendarAccount).values([
+    { id: remoteAccount, userId, googleSubject: remoteAccount, email: "remote@example.test", secret: { ciphertext: "fixture", iv: "fixture", keyVersion: "v1" }, scopes: [] },
+    { id: privateAccount, userId: otherUser, googleSubject: privateAccount, email: "private@example.test", secret: { ciphertext: "fixture", iv: "fixture", keyVersion: "v1" }, scopes: [] },
+  ]);
+  await database!.insert(schema.calendarBinding).values([
+    { id: randomUUID(), userId, workspaceId: remoteWorkspace, accountId: secondAccount },
+    { id: randomUUID(), userId, workspaceId: remoteWorkspace, accountId: remoteAccount },
+    { id: randomUUID(), userId: otherUser, workspaceId: remoteWorkspace, accountId: privateAccount },
+    { id: randomUUID(), userId, workspaceId: expiredWorkspace, accountId: remoteAccount },
+  ]);
+  const env = { CALENDAR_ENABLED: "true", CALENDAR_ENABLED_WORKSPACE_IDS: "*" };
+  const sources = await runWithDb(database!, () => personalCalendarSources(env, userId, workspaceId));
+  expect(sources.filter(source => source.accountId === secondAccount)).toHaveLength(1);
+  expect(sources.find(source => source.accountId === secondAccount)?.workspaceId).toBe(workspaceId);
+  expect(sources.find(source => source.accountId === remoteAccount)?.workspaceId).toBe(remoteWorkspace);
+  expect(sources.some(source => source.accountId === privateAccount || source.workspaceId === expiredWorkspace)).toBe(false);
+  expect(JSON.stringify(sources)).not.toContain("ciphertext");
+  const restricted = await runWithDb(database!, () => personalCalendarSources({ ...env, CALENDAR_ENABLED_WORKSPACE_IDS: workspaceId }, userId, workspaceId));
+  expect(restricted.some(source => source.accountId === remoteAccount)).toBe(false);
+  await expect(runWithDb(database!, () => personalCalendarSources(env, userId, expiredWorkspace))).rejects.toThrow("Workspace access required");
+});
