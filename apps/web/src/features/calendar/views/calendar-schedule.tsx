@@ -8,7 +8,7 @@ import { newCalendarEvent } from "../events/event-editor";
 import { PALETTE, type ColorTokenId } from "@/shared/lib/color-tokens";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { calendarDays, normalizeCalendarView, todayInZone, dayInstant, addCalendarDays, shiftCalendarPeriod, calendarEventKey, calendarApiBasePath, type CalendarConnection, type CalendarEvent, type CalendarPreferences, type CalendarRecord, type CalendarView } from "@zilobase/features/calendar";
+import { calendarCapability, calendarDays, normalizeCalendarView, todayInZone, dayInstant, addCalendarDays, shiftCalendarPeriod, calendarEventKey, calendarApiBasePath, type CalendarConnection, type CalendarEvent, type CalendarPreferences, type CalendarRecord, type CalendarView } from "@zilobase/features/calendar";
 import { useCalendarCache } from "../sync/use-calendar-cache";
 import { calendarSelectionKey, calendarIsVisible, resolveDefaultCalendar } from "../connections/calendar-selection";
 import { Button } from "@/shared/ui/button";
@@ -96,7 +96,7 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
     const cache = new Map<string, CalendarItem>();
     const next = visible.map(event => {
       const id = calendarEventKey(event), style = color(event);
-      const candidate: CalendarItem = { id, title: event.title, start: event.start, end: event.end, backgroundClass: style.backgroundClass, textClass: style.textClass, dashed: event.attendees.some(a => a.self && a.responseStatus === "needsAction"), editable: online && Boolean(calendarsByKey.get(calendarSelectionKey(event.bindingId, event.calendarId))?.permissions.write) };
+      const candidate: CalendarItem = { id, title: event.title, start: event.start, end: event.end, backgroundClass: style.backgroundClass, textClass: style.textClass, dashed: event.attendees.some(a => a.self && a.responseStatus === "needsAction"), editable: online && calendarCapability("update", calendarsByKey.get(calendarSelectionKey(event.bindingId, event.calendarId))?.permissions, event).allowed };
       const old = itemCache.current.get(id);
       const item = old && old.title === candidate.title && old.start === candidate.start && old.end === candidate.end && old.backgroundClass === candidate.backgroundClass && old.textClass === candidate.textClass && old.dashed === candidate.dashed && old.editable === candidate.editable ? old : candidate;
       cache.set(id, item); return item;

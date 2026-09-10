@@ -1,7 +1,7 @@
 import { EventTimingFields, EventRecurrenceFields } from "./event-timing-fields";
 import { eventEditorDefaults, eventEditorZone, editorWrite, type EventEditorDraft } from "./event-editor-model";
 import { useState } from "react";
-import { dayInstant, wallTime, type CalendarEvent, type CalendarRecord } from "@zilobase/features/calendar";
+import { calendarCapability, dayInstant, wallTime, type CalendarEvent, type CalendarRecord } from "@zilobase/features/calendar";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Textarea } from "@/shared/ui/textarea";
@@ -29,8 +29,9 @@ export function EventEditor({ event, calendars, database, online, isNew, onSaved
   const setMeet = (value: EventEditorDraft["meet"]) => setDraft(current => ({ ...current, meet: value }));
   const [error, setError] = useState<unknown>(), [pending, setPending] = useState(false), [uncertain, setUncertain] = useState(false);
   const [recurrence, setRecurrence] = useState<string[] | undefined>(), [scope, setScope] = useState<"occurrence" | "following" | "series">("occurrence");
+  const capability = calendarCapability(isNew ? "create" : scope === "following" ? "following" : "update", calendars.find(c => c.id === calendarId && c.bindingId === event.bindingId)?.permissions, event);
   const save = async () => {
-    if (!online) return; setPending(true); setError(undefined);
+    if (!online || !capability.allowed) return; setPending(true); setError(undefined);
     try {
       const write = editorWrite(event, draft, isNew, recurrence, scope);
       const result = await runCalendarMutation({ database, event: { ...event, calendarId }, action: isNew ? "create" : "update", write });
@@ -38,9 +39,9 @@ export function EventEditor({ event, calendars, database, online, isNew, onSaved
     } catch (cause) { setError(cause); setUncertain(await database.pending.count() > 0) } finally { setPending(false) }
   };
   return <form className="grid gap-4 text-xs/relaxed" onSubmit={e => { e.preventDefault(); void save() }}>
-    <fieldset className="grid gap-4" disabled={!online || pending || uncertain}>
+    <fieldset className="grid gap-4" disabled={!online || pending || uncertain || !capability.allowed}>
       <Label className="grid min-w-0 gap-2">Title<Input required value={title} onChange={e => setTitle(e.target.value)} /></Label>
-      <Label className="grid min-w-0 gap-2">Calendar<Select value={calendarId} disabled={!isNew} onValueChange={setCalendarId}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{calendars.filter(c => c.permissions.write).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></Label>
+      <Label className="grid min-w-0 gap-2">Calendar<Select value={calendarId} disabled={!isNew} onValueChange={setCalendarId}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{calendars.filter(c => c.bindingId === event.bindingId && calendarCapability("create", c.permissions).allowed).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></Label>
       <EventTimingFields draft={draft} update={(key, value) => setDraft(current => ({ ...current, [key]: value }))} />
       <EventRecurrenceFields event={event} scope={scope} setScope={setScope} onChange={setRecurrence} />
       <Label className="grid min-w-0 gap-2">Guests<Input value={guests} onChange={e => setGuests(e.target.value)} placeholder="Emails separated by commas" /></Label>
@@ -53,6 +54,7 @@ export function EventEditor({ event, calendars, database, online, isNew, onSaved
       <Label className="flex items-center gap-2"><Checkbox checked={sendUpdates === "all"} onCheckedChange={v => setSendUpdates(v ? "all" : "none")} />Send updates to guests</Label>
       <Button type="submit">{pending ? "Saving…" : "Save event"}</Button>
     </fieldset>
+    {!capability.allowed && <p role="status">{capability.reason}</p>}
     {!online && <p>Reconnect to edit events.</p>}{error ? <p role="alert" className="text-feedback-danger-text">{getApiErrorMessage(error)}</p> : null}
     {uncertain && <Button type="button" variant="outline" onClick={async () => { await reconcileCalendarMutations(database); if (!await database.pending.count()) onSaved() }}>Check delivery status</Button>}
   </form>;

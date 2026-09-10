@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Label } from "@/shared/ui/label";
 import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
-export function RecurrenceScope({ value, onChange }: { value: "occurrence" | "following" | "series"; onChange: (value: "occurrence" | "following" | "series") => void }) {
-  return <Label className="grid min-w-0 gap-2">Apply to<Select value={value} onValueChange={v => onChange(v as typeof value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="occurrence">This event</SelectItem><SelectItem value="following">This and following events</SelectItem><SelectItem value="series">Entire series</SelectItem></SelectContent></Select></Label>;
+export function RecurrenceScope({ value, onChange, allowFollowing = true }: { allowFollowing?: boolean; value: "occurrence" | "following" | "series"; onChange: (value: "occurrence" | "following" | "series") => void }) {
+  return <Label className="grid min-w-0 gap-2">Apply to<Select value={value} onValueChange={v => onChange(v as typeof value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="occurrence">This event</SelectItem><SelectItem value="following" disabled={!allowFollowing}>This and following events</SelectItem><SelectItem value="series">Entire series</SelectItem></SelectContent></Select></Label>;
 }
 export function RecurrenceControls({ initial, onChange }: { initial?: string[]; onChange: (rules: string[] | undefined) => void }) {
   const [frequency, setFrequency] = useState(initial?.length ? "preserve" : "none"), [interval, setInterval] = useState(1), [end, setEnd] = useState("never"), [count, setCount] = useState(10), [until, setUntil] = useState("");

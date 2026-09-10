@@ -1,3 +1,4 @@
+import { calendarCapability, type CalendarPermissions, type CalendarOperation } from "@zilobase/features/calendar";
 import type { CalendarWrite } from "./input";
 import { providerEventPatch, validateEventInterval } from "./input";
 import type { CalendarMutationInput } from "./mutations";
@@ -12,11 +13,10 @@ export function markOperation(body: Record<string, unknown>, id: string) {
 export function operationMarker(raw: GoogleCalendarEvent) { return (raw.extendedProperties as { private?: { zilobaseOperationId?: string } } | undefined)?.private?.zilobaseOperationId }
 export async function writableCalendar(accountId: string, calendarId: string, rsvp = false) {
   const [calendar] = await db.select().from(calendarProviderCalendar).where(and(eq(calendarProviderCalendar.accountId, accountId), eq(calendarProviderCalendar.calendarId, calendarId)));
-  if (!calendar || (!calendar.data.permissions.write && !rsvp)) throw new CalendarProviderError(403, "calendar_read_only");
+  if (!calendar || !calendar.data.permissions.read || calendar.data.permissions.freeBusyOnly || (!calendar.data.permissions.write && !rsvp)) throw new CalendarProviderError(403, "calendar_read_only");
   return calendar;
 }
 function checkEvent(raw: GoogleCalendarEvent, write: CalendarWrite) {
-  if (raw.eventType && raw.eventType !== "default") throw new CalendarProviderError(403, "specialized_event_read_only");
   if (!write.etag || raw.etag !== write.etag) throw new CalendarProviderError(412, "event_changed");
 }
 function rsvpBody(raw: GoogleCalendarEvent, status: CalendarMutationInput["responseStatus"]) {
@@ -35,10 +35,13 @@ function createBody(raw: GoogleCalendarEvent | null, input: CalendarMutationInpu
 async function moveEvent(gateway: CalendarGateway, accountId: string, input: CalendarMutationInput, raw: GoogleCalendarEvent, path: string, query: URLSearchParams) {
   if (!input.destination) throw new CalendarProviderError(400, "destination_required");
   await writableCalendar(accountId, input.destination);
-  if (raw.organizer?.self !== true) throw new CalendarProviderError(403, "event_move_not_allowed");
   const marked = googleEventSchema.parse(await gateway.request(`${path}/${encodeURIComponent(raw.id)}?sendUpdates=none`, { method: "PATCH", headers: { "If-Match": raw.etag! }, body: JSON.stringify({ extendedProperties: markOperation(raw, input.write.operationId).extendedProperties }) }));
   query.set("destination", input.destination);
   return gateway.request(`${path}/${encodeURIComponent(raw.id)}/move?${query}`, { method: "POST", headers: { "If-Match": marked.etag! } });
+}
+export function requireEventCapability(operation: CalendarOperation, permissions: CalendarPermissions, event?: GoogleCalendarEvent) {
+  const capability = calendarCapability(operation, permissions, event);
+  if (!capability.allowed) throw new CalendarProviderError(403, capability.code);
 }
 export async function executeProviderWrite(gateway: CalendarGateway, accountId: string, input: CalendarMutationInput, eventId: string) {
   const creating = ["create", "duplicate"].includes(input.action), path = `/calendars/${encodeURIComponent(input.calendarId)}/events`;
@@ -47,6 +50,8 @@ export async function executeProviderWrite(gateway: CalendarGateway, accountId: 
     raw = googleEventSchema.parse(await gateway.request(`${path}/${encodeURIComponent(input.eventId!)}`));
     checkEvent(raw, input.write);
   }
+  const calendar = await writableCalendar(accountId, input.calendarId, input.action === "rsvp");
+  requireEventCapability(input.action, calendar.data.permissions, raw ?? undefined);
   const query = new URLSearchParams({ sendUpdates: input.write.sendUpdates, conferenceDataVersion: "1" });
   if (input.action === "delete") return gateway.request(`${path}/${encodeURIComponent(eventId)}?${query}`, { method: "DELETE", headers: { "If-Match": input.write.etag! } });
   if (input.action === "move") return moveEvent(gateway, accountId, input, raw!, path, query);

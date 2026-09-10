@@ -195,3 +195,21 @@ test.skipIf(!enabled)("catalog refresh is mounted, scoped, and provider-independ
     expect(fetchSpy).not.toHaveBeenCalled();
   } finally { vi.unstubAllGlobals(); }
 });
+
+
+test.skipIf(!enabled)("event capabilities reject unsupported writes before provider delivery", async () => {
+  const [binding] = (await database!.select().from(schema.calendarBinding)).filter(row => row.accountId === secondAccount);
+  let writes = 0;
+  const raw = { id: "capability-event", etag: "v1", eventType: "focusTime", organizer: { self: true, email: "owner@example.test" }, start: { date: "2026-09-09" }, end: { date: "2026-09-10" } };
+  const gateway = new CalendarGateway("fixture", async (_url, options) => {
+    if (options?.method && options.method !== "GET") writes++;
+    return Response.json(raw);
+  });
+  const input = { userId, workspaceId, bindingId: binding!.id, calendarId: "primary", eventId: raw.id, action: "update" as const, write: { operationId: randomUUID(), etag: "v1", sendUpdates: "none" as const, event: { title: "Denied" } } };
+  await expect(runWithDb(database!, () => mutateCalendarEvent({}, input, gateway))).rejects.toThrow("specialized_event_read_only");
+  expect(writes).toBe(0);
+  raw.eventType = "default";
+  raw.organizer.self = false;
+  await expect(runWithDb(database!, () => mutateCalendarEvent({}, { ...input, action: "move", destination: "primary", write: { ...input.write, operationId: randomUUID() } }, gateway))).rejects.toThrow("event_move_not_allowed");
+  expect(writes).toBe(0);
+});

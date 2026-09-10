@@ -42,6 +42,8 @@ The Calendar schedule composes account cache subscriptions into day/week grids a
 
 ## Event writes
 
+[Shared operation capabilities](../../../packages/features/src/calendar/capabilities.ts) define supported Google writes from calendar permissions and event context. The grid, editor and actions use the same decisions as provider delivery and series splitting. Free/busy-only sources cannot mutate; read-only invited attendees may RSVP; specialized events remain read-only until their editing workflows are implemented. Moves require an organizer-owned non-occurrence event and stay within the binding. Google remains authoritative when permissions change after synchronization.
+
 [Mutation services](../../../apps/server/src/features/calendar/events/mutations.ts) reserve request-hashed operation receipts before provider calls. Creates use deterministic provider IDs; existing events require matching ETags. Provider failures distinguish definite rejection from uncertain delivery. Status lookup reconciles private operation markers or confirmed deletion without replaying writes. Permission checks and account ownership precede delivery. Successful receipts and revision invalidations commit together.
 
 ## Editing and optimistic recovery
