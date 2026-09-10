@@ -1,8 +1,9 @@
+import type { CalendarItem } from "./types";
 import { useRef, useState, type ReactNode, type PointerEvent } from "react";
-import type { CalendarEvent } from "@zilobase/features/calendar";
+
 import { shiftEventGeometry } from "./event-geometry";
-import { toast } from "sonner";
-export function DraggableEvent({ event, zone, dayWidth, disabled, onChange, children }: { event: CalendarEvent; zone: string; dayWidth: number; disabled: boolean; onChange: (event: CalendarEvent) => void; children: ReactNode }) {
+
+export function DraggableEvent({ event, zone, dayWidth, disabled, onChange, onError, children }: { event: CalendarItem; zone: string; dayWidth: number; disabled: boolean; onChange: (event: CalendarItem) => void; onError?: (error: Error) => void; children: ReactNode }) {
   const origin = useRef<{ x: number; y: number; resize: "start" | "end" | null } | null>(null), [offset, setOffset] = useState({ x: 0, y: 0 });
   const moved = useRef(false);
   const allDay = Boolean(event.start.date);
@@ -15,7 +16,7 @@ export function DraggableEvent({ event, zone, dayWidth, disabled, onChange, chil
     const start = origin.current; origin.current = null; setOffset({ x: 0, y: 0 });
     if (!start || !moved.current) return;
     const dx = e.clientX - start.x, dy = e.clientY - start.y;
-    try { onChange(shiftEventGeometry(event, zone, Math.round(dx / Math.max(1, dayWidth)), Math.round(dy / .8 / 15) * 15, start.resize)) } catch (error) { toast.error(error instanceof Error ? error.message : "Invalid event time") }
+    try { onChange(shiftEventGeometry(event, zone, Math.round(dx / Math.max(1, dayWidth)), Math.round(dy / .8 / 15) * 15, start.resize)) } catch (error) { onError?.(error instanceof Error ? error : new Error("Invalid event time")) }
   };
   return <div className="relative h-full touch-none" style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }} onPointerDown={down} onPointerMove={e => {
     if (!origin.current) return;

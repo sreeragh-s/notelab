@@ -1,15 +1,14 @@
 import { useCalendarWorkspace } from "../workspace/calendar-workspace";
 import { CalendarEventPanel } from "./calendar-event-panel";
 import { CalendarStatus } from "./calendar-status";
-import { CalendarPeriodScroller } from "./calendar-period-scroller";
-import { CalendarMonthView } from "./calendar-month-view";
+import { CalendarSurface, type CalendarItem, type CalendarRange } from "@/shared/components/calendar";
 import { runCalendarMutation } from "../events/calendar-mutations";
 import { toast } from "sonner";
 import { newCalendarEvent } from "../events/event-editor";
 import { PALETTE, type ColorTokenId } from "@/shared/lib/color-tokens";
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { calendarDays, todayInZone, dayInstant, addCalendarDays, shiftCalendarPeriod, calendarEventKey, eventInstant, eventClock, calendarApiBasePath, type CalendarConnection, type CalendarEvent, type CalendarPreferences, type CalendarRecord, type CalendarView } from "@zilobase/features/calendar";
+import { calendarDays, todayInZone, dayInstant, addCalendarDays, shiftCalendarPeriod, calendarEventKey, calendarApiBasePath, type CalendarConnection, type CalendarEvent, type CalendarPreferences, type CalendarRecord, type CalendarView } from "@zilobase/features/calendar";
 import { useCalendarCache } from "../sync/use-calendar-cache";
 import { calendarSelectionKey, calendarIsVisible, resolveDefaultCalendar } from "../connections/calendar-selection";
 import { Button } from "@/shared/ui/button";
@@ -24,25 +23,20 @@ function AccountData({ connection, userId, start, end, onData }: { connection: C
 export function CalendarSchedule({ connections, userId, preferences }: { connections: CalendarConnection[]; userId: string; preferences: CalendarPreferences }) {
   const workspace = useCalendarWorkspace();
   const { query } = workspace;
-  const gridScroll = useRef<HTMLDivElement>(null);
   const search = useSearch({ from: "/app/calendar" }), navigate = useNavigate();
   const view = search.view ?? preferences.view, date = search.date ?? todayInZone(preferences.timeZone);
-  useEffect(() => { if (gridScroll.current) gridScroll.current.scrollTop = 7 * 48 }, [view]);
   const allDays = useMemo(() => calendarDays(date, view, preferences.weekStartsOn), [date, view, preferences.weekStartsOn]);
-  const periods = useMemo(() => [-1, 0, 1].map(direction => calendarDays(shiftCalendarPeriod(date, view, direction), view, preferences.weekStartsOn).filter(day => preferences.showWeekends || view === "day" || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()))), [date, view, preferences.weekStartsOn, preferences.showWeekends]);
-  const [monthDays, setMonthDays] = useState<string[]>([]);
-  const loadedDays = view === "day" || view === "week" ? periods.flat() : view === "month" && monthDays.length ? monthDays : allDays;
-  const cacheStart = dayInstant(loadedDays[0]!, preferences.timeZone), cacheEnd = dayInstant(addCalendarDays(loadedDays.at(-1)!, 1), preferences.timeZone);
-  const days = allDays.filter(day => preferences.showWeekends || view === "day" || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()));
+  const [range, setRange] = useState<CalendarRange | null>(null);
+  const cacheStart = range?.start ?? dayInstant(allDays[0]!, preferences.timeZone);
+  const cacheEnd = range?.end ?? dayInstant(addCalendarDays(allDays.at(-1)!, 1), preferences.timeZone);
   const start = dayInstant(allDays[0]!, preferences.timeZone), end = dayInstant(addCalendarDays(allDays.at(-1)!, 1), preferences.timeZone);
   const [snapshots, setSnapshots] = useState<Record<string, Snapshot>>({}), [selected, setSelected] = useState<CalendarEvent | null>(null);
   const [editing, setEditing] = useState(false), [creating, setCreating] = useState(false);
   const [searchEvents, setSearchEvents] = useState<CalendarEvent[] | null>(null), [searchError, setSearchError] = useState<unknown>();
   const onData = useCallback((binding: string, data: Snapshot) => setSnapshots(current => ({ ...current, [binding]: data })), []);
-  const data = connections.flatMap(c => snapshots[c.bindingId] ? [snapshots[c.bindingId]!] : []);
-  const events = data.flatMap(d => d.events).filter(event => calendarIsVisible(preferences, event.bindingId, event.calendarId) && (preferences.showDeclined || !event.attendees.some(a => a.self && a.responseStatus === "declined")));
-  const online = data.every(d => d.online), [now, setNow] = useState(Date.now());
-  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 60_000); return () => clearInterval(timer) }, []);
+  const data = useMemo(() => connections.flatMap(c => snapshots[c.bindingId] ? [snapshots[c.bindingId]!] : []), [connections, snapshots]);
+  const events = useMemo(() => data.flatMap(d => d.events).filter(event => calendarIsVisible(preferences, event.bindingId, event.calendarId) && (preferences.showDeclined || !event.attendees.some(a => a.self && a.responseStatus === "declined"))), [data, preferences]);
+  const online = data.every(d => d.online);
   const setPeriod = useCallback((next: string, nextView: CalendarView = view) => { void navigate({ to: "/calendar", search: { date: next, view: nextView } }) }, [navigate, view]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.defaultPrevented || (e.target as HTMLElement)?.closest("input,textarea,select,[contenteditable=true],[role=dialog],[role=alertdialog],[role=menu],[data-calendar-event-panel]") || e.metaKey || e.ctrlKey || e.altKey) return; if (e.key.toLowerCase() === "t") setPeriod(todayInZone(preferences.timeZone)); if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); setPeriod(shiftCalendarPeriod(date, view, e.key === "ArrowLeft" ? -1 : 1)) } };
@@ -66,15 +60,7 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
     }))).then(results => { if (active) setSearchEvents(results.flat()) }).catch(error => { if (active) setSearchError(error) }) }, 350);
     return () => { active = false; clearTimeout(timer) };
   }, [query, online, start, end, connections, preferences.hiddenCalendarKeys, preferences.removedCalendarKeys]);
-  const visible = query ? (searchEvents?.filter(event => calendarIsVisible(preferences, event.bindingId, event.calendarId)) ?? events.filter(e => `${e.title} ${e.description} ${e.location}`.toLowerCase().includes(query.toLowerCase()))) : events;
-  const eventsByDay = useMemo(() => {
-    const periods = loadedDays.map(day => ({ day, start: Date.parse(dayInstant(day, preferences.timeZone)), end: Date.parse(dayInstant(addCalendarDays(day, 1), preferences.timeZone)), events: [] as CalendarEvent[] }));
-    for (const event of visible) {
-      const from = Date.parse(eventInstant(event.start, preferences.timeZone)), until = Date.parse(eventInstant(event.end, preferences.timeZone));
-      for (const period of periods) if (from < period.end && until > period.start) period.events.push(event);
-    }
-    return Object.fromEntries(periods.map(period => [period.day, period.events]));
-  }, [visible, loadedDays, preferences.timeZone]);
+  const visible = useMemo(() => query ? (searchEvents?.filter(event => calendarIsVisible(preferences, event.bindingId, event.calendarId)) ?? events.filter(e => `${e.title} ${e.description} ${e.location}`.toLowerCase().includes(query.toLowerCase()))) : events, [query, searchEvents, events, preferences]);
   const open = (event: CalendarEvent) => { workspace.openPanel(); setEditing(false); setCreating(false); setSelected(event); void navigate({ to: "/calendar", search: { date, view, binding: event.bindingId, calendar: event.calendarId, event: event.eventId } }) };
   const create = (day = date, hour = 9, duration = 30) => {
     const writable = data.flatMap(d => d.calendars).filter(c => c.permissions.write);
@@ -102,14 +88,13 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
   useEffect(() => workspace.register({ close, create: () => create() }));
   useEffect(() => { if (search.event) workspace.openPanel(); }, [search.event, workspace.openPanel]);
   const selection = selectionData(selected, snapshots, connections);
-  const card = (event: CalendarEvent) => {
-    const timed = !event.start.date && !query && (view === "day" || view === "week");
-    const awaiting = event.attendees.some(attendee => attendee.self && attendee.responseStatus === "needsAction");
-    return <Button key={calendarEventKey(event)} data-calendar-event-card draggable={view === "month" && online && !event.start.date} onDragStart={e => e.dataTransfer.setData("text/calendar-event", calendarEventKey(event))} variant="ghost" className={`${timed ? "h-full flex-col items-start gap-0.5 rounded-md border border-current p-2" : event.start.date && !query && (view === "day" || view === "week") ? "h-auto rounded-none px-1.5 py-1" : "h-auto rounded-sm px-1.5 py-1"} ${timed && awaiting ? "border-dashed" : ""} w-full justify-start overflow-hidden text-left text-xs font-normal ${color(event).backgroundClass} ${color(event).textClass}`} onClick={() => open(event)} title={event.title}>
-      <span className="w-full truncate font-medium">{event.title}</span>
-      {!event.start.date && <span className="truncate text-[11px] opacity-80">{eventClock(event.start, preferences.timeZone, preferences.timeFormat)}–{eventClock(event.end, preferences.timeZone, preferences.timeFormat)}</span>}
-    </Button>;
-  };
+  const items = useMemo<CalendarItem[]>(() => visible.map(event => ({
+    id: calendarEventKey(event), title: event.title, start: event.start, end: event.end,
+    ...color(event), dashed: event.attendees.some(a => a.self && a.responseStatus === "needsAction"),
+    editable: online && data.flatMap(d => d.calendars).some(c => c.id === event.calendarId && c.bindingId === event.bindingId && c.permissions.write),
+  })), [visible, data, preferences, online]);
+  const selectItem = (item: CalendarItem) => { const event = visible.find(event => calendarEventKey(event) === item.id); if (event) open(event); };
+  const changeItem = (item: CalendarItem) => { const event = visible.find(event => calendarEventKey(event) === item.id); if (event) void changeGeometry({ ...event, start: item.start, end: item.end }); };
   return <div className="flex min-h-0 min-w-0 flex-1 flex-col">
     {connections.map(c => <AccountData key={c.bindingId} connection={c} userId={userId} start={cacheStart} end={cacheEnd} onData={onData} />)}
     <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stroke-default px-4 py-3">
@@ -117,7 +102,7 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
       <Button className="shrink-0" disabled={!online || !Boolean(resolveDefaultCalendar(data.flatMap(d => d.calendars), preferences))} onClick={() => create()}>Create event</Button>
     </div>
     <CalendarStatus data={data} online={online} error={searchError} />
-    {view === "agenda" || query ? <div data-calendar-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-y-none p-4">{days.map(day => { const rows = eventsByDay[day] ?? []; return <section key={day} className="mb-5"><h2 className="mb-2 text-sm font-medium">{day}</h2>{rows.length ? rows.map(card) : <p className="text-xs text-content-secondary">No events</p>}</section> })}</div> : view === "month" ? <CalendarMonthView date={date} onDate={setPeriod} onRangeChange={setMonthDays} days={days} eventsByDay={eventsByDay} preferences={preferences} online={online} writable={event => data.flatMap(d => d.calendars).some(c => c.id === event.calendarId && c.bindingId === event.bindingId && c.permissions.write)} card={card} onDay={day => setPeriod(day, "day")} onChange={event => void changeGeometry(event)} /> : <CalendarPeriodScroller periods={periods} periodKey={`${view}:${date}`} onPeriod={direction => setPeriod(shiftCalendarPeriod(date, view, direction))} eventsByDay={eventsByDay} preferences={preferences} now={now} online={online} scrollRef={gridScroll} card={card} writable={event => data.flatMap(d => d.calendars).some(c => c.id === event.calendarId && c.bindingId === event.bindingId && c.permissions.write)} onDay={day => setPeriod(day, "day")} onCreate={create} onChange={event => void changeGeometry(event)} background={event => color(event).backgroundClass} />}
+    <CalendarSurface items={items} date={date} view={view} agenda={Boolean(query)} preferences={preferences} onNavigate={setPeriod} onRangeChange={setRange} onSelect={selectItem} onCreate={online ? create : undefined} onChange={changeItem} onError={error => toast.error(error.message)} />
     <CalendarEventPanel selected={selection.event} database={selection.database} calendars={selection.calendars} online={online} editing={editing} creating={creating} zone={preferences.timeZone} timeFormat={preferences.timeFormat} onClose={workspace.closePanel} onEdit={() => setEditing(true)} onDuplicate={() => { if (!selected) return; setSelected({ ...selected, eventId: `local-${crypto.randomUUID()}`, etag: "", title: `${selected.title} (copy)`, attendees: [], recurringEventId: undefined, originalStartTime: undefined, recurrence: undefined }); setCreating(true); setEditing(true) }} />
   </div>;
 }

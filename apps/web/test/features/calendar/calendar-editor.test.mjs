@@ -1,9 +1,9 @@
 export function register({ assert, loadModule, readSource, test }) {
   test("Calendar view scrollers disable overscroll chaining", async () => {
     const [month, grid, pager, schedule] = await Promise.all([
-      readSource("/src/features/calendar/views/calendar-month-view.tsx"),
-      readSource("/src/features/calendar/views/calendar-time-grid.tsx"),
-      readSource("/src/features/calendar/views/calendar-period-scroller.tsx"),
+      readSource("/src/shared/components/calendar/calendar-month-view.tsx"),
+      readSource("/src/shared/components/calendar/calendar-time-grid.tsx"),
+      readSource("/src/shared/components/calendar/calendar-period-scroller.tsx"),
       readSource("/src/features/calendar/views/calendar-schedule.tsx"),
     ]);
     assert.match(month, /overflow-y-auto overscroll-y-none/);
@@ -14,12 +14,12 @@ export function register({ assert, loadModule, readSource, test }) {
     assert.doesNotMatch(grid, /(?<![\w-])overscroll-none(?![\w-])/);
     assert.match(pager, /overflow-x-auto overflow-y-hidden overscroll-x-contain/);
     assert.doesNotMatch(pager, /(?<![\w-])overscroll-none(?![\w-])/);
-    assert.match(schedule, /overflow-y-auto overscroll-y-none p-4/);
+    assert.match(await readSource("/src/shared/components/calendar/calendar-surface.tsx"), /overflow-y-auto overscroll-y-none p-4/);
     assert.match(schedule, /flex shrink-0 items-center justify-between gap-3 border-b/);
     assert.match(schedule, /<Button className="shrink-0"[\s\S]*?>Create event<\/Button>/);
   });
   test("Calendar drag preserves all-day boundaries and rejects DST gaps and inverted resizing", async () => {
-    const { shiftEventGeometry } = await loadModule("/src/features/calendar/events/event-geometry.ts");
+    const { shiftEventGeometry } = await loadModule("/src/shared/components/calendar/event-geometry.ts");
     const allDay = { start: { date: "2026-09-09" }, end: { date: "2026-09-11" } };
     const moved = shiftEventGeometry(allDay, "Asia/Kolkata", 2, 0);
     assert.equal(moved.start.date, "2026-09-11"); assert.equal(moved.end.date, "2026-09-13");
