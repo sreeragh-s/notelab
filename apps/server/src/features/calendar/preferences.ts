@@ -7,6 +7,7 @@ import { calendarPreference } from "../../infrastructure/database/schema";
 import type { AppBindings } from "../../shared/types";
 const timeZone = z.string().max(100).refine(value => { try { new Intl.DateTimeFormat("en", { timeZone: value }); return true } catch { return false } });
 export const calendarPreferencesSchema = z.object({
+  hourHeight: z.number().int().min(32).max(120).default(48),
   accountOrder: z.array(z.string().max(1024)).max(500).default([]),
   calendarOrder: z.array(z.string().max(1024)).max(500).default([]),
   collapsedAccountIds: z.array(z.string().max(1024)).max(500).default([]),

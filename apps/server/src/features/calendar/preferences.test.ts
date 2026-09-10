@@ -24,3 +24,10 @@ test("source organization defaults preserve old preferences and bound saved keys
   expect(parsed.collapsedAccountIds).toEqual([]);
   expect(calendarPreferencesSchema.safeParse({ ...parsed, calendarOrder: Array(501).fill("a") }).success).toBe(false);
 });
+
+test("grid density migrates old preferences and enforces usable bounds", () => {
+  const old = defaultCalendarPreferences(); delete old.hourHeight;
+  expect(calendarPreferencesSchema.parse(old).hourHeight).toBe(48);
+  for (const hourHeight of [32, 48, 120]) expect(calendarPreferencesSchema.parse({ ...old, hourHeight }).hourHeight).toBe(hourHeight);
+  for (const hourHeight of [0, 31, 121, 48.5]) expect(calendarPreferencesSchema.safeParse({ ...old, hourHeight }).success).toBe(false);
+});

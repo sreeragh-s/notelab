@@ -11,6 +11,7 @@ export type CalendarItem = CalendarSpan & {
 };
 export type CalendarDisplayPreferences = {
   visibleDayCount?: number;
+  hourHeight?: number;
   timeZone: string;
   timeFormat: "12" | "24";
   weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6;

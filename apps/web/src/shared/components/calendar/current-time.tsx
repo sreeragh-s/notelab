@@ -31,19 +31,19 @@ function useCalendarClock(zone: string) {
   return { now, date: `${parts.year}-${parts.month}-${parts.day}`, top: (Number(parts.hour) * 60 + Number(parts.minute)) * .8 };
 }
 
-export const CurrentTime = memo(function CurrentTime({ day, days, zone }: { day: string; days: string[]; zone: string }) {
+export const CurrentTime = memo(function CurrentTime({ day, days, zone, hourHeight = 48 }: { day: string; days: string[]; zone: string; hourHeight?: number }) {
   const clock = useCalendarClock(zone);
   if (!days.includes(clock.date)) return null;
   const active = clock.date === day;
-  return <div data-calendar-now data-active={active} aria-hidden="true" className={`pointer-events-none absolute inset-x-0 z-20 bg-action-primary ${active ? "h-0.5" : "h-px opacity-20"}`} style={{ top: clock.top }}>
+  return <div data-calendar-now data-active={active} aria-hidden="true" className={`pointer-events-none absolute inset-x-0 z-20 bg-action-primary ${active ? "h-0.5" : "h-px opacity-20"}`} style={{ top: clock.top * hourHeight / 48 }}>
     {active && <span className="absolute -top-1 left-0 h-2.5 w-0.5 bg-action-primary" />}
   </div>;
 });
 
-export const CurrentTimeLabel = memo(function CurrentTimeLabel({ days, zone, secondaryZones, timeFormat }: { days: string[]; zone: string; secondaryZones: string[]; timeFormat: "12" | "24" }) {
+export const CurrentTimeLabel = memo(function CurrentTimeLabel({ days, zone, secondaryZones, timeFormat, hourHeight = 48 }: { hourHeight?: number; days: string[]; zone: string; secondaryZones: string[]; timeFormat: "12" | "24" }) {
   const clock = useCalendarClock(zone);
   if (!days.includes(clock.date)) return null;
-  return <div data-calendar-current-time-label className="pointer-events-none absolute inset-x-0 z-20 flex -translate-y-1/2" style={{ top: clock.top }}>
+  return <div data-calendar-current-time-label className="pointer-events-none absolute inset-x-0 z-20 flex -translate-y-1/2" style={{ top: clock.top * hourHeight / 48 }}>
     {[zone, ...secondaryZones].map(value => <div key={value} className="flex w-14 justify-end pr-1"><span className="rounded-sm bg-action-primary px-1 py-0.5 text-[10px] text-action-on-primary">{eventClock({ dateTime: new Date(clock.now).toISOString(), timeZone: value }, value, timeFormat)}</span></div>)}
   </div>;
 });

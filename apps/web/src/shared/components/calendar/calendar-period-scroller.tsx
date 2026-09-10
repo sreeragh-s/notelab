@@ -14,9 +14,11 @@ type Props = CalendarColumnActions & {
 const EMPTY_ITEMS: CalendarItem[] = [];
 /** Day and Week differ only in the number of complete day columns per period. */
 export function CalendarPeriodScroller({ periods, periodKey, view, eventsByDay, onPeriod, ...actions }: Props) {
+  const hourHeight = actions.preferences.hourHeight ?? 48;
+  const previousHourHeight = useRef(hourHeight);
   const [allDayCollapsed, setAllDayCollapsed] = useState(false);
   const allDayToggle = useRef<HTMLButtonElement>(null), axis = useRef<HTMLDivElement>(null), viewport = useRef<HTMLDivElement>(null);
-  const [scrollGroup] = useState(createCalendarScrollGroup);
+  const [scrollGroup] = useState(() => createCalendarScrollGroup(7 * hourHeight));
   const settling = useRef<ReturnType<typeof setTimeout> | null>(null), navigating = useRef(false);
   const [preparedPeriod, setPreparedPeriod] = useState<string | null>(null);
   const onPeriodRef = useRef(onPeriod); onPeriodRef.current = onPeriod;
@@ -24,7 +26,11 @@ export function CalendarPeriodScroller({ periods, periodKey, view, eventsByDay, 
   const expand = useCallback(() => { setAllDayCollapsed(false); allDayToggle.current?.focus(); }, []);
   const allDayHeight = useMemo(() => allDayCollapsed ? 24 : Math.max(48, Math.min(96, Math.max(0, ...periods.flat().map(day => (eventsByDay[day] ?? EMPTY_ITEMS).filter(item => item.start.date).length)) * 26)), [allDayCollapsed, periods, eventsByDay]);
   useLayoutEffect(() => axis.current ? scrollGroup.register(axis.current) : undefined, [scrollGroup]);
-  useLayoutEffect(() => scrollGroup.scrollTo(7 * 48), [view, scrollGroup]);
+  useLayoutEffect(() => {
+    scrollGroup.scrollTo(scrollGroup.getTop() * hourHeight / previousHourHeight.current);
+    previousHourHeight.current = hourHeight;
+  }, [hourHeight, scrollGroup]);
+  useLayoutEffect(() => scrollGroup.scrollTo(7 * previousHourHeight.current), [view, scrollGroup]);
   useLayoutEffect(() => {
     const element = viewport.current; if (!element) return;
     if (settling.current) clearTimeout(settling.current);

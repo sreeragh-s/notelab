@@ -152,3 +152,26 @@ for (const view of ["day", "week"]) for (const area of ["header", "body"]) {
     await expect.poll(() => pager.evaluate(element => Math.abs(element.scrollLeft - element.clientWidth))).toBeLessThan(2);
   });
 }
+
+test("density preserves the time anchor and scales creation and drag geometry", async ({ page }) => {
+  await page.goto("/scripts/calendar/e2e/surface.html");
+  const first = page.getByRole("region", { name: "First calendar", exact: true });
+  const body = first.locator('[data-calendar-period="1"] [data-calendar-scroll]').first();
+  await body.evaluate(element => { element.scrollTop = 240; });
+  await expect.poll(() => body.evaluate(element => element.scrollTop)).toBe(240);
+  await first.getByRole("button", { name: "Toggle density" }).click();
+  await expect.poll(() => body.evaluate(element => element.scrollTop)).toBe(480);
+  const slot = first.getByRole("button", { name: "Create event 2026-09-09 9:00", exact: true });
+  await slot.click({ position: { x: 4, y: 26 } });
+  await expect(first.locator("output")).toContainText("created:2026-09-09:9.25:30");
+  const meeting = first.getByRole("button", { name: /Plain meeting/ });
+  await meeting.scrollIntoViewIfNeeded();
+  const box = await meeting.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, box.y + 116, { steps: 5 });
+  await page.mouse.up();
+  await expect(meeting).toContainText("11:00");
+  await first.getByRole("button", { name: "Toggle density" }).click();
+  await expect(first.locator('[data-calendar-period="1"] [data-calendar-time-content]').first()).toHaveCSS("height", "1152px");
+});

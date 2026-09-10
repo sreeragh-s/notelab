@@ -15,7 +15,7 @@ function Fixture({ name }: { name: string }) {
   const [items, setItems] = useState(sample), [action, setAction] = useState("");
   return <section aria-label={name} className="flex h-screen min-w-0 flex-1 flex-col bg-surface-canvas text-content-primary">
     <nav>{(["day", "week", "month"] as const).map(view => <button key={view} onClick={() => setView(view)}>{view}</button>)}</nav>
-    <nav><button onClick={() => setPreferences(p => ({ ...p, showWeekends: !p.showWeekends }))}>Toggle weekends</button><button onClick={() => setPreferences(p => ({ ...p, timeZone: p.timeZone === "UTC" ? "Asia/Kolkata" : "UTC" }))}>Toggle timezone</button><button onClick={() => setPreferences(p => ({ ...p, weekStartsOn: 0 }))}>Start Sunday</button></nav>
+    <nav><button onClick={() => setPreferences(p => ({ ...p, hourHeight: p.hourHeight === 96 ? 48 : 96 }))}>Toggle density</button><button onClick={() => setPreferences(p => ({ ...p, showWeekends: !p.showWeekends }))}>Toggle weekends</button><button onClick={() => setPreferences(p => ({ ...p, timeZone: p.timeZone === "UTC" ? "Asia/Kolkata" : "UTC" }))}>Toggle timezone</button><button onClick={() => setPreferences(p => ({ ...p, weekStartsOn: 0 }))}>Start Sunday</button></nav>
     <output>{date} {action}</output>
     <CalendarSurface date={date} view={view} preferences={preferences} items={items} onNavigate={(date, view) => { setDate(date); setView(view); }} onSelect={item => setAction(`selected:${item.id}`)} onCreate={(day, hour, duration) => setAction(`created:${day}:${hour}:${duration}`)} onChange={item => { setItems(items => items.map(current => current.id === item.id ? item : current)); setAction(`changed:${item.id}`); }} onError={error => setAction(error.message)} />
   </section>;

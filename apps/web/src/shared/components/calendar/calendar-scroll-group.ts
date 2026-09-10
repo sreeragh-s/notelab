@@ -11,6 +11,7 @@ export function createCalendarScrollGroup(initialTop = 7 * 48) {
       top = Math.max(0, next);
       for (const element of elements) if (element.scrollTop !== top) element.scrollTop = top;
     },
+    getTop() { return top; },
     scrollBy(delta: number) { this.scrollTo(top + delta); },
   };
 }

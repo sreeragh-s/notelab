@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode, type PointerEvent } from "
 
 import { shiftEventGeometry } from "./event-geometry";
 
-export function DraggableEvent({ event, zone, dayWidth, disabled, onChange, onError, children }: { event: CalendarItem; zone: string; dayWidth: number; disabled: boolean; onChange: (event: CalendarItem) => void; onError?: (error: Error) => void; children: ReactNode }) {
+export function DraggableEvent({ event, zone, dayWidth, hourHeight = 48, disabled, onChange, onError, children }: { event: CalendarItem; zone: string; dayWidth: number; hourHeight?: number; disabled: boolean; onChange: (event: CalendarItem) => void; onError?: (error: Error) => void; children: ReactNode }) {
   const origin = useRef<{ x: number; y: number; resize: "start" | "end" | null; dayWidth: number; preview?: { left: number; top: number; width: number; height: number } } | null>(null), [offset, setOffset] = useState({ x: 0, y: 0 });
   const frame = useRef<number | null>(null);
   const preview = useRef({ x: 0, y: 0 });
@@ -24,7 +24,7 @@ export function DraggableEvent({ event, zone, dayWidth, disabled, onChange, onEr
     const start = origin.current; origin.current = null; setOffset({ x: 0, y: 0 });
     if (!start || !moved.current) return;
     const dx = e.clientX - start.x, dy = e.clientY - start.y;
-    try { onChange(shiftEventGeometry(event, zone, Math.round(dx / Math.max(1, start.dayWidth)), Math.round(dy / .8 / 15) * 15, start.resize)) } catch (error) { onError?.(error instanceof Error ? error : new Error("Invalid event time")) }
+    try { onChange(shiftEventGeometry(event, zone, Math.round(dx / Math.max(1, start.dayWidth)), Math.round(dy / (hourHeight / 60) / 15) * 15, start.resize)) } catch (error) { onError?.(error instanceof Error ? error : new Error("Invalid event time")) }
   };
   const previewRect = origin.current?.preview;
   const floating = previewRect && (offset.x !== 0 || offset.y !== 0);
