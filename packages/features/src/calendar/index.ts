@@ -1,4 +1,5 @@
 export type * from "./contracts"
+export { orderCalendarSources, moveCalendarSource } from "./source-order";
 export { calendarConnectionReturnPath } from "./onboarding";
 export { calendarCapability, type CalendarCapability, type CalendarOperation } from "./capabilities";
 export { calendarApiBasePath, calendarKeys, calendarEventKey, defaultCalendarPreferences } from "./model"

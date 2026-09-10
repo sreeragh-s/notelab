@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import type { CalendarRecord, CalendarPreferences, CalendarColor } from "@zilobase/features/calendar";
+import { orderCalendarSources, moveCalendarSource, type CalendarRecord, type CalendarPreferences, type CalendarColor } from "@zilobase/features/calendar";
 import { EyeIcon, EyeOffIcon, MoreHorizontalIcon, CalendarIcon, CheckIcon, ArrowUpRightIcon, TrashIcon } from "@/shared/components/icons";
 import { GoogleIcon } from "@/shared/components/google-icon";
 import { PALETTE } from "@/shared/lib/color-tokens";
@@ -15,11 +15,13 @@ const colorName = (color: CalendarColor) => color === "gray" ? "Grey" : PALETTE[
 type Props = { calendars: CalendarRecord[]; allCalendars: CalendarRecord[]; preferences: CalendarPreferences; onPreferences: (preferences: CalendarPreferences) => Promise<unknown>; disabled: boolean };
 
 export function CalendarList(props: Props) {
-  return <SidebarMenu>{props.calendars.filter(calendar => !props.preferences.removedCalendarKeys?.includes(calendarSelectionKey(calendar.bindingId, calendar.id))).map(calendar => <CalendarRow key={calendarSelectionKey(calendar.bindingId, calendar.id)} {...props} calendar={calendar} />)}</SidebarMenu>;
+  return <SidebarMenu>{orderCalendarSources(props.calendars, props.preferences.calendarOrder ?? [], calendar => calendarSelectionKey(calendar.bindingId, calendar.id)).filter(calendar => !props.preferences.removedCalendarKeys?.includes(calendarSelectionKey(calendar.bindingId, calendar.id))).map(calendar => <CalendarRow key={calendarSelectionKey(calendar.bindingId, calendar.id)} {...props} calendar={calendar} />)}</SidebarMenu>;
 }
 
-function CalendarRow({ calendar, allCalendars, preferences, onPreferences, disabled }: Props & { calendar: CalendarRecord }) {
+function CalendarRow({ calendar, calendars, allCalendars, preferences, onPreferences, disabled }: Props & { calendar: CalendarRecord }) {
   const key = calendarSelectionKey(calendar.bindingId, calendar.id), hidden = preferences.hiddenCalendarKeys.includes(key);
+  const siblings = orderCalendarSources(calendars, preferences.calendarOrder ?? [], item => calendarSelectionKey(item.bindingId, item.id)).filter(item => !preferences.removedCalendarKeys?.includes(calendarSelectionKey(item.bindingId, item.id))).map(item => calendarSelectionKey(item.bindingId, item.id));
+  const position = siblings.indexOf(key);
   const color = preferences.calendarColors?.[key] ?? "blue";
   const [menuOpen, setMenuOpen] = useState(false);
   const [removing, setRemoving] = useState(false), [pending, setPending] = useState(false), [error, setError] = useState<unknown>();
@@ -37,6 +39,9 @@ function CalendarRow({ calendar, allCalendars, preferences, onPreferences, disab
         <DropdownMenuSub title="Color"><DropdownMenuSubTrigger disabled={disabled}><span className={`size-4 rounded-sm ${PALETTE[color].swatchClass}`} /><span className="flex-1">Color</span><span className="text-content-secondary">{colorName(color)}</span></DropdownMenuSubTrigger>
           <DropdownMenuSubContent>{colors.map(option => <DropdownMenuItem key={option} disabled={disabled} onSelect={() => save({ ...preferences, calendarColors: { ...preferences.calendarColors, [key]: option } })}><span className={`size-4 rounded-sm ${PALETTE[option].swatchClass}`} /><span className="flex-1">{colorName(option)}</span>{option === color && <CheckIcon />}</DropdownMenuItem>)}</DropdownMenuSubContent>
         </DropdownMenuSub>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem disabled={disabled || position <= 0} onSelect={() => save({ ...preferences, calendarOrder: moveCalendarSource(preferences.calendarOrder ?? [], siblings, key, -1) })}>Move up</DropdownMenuItem>
+        <DropdownMenuItem disabled={disabled || position === siblings.length - 1} onSelect={() => save({ ...preferences, calendarOrder: moveCalendarSource(preferences.calendarOrder ?? [], siblings, key, 1) })}>Move down</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled={disabled || !calendar.permissions.write || preferences.defaultCalendarKey === key} onSelect={() => save({ ...preferences, defaultCalendarKey: key })}><CalendarIcon />Make default calendar</DropdownMenuItem>
         <DropdownMenuItem disabled={disabled} onSelect={() => save({ ...preferences, hiddenCalendarKeys: allCalendars.map(c => calendarSelectionKey(c.bindingId, c.id)).filter(id => id !== key) })}><EyeIcon />Show only this calendar</DropdownMenuItem>

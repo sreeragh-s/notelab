@@ -17,3 +17,10 @@ test("retired Agenda preferences become Week", () => {
   expect(calendarPreferencesSchema.parse({ ...defaultCalendarPreferences(), view: "agenda" }).view).toBe("week");
   expect(calendarPreferencesSchema.safeParse({ ...defaultCalendarPreferences(), view: "invalid" }).success).toBe(false);
 });
+
+test("source organization defaults preserve old preferences and bound saved keys", () => {
+  const parsed = calendarPreferencesSchema.parse(defaultCalendarPreferences());
+  expect(parsed.accountOrder).toEqual([]);
+  expect(parsed.collapsedAccountIds).toEqual([]);
+  expect(calendarPreferencesSchema.safeParse({ ...parsed, calendarOrder: Array(501).fill("a") }).success).toBe(false);
+});

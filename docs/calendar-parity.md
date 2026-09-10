@@ -9,7 +9,7 @@ Reference: [Notion Calendar documentation](https://www.notion.com/help/category/
 | 1 | Google event capabilities | Implemented | Shared capability tests; Calendar integration tests; web editor regression; workspace typecheck; architecture link checks. |
 | 2 | Personal calendar source catalog | Implemented | 12 Calendar integration tests including owner isolation, account deduplication, expired memberships and rollout filtering; server/web typechecks; architecture checks. |
 | 3 | Google connection onboarding | Implemented | Return-path test; OAuth replay/cancellation and reconnect deduplication integration tests; server/web typechecks; architecture checks. Live desktop OAuth acceptance pending. |
-| 4 | Source organization | Pending | — |
+| 4 | Source organization | Implemented | Source-order behavioral tests; preference schema tests; web typecheck; selection regression. |
 | 5 | Calendar-specific event panel | Pending | — |
 | 6 | Configurable multi-day views | Pending | — |
 | 7 | Grid density | Pending | — |

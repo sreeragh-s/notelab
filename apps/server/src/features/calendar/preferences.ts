@@ -7,6 +7,9 @@ import { calendarPreference } from "../../infrastructure/database/schema";
 import type { AppBindings } from "../../shared/types";
 const timeZone = z.string().max(100).refine(value => { try { new Intl.DateTimeFormat("en", { timeZone: value }); return true } catch { return false } });
 export const calendarPreferencesSchema = z.object({
+  accountOrder: z.array(z.string().max(1024)).max(500).default([]),
+  calendarOrder: z.array(z.string().max(1024)).max(500).default([]),
+  collapsedAccountIds: z.array(z.string().max(1024)).max(500).default([]),
   calendarColors: z.record(z.string().max(1024), z.enum(["red", "orange", "yellow", "green", "blue", "purple", "gray"])).refine(value => Object.keys(value).length <= 500).default({}),
   removedCalendarKeys: z.array(z.string().max(1024)).max(500).default([]),
   view: z.preprocess(value => value === "agenda" ? "week" : value, z.enum(["day", "week", "month"])), hiddenCalendarKeys: z.array(z.string().max(1024)).max(500), defaultCalendarKey: z.string().max(1024).nullable(),
