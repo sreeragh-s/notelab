@@ -48,7 +48,7 @@ function CalendarWorkspace({ workspaceId }: { workspaceId: string }) {
     open={false}
     visible={false}
     header={<PageSidePaneHeaderCell className="z-10" side="main" splitActive={false}>
-      <PagePaneHeader className="min-w-0 flex-1" leadingControl={<MainPaneHeaderLeadingControl />} pathname="/calendar" actions={preferences.query.data ? <CalendarToolbar preferences={preferences.query.data} onSettings={() => setSettings(true)} /> : <Button variant="ghost" size="icon" aria-label="Calendar settings" onClick={() => setSettings(true)}><SettingsIcon /></Button>} />
+      <PagePaneHeader className="min-w-0 flex-1" leadingControl={<MainPaneHeaderLeadingControl />} pathname="/calendar" actions={preferences.query.data ? <CalendarToolbar onPreferences={data => preferences.save.mutateAsync(data)} preferences={preferences.query.data} onSettings={() => setSettings(true)} /> : <Button variant="ghost" size="icon" aria-label="Calendar settings" onClick={() => setSettings(true)}><SettingsIcon /></Button>} />
     </PageSidePaneHeaderCell>}
     body={<section className="flex h-full min-h-0 flex-1 flex-col bg-surface-canvas text-content-primary" aria-label="Calendar">
       <CalendarConnectionStatus workspaceId={workspaceId} />

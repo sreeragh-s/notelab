@@ -1,9 +1,11 @@
+import { useCalendarDisplayPreferences } from "../preferences/calendar-travel";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { todayInZone, type CalendarPreferences } from "@zilobase/features/calendar";
 import { DateCalendar } from "@/shared/ui/calendar";
 
-export function CalendarMiniCalendar({ preferences }: { preferences: CalendarPreferences }) {
+export function CalendarMiniCalendar({ preferences: savedPreferences }: { preferences: CalendarPreferences }) {
+  const preferences = useCalendarDisplayPreferences(savedPreferences);
   const search = useSearch({ strict: false }) as { align?: boolean; days?: number; date?: string; view?: CalendarPreferences["view"] };
   const navigate = useNavigate();
   const date = search.date ?? todayInZone(preferences.timeZone);

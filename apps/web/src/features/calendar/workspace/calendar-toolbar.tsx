@@ -1,3 +1,4 @@
+import { CalendarTravel, useCalendarDisplayPreferences } from "../preferences/calendar-travel";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { normalizeCalendarView, todayInZone, shiftCalendarPeriod, type CalendarPreferences, type CalendarView } from "@zilobase/features/calendar";
 import { Button } from "@/shared/ui/button";
@@ -7,7 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/shared/ui/dropdown-menu";
 import { SearchIcon, SidebarSimpleIcon, ChevronLeftIcon, ChevronRightIcon, SettingsIcon, MoreHorizontalIcon } from "@/shared/components/icons";
 import { useCalendarWorkspace } from "./calendar-workspace";
-export function CalendarToolbar({ preferences, onSettings }: { preferences: CalendarPreferences; onSettings: () => void }) {
+export function CalendarToolbar({ preferences: savedPreferences, onSettings, onPreferences }: { preferences: CalendarPreferences; onSettings: () => void; onPreferences?: (preferences: CalendarPreferences) => Promise<unknown> }) {
+  const preferences = useCalendarDisplayPreferences(savedPreferences);
   const workspace = useCalendarWorkspace(), search = useSearch({ from: "/app/calendar" }), navigate = useNavigate();
   const date = search.date ?? todayInZone(preferences.timeZone), view = normalizeCalendarView(search.view ?? preferences.view);
   const period = (date: string, view: CalendarView) => void navigate({ to: "/calendar", search: { date, view, align: search.align, days: search.days } });
@@ -22,6 +24,7 @@ export function CalendarToolbar({ preferences, onSettings }: { preferences: Cale
     <Button variant="ghost" size="icon" data-calendar-panel-toggle aria-label="Calendar event panel" aria-expanded={workspace.panelOpen} onClick={() => workspace.panelOpen ? workspace.closePanel() : workspace.openPanel()}><SidebarSimpleIcon /></Button>
     <div className="hidden items-center gap-1 lg:flex"><Button variant="ghost" onClick={today}>Today</Button><Button variant="ghost" size="icon" aria-label="Previous period" onClick={() => shift(-1)}><ChevronLeftIcon /></Button><Button variant="ghost" size="icon" aria-label="Next period" onClick={() => shift(1)}><ChevronRightIcon /></Button></div>
     <DropdownMenu><DropdownMenuTrigger asChild><Button className="lg:hidden" variant="ghost" size="icon" aria-label="Calendar navigation"><MoreHorizontalIcon /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={today}>Today</DropdownMenuItem><DropdownMenuItem onSelect={() => shift(-1)}><ChevronLeftIcon />Previous period</DropdownMenuItem><DropdownMenuItem onSelect={() => shift(1)}><ChevronRightIcon />Next period</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
+    <CalendarTravel preferences={savedPreferences} onSave={onPreferences} />
     <Button variant="ghost" size="icon" aria-label="Calendar settings" onClick={onSettings}><SettingsIcon /></Button>
   </div>;
 }

@@ -37,7 +37,7 @@ function FixtureSchedule(props: Parameters<typeof CalendarSchedule>[0]) {
   const panels = { calendarOpen: workspace.panelOpen, calendarPanel: <CalendarDockMount />, chatOpen: chatOpen && (isMobile || !floating), chatPanel, discussionsEnabled: false, discussionsOpen: false, isMobile };
   return <div className="flex min-w-0 flex-1 flex-col">
     <ResizablePanelGroup orientation="horizontal"><ResizablePanel id="fixture-main" minSize="25%"><div className="flex h-full min-h-0 flex-col">
-      <PagePaneHeader pathname="/calendar" showBreadcrumb={false} leadingControl={<span>Calendar</span>} actions={<CalendarToolbar preferences={props.preferences} onSettings={() => setSettings(true)} />} />
+      <PagePaneHeader pathname="/calendar" showBreadcrumb={false} leadingControl={<span>Calendar</span>} actions={<CalendarToolbar onPreferences={data => settingsPreferences.save.mutateAsync(data)} preferences={props.preferences} onSettings={() => setSettings(true)} />} />
       <CalendarSchedule {...props} />
     </div></ResizablePanel><RightSidebars {...panels} navigationSidebarOpen={false} /></ResizablePanelGroup>
     <Dialog open={settings} onOpenChange={setSettings}><DialogContent className="max-h-[85vh] overflow-y-auto"><DialogTitle>Calendar settings</DialogTitle><CalendarSettings value={settingsPreferences.query.data ?? props.preferences} pending={settingsPreferences.pending} onSave={data => settingsPreferences.save.mutate(data, { onSuccess: () => setSettings(false) })} /></DialogContent></Dialog>

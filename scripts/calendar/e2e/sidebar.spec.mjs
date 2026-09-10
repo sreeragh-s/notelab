@@ -198,3 +198,24 @@ test("labeled zones add, rename, reorder and persist four columns", async ({ pag
   await page.getByRole("button", { name: "Save preferences" }).click();
   await expect(page.locator('[data-calendar-zone-labels]')).toHaveText("TeamHomeNew York");
 });
+
+test("travel mode previews without saving and supports restore and explicit save", async ({ page }) => {
+  await expect(page.getByRole("button", { name: "Personal Default", exact: true })).toBeVisible();
+  const saved = await page.locator('[data-calendar-zone-labels]').textContent();
+  const writes = [];
+  page.on("request", request => { if (request.method() === "PUT" && request.url().endsWith("/preferences")) writes.push(request.postDataJSON()); });
+  await page.getByRole("button", { name: "Travel time zone", exact: true }).click();
+  await page.getByLabel("Travel time zone name", { exact: true }).fill("Europe/London");
+  await page.getByRole("button", { name: "Preview zone", exact: true }).click();
+  await expect(page.locator('[data-calendar-zone-labels]')).toContainText("London");
+  expect(writes).toHaveLength(0);
+  await page.getByRole("button", { name: "Restore saved zone", exact: true }).click();
+  await expect(page.locator('[data-calendar-zone-labels]')).toHaveText(saved);
+  await page.getByLabel("Travel time zone name", { exact: true }).fill("Europe/London");
+  await page.getByRole("button", { name: "Preview zone", exact: true }).click();
+  await page.getByRole("button", { name: "Save as primary zone", exact: true }).click();
+  await expect.poll(() => writes.length).toBe(1);
+  await page.reload();
+  await expect(page.locator('[data-calendar-zone-labels]')).toContainText("London");
+  await expect(page.getByRole("button", { name: "Travel time zone", exact: true })).toHaveText("Travel");
+});

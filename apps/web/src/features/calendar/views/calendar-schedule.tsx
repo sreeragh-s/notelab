@@ -1,3 +1,4 @@
+import { useCalendarDisplayPreferences } from "../preferences/calendar-travel";
 import { CalendarMeetingPreview } from "./calendar-meeting-preview";
 import { CalendarSourcePanel } from "./calendar-source-panel";
 import { useCalendarWorkspace } from "../workspace/calendar-workspace";
@@ -22,7 +23,8 @@ function AccountData({ connection, userId, start, end, onData }: { connection: C
   useEffect(() => { onData(connection.bindingId, { events: cache.events ?? [], calendars: cache.calendars ?? [], database: cache.database, error: cache.error, loaded: cache.loaded ?? false, syncing: cache.syncing, online: cache.online, stale: cache.stale ?? true }) }, [connection.bindingId, cache.events, cache.calendars, cache.database, cache.error, cache.loaded, cache.syncing, cache.online, cache.stale, onData]);
   return null;
 }
-export function CalendarSchedule({ connections, userId, preferences, preferenceWorkspaceId }: { preferenceWorkspaceId?: string; connections: CalendarConnection[]; userId: string; preferences: CalendarPreferences }) {
+export function CalendarSchedule({ connections, userId, preferences: savedPreferences, preferenceWorkspaceId }: { preferenceWorkspaceId?: string; connections: CalendarConnection[]; userId: string; preferences: CalendarPreferences }) {
+  const preferences = useCalendarDisplayPreferences(savedPreferences);
   const workspace = useCalendarWorkspace();
   const { query } = workspace;
   const search = useSearch({ from: "/app/calendar" }), navigate = useNavigate();

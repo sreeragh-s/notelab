@@ -31,6 +31,7 @@ export type CalendarMutationResponse = { operationId: string; status: "pending" 
 export type CalendarColor = "red" | "orange" | "yellow" | "green" | "blue" | "purple" | "gray"
 export type CalendarTimeZoneColumn = { zone: string; label: string };
 export type CalendarPreferences = {
+  promptTimeZoneChanges?: boolean;
   timeZoneColumns?: CalendarTimeZoneColumn[];
   todayAlignment?: "week" | "start"; meetingPreviewMinutes?: number; mapsProvider?: "google" | "apple";
   hourHeight?: number;

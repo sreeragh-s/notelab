@@ -7,6 +7,7 @@ import { calendarPreference } from "../../infrastructure/database/schema";
 import type { AppBindings } from "../../shared/types";
 const timeZone = z.string().max(100).refine(value => { try { new Intl.DateTimeFormat("en", { timeZone: value }); return true } catch { return false } });
 export const calendarPreferencesSchema = z.object({
+  promptTimeZoneChanges: z.boolean().default(false),
   timeZoneColumns: z.array(z.object({ zone: timeZone, label: z.string().trim().min(1).max(32) })).min(1).max(4).refine(columns => new Set(columns.map(column => column.zone)).size === columns.length, "Time zones must be unique").optional(),
   todayAlignment: z.enum(["week", "start"]).default("week"),
   meetingPreviewMinutes: z.number().int().min(0).max(1440).default(15),

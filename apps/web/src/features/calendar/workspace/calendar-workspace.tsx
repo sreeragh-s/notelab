@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useRef, useCallback, useMemo, useL
 type PanelActions = { close: () => void; create: () => void };
 function useWorkspaceState() {
   const [panelElement] = useState(() => { const element = document.createElement("div"); element.className = "h-full min-h-0"; return element; });
+  const [travelZone, setTravelZone] = useState<string | null>(null);
   const [source, setSource] = useState<{ bindingId: string; calendarId: string } | null>(null);
   const [query, setQuery] = useState("");
   const [panelOpen, setPanelOpen] = useState(false);
@@ -19,9 +20,9 @@ function useWorkspaceState() {
   }, []);
   const suspendPanel = useCallback(() => setPanelOpen(false), []);
   const register = useCallback((value: PanelActions) => { actions.current = value; return () => { actions.current = null; }; }, []);
-  const reset = useCallback(() => { setPanelOpen(false); setSource(null); setQuery(""); actions.current = null; trigger.current = null; }, []);
+  const reset = useCallback(() => { setTravelZone(null); setPanelOpen(false); setSource(null); setQuery(""); actions.current = null; trigger.current = null; }, []);
   const create = useCallback(() => actions.current?.create(), []);
-  return useMemo(() => ({ source, showSource, panelElement, query, setQuery, panelOpen, openPanel, closePanel, suspendPanel, register, reset, create }), [source, showSource, panelElement, query, panelOpen, openPanel, closePanel, suspendPanel, register, reset, create]);
+  return useMemo(() => ({ travelZone, setTravelZone, source, showSource, panelElement, query, setQuery, panelOpen, openPanel, closePanel, suspendPanel, register, reset, create }), [travelZone, source, showSource, panelElement, query, panelOpen, openPanel, closePanel, suspendPanel, register, reset, create]);
 }
 const CalendarWorkspaceContext = createContext<ReturnType<typeof useWorkspaceState> | null>(null);
 export function CalendarWorkspaceProvider({ children }: { children: ReactNode }) {
