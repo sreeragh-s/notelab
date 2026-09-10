@@ -1,6 +1,10 @@
 export function orderCalendarSources<T>(items: readonly T[], order: readonly string[], key: (item: T) => string): T[] {
   const ranks = new Map(order.map((id, index) => [id, index]));
-  return [...items].sort((a, b) => (ranks.get(key(a)) ?? Infinity) - (ranks.get(key(b)) ?? Infinity));
+  return [...items].sort((a, b) => {
+    const left = ranks.get(key(a)), right = ranks.get(key(b));
+    if (left === undefined && right === undefined) return key(a).localeCompare(key(b));
+    return (left ?? Infinity) - (right ?? Infinity);
+  });
 }
 
 /** Reorder siblings without discarding saved positions belonging to another account. */

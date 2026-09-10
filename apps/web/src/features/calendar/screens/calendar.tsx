@@ -64,15 +64,15 @@ function CalendarWorkspace({ workspaceId }: { workspaceId: string }) {
             <CalendarConnectButton accounts={accounts} connect={connect} />
           </section>
         </main>
-        : <CalendarScheduleContent connections={accounts.data.connections} preferences={preferences.query.data} error={preferences.query.error} userId={session?.user?.id} />}
+        : <CalendarScheduleContent workspaceId={workspaceId} connections={accounts.data.connections} preferences={preferences.query.data} error={preferences.query.error} userId={session?.user?.id} />}
     <Dialog open={settings} onOpenChange={setSettings}><DialogContent className="max-h-[85vh] overflow-y-auto"><DialogTitle>Calendar settings</DialogTitle>{preferences.query.data ? <CalendarSettings key={preferences.query.dataUpdatedAt} value={preferences.query.data} pending={preferences.pending} onSave={data => preferences.save.mutate(data, { onSuccess: () => setSettings(false) })} /> : <p>Loading preferences…</p>}<RemovedCalendars workspaceId={workspaceId} /></DialogContent></Dialog>
     </section>}
   />;
 }
 
-function CalendarScheduleContent({ connections = [], preferences, userId, error }: { connections?: CalendarConnection[]; preferences?: CalendarPreferences; userId?: string; error: unknown }) {
+function CalendarScheduleContent({ workspaceId, connections = [], preferences, userId, error }: { workspaceId: string; connections?: CalendarConnection[]; preferences?: CalendarPreferences; userId?: string; error: unknown }) {
   if (error) return <p role="alert" className="p-6 text-feedback-danger-text">{getApiErrorMessage(error)}</p>;
   if (!preferences) return <p className="p-6 text-content-secondary">Loading calendar preferences…</p>;
   if (!connections.length || !userId) return <main className="grid flex-1 place-items-center p-6 text-sm text-content-secondary">Connect a calendar to see your schedule.</main>;
-  return <CalendarSchedule connections={connections} userId={userId} preferences={preferences} />;
+  return <CalendarSchedule preferenceWorkspaceId={workspaceId} connections={connections} userId={userId} preferences={preferences} />;
 }

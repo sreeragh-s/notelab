@@ -10,7 +10,7 @@ Reference: [Notion Calendar documentation](https://www.notion.com/help/category/
 | 2 | Personal calendar source catalog | Implemented | 12 Calendar integration tests including owner isolation, account deduplication, expired memberships and rollout filtering; server/web typechecks; architecture checks. |
 | 3 | Google connection onboarding | Implemented | Return-path test; OAuth replay/cancellation and reconnect deduplication integration tests; server/web typechecks; architecture checks. Live desktop OAuth acceptance pending. |
 | 4 | Source organization | Implemented | Source-order behavioral tests; preference schema tests; web typecheck; selection regression. |
-| 5 | Calendar-specific event panel | Pending | — |
+| 5 | Calendar-specific event panel | Implemented | Seven sidebar browser tests including independent pagination, selected-source creation, read-only creation denial and persistent ordering; source-order tests; web typecheck; architecture checks. |
 | 6 | Configurable multi-day views | Pending | — |
 | 7 | Grid density | Pending | — |
 | 8 | General preferences | Pending | — |

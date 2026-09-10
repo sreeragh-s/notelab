@@ -4,6 +4,7 @@ import { orderCalendarSources, moveCalendarSource } from "./source-order";
 
 test("new and removed sources preserve saved ordering", () => {
   assert.deepEqual(orderCalendarSources(["a", "new", "b"], ["removed", "b", "a"], id => id), ["b", "a", "new"]);
+  assert.deepEqual(orderCalendarSources(["b", "a"], [], id => id), orderCalendarSources(["a", "b"], [], id => id));
 });
 test("moving within an account preserves other accounts and handles edges", () => {
   const saved = ["other/b", "other/a", "self/b", "self/a"];

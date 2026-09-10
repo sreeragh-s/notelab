@@ -13,7 +13,7 @@ test.beforeEach(async ({ page }) => {
   await page.route("**/workspaces/workspace/calendar/**", async route => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith("/preferences")) { if (route.request().method() === "PUT") preferences = route.request().postDataJSON(); return route.fulfill({ json: preferences }); }
-    if (url.pathname.endsWith("/connections")) return route.fulfill({ json: { providerConfigured: true, connections: [{ workspaceId: "workspace", bindingId: "binding", accountId: "account", email: "calendar@example.test", status: "connected", pushAvailable: false }] } });
+    if (url.pathname.endsWith("/sources")) return route.fulfill({ json: { providerConfigured: true, connections: [{ workspaceId: "workspace", bindingId: "binding", accountId: "account", email: "calendar@example.test", status: "connected", pushAvailable: false }] } });
     if ((url.pathname.endsWith("/calendars") || url.pathname.endsWith("/catalog"))) return route.fulfill({ json: { calendars } });
     if (url.pathname.endsWith("/sync")) return route.fulfill({ json: { calendars, revisions: { primary: 1, holidays: 1 }, pending: false } });
     if (url.pathname.endsWith("/ranges")) return route.fulfill({ json: { calendarId: url.searchParams.get("calendarId"), start: url.searchParams.get("start"), end: url.searchParams.get("end"), generation: 1, revision: 1, events: [], complete: true, nextPageToken: null } });
@@ -112,4 +112,37 @@ test("only the eye changes visibility and Default never overlaps actions", async
   const center = box => box.y + box.height / 2;
   expect(Math.abs(center(more) - center(rowBox))).toBeLessThan(1);
   expect(Math.abs(center(eyeBox) - center(rowBox))).toBeLessThan(1);
+});
+
+
+test("calendar source panel pages independently and creates on its selected source", async ({ page }) => {
+  await page.getByRole("button", { name: "Personal Default", exact: true }).click();
+  const panel = page.getByRole("region", { name: "Personal upcoming events" });
+  await expect(panel).toBeVisible();
+  const initial = await panel.getByRole("status").textContent();
+  await panel.getByRole("button", { name: "Next 30 days" }).click();
+  await expect(panel.getByRole("status")).not.toHaveText(initial);
+  await panel.getByRole("button", { name: "Previous 30 days" }).click();
+  await expect(panel.getByRole("status")).toHaveText(initial);
+  await panel.getByRole("button", { name: "Create event", exact: true }).click();
+  await expect(page.getByLabel("Title", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Calendar", { exact: true })).toContainText("Personal");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Holidays in India", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Holidays in India upcoming events" }).getByRole("button", { name: "Create event", exact: true })).toBeDisabled();
+});
+
+test("source collapse and order survive reload", async ({ page }) => {
+  await expect(page.locator('[data-calendar-row]')).toHaveCount(2);
+  const name = await page.locator('[data-calendar-row]').last().locator('[data-sidebar=menu-button]').getAttribute("title");
+  await openCalendarMenu(page, name);
+  await page.getByRole("menuitem", { name: "Move up", exact: true }).click();
+  await expect(page.locator('[data-calendar-row]').first()).toContainText(name);
+  await page.getByRole("button", { name: "calendar@example.test", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Holidays in India", exact: true })).toHaveCount(0);
+  await page.reload();
+  const account = page.getByRole("button", { name: "calendar@example.test", exact: true });
+  await expect(account).toHaveAttribute("aria-expanded", "false");
+  await account.click();
+  await expect(page.locator('[data-calendar-row]').first()).toContainText(name);
 });

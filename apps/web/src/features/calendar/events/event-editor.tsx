@@ -41,7 +41,7 @@ export function EventEditor({ event, calendars, database, online, isNew, onSaved
   return <form className="grid gap-4 text-xs/relaxed" onSubmit={e => { e.preventDefault(); void save() }}>
     <fieldset className="grid gap-4" disabled={!online || pending || uncertain || !capability.allowed}>
       <Label className="grid min-w-0 gap-2">Title<Input required value={title} onChange={e => setTitle(e.target.value)} /></Label>
-      <Label className="grid min-w-0 gap-2">Calendar<Select value={calendarId} disabled={!isNew} onValueChange={setCalendarId}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{calendars.filter(c => c.bindingId === event.bindingId && calendarCapability("create", c.permissions).allowed).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></Label>
+      <Label className="grid min-w-0 gap-2">Calendar<Select value={calendarId} disabled={!isNew} onValueChange={setCalendarId}><SelectTrigger aria-label="Calendar"><SelectValue /></SelectTrigger><SelectContent>{calendars.filter(c => c.bindingId === event.bindingId && calendarCapability("create", c.permissions).allowed).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></Label>
       <EventTimingFields draft={draft} update={(key, value) => setDraft(current => ({ ...current, [key]: value }))} />
       <EventRecurrenceFields event={event} scope={scope} setScope={setScope} onChange={setRecurrence} />
       <Label className="grid min-w-0 gap-2">Guests<Input value={guests} onChange={e => setGuests(e.target.value)} placeholder="Emails separated by commas" /></Label>

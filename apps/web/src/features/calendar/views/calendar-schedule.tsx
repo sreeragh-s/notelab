@@ -1,3 +1,4 @@
+import { CalendarSourcePanel } from "./calendar-source-panel";
 import { useCalendarWorkspace } from "../workspace/calendar-workspace";
 import { CalendarEventPanel } from "./calendar-event-panel";
 import { CalendarStatus } from "./calendar-status";
@@ -20,7 +21,7 @@ function AccountData({ connection, userId, start, end, onData }: { connection: C
   useEffect(() => { onData(connection.bindingId, { events: cache.events ?? [], calendars: cache.calendars ?? [], database: cache.database, error: cache.error, loaded: cache.loaded ?? false, syncing: cache.syncing, online: cache.online, stale: cache.stale ?? true }) }, [connection.bindingId, cache.events, cache.calendars, cache.database, cache.error, cache.loaded, cache.syncing, cache.online, cache.stale, onData]);
   return null;
 }
-export function CalendarSchedule({ connections, userId, preferences }: { connections: CalendarConnection[]; userId: string; preferences: CalendarPreferences }) {
+export function CalendarSchedule({ connections, userId, preferences, preferenceWorkspaceId }: { preferenceWorkspaceId?: string; connections: CalendarConnection[]; userId: string; preferences: CalendarPreferences }) {
   const workspace = useCalendarWorkspace();
   const { query } = workspace;
   const search = useSearch({ from: "/app/calendar" }), navigate = useNavigate();
@@ -63,15 +64,15 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
     return () => { active = false; clearTimeout(timer) };
   }, [query, online, start, end, connections, preferences.hiddenCalendarKeys, preferences.removedCalendarKeys]);
   const visible = useMemo(() => query ? (searchEvents?.filter(event => calendarIsVisible(preferences, event.bindingId, event.calendarId)) ?? events.filter(e => `${e.title} ${e.description} ${e.location}`.toLowerCase().includes(query.toLowerCase()))) : events, [query, searchEvents, events, preferences]);
-  const open = useCallback((event: CalendarEvent) => { workspace.openPanel(); setEditing(false); setCreating(false); setSelected(event); void navigate({ to: "/calendar", search: { date, view, binding: event.bindingId, calendar: event.calendarId, event: event.eventId } }) }, [workspace.openPanel, navigate, date, view]);
-  const create = useCallback((day = date, hour = 9, duration = 30) => {
+  const open = useCallback((event: CalendarEvent) => { workspace.showSource(null); workspace.openPanel(); setEditing(false); setCreating(false); setSelected(event); void navigate({ to: "/calendar", search: { date, view, binding: event.bindingId, calendar: event.calendarId, event: event.eventId } }) }, [workspace.openPanel, navigate, date, view]);
+  const create = useCallback((day = date, hour = 9, duration = 30, target?: CalendarRecord) => {
     const writable = calendars.filter(c => c.permissions.write);
-    const calendar = resolveDefaultCalendar(writable, preferences);
+    const calendar = target ?? resolveDefaultCalendar(writable, preferences);
     if (!calendar) return;
     const connection = connections.find(c => c.bindingId === calendar.bindingId)!;
     let seed: CalendarEvent;
     try { seed = newCalendarEvent({ ...connection, calendarId: calendar.id, date: day, hour, timeZone: preferences.timeZone }); } catch (error) { toast.error(getApiErrorMessage(error)); return }
-    workspace.openPanel();
+    workspace.showSource(null); workspace.openPanel();
     setSelected({ ...seed, end: { dateTime: new Date(Date.parse(seed.start.dateTime!) + duration * 60000).toISOString(), timeZone: preferences.timeZone } }); setEditing(true); setCreating(true);
   }, [date, calendars, preferences, connections, workspace.openPanel]);
   const changeGeometry = useCallback(async (event: CalendarEvent) => {
@@ -89,6 +90,8 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
   const close = () => { setSelected(null); setEditing(false); setCreating(false); void navigate({ to: "/calendar", search: { date, view } }); };
   useEffect(() => workspace.register({ close, create: () => create() }));
   useEffect(() => { if (search.event) workspace.openPanel(); }, [search.event, workspace.openPanel]);
+  const sourceConnection = connections.find(connection => connection.bindingId === workspace.source?.bindingId);
+  const sourceCalendar = calendars.find(calendar => calendar.bindingId === workspace.source?.bindingId && calendar.id === workspace.source?.calendarId);
   const selection = selectionData(selected, snapshots, connections);
   const itemCache = useRef(new Map<string, CalendarItem>());
   const previousItems = useRef<CalendarItem[]>([]);
@@ -117,7 +120,7 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
     </div>
     <CalendarStatus data={data} online={online} error={searchError} />
     <CalendarSurface items={items} date={date} view={view} preferences={preferences} onNavigate={setPeriod} onRangeChange={setRange} onSelect={selectItem} onCreate={online ? create : undefined} onChange={changeItem} onError={onGeometryError} />
-    <CalendarEventPanel selected={selection.event} database={selection.database} calendars={selection.calendars} online={online} editing={editing} creating={creating} zone={preferences.timeZone} timeFormat={preferences.timeFormat} onClose={workspace.closePanel} onEdit={() => setEditing(true)} onDuplicate={() => { if (!selected) return; setSelected({ ...selected, eventId: `local-${crypto.randomUUID()}`, etag: "", title: `${selected.title} (copy)`, attendees: [], recurringEventId: undefined, originalStartTime: undefined, recurrence: undefined }); setCreating(true); setEditing(true) }} />
+    {sourceConnection && sourceCalendar ? <CalendarSourcePanel key={`${sourceConnection.bindingId}:${sourceCalendar.id}`} connection={sourceConnection} calendar={sourceCalendar} allCalendars={calendars} userId={userId} preferences={preferences} preferenceWorkspaceId={preferenceWorkspaceId ?? connections[0]!.workspaceId} onSelect={open} onCreate={() => create(todayInZone(preferences.timeZone), 9, 30, sourceCalendar)} /> : <CalendarEventPanel selected={selection.event} database={selection.database} calendars={selection.calendars} online={online} editing={editing} creating={creating} zone={preferences.timeZone} timeFormat={preferences.timeFormat} onClose={workspace.closePanel} onEdit={() => setEditing(true)} onDuplicate={() => { if (!selected) return; setSelected({ ...selected, eventId: `local-${crypto.randomUUID()}`, etag: "", title: `${selected.title} (copy)`, attendees: [], recurringEventId: undefined, originalStartTime: undefined, recurrence: undefined }); setCreating(true); setEditing(true) }} />}
   </div>;
 }
 
