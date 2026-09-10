@@ -16,7 +16,7 @@ Reference: [Notion Calendar documentation](https://www.notion.com/help/category/
 | 8 | General preferences | Implemented | Preference persistence/Today-alignment browser test; shared preview exclusion and safe maps-link tests; schema bounds/defaults tests; web typecheck. Source: [General settings](https://www.notion.com/help/notion-calendar-settings). |
 | 9 | Labeled time zones | Implemented | Browser add/rename/reorder/remove and four-column reload test; server preference migration/promotion/limits tests; web/server typechecks. |
 | 10 | Travel time zones | Implemented | Browser preview/restore/explicit-save test asserts no preference writes during preview; shared immutability/restore/invalid-zone tests; web typecheck. |
-| 11 | Cross-period search | Pending | — |
+| 11 | Cross-period search | Implemented | Browser finds/opens events years outside the grid, paginates and resets cursors on date filters; server unbounded-range/pagination and permission tests; server/web typechecks. Google [event-list search contract](https://developers.google.com/workspace/calendar/api/v3/reference/events/list). |
 | 12 | Commands and shortcut discovery | Pending | — |
 | 13 | Formatted descriptions | Pending | — |
 | 14 | Participant response notes | Pending | — |

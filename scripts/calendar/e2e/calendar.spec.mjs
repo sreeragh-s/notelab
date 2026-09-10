@@ -429,3 +429,26 @@ test("meeting preview reads today independently of the displayed period", async 
   await expect(page.getByRole("heading", { name: "Design review" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Studio", exact: true })).toHaveAttribute("href", /google.com\/maps\/search/);
 });
+
+test("search finds distant events with explicit pagination and date filters", async ({ page }) => {
+  const requests = [];
+  await page.route("**/search?**", route => {
+    const url = new URL(route.request().url()); requests.push(Object.fromEntries(url.searchParams));
+    const later = { ...event, eventId: url.searchParams.has("pageToken") ? "second" : "distant", title: url.searchParams.has("pageToken") ? "Second distant review" : "Distant design review", start: { dateTime: "2028-03-12T04:30:00Z", timeZone: "Asia/Kolkata" }, end: { dateTime: "2028-03-12T05:30:00Z", timeZone: "Asia/Kolkata" } };
+    return route.fulfill({ json: { events: [later], nextPageToken: url.searchParams.has("pageToken") ? null : "more" } });
+  });
+  await page.getByRole("textbox", { name: "Search calendar", exact: true }).fill("review");
+  const results = page.getByRole("region", { name: "Calendar search results", exact: true });
+  await expect(results.getByRole("button", { name: /Distant design review/ })).toBeVisible();
+  expect(requests[0]).not.toHaveProperty("start");
+  expect(requests[0]).not.toHaveProperty("end");
+  await results.getByRole("button", { name: "Load more results" }).click();
+  await expect(results.getByRole("button", { name: /Second distant review/ })).toBeVisible();
+  await results.getByRole("button", { name: /Distant design review/ }).click();
+  await expect(page.getByRole("heading", { name: "Distant design review" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await results.getByLabel("Search from date").fill("2028-01-01");
+  await results.getByLabel("Search through date").fill("2028-12-31");
+  await expect.poll(() => requests.at(-1)?.end).toContain("2028-12-31T18:30:00");
+  expect(requests.at(-1)).not.toHaveProperty("pageToken");
+});
