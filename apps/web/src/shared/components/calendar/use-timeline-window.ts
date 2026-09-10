@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { addCalendarDays, calendarDays, civilDayOrdinal, contiguousTimeline, dayInstant } from "@zilobase/features/calendar-layout";
 import type { CalendarSurfaceProps } from "./types";
 
-export function useTimelineWindow({ date, view, preferences: p, isRangeReady, onRangeChange }: CalendarSurfaceProps) {
+export function useTimelineWindow({ date, view, preferences: p, isRangeReady, onRangeChange, onViewportRangeChange }: CalendarSurfaceProps) {
   const initial = useMemo(() => calendarDays(date, view, p.weekStartsOn, p.visibleDayCount, p.showWeekends, p.alignStart), [date, view, p.weekStartsOn, p.visibleDayCount, p.showWeekends, p.alignStart]);
   const before = p.bufferBefore ?? (view === "month" ? 56 : 28), after = p.bufferAfter ?? (view === "month" ? 56 : 28);
   const windowFor = (first: string, last: string) => ({ first: addCalendarDays(first, -before - (view === "month" ? 7 : 0)), last: addCalendarDays(last, after + (view === "month" ? 7 : 0)) });
@@ -29,14 +29,16 @@ export function useTimelineWindow({ date, view, preferences: p, isRangeReady, on
   const first = complete ? days[coverage.first]! < pinnedFirst ? days[coverage.first]! : pinnedFirst : pinnedFirst;
   const last = complete ? days[coverage.last]! > pinnedLast ? days[coverage.last]! : pinnedLast : pinnedLast;
   const reachable = useMemo(() => Array.from({ length: civilDayOrdinal(last) - civilDayOrdinal(first) + 1 }, (_, i) => addCalendarDays(first, i)), [first, last]);
-  const report = useCallback((first: string, last: string) => {
+  const report = useCallback((first: string, last: string, retain = false) => {
+    onViewportRangeChange?.({ start: instant(first), end: instant(addCalendarDays(last, 1)) });
     visible.current = { first, last };
     setWindow(current => {
       const left = civilDayOrdinal(first) - civilDayOrdinal(current.first), right = civilDayOrdinal(current.last) - civilDayOrdinal(last);
       if (left > before / 2 && right > after / 2) return current;
-      return windowFor(first, last);
+      const next = windowFor(first, last);
+      return retain ? { first: next.first < current.first ? next.first : current.first, last: next.last > current.last ? next.last : current.last } : next;
     });
-  }, [before, after, view]);
+  }, [before, after, view, instant, onViewportRangeChange]);
   const markEmitted = (date: string) => { emitted.current = date; };
   return { days: reachable, ready, report, markEmitted, initial, jumped, loading: !ready(pinnedFirst, pinnedLast), beforeLoading: first > activeWindow.first, afterLoading: last < activeWindow.last };
 }

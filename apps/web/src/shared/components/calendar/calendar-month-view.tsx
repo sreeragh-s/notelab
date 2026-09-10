@@ -47,7 +47,7 @@ const CalendarMonthWeek = memo(function CalendarMonthWeek(props: MonthProps) {
   </div>;
 }, (a, b) => a.days === b.days && a.days.every(day => a.eventsByDay[day] === b.eventsByDay[day]) && a.preferences === b.preferences && a.online === b.online && a.writable === b.writable && a.card === b.card && a.onDay === b.onDay && a.onChange === b.onChange && a.onError === b.onError);
 const WEEK_HEIGHT = 144;
-export function CalendarMonthView(props: MonthProps & { loadingMessage?: string; beforeLoading: boolean; afterLoading: boolean; date: string; onDate: (date: string) => void; onViewport: (first: string, last: string) => void }) {
+export function CalendarMonthView(props: MonthProps & { loadingMessage?: string; beforeLoading: boolean; afterLoading: boolean; date: string; onDate: (date: string) => void; onViewport: (first: string, last: string, retain?: boolean) => void }) {
   const viewport = useRef<HTMLDivElement>(null);
   const emitted = useRef<string | null>(null);
   const previous = useRef<{ first: string; date: string } | null>(null);
@@ -71,6 +71,7 @@ export function CalendarMonthView(props: MonthProps & { loadingMessage?: string;
     const element = event.currentTarget;
     if (idle.current) clearTimeout(idle.current);
     const top = element.scrollTop, height = element.clientHeight;
+    props.onViewport(weeks[Math.min(count - 1, Math.floor(top / WEEK_HEIGHT))]![0]!, weeks[Math.min(count - 1, Math.floor((top + height - 1) / WEEK_HEIGHT))]![6]!, true);
     idle.current = setTimeout(() => {
       if (pointer.current) return;
       const firstIndex = Math.min(count - 1, Math.floor(top / WEEK_HEIGHT)), lastIndex = Math.min(count - 1, Math.floor((top + height - 1) / WEEK_HEIGHT));

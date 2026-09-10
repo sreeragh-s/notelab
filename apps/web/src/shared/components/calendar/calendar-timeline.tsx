@@ -6,7 +6,7 @@ import { CalendarDayColumn, type CalendarColumnActions } from "./calendar-day-co
 import { TimeAxis } from "./calendar-time-axis";
 import type { CalendarItem } from "./types";
 import type { ReactNode } from "react";
-export type TimelineProps = CalendarColumnActions & { days: string[]; target: string; eventsByDay: Record<string, CalendarItem[]>; zoneControls?: ReactNode; onViewport: (first: string, last: string) => void; beforeLoading: boolean; afterLoading: boolean; loadingMessage?: string; onVisibleDate: (date: string) => void };
+export type TimelineProps = CalendarColumnActions & { days: string[]; target: string; eventsByDay: Record<string, CalendarItem[]>; zoneControls?: ReactNode; onViewport: (first: string, last: string, retain?: boolean) => void; beforeLoading: boolean; afterLoading: boolean; loadingMessage?: string; onVisibleDate: (date: string) => void };
 const EMPTY: CalendarItem[] = [];
 export function CalendarTimeline({ days, target, eventsByDay, zoneControls, onViewport, beforeLoading, afterLoading, loadingMessage, onVisibleDate, ...actions }: TimelineProps) {
   const viewport = useRef<HTMLDivElement>(null);
@@ -51,6 +51,7 @@ export function CalendarTimeline({ days, target, eventsByDay, zoneControls, onVi
       setTop(old => Math.abs(old - element.scrollTop) > hourHeight ? element.scrollTop : old);
       const nextDirection = element.scrollLeft >= lastScroll.current ? 1 : -1; lastScroll.current = element.scrollLeft; setDirection(nextDirection);
       const first = geometry.positionToDate(element.scrollLeft), last = geometry.positionToDate(element.scrollLeft + Math.max(0, element.clientWidth - rail - 1));
+      onViewport(first, last, true);
       if (settle.current) clearTimeout(settle.current);
       settle.current = setTimeout(() => { if (active.current) return; onViewport(first, last); emitted.current = first; onVisibleDate(first); }, 100);
     }}>

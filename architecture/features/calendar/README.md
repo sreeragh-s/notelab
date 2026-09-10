@@ -181,3 +181,5 @@ The timed [continuous timeline](../../../apps/web/src/shared/components/calendar
 Month uses TanStack Virtual over complete, fixed-height week rows. Week-start keys remain stable when weekends are hidden. Extending earlier coverage adjusts the origin and pixel offset before paint; scroll handlers never restore attempted offsets. Row retirement occurs after gestures settle.
 
 [Interaction host](../../../apps/web/src/shared/components/calendar/calendar-interactions.tsx) retains pointer sessions and previews above virtualized columns, computes civil-date displacement with scroll deltas and stops writes into incomplete dates. One clock provider drives the continuous wall-clock line and today segment. Focused timed columns are pinned as one extra virtual item.
+
+Continuous scroll reports viewport demand separately from buffered demand. Passive dates replace route search without explicit navigation or renderer remount; explicit navigation retains the previous view until destination coverage arrives. Progress is inline in the toolbar, and initial visits use an inline loading surface.

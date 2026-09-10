@@ -16,12 +16,12 @@ export function useCalendarNavigation({ ready, online, error, initial, retry }: 
   const state = useRef({ ready, online, error }); state.current = { ready, online, error };
   const request = useCallback((range: CalendarWindow, commit: () => void) => {
     action.current = commit;
-    if (state.current.ready(range)) { action.current = null; setPending(false); commit(); return; }
+    if (state.current.ready(range)) { action.current = null; setPending(false); setTarget(null); commit(); return; }
     setTarget(current => current?.start === range.start && current.end === range.end ? current : range); setPending(true);
   }, []);
   useEffect(() => {
     if (!pending || !target || !ready(target)) return;
-    const commit = action.current; action.current = null; setPending(false); commit?.();
+    const commit = action.current; action.current = null; setPending(false); setTarget(null); commit?.();
   }, [pending, target, ready]);
   const cancel = useCallback(() => { action.current = null; setPending(false); setTarget(null); }, []);
   return { target, pending, request, cancel, retry, error: pending ? !online ? new Error("These dates are not cached. Connect to load them.") : error : undefined };

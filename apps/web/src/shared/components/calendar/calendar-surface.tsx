@@ -3,7 +3,7 @@ import { CalendarClockProvider } from "./current-time";
 import { useTimelineWindow } from "./use-timeline-window";
 import { CalendarTimeline } from "./calendar-timeline";
 import { CalendarDragContext } from "./drag-context";
-import { useId, useCallback, useMemo, useState } from "react";
+import { useId, useCallback, useMemo, useState, useRef } from "react";
 import { calendarDays, eventClock, createEventIndex } from "@zilobase/features/calendar-layout";
 import { Button } from "@/shared/ui/button";
 import { CalendarMonthView } from "./calendar-month-view";
@@ -13,6 +13,8 @@ export function CalendarSurface(props: CalendarSurfaceProps) {
  const { loadingMessage, zoneControls, items, date, view, preferences, onNavigate,  onSelect, onCreate, onChange, onError, renderItem } = props;
  const timeline = useTimelineWindow(props);
   const scope = useId();
+  const painted = useRef(false);
+  if (!timeline.loading) painted.current = true;
   const dragContext = useMemo(() => ({ scope, items: new Map(items.map(item => [item.id, item])) }), [scope, items]);
   const allDays = useMemo(() => calendarDays(date, view, preferences.weekStartsOn, preferences.visibleDayCount, preferences.showWeekends, preferences.alignStart), [date, view, preferences.weekStartsOn, preferences.visibleDayCount, preferences.showWeekends, preferences.alignStart]);
   const loadedDays = timeline.days;
@@ -35,5 +37,6 @@ export function CalendarSurface(props: CalendarSurfaceProps) {
   let content;
   if (view === "month") content = <CalendarMonthView loadingMessage={loadingMessage} beforeLoading={timeline.beforeLoading} afterLoading={timeline.afterLoading} date={date} onDate={next => { timeline.markEmitted(next); props.onVisibleDateChange?.(next); }} onViewport={timeline.report} days={timeline.days} eventsByDay={eventsByDay} preferences={preferences} online={Boolean(onChange)} writable={writable} card={card} onDay={day} onChange={change} onError={onError} />;
   else content = <CalendarTimeline loadingMessage={loadingMessage} beforeLoading={timeline.beforeLoading} afterLoading={timeline.afterLoading} zoneControls={zoneControls} canCreate={Boolean(onCreate)} days={timeline.days.filter(day => preferences.showWeekends || view === "day" || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()))} target={days[0]!} onViewport={timeline.report} onVisibleDate={next => { timeline.markEmitted(next); props.onVisibleDateChange?.(next); }} eventsByDay={eventsByDay} preferences={{ ...preferences, showWeekends: preferences.showWeekends || view === "day", visibleDayCount: view === "day" ? 1 : days.length }} card={card} writable={writable} onDay={day} onCreate={create} onChange={change} onError={onError} />;
+  if (timeline.loading && (!painted.current || timeline.jumped)) return <div role="status" aria-busy="true" className="flex min-h-0 flex-1 items-center justify-center text-sm text-content-secondary">{loadingMessage ?? "Loading calendar…"}</div>;
   return <CalendarClockProvider><CalendarDragContext.Provider value={dragContext}><CalendarInteractionHost ready={timeline.ready} weekends={preferences.showWeekends || view === "day"}>{content}</CalendarInteractionHost></CalendarDragContext.Provider></CalendarClockProvider>;
 }
