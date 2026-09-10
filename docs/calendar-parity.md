@@ -111,3 +111,4 @@ Correction acceptance (2026-09-10): all 66 Calendar browser scenarios pass. Cach
 - Geometry: civil-date/DST/leap-day, business-day and fractional anchor tests live in `packages/features/src/calendar-layout/timeline.test.ts`. UI acceptance remains manual.
 - Range coordination: overlapping-consumer/cancellation tests accompany cache completeness and identity tests in `calendar-cache.test.mjs`.
 - Read delivery: provider gateway tests and typechecking validate abort propagation; range pagination retains complete-only publication.
+- Rolling buffers: advanced preferences isolate user/server settings; request chunks remain below the server limit and cache retention pins active ranges.

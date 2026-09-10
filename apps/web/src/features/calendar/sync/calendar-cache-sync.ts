@@ -1,8 +1,9 @@
+import { emitCalendarMetric } from "../metrics";
 import { requestCalendarIntervals } from "./calendar-range-queue";
 import { missingCalendarRanges } from "./range-coverage";
 import { runCalendarSyncOnce } from "./calendar-sync-queue";
 import { calendarApiBasePath, type CalendarRangeResponse, type CalendarSyncResponse } from "@zilobase/features/calendar";
-import { applyCalendarRange, calendarRangeKey, evictCalendarRanges, type CalendarDatabase } from "../storage/calendar-database";
+import { applyCalendarRange, calendarBufferBudgetAvailable, calendarRangeKey, evictCalendarRanges, type CalendarDatabase } from "../storage/calendar-database";
 type Transport = <T>(path: string, options?: RequestInit) => Promise<T>;
 export async function synchronizeCalendarCache(database: CalendarDatabase, start: string, end: string, fetcher: Transport, recover = true, options: { missingOnly?: boolean; priority?: number; metadataLoaded?: boolean; hiddenKeys?: string[]; requestId?: string; isCurrent?: () => boolean; signal?: AbortSignal } = {}) {
   return (async () => {
@@ -39,10 +40,12 @@ export async function synchronizeCalendarCache(database: CalendarDatabase, start
     sync = { calendars: await database.calendars.toArray() };
     await Promise.all(sync.calendars.filter(c => c.permissions.read && !c.permissions.freeBusyOnly && !options.hiddenKeys?.includes(JSON.stringify([database.identity.bindingId, c.id]))).map(async calendar => {
       const cached = await database.ranges.where("calendarId").equals(calendar.id).toArray();
+      const dense = await database.state.get(`density:${calendar.id}`);
       const requested = options.missingOnly ? missingCalendarRanges(start, end, cached) : [{ start, end }];
       pinned.push(...cached.filter(r => Date.parse(r.start) < Date.parse(end) && Date.parse(r.end) > Date.parse(start)).map(r => r.key));
-      for (const range of requested.flatMap(r => calendarRequestRanges(r.start, r.end))) {
+      for (const range of requested.flatMap(r => calendarRequestRanges(r.start, r.end, dense?.revision ? 7 : 28))) {
       if (options.isCurrent && !options.isCurrent()) return;
+      if ((options.priority ?? 0) < 10 && !calendarBufferBudgetAvailable(database)) return;
       await requestCalendarIntervals(`${database.name}:${calendar.id}`, database.name, range, async ({ start, end }, signal) => {
       const load = async () => {
       signal.throwIfAborted();
@@ -51,14 +54,17 @@ export async function synchronizeCalendarCache(database: CalendarDatabase, start
       const prior = await database.ranges.get(calendarRangeKey(calendar.id, start, end));
       const state = await database.state.get(calendar.id);
       if (prior && Date.now() - prior.fetchedAt < 2000 && (!state || (state.revision <= prior.revision && state.generation <= prior.generation))) return;
-      let pageToken: string | null = null;
+      let pageToken: string | null = null; let pages = 0;
       do {
         const params: URLSearchParams = new URLSearchParams({ calendarId: calendar.id, start, end, ...(pageToken ? { pageToken } : {}) });
         const response: CalendarRangeResponse = await fetcher<CalendarRangeResponse>(`${base}/ranges?${params}`, { signal });
         if (!database.isOpen()) return;
+        pages++;
+        if (pages > 1) await database.state.put({ key: `density:${calendar.id}`, revision: 1, generation: 1 });
         await applyCalendarRange(database, response); pageToken = response.nextPageToken;
         signal.throwIfAborted();
       } while (pageToken);
+      emitCalendarMetric("range_pages", pages);
       };
       if (typeof navigator !== "undefined" && navigator.locks) await navigator.locks.request(`${database.name}:range:${calendar.id}:${start}:${end}`, { signal }, load);
       else await load();
@@ -71,12 +77,12 @@ export async function synchronizeCalendarCache(database: CalendarDatabase, start
 }
 
 // Keep moving month windows within the server's 62-day per-request limit.
-export function calendarRequestRanges(start: string, end: string) {
+export function calendarRequestRanges(start: string, end: string, chunkDays = 28) {
   const ranges: { start: string; end: string }[] = [];
   let cursor = Date.parse(start);
   const until = Date.parse(end);
   while (cursor < until) {
-    const next = Math.min(until, cursor + 60 * 86400_000);
+    const next = Math.min(until, cursor + Math.min(60, Math.max(1, chunkDays)) * 86400_000);
     ranges.push({ start: new Date(cursor).toISOString(), end: new Date(next).toISOString() });
     cursor = next;
   }

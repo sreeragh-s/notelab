@@ -42,7 +42,7 @@ Calendar preference JSON also stores local color overrides and removed-calendar 
 
 ## Browser storage
 
-[Dexie storage](../../../apps/web/src/features/calendar/storage/calendar-database.ts) isolates each server/user/workspace/binding. Completed range membership and event records commit together; older generations/revisions and cross-identity payloads are rejected. Cache reads distinguish unloaded, empty, and stale ranges. Monthly LRU eviction retains pending mutation records. App session composition closes Calendar and Mail databases before offline-store deletion. Account disconnect removes only its own Calendar cache.
+[Dexie storage](../../../apps/web/src/features/calendar/storage/calendar-database.ts) isolates each server/user/workspace/binding. Completed range membership and event records commit together; older generations/revisions and cross-identity payloads are rejected. Cache reads distinguish unloaded, empty, and stale ranges. A shared 50MiB soft retention budget evicts least-recently-read ranges across open user/server bindings, retaining current ranges and pending mutations. App session composition closes Calendar and Mail databases before offline-store deletion. Account disconnect removes only its own Calendar cache.
 
 [Cache synchronization](../../../apps/web/src/features/calendar/sync/calendar-cache-sync.ts) serializes catalog work and shares overlapping calendar intervals through the range scheduler. Destination reads have priority over queued buffers; superseded work stops at request/range boundaries. Missing-only loads compose existing coverage and fetch holes without replacing completed snapshots with partial pages. Recovery refreshes still revalidate cached ranges. IndexedDB is authoritative for event presentation; account and preference queries use TanStack Query.
 
@@ -173,3 +173,5 @@ The [navigation controller](../../../apps/web/src/features/calendar/workspace/ca
 [Timeline geometry](../../../packages/features/src/calendar-layout/timeline.ts) provides civil-date ranks, hidden-weekend mapping, fractional scroll anchors and contiguous coverage bounds independently of transport and rendering. Civil dates use Temporal rather than elapsed zoned milliseconds.
 
 Range reads share overlapping jobs with two foreground slots per binding and four globally; prefetch leaves one slot free. Range requests use 1,000-event Google pages and forward read cancellation through the gateway timeout. Transient GET failures retry with bounded jitter; writes are never automatically retried by this transport.
+
+Date buffers are user/server-local advanced preferences (28 days per side for timed views, 56 for month, configurable 7–180). Requests split at 28 days, reduced to seven for calendars with paginated ranges. Cache pressure suspends speculative reads.

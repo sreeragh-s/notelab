@@ -10,6 +10,8 @@ export type CalendarItem = CalendarSpan & {
   editable?: boolean;
 };
 export type CalendarDisplayPreferences = {
+  bufferBefore?: number;
+  bufferAfter?: number;
   timeZoneColumns?: { zone: string; label: string }[];
   alignStart?: boolean;
   visibleDayCount?: number;

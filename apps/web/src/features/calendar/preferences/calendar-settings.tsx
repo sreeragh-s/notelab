@@ -1,3 +1,4 @@
+import { CalendarBufferSettings } from "./calendar-buffer-preferences";
 import { CalendarTimeZones } from "./calendar-time-zones";
 import { Link } from "@tanstack/react-router";
 import { requestCalendarNotificationPermission } from "../reminders/notification-delivery";
@@ -18,6 +19,7 @@ export function CalendarSettings({ value, onSave, pending }: { value: CalendarPr
     <div className="flex gap-2"><Button asChild variant="outline"><Link to="/settings/preferences">Appearance settings</Link></Button><Button asChild variant="outline"><Link to="/settings/profile">Profile settings</Link></Button></div>
     <Label>Hour height (pixels)<Input type="number" min={32} max={120} value={draft.hourHeight ?? 48} onChange={event => { const hourHeight = Number(event.target.value); if (Number.isInteger(hourHeight) && hourHeight >= 32 && hourHeight <= 120) setDraft({ ...draft, hourHeight }); }} /></Label>
     <div className="flex gap-2"><Button type="button" variant="outline" disabled={(draft.hourHeight ?? 48) <= 32} onClick={() => setDraft({ ...draft, hourHeight: Math.max(32, (draft.hourHeight ?? 48) - 8) })}>Denser hours</Button><Button type="button" variant="outline" disabled={(draft.hourHeight ?? 48) >= 120} onClick={() => setDraft({ ...draft, hourHeight: Math.min(120, (draft.hourHeight ?? 48) + 8) })}>Taller hours</Button><Button type="button" variant="ghost" onClick={() => setDraft({ ...draft, hourHeight: 48 })}>Reset hour height</Button></div>
+    <CalendarBufferSettings />
     <CalendarTimeZones value={draft} onChange={setDraft} />
     <Label>Week starts on<Select value={String(draft.weekStartsOn)} onValueChange={day => setDraft({ ...draft, weekStartsOn: Number(day) as CalendarPreferences["weekStartsOn"] })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day, i) => <SelectItem key={day} value={String(i)}>{day}</SelectItem>)}</SelectContent></Select></Label>
     <Label>Time format<Select value={draft.timeFormat} onValueChange={format => setDraft({ ...draft, timeFormat: format as "12" | "24" })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="12">12 hour</SelectItem><SelectItem value="24">24 hour</SelectItem></SelectContent></Select></Label>

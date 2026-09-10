@@ -1,3 +1,4 @@
+import { useCalendarBuffers } from "../preferences/calendar-buffer-preferences";
 import { calendarRangeReady, calendarSnapshotMatches } from "../sync/range-coverage";
 import { calendarDestinationRange, useCalendarNavigation } from "../workspace/calendar-navigation";
 import { CalendarTimeZones } from "../preferences/calendar-time-zones";
@@ -37,7 +38,8 @@ export function CalendarSchedule({ connections, userId, preferences: savedPrefer
   const { query } = workspace;
   const search = useSearch({ from: "/app/calendar" }), navigate = useNavigate();
   const view = normalizeCalendarView(search.view ?? preferences.view), date = search.date ?? todayInZone(preferences.timeZone);
-  const displayPreferences = useMemo(() => ({ ...preferences, visibleDayCount: search.days ?? 7, alignStart: search.align }), [preferences, search.days, search.align]);
+  const { value: buffers } = useCalendarBuffers();
+  const displayPreferences = useMemo(() => ({ ...preferences, bufferBefore: view === "month" ? buffers.monthBefore : buffers.before, bufferAfter: view === "month" ? buffers.monthAfter : buffers.after, visibleDayCount: search.days ?? 7, alignStart: search.align }), [preferences, search.days, search.align, view, buffers.before, buffers.after, buffers.monthBefore, buffers.monthAfter]);
   const allDays = useMemo(() => calendarDays(date, view, preferences.weekStartsOn, search.days, preferences.showWeekends, search.align), [date, view, preferences.weekStartsOn, search.days, preferences.showWeekends, search.align]);
   const [range, setRange] = useState<CalendarRange | null>(null);
   const cacheStart = range?.start ?? dayInstant(allDays[0]!, preferences.timeZone);
