@@ -1,10 +1,11 @@
+import { requestCalendarIntervals } from "./calendar-range-queue";
 import { missingCalendarRanges } from "./range-coverage";
 import { runCalendarSyncOnce } from "./calendar-sync-queue";
 import { calendarApiBasePath, type CalendarRangeResponse, type CalendarSyncResponse } from "@zilobase/features/calendar";
 import { applyCalendarRange, calendarRangeKey, evictCalendarRanges, type CalendarDatabase } from "../storage/calendar-database";
 type Transport = <T>(path: string, options?: RequestInit) => Promise<T>;
-export async function synchronizeCalendarCache(database: CalendarDatabase, start: string, end: string, fetcher: Transport, recover = true, options: { missingOnly?: boolean; priority?: number; metadataLoaded?: boolean; hiddenKeys?: string[]; requestId?: string; isCurrent?: () => boolean } = {}) {
-  return runCalendarSyncOnce(database, JSON.stringify([start, end, recover, options.missingOnly, options.metadataLoaded, options.hiddenKeys, options.requestId]), async () => {
+export async function synchronizeCalendarCache(database: CalendarDatabase, start: string, end: string, fetcher: Transport, recover = true, options: { missingOnly?: boolean; priority?: number; metadataLoaded?: boolean; hiddenKeys?: string[]; requestId?: string; isCurrent?: () => boolean; signal?: AbortSignal } = {}) {
+  return (async () => {
     if (options.isCurrent && !options.isCurrent()) return;
     const base = `${calendarApiBasePath(database.identity.workspaceId)}/connections/${encodeURIComponent(database.identity.bindingId)}`;
     let sync: Pick<CalendarSyncResponse, "calendars"> = { calendars: await database.calendars.toArray() };
@@ -23,6 +24,7 @@ export async function synchronizeCalendarCache(database: CalendarDatabase, start
       await storeMetadata();
       await database.state.put({ key: "last_recovery", revision: Date.now(), generation: 1 });
     };
+    await runCalendarSyncOnce(database, JSON.stringify(["metadata", recover, options.metadataLoaded]), async () => {
     if (recover) {
       if (typeof navigator !== "undefined" && navigator.locks) await navigator.locks.request(`${database.name}:provider-recovery`, recoverMetadata);
       else await recoverMetadata();
@@ -32,33 +34,40 @@ export async function synchronizeCalendarCache(database: CalendarDatabase, start
       await storeMetadata();
     }
     if (!database.isOpen()) return;
-    const pinned = [];
-    for (const calendar of sync.calendars.filter(c => c.permissions.read && !c.permissions.freeBusyOnly && !options.hiddenKeys?.includes(JSON.stringify([database.identity.bindingId, c.id])))) {
+    }, options.priority);
+    const pinned: string[] = [];
+    sync = { calendars: await database.calendars.toArray() };
+    await Promise.all(sync.calendars.filter(c => c.permissions.read && !c.permissions.freeBusyOnly && !options.hiddenKeys?.includes(JSON.stringify([database.identity.bindingId, c.id]))).map(async calendar => {
       const cached = await database.ranges.where("calendarId").equals(calendar.id).toArray();
       const requested = options.missingOnly ? missingCalendarRanges(start, end, cached) : [{ start, end }];
       pinned.push(...cached.filter(r => Date.parse(r.start) < Date.parse(end) && Date.parse(r.end) > Date.parse(start)).map(r => r.key));
       for (const range of requested.flatMap(r => calendarRequestRanges(r.start, r.end))) {
       if (options.isCurrent && !options.isCurrent()) return;
-      const { start, end } = range;
+      await requestCalendarIntervals(`${database.name}:${calendar.id}`, database.name, range, async ({ start, end }, signal) => {
       const load = async () => {
+      signal.throwIfAborted();
+      const covered = await database.ranges.where("calendarId").equals(calendar.id).toArray();
+      if (options.missingOnly && !missingCalendarRanges(start, end, covered).length) return;
       const prior = await database.ranges.get(calendarRangeKey(calendar.id, start, end));
       const state = await database.state.get(calendar.id);
       if (prior && Date.now() - prior.fetchedAt < 2000 && (!state || (state.revision <= prior.revision && state.generation <= prior.generation))) return;
       let pageToken: string | null = null;
       do {
         const params: URLSearchParams = new URLSearchParams({ calendarId: calendar.id, start, end, ...(pageToken ? { pageToken } : {}) });
-        const response: CalendarRangeResponse = await fetcher<CalendarRangeResponse>(`${base}/ranges?${params}`);
+        const response: CalendarRangeResponse = await fetcher<CalendarRangeResponse>(`${base}/ranges?${params}`, { signal });
         if (!database.isOpen()) return;
         await applyCalendarRange(database, response); pageToken = response.nextPageToken;
+        signal.throwIfAborted();
       } while (pageToken);
       };
-      if (typeof navigator !== "undefined" && navigator.locks) await navigator.locks.request(`${database.name}:range:${calendar.id}:${start}:${end}`, load);
+      if (typeof navigator !== "undefined" && navigator.locks) await navigator.locks.request(`${database.name}:range:${calendar.id}:${start}:${end}`, { signal }, load);
       else await load();
-      pinned.push(calendarRangeKey(calendar.id, start, end));
+      }, options.priority, options.signal);
+      pinned.push(calendarRangeKey(calendar.id, range.start, range.end));
       }
-    }
+    }));
     await evictCalendarRanges(database, pinned);
-  }, options.priority);
+  })();
 }
 
 // Keep moving month windows within the server's 62-day per-request limit.

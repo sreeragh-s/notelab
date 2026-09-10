@@ -1,4 +1,16 @@
 export function register({ assert, loadModule, test }) {
+  test("overlapping calendar requests share delivery and isolate cancellation", async () => {
+    const { requestCalendarIntervals } = await loadModule("/src/features/calendar/sync/calendar-range-queue.ts");
+    const calls = []; let release;
+    const barrier = new Promise(resolve => { release = resolve; });
+    const run = async range => { calls.push([range.start, range.end]); await barrier; };
+    const signal = new AbortController();
+    const a = requestCalendarIntervals("overlap", "account", { start: "2026-09-01", end: "2026-09-10" }, run, 10, signal.signal);
+    const b = requestCalendarIntervals("overlap", "account", { start: "2026-09-05", end: "2026-09-12" }, run, 10);
+    signal.abort(); await assert.rejects(a, { name: "AbortError" }); release(); await b;
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1][0].slice(0, 10), "2026-09-10");
+  });
   test("Calendar snapshots reject partial and cross-account data and keep empty coverage", async () => {
     const fake = await import("fake-indexeddb"); globalThis.indexedDB = fake.indexedDB; globalThis.IDBKeyRange = fake.IDBKeyRange;
     const { openCalendarDatabase, applyCalendarRange, readCalendarRangeCache, destroyCalendarDatabase } = await loadModule("/src/features/calendar/storage/calendar-database.ts");

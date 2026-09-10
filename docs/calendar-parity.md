@@ -109,3 +109,4 @@ Correction acceptance (2026-09-10): all 66 Calendar browser scenarios pass. Cach
 ## Continuous timeline corrections
 
 - Geometry: civil-date/DST/leap-day, business-day and fractional anchor tests live in `packages/features/src/calendar-layout/timeline.test.ts`. UI acceptance remains manual.
+- Range coordination: overlapping-consumer/cancellation tests accompany cache completeness and identity tests in `calendar-cache.test.mjs`.

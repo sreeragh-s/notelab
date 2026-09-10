@@ -44,7 +44,7 @@ Calendar preference JSON also stores local color overrides and removed-calendar 
 
 [Dexie storage](../../../apps/web/src/features/calendar/storage/calendar-database.ts) isolates each server/user/workspace/binding. Completed range membership and event records commit together; older generations/revisions and cross-identity payloads are rejected. Cache reads distinguish unloaded, empty, and stale ranges. Monthly LRU eviction retains pending mutation records. App session composition closes Calendar and Mail databases before offline-store deletion. Account disconnect removes only its own Calendar cache.
 
-[Cache synchronization](../../../apps/web/src/features/calendar/sync/calendar-cache-sync.ts) serializes per binding and coalesces equal requests. Destination reads have priority over queued buffers; superseded work stops at request/range boundaries. Missing-only loads compose existing coverage and fetch holes without replacing completed snapshots with partial pages. Recovery refreshes still revalidate cached ranges. IndexedDB is authoritative for event presentation; account and preference queries use TanStack Query.
+[Cache synchronization](../../../apps/web/src/features/calendar/sync/calendar-cache-sync.ts) serializes catalog work and shares overlapping calendar intervals through the range scheduler. Destination reads have priority over queued buffers; superseded work stops at request/range boundaries. Missing-only loads compose existing coverage and fetch holes without replacing completed snapshots with partial pages. Recovery refreshes still revalidate cached ranges. IndexedDB is authoritative for event presentation; account and preference queries use TanStack Query.
 
 ## Views and time
 

@@ -53,6 +53,18 @@ export async function applyCalendarRange(database: CalendarDatabase, response: C
       if (!matchesIdentity(event, database.identity, response.calendarId)) throw new Error("Calendar response identity mismatch");
       const eventKey = calendarEventKey(event); if (!pending.has(eventKey)) await database.events.put({ key: eventKey, event });
     }
+    // An authoritative absence must also leave older overlapping memberships.
+    const incoming = new Set(events.map(calendarEventKey));
+    const older = await database.ranges.where("calendarId").equals(response.calendarId).toArray();
+    for (const range of older) {
+      if (newerRevision(range, response)) continue;
+      const rows = await database.events.bulkGet(range.eventKeys);
+      const eventKeys = range.eventKeys.filter((eventKey, index) => {
+        const event = rows[index]?.event;
+        return pending.has(eventKey) || incoming.has(eventKey) || !event || !eventOverlaps(event, response.start, response.end, event.start.timeZone ?? "UTC");
+      });
+      if (eventKeys.length !== range.eventKeys.length) await database.ranges.update(range.key, { eventKeys });
+    }
     await database.ranges.put({ key, calendarId: response.calendarId, start: response.start, end: response.end, eventKeys: [...new Set([...events.map(calendarEventKey).filter(key => !pending.has(key)), ...pendingRows.filter(row => row.optimistic?.calendarId === response.calendarId && eventOverlaps(row.optimistic, response.start, response.end, row.optimistic.start.timeZone ?? "UTC")).map(row => row.eventKey)])], generation: response.generation, revision: response.revision, fetchedAt: Date.now(), accessedAt: Date.now() });
     await database.state.put({ key: response.calendarId, generation: response.generation, revision: response.revision });
     return true;
