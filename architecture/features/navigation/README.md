@@ -22,6 +22,8 @@ Navigation reflects accessible content and user sidebar preferences. [Sidebar co
 
 ## Side effects, failures and recovery
 
+Calendar sidebar controls share the content pane's Calendar controller through a single provider in the [application layout](../../../apps/web/src/app/shell/content/app-layout.tsx), above both sibling subtrees. This boundary keeps source selection, dock actions and travel-zone display synchronized. The [provider regression test](../../../apps/web/test/app/calendar-provider-boundary.test.mjs) renders the real shell composition with unrelated surfaces stubbed and asserts both consumers receive the same context.
+
 Hierarchy changes and workspace switches invalidate navigation state. Preserve expansion, ordering, recency, selected view and realtime reconciliation while separating actions from rendering.
 
 ## Verification and change points

@@ -116,13 +116,15 @@ export function AppLayout({
       }
     >
       <AppSearchProvider>
-        <AppLayoutWithRoutePage
-          pathname={pathname}
-          utilitySidebar={utilitySidebar}
-          utilitySidebarOpen={utilitySidebarOpen}
-        >
-          {children}
-        </AppLayoutWithRoutePage>
+        <CalendarWorkspaceProvider>
+          <AppLayoutWithRoutePage
+            pathname={pathname}
+            utilitySidebar={utilitySidebar}
+            utilitySidebarOpen={utilitySidebarOpen}
+          >
+            {children}
+          </AppLayoutWithRoutePage>
+        </CalendarWorkspaceProvider>
       </AppSearchProvider>
     </SidebarProvider>
   )
@@ -192,7 +194,7 @@ function AppLayoutWithRoutePage({
 }
 
 function AppLayoutContent(props: ComponentProps<typeof AppLayoutContentInner>) {
-  return <CalendarWorkspaceProvider><AppLayoutContentInner {...props} /></CalendarWorkspaceProvider>;
+  return <AppLayoutContentInner {...props} />;
 }
 
 function AppLayoutContentInner({
