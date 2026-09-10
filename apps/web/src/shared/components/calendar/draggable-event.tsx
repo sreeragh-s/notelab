@@ -1,3 +1,4 @@
+import { useCalendarInteraction } from "./calendar-interactions";
 import { createPortal } from "react-dom";
 import type { CalendarItem } from "./types";
 import { useEffect, useRef, useState, type ReactNode, type PointerEvent } from "react";
@@ -5,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode, type PointerEvent } from "
 import { shiftEventGeometry } from "./event-geometry";
 
 export function DraggableEvent({ event, zone, dayWidth, hourHeight = 48, disabled, onChange, onError, children }: { event: CalendarItem; zone: string; dayWidth: number; hourHeight?: number; disabled: boolean; onChange: (event: CalendarItem) => void; onError?: (error: Error) => void; children: ReactNode }) {
+  const interaction = useCalendarInteraction();
   const origin = useRef<{ x: number; y: number; resize: "start" | "end" | null; dayWidth: number; preview?: { left: number; top: number; width: number; height: number } } | null>(null), [offset, setOffset] = useState({ x: 0, y: 0 });
   const frame = useRef<number | null>(null);
   const preview = useRef({ x: 0, y: 0 });
@@ -15,6 +17,7 @@ export function DraggableEvent({ event, zone, dayWidth, hourHeight = 48, disable
   const down = (e: PointerEvent<HTMLDivElement>) => {
     if (disabled || e.button !== 0) return;
     const edge = (e.target as HTMLElement).closest("[data-resize]")?.getAttribute("data-resize") as "start" | "end" | undefined;
+    if (interaction && e.currentTarget.closest("[data-calendar-timeline-scroll], [data-calendar-month-scroll]")) { interaction(e, { event, zone, hourHeight, resize: edge ?? null, content: children, onChange, onError }); return; }
     const column = e.currentTarget.closest<HTMLElement>("[data-calendar-columns]");
     const measuredWidth = column ? column.clientWidth / Number(column.dataset.calendarColumns) : dayWidth;
     origin.current = { preview: e.currentTarget.closest("[data-calendar-day-column]") ? e.currentTarget.getBoundingClientRect() : undefined, dayWidth: measuredWidth, x: e.clientX, y: e.clientY, resize: edge ?? null }; moved.current = false;

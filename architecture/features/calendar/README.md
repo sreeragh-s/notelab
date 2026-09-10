@@ -179,3 +179,5 @@ Date buffers are user/server-local advanced preferences (28 days per side for ti
 The timed [continuous timeline](../../../apps/web/src/shared/components/calendar/calendar-timeline.tsx) virtualizes stable date columns with one native two-axis scroller. Column headers and timezone rails are sticky; the full-height day bodies no longer synchronize independent scroll positions. Width is derived from the visible day count, and extending coverage preserves a fractional date anchor.
 
 Month uses TanStack Virtual over complete, fixed-height week rows. Week-start keys remain stable when weekends are hidden. Extending earlier coverage adjusts the origin and pixel offset before paint; scroll handlers never restore attempted offsets. Row retirement occurs after gestures settle.
+
+[Interaction host](../../../apps/web/src/shared/components/calendar/calendar-interactions.tsx) retains pointer sessions and previews above virtualized columns, computes civil-date displacement with scroll deltas and stops writes into incomplete dates. One clock provider drives the continuous wall-clock line and today segment. Focused timed columns are pinned as one extra virtual item.

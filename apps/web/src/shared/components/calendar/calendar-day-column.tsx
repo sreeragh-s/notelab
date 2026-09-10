@@ -1,7 +1,7 @@
 import { memo, useMemo, useRef, type ReactNode } from "react";
 import { timedLayout } from "@zilobase/features/calendar-layout";
 import { Button } from "@/shared/ui/button";
-import { CalendarDateLabel, CurrentTime } from "./current-time";
+import { CalendarDateLabel } from "./current-time";
 import { DraggableEvent } from "./draggable-event";
 import { calendarItemKey, type CalendarItem, type CalendarDisplayPreferences } from "./types";
 import type { CalendarScrollGroup } from "./calendar-scroll-group";
@@ -27,7 +27,7 @@ type Props = CalendarColumnActions & {
   scrollGroup?: CalendarScrollGroup;
 };
 /** A complete day: date header, all-day lane and independently scrolling time body. */
-export const CalendarDayColumn = memo(function CalendarDayColumn({ day, periodDays, items, preferences, prepared = true, canCreate, card, writable, onDay, onCreate, onChange, onError, allDayCollapsed, onExpandAllDay, scrollGroup, viewportTop = 0, viewportHeight = 800 }: Props) {
+export const CalendarDayColumn = memo(function CalendarDayColumn({ day, items, preferences, prepared = true, canCreate, card, writable, onDay, onCreate, onChange, onError, allDayCollapsed, onExpandAllDay, viewportTop = 0, viewportHeight = 800 }: Props) {
   const hourHeight = preferences.hourHeight ?? 48, pixelsPerMinute = hourHeight / 60;
   const header = useRef<HTMLElement>(null), body = useRef<HTMLDivElement>(null);
   const slot = useRef<{ y: number; hour: number } | null>(null);
@@ -49,7 +49,7 @@ export const CalendarDayColumn = memo(function CalendarDayColumn({ day, periodDa
           if (start) onCreate(day, start.hour, Math.max(30, Math.round(Math.max(0, event.clientY - start.y) / pixelsPerMinute / 15) * 15));
         }} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onCreate(day, hour, 30); } }} />)}
         {layout.filter(item => item.bottom * pixelsPerMinute >= viewportTop - viewportHeight && item.top * pixelsPerMinute <= viewportTop + viewportHeight * 2).map(item => <div key={item.event.id} className="absolute rounded-md" style={{ top: item.top * pixelsPerMinute, height: Math.max(18, (item.bottom - item.top) * pixelsPerMinute), left: `${item.column / item.columns * 100}%`, width: `${100 / item.columns}%` }}><DraggableEvent event={item.event} zone={preferences.timeZone} hourHeight={hourHeight} dayWidth={1} disabled={!writable(item.event)} onChange={onChange} onError={onError}>{card(item.event)}</DraggableEvent></div>)}
-        <CurrentTime hourHeight={hourHeight} day={day} days={periodDays ?? [day]} zone={preferences.timeZone} /></>}
+        </>}
       </div>
     </div>
   </section>;

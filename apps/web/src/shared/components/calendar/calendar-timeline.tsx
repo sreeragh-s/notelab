@@ -1,8 +1,9 @@
+import { TimelineCurrentTime } from "./current-time";
 import { useLayoutEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useVirtualizer, defaultRangeExtractor } from "@tanstack/react-virtual";
 import { timelineGeometry } from "@zilobase/features/calendar-layout";
 import { CalendarDayColumn, type CalendarColumnActions } from "./calendar-day-column";
-import { TimeAxis } from "./time-axis";
+import { TimeAxis } from "./calendar-time-axis";
 import type { CalendarItem } from "./types";
 import type { ReactNode } from "react";
 export type TimelineProps = CalendarColumnActions & { days: string[]; target: string; eventsByDay: Record<string, CalendarItem[]>; zoneControls?: ReactNode; onViewport: (first: string, last: string) => void; beforeLoading: boolean; afterLoading: boolean; loadingMessage?: string; onVisibleDate: (date: string) => void };
@@ -10,6 +11,7 @@ const EMPTY: CalendarItem[] = [];
 export function CalendarTimeline({ days, target, eventsByDay, zoneControls, onViewport, beforeLoading, afterLoading, loadingMessage, onVisibleDate, ...actions }: TimelineProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(900), [top, setTop] = useState(0), [height, setHeight] = useState(800), [collapsed, collapse] = useState(false);
+  const [focusedDay, setFocusedDay] = useState<string | null>(null);
   const [direction, setDirection] = useState(1);
   const lastScroll = useRef(0), active = useRef(false), settle = useRef<ReturnType<typeof setTimeout> | null>(null);
   const p = actions.preferences, hourHeight = p.hourHeight ?? 48, headerHeight = 32 + (collapsed ? 24 : 96);
@@ -20,8 +22,9 @@ export function CalendarTimeline({ days, target, eventsByDay, zoneControls, onVi
   const rangeExtractor = useCallback((range: Parameters<typeof defaultRangeExtractor>[0]) => {
     const first = Math.max(0, range.startIndex - (direction < 0 ? count * 2 : Math.ceil(count / 2)));
     const last = Math.min(range.count - 1, range.endIndex + (direction > 0 ? count * 2 : Math.ceil(count / 2)));
-    return Array.from({ length: last - first + 1 }, (_, i) => first + i);
-  }, [count, direction]);
+    const focused = focusedDay ? days.indexOf(focusedDay) : -1;
+    return [...new Set([...Array.from({ length: last - first + 1 }, (_, i) => first + i), ...(focused >= 0 ? [focused] : [])])].sort((a, b) => a - b);
+  }, [count, direction, focusedDay, days]);
   const virtual = useVirtualizer({ horizontal: true, count: days.length, getScrollElement: () => viewport.current, estimateSize: () => columnWidth, getItemKey: index => days[index]!, rangeExtractor, scrollMargin: rail });
   const previous = useRef<{ geometry: typeof geometry; target: string; hourHeight: number } | null>(null);
   const emitted = useRef<string | null>(null);
@@ -43,7 +46,7 @@ export function CalendarTimeline({ days, target, eventsByDay, zoneControls, onVi
   }, []);
   const mounted = virtual.getVirtualItems();
   return <div className="relative min-h-0 flex-1">
-    <div ref={viewport} data-calendar-scroll data-calendar-timeline-scroll className="h-full overflow-auto overscroll-none [overflow-anchor:none] [scrollbar-gutter:stable]" onPointerDown={() => { active.current = true; }} onPointerUp={() => { active.current = false; }} onScroll={event => {
+    <div ref={viewport} data-calendar-scroll data-calendar-timeline-scroll onFocusCapture={event => setFocusedDay((event.target as HTMLElement).closest<HTMLElement>("[data-calendar-day-column]")?.dataset.calendarDayColumn ?? null)} className="h-full overflow-auto overscroll-none [overflow-anchor:none] [scrollbar-gutter:stable]" onPointerDown={() => { active.current = true; }} onPointerUp={() => { active.current = false; }} onScroll={event => {
       const element = event.currentTarget;
       setTop(old => Math.abs(old - element.scrollTop) > hourHeight ? element.scrollTop : old);
       const nextDirection = element.scrollLeft >= lastScroll.current ? 1 : -1; lastScroll.current = element.scrollLeft; setDirection(nextDirection);
@@ -57,6 +60,7 @@ export function CalendarTimeline({ days, target, eventsByDay, zoneControls, onVi
           <TimeAxis day={target} days={days} preferences={p} />
         </div>
         <div className="relative" style={{ width: days.length * columnWidth }}>
+          <TimelineCurrentTime days={days} columnWidth={columnWidth} zone={p.timeZone} hourHeight={hourHeight} headerHeight={headerHeight} />
           {mounted.map(item => <div key={item.key} className="absolute top-0" style={{ left: item.index * columnWidth, width: columnWidth, height: headerHeight + hourHeight * 24 }}><CalendarDayColumn {...actions} day={days[item.index]!} items={eventsByDay[days[item.index]!] ?? EMPTY} allDayCollapsed={collapsed} onExpandAllDay={() => collapse(false)} viewportTop={top} viewportHeight={height} /></div>)}
         </div>
       </div>

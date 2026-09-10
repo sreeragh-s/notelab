@@ -114,3 +114,4 @@ Correction acceptance (2026-09-10): all 66 Calendar browser scenarios pass. Cach
 - Rolling buffers: advanced preferences isolate user/server settings; request chunks remain below the server limit and cache retention pins active ranges.
 - Timed renderer: independent date keys, shared native scroller and bounded column/event overscan; trackpad and sticky-header acceptance remains manual.
 - Month renderer: complete week extents and stable week keys replace four-week recentering. Manual acceptance covers prepend anchoring and scrollbar dragging.
+- Interactions: shared pointer ownership and continuous clock replace cell-owned lifetime; geometry unit tests cover weekend displacement and DST rejection. Manual acceptance covers cross-window drag and resize.
