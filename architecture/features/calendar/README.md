@@ -107,6 +107,10 @@ rendered in `PagePaneHeader`'s padded action slot, with compact search/navigatio
 menus at narrow widths. The schedule renders a plain month heading on the leading edge and Create event on the trailing edge;
 date picking remains in the left mini calendar.
 
+[Calendar commands](../../../apps/web/src/features/calendar/workspace/calendar-commands.tsx) use the application's shared shortcut provider and command-dialog primitives. While Calendar is mounted, Cmd/Ctrl+K opens its scoped actions and `?` opens searchable shortcut help. The schedule registers capability-aware creation, event traversal and source actions; the toolbar owns date/view/display/preference actions. Letter shortcuts skip editable controls and modal/menu contexts, and unavailable actions cannot execute. Registrations are removed on unmount, returning Cmd/Ctrl+K to application search elsewhere.
+
+Command callbacks read current schedule state without rebuilding metadata on every date navigation. Display preferences retain stable identity between relevant changes, and the meeting-preview cache subscribes only while its dock is visible. A source that is still loading renders its own pending state so the generic event panel cannot steal sidebar focus.
+
 Calendar row buttons open a [source-specific upcoming-event panel](../../../apps/web/src/features/calendar/views/calendar-source-panel.tsx) in the existing dock. The panel reads 30-day cache windows with forward/backward pagination independently of the grid period; creation explicitly targets the source. Calendar options reuse the existing source controls. Selecting an event switches the dock back to event details. Unsaved source ordering uses stable source identity so provider and cache response order cannot move open controls. Visibility and its pressed state belong
 to the eye button; hidden names use the shared secondary text token. A flex action
 area allocates space for the eye and expands for the options button on hover,

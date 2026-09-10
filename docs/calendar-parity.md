@@ -17,7 +17,7 @@ Reference: [Notion Calendar documentation](https://www.notion.com/help/category/
 | 9 | Labeled time zones | Implemented | Browser add/rename/reorder/remove and four-column reload test; server preference migration/promotion/limits tests; web/server typechecks. |
 | 10 | Travel time zones | Implemented | Browser preview/restore/explicit-save test asserts no preference writes during preview; shared immutability/restore/invalid-zone tests; web typecheck. |
 | 11 | Cross-period search | Implemented | Browser finds/opens events years outside the grid, paginates and resets cursors on date filters; server unbounded-range/pagination and permission tests; server/web typechecks. Google [event-list search contract](https://developers.google.com/workspace/calendar/api/v3/reference/events/list). |
-| 12 | Commands and shortcut discovery | Pending | — |
+| 12 | Commands and shortcut discovery | Implemented | Browser command-menu/help test covers view switching, searchable actions, typing focus and disabled offline creation. Uses shared shortcut registration and command UI. Milestone validation recorded below. |
 | 13 | Formatted descriptions | Pending | — |
 | 14 | Participant response notes | Pending | — |
 | 15 | Merged event presentation | Pending | — |
@@ -67,3 +67,35 @@ Reference: [Notion Calendar documentation](https://www.notion.com/help/category/
 ## Release acceptance
 
 Implementation status is not live-provider certification. Google/Zoom live checks and macOS/Windows acceptance remain pending. Public scheduling remains disabled until concurrency, privacy and recovery checks pass.
+
+## Milestone A manual acceptance (passes 1–12)
+
+The requested stopping point is pass 12. Passes 13–57 are not part of this review.
+
+- Connect/reconnect two Google accounts; verify cancellation, workspace return, defaults and private source ownership. Repeat an account in two workspaces and revoke one membership.
+- Reorder/collapse accounts and calendars, reload, and open a calendar's upcoming panel. Page beyond the grid and create on its selected calendar. Verify read-only calendars cannot create or mutate.
+- Try 1, 3, 7 and 31 days, hidden weekends, Today alignment, mini-calendar selection, arrow navigation and reload.
+- Change hour height, drag/resize/create, and reset. Verify the same time remains at the top.
+- Add four zones, rename/reorder/promote/remove them. Preview a travel zone, restore, and explicitly save. Verify existing event instants in Google stay unchanged.
+- Search for events outside the displayed month, load another page, change source/date filters, open a result, and retry a failed/offline search.
+- Open commands with Cmd/Ctrl+K and help with ?. Check navigation, event traversal, source selection, density, zones, disabled actions, and typing in an editor.
+- Check maps preference and the upcoming meeting preview. Recheck permission denial and desktop OAuth callbacks on macOS/Windows.
+
+Live Google and desktop acceptance remains a manual gate; mocked browser and integration evidence does not replace it.
+
+## Milestone A automated validation
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck` | Passed across workspaces. |
+| `npm run test:packages` | Passed, including Calendar capability, date-range, ordering, context and travel tests. |
+| `npm run test:web` | Passed. |
+| `npm run test:server` | Passed: 1,164 tests and 310 query-regression tests; coverage and server build passed. |
+| `npm run test:calendar:integration` | Passed: 12 tests against disposable PostgreSQL. |
+| `npm run build:web` | Passed; final bundle budget passed. |
+| `npm run test:architecture` | Passed. |
+| `npm run test:calendar:browser` | Passed: all 59 tests in the final run. Cached day/week/month navigation measured 19/65/65 ms against the unchanged 100 ms gate. |
+| `npm run test:runtime-parity` | Blocked by local environment: Node `/demo/bootstrap` returned HTTP 404. |
+| Live Google and macOS/Windows OAuth | Pending manual acceptance. |
+
+The initial browser run exposed a source-panel focus race and a navigation timing regression. The source pending state now retains sidebar focus; stable display/command metadata and mounting preview subscriptions only for an open dock reduce unnecessary navigation work. The 100 ms benchmark threshold remains unchanged.

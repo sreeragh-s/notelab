@@ -1,4 +1,11 @@
 export const appShortcutDefinitions = {
+  calendarHelp: { key: "?", primaryModifier: false, shiftKey: null },
+  calendarToday: { key: "t", primaryModifier: false, shiftKey: false },
+  calendarPrevious: { key: "arrowleft", primaryModifier: false, shiftKey: false },
+  calendarNext: { key: "arrowright", primaryModifier: false, shiftKey: false },
+  calendarCreate: { key: "c", primaryModifier: false, shiftKey: false },
+  calendarNextEvent: { key: "j", primaryModifier: false, shiftKey: false },
+  calendarPreviousEvent: { key: "k", primaryModifier: false, shiftKey: false },
   openSearch: {
     key: "k",
     primaryModifier: true,
@@ -46,8 +53,8 @@ export function matchesAppShortcut(
 
   return (
     event.key.toLowerCase() === shortcut.key &&
-    (!shortcut.primaryModifier || hasPrimaryModifier) &&
+    (shortcut.primaryModifier ? hasPrimaryModifier : !hasPrimaryModifier) &&
     !event.altKey &&
-    event.shiftKey === shortcut.shiftKey
+    (shortcut.shiftKey === null || event.shiftKey === shortcut.shiftKey)
   )
 }

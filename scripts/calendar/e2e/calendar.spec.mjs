@@ -73,6 +73,7 @@ test("cached view changes meet the 1000-occurrence budget", async ({ page }, tes
     durations.push(await page.evaluate(async view => { const begin = performance.now(); await window.calendarFixture.navigate(view); await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); return performance.now() - begin }, view));
   }
   await testInfo.attach("cached-view-benchmark.json", { body: JSON.stringify({ occurrences: 1000, views: ["day", "week", "month"], durations }), contentType: "application/json" });
+  console.info("Cached navigation (day/week/month), ms:", durations.map(value => Math.round(value)));
   expect(Math.max(...durations)).toBeLessThan(100);
 });
 
@@ -451,4 +452,27 @@ test("search finds distant events with explicit pagination and date filters", as
   await results.getByLabel("Search through date").fill("2028-12-31");
   await expect.poll(() => requests.at(-1)?.end).toContain("2028-12-31T18:30:00");
   expect(requests.at(-1)).not.toHaveProperty("pageToken");
+});
+
+test("Calendar command menu and shortcut help respect editing focus and capabilities", async ({ page }) => {
+  await expect(page.getByRole("button", { name: /Design review/ })).toBeVisible();
+  await page.keyboard.press("Control+k");
+  await expect(page.getByRole("dialog", { name: "Calendar commands" })).toBeVisible();
+  await page.getByPlaceholder("Search Calendar commands…").fill("month");
+  await page.getByRole("option", { name: "Switch to month view", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "Calendar view" })).toContainText("Month");
+  await page.locator("body").click({ position: { x: 2, y: 2 } });
+  await page.keyboard.press("?");
+  await expect(page.getByRole("dialog", { name: "Calendar shortcuts" })).toBeVisible();
+  await page.getByPlaceholder("Search shortcuts and actions…").fill("Next event");
+  await expect(page.getByRole("option", { name: "Next event J" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByRole("textbox", { name: "Search calendar", exact: true }).fill("c");
+  await page.keyboard.press("t");
+  await expect(page.getByRole("textbox", { name: "Search calendar", exact: true })).toHaveValue("ct");
+  await expect(page.getByLabel("Title", { exact: true })).toHaveCount(0);
+  await page.evaluate(() => window.calendarFixture.offline());
+  await page.keyboard.press("Control+k");
+  await page.getByPlaceholder("Search Calendar commands…").fill("Create event");
+  await expect(page.getByRole("option", { name: "Create event C", exact: true })).toHaveAttribute("aria-disabled", "true");
 });

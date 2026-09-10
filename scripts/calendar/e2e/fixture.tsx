@@ -1,3 +1,4 @@
+import { ShortcutProvider } from "@/shared/shortcuts";
 import { CalendarSettings } from "@/features/calendar/preferences/calendar-settings";
 import { Dialog, DialogContent, DialogTitle } from "@/shared/ui/dialog";
 import { validateCalendarSearch } from "@/app/routing/search-validators";
@@ -58,5 +59,5 @@ history.subscribe(({ location }) => sessionStorage.setItem("calendar-fixture-rou
 const router = createRouter({ routeTree: root.addChildren([app.addChildren([calendar])]), history });
 const queryClient = new QueryClient();
 const auth = { getSession: async () => ({ user: { id: "user" } }) } as ZilobaseAuthClient;
-createRoot(document.getElementById("root")!).render(<QueryClientProvider client={queryClient}><ZilobaseFeaturesProvider value={{ queryClient, auth, apiFetch }}><CalendarWorkspaceProvider><RouterProvider router={router} /></CalendarWorkspaceProvider></ZilobaseFeaturesProvider></QueryClientProvider>);
+createRoot(document.getElementById("root")!).render(<QueryClientProvider client={queryClient}><ZilobaseFeaturesProvider value={{ queryClient, auth, apiFetch }}><ShortcutProvider><CalendarWorkspaceProvider><RouterProvider router={router} /></CalendarWorkspaceProvider></ShortcutProvider></ZilobaseFeaturesProvider></QueryClientProvider>);
 Object.assign(window, { calendarFixture: { search: () => router.state.location.search, select: (event: string) => router.navigate({ to: "/calendar", search: { date: "2026-09-09", view: "week", binding: "binding", calendar: "primary", event } }), navigate: (view: string, date = "2026-09-09") => router.navigate({ to: "/calendar", search: { view, date } }), offline: () => setConnectivityState("offline") } });
