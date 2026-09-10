@@ -59,7 +59,7 @@ export function CalendarPeriodScroller({ periods, periodKey, view, eventsByDay, 
       {periods.map((days, index) => {
         const prepared = index === 1 || preparedPeriod === periodKey;
         return <div key={index} data-calendar-period={index} data-calendar-period-ready={prepared} aria-hidden={!prepared} inert={!prepared} className="flex h-full min-h-0 w-full min-w-0 shrink-0">
-          {days.map(day => <CalendarDayColumn key={day} {...actions} day={day} periodDays={days} items={eventsByDay[day] ?? EMPTY_ITEMS} prepared={prepared} allDayCollapsed={allDayCollapsed} onExpandAllDay={expand} scrollGroup={scrollGroup} onHorizontalScroll={horizontal} />)}
+          {days.map(day => <CalendarDayColumn key={day} {...actions} day={day} periodDays={days} items={eventsByDay[day] ?? EMPTY_ITEMS} prepared={prepared} allDayCollapsed={allDayCollapsed} onExpandAllDay={expand} scrollGroup={scrollGroup} />)}
         </div>;
       })}
     </div>

@@ -23,10 +23,9 @@ type Props = CalendarColumnActions & {
   allDayCollapsed: boolean;
   onExpandAllDay: () => void;
   scrollGroup: CalendarScrollGroup;
-  onHorizontalScroll: (delta: number) => void;
 };
 /** A complete day: date header, all-day lane and independently scrolling time body. */
-export const CalendarDayColumn = memo(function CalendarDayColumn({ day, periodDays, items, preferences, prepared, canCreate, card, writable, onDay, onCreate, onChange, onError, allDayCollapsed, onExpandAllDay, scrollGroup, onHorizontalScroll }: Props) {
+export const CalendarDayColumn = memo(function CalendarDayColumn({ day, periodDays, items, preferences, prepared, canCreate, card, writable, onDay, onCreate, onChange, onError, allDayCollapsed, onExpandAllDay, scrollGroup }: Props) {
   const header = useRef<HTMLElement>(null), body = useRef<HTMLDivElement>(null);
   const slot = useRef<{ y: number; hour: number } | null>(null);
   const allDay = useMemo(() => items.filter(item => item.start.date), [items]);
@@ -35,15 +34,16 @@ export const CalendarDayColumn = memo(function CalendarDayColumn({ day, periodDa
   useEffect(() => {
     const element = header.current; if (!element) return;
     const wheel = (event: WheelEvent) => {
+      // Horizontal gestures use the same native ancestor viewport as the time body.
+      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
       event.preventDefault();
-      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) { onHorizontalScroll(event.deltaX); return; }
       const events = (event.target as HTMLElement).closest<HTMLElement>("[data-calendar-all-day-events]");
       if (events && events.scrollHeight > events.clientHeight) events.scrollTop += event.deltaY;
       else if (body.current) { body.current.scrollTop += event.deltaY; scrollGroup.scrollTo(body.current.scrollTop); }
     };
     element.addEventListener("wheel", wheel, { passive: false });
     return () => element.removeEventListener("wheel", wheel);
-  }, [scrollGroup, onHorizontalScroll]);
+  }, [scrollGroup]);
   return <section data-calendar-day-column={day} data-calendar-columns={1} className="flex h-full min-h-0 min-w-0 flex-1 snap-start flex-col border-l border-stroke-default">
     <header data-calendar-column-header ref={header} className="z-10 shrink-0 bg-surface-canvas">
       <div data-calendar-date-header={day} className="flex h-8 items-center px-1"><Button size="sm" variant="ghost" className="w-full" onClick={() => onDay(day)}><CalendarDateLabel day={day} zone={preferences.timeZone} /></Button></div>

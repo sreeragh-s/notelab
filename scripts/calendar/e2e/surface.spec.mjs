@@ -127,3 +127,28 @@ test("drag previews cross column scroll boundaries and disappear on drop", async
   await expect(first.locator("output")).toContainText("changed:meeting");
   await expect(first.locator('[data-calendar-day-column="2026-09-10"]').getByRole("button", { name: /Plain meeting/ })).toBeVisible();
 });
+
+for (const view of ["day", "week"]) for (const area of ["header", "body"]) {
+  test(`${view} horizontal wheel over ${area} uses native calendar paging`, async ({ page }) => {
+    const first = page.getByRole("region", { name: "First calendar" });
+    const second = page.getByRole("region", { name: "Second calendar" });
+    await first.getByRole("button", { name: view, exact: true }).click();
+    await expect(first.locator('[data-calendar-period-ready="true"]')).toHaveCount(3);
+    const pager = first.locator("[data-calendar-period-scroll]");
+    const target = first.locator(`[data-calendar-period="1"] ${area === "header" ? "[data-calendar-date-header]" : "[data-calendar-scroll]"}`).first();
+    // Cancellation or an immediate scroll here would bypass native wheel momentum/snapping.
+    const native = await target.evaluate(element => {
+      const viewport = element.closest("[data-calendar-period-scroll]");
+      const before = viewport.scrollLeft;
+      const wheel = new WheelEvent("wheel", { deltaX: 80, deltaY: 1, bubbles: true, cancelable: true });
+      element.dispatchEvent(wheel);
+      return { cancelled: wheel.defaultPrevented, moved: viewport.scrollLeft !== before };
+    });
+    expect(native).toEqual({ cancelled: false, moved: false });
+    await target.hover();
+    await page.mouse.wheel(await pager.evaluate(element => element.clientWidth), 0);
+    await expect(first.locator("output")).toContainText(view === "day" ? "2026-09-10" : "2026-09-16");
+    await expect(second.locator("output")).toContainText("2026-09-09");
+    await expect.poll(() => pager.evaluate(element => Math.abs(element.scrollLeft - element.clientWidth))).toBeLessThan(2);
+  });
+}
