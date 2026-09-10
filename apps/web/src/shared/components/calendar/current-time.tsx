@@ -44,7 +44,7 @@ export const CurrentTimeLabel = memo(function CurrentTimeLabel({ days, zone, sec
   const clock = useCalendarClock(zone);
   if (!days.includes(clock.date)) return null;
   return <div data-calendar-current-time-label className="pointer-events-none absolute inset-x-0 z-20 flex -translate-y-1/2" style={{ top: clock.top * hourHeight / 48 }}>
-    {[zone, ...secondaryZones].map(value => <div key={value} className="flex w-14 justify-end pr-1"><span className="rounded-sm bg-action-primary px-1 py-0.5 text-[10px] text-action-on-primary">{eventClock({ dateTime: new Date(clock.now).toISOString(), timeZone: value }, value, timeFormat)}</span></div>)}
+    {[zone, ...secondaryZones].reverse().map(value => <div key={value} className="flex w-14 justify-end pr-1"><span className="rounded-sm bg-action-primary px-1 py-0.5 text-[10px] text-action-on-primary">{eventClock({ dateTime: new Date(clock.now).toISOString(), timeZone: value }, value, timeFormat)}</span></div>)}
   </div>;
 });
 

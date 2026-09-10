@@ -24,6 +24,7 @@ export type CalendarDisplayPreferences = {
 export type CalendarRange = { start: string; end: string };
 export type CalendarSurfaceProps = {
   /** IDs are unique within this instance. Replace items/arrays when data changes. */
+  zoneControls?: ReactNode;
   items: CalendarItem[];
   date: string;
   view: CalendarView;

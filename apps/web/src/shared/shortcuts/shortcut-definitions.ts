@@ -1,4 +1,5 @@
 export const appShortcutDefinitions = {
+  calendarTravel: { key: "z", primaryModifier: false, shiftKey: false },
   calendarHelp: { key: "?", primaryModifier: false, shiftKey: null },
   calendarToday: { key: "t", primaryModifier: false, shiftKey: false },
   calendarPrevious: { key: "arrowleft", primaryModifier: false, shiftKey: false },

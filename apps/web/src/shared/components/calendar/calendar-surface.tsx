@@ -6,7 +6,7 @@ import { CalendarMonthView } from "./calendar-month-view";
 import { CalendarPeriodScroller } from "./calendar-period-scroller";
 import { type CalendarItem, type CalendarSurfaceProps } from "./types";
 
-export function CalendarSurface({ items, date, view, preferences, onNavigate, onRangeChange, onSelect, onCreate, onChange, onError, renderItem }: CalendarSurfaceProps) {
+export function CalendarSurface({ zoneControls, items, date, view, preferences, onNavigate, onRangeChange, onSelect, onCreate, onChange, onError, renderItem }: CalendarSurfaceProps) {
   const scope = useId();
   const dragContext = useMemo(() => ({ scope, items: new Map(items.map(item => [item.id, item])) }), [scope, items]);
   const allDays = useMemo(() => calendarDays(date, view, preferences.weekStartsOn, preferences.visibleDayCount, preferences.showWeekends, preferences.alignStart), [date, view, preferences.weekStartsOn, preferences.visibleDayCount, preferences.showWeekends, preferences.alignStart]);
@@ -32,6 +32,6 @@ export function CalendarSurface({ items, date, view, preferences, onNavigate, on
   }, [scope, view, writable, onSelect, renderItem, preferences.timeZone, preferences.timeFormat]);
   let content;
   if (view === "month") content = <CalendarMonthView date={date} onDate={navigateDate} onRangeChange={setMonthDays} days={days} eventsByDay={eventsByDay} preferences={preferences} online={Boolean(onChange)} writable={writable} card={card} onDay={day} onChange={change} onError={onError} />;
-  else content = <CalendarPeriodScroller view={view} canCreate={Boolean(onCreate)} periods={periods} periodKey={`${view}:${date}:${preferences.visibleDayCount ?? 7}:${preferences.showWeekends}:${preferences.alignStart}`} onPeriod={navigatePeriod} eventsByDay={eventsByDay} preferences={preferences} card={card} writable={writable} onDay={day} onCreate={create} onChange={change} onError={onError} />;
+  else content = <CalendarPeriodScroller zoneControls={zoneControls} view={view} canCreate={Boolean(onCreate)} periods={periods} periodKey={`${view}:${date}:${preferences.visibleDayCount ?? 7}:${preferences.showWeekends}:${preferences.alignStart}`} onPeriod={navigatePeriod} eventsByDay={eventsByDay} preferences={preferences} card={card} writable={writable} onDay={day} onCreate={create} onChange={change} onError={onError} />;
   return <CalendarDragContext.Provider value={dragContext}>{content}</CalendarDragContext.Provider>;
 }

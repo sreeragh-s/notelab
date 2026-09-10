@@ -99,3 +99,5 @@ Live Google and desktop acceptance remains a manual gate; mocked browser and int
 | Live Google and macOS/Windows OAuth | Pending manual acceptance. |
 
 The initial browser run exposed a source-panel focus race and a navigation timing regression. The source pending state now retains sidebar focus; stable display/command metadata and mounting preview subscriptions only for an open dock reduce unnecessary navigation work. The 100 ms benchmark threshold remains unchanged.
+
+Timezone correction: rail + picker and heading menus replace toolbar travel. Primary renders nearest the grid; Z previews, heading actions restore/save. Browser acceptance: `timezone rail adds, renames, promotes and persists four columns` and `Z previews travel without saving and heading actions restore or save`; model coverage includes alias rejection, four-zone retention and DST offsets.

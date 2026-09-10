@@ -26,6 +26,7 @@ export function CalendarCommands({ preferences, onPreferences, onSettings, onSea
     ...([{ label: "Taller hours", height: Math.min(120, (preferences.hourHeight ?? 48) + 8) }, { label: "Denser hours", height: Math.max(32, (preferences.hourHeight ?? 48) - 8) }, { label: "Reset hour height", height: 48 }].map(({ label, height }) => ({ id: label, label, disabled: !onPreferences || pending, run: () => void save({ ...preferences, hourHeight: height }) }))),
     ...(["showWeekends", "showDeclined", "showWeekNumbers"] as const).map(key => ({ id: key, label: `${preferences[key] ? "Hide" : "Show"} ${key === "showWeekends" ? "weekends" : key === "showDeclined" ? "declined events" : "week numbers"}`, disabled: !onPreferences || pending, run: () => void save({ ...preferences, [key]: !preferences[key] }) })),
     ...(preferences.timeZoneColumns ?? [preferences.timeZone, ...preferences.secondaryTimeZones].map(zone => ({ zone, label: zone }))).map(column => ({ id: `zone:${column.zone}`, label: `Make ${column.label} the primary time zone`, disabled: !onPreferences || pending || preferences.timeZone === column.zone, run: () => void save(calendarTravelPreferences(preferences, column.zone)) })),
+    { id: "travel", label: "Travel to a time zone", shortcut: "Z", run: () => workspace.setTravelPickerOpen(true) },
     { id: "restore-travel", label: "Restore saved time zone", disabled: !workspace.travelZone, run: () => workspace.setTravelZone(null) },
     { id: "help", label: "Calendar shortcut help", shortcut: "?", run: () => setMode("help") },
   ];
@@ -37,6 +38,7 @@ export function CalendarCommands({ preferences, onPreferences, onSettings, onSea
   };
   useAppShortcut("openSearch", () => { setMode(current => current ? null : "commands"); return true; }, { allowInEditable: true, priority: 50 });
   useAppShortcut("calendarHelp", () => { setMode("help"); return true; }, { priority: 50 });
+  useAppShortcut("calendarTravel", event => invoke("travel", event), { priority: 50 });
   useAppShortcut("calendarToday", event => invoke("today", event), { priority: 50 });
   useAppShortcut("calendarPrevious", event => invoke("previous", event), { priority: 50 });
   useAppShortcut("calendarNext", event => invoke("next", event), { priority: 50 });

@@ -179,43 +179,77 @@ test("general preferences persist and Today uses the chosen alignment", async ({
   await expect(page.getByRole("link", { name: "Profile settings" })).toHaveAttribute("href", "/settings/profile");
 });
 
-test("labeled zones add, rename, reorder and persist four columns", async ({ page }) => {
-  await page.getByRole("button", { name: "Calendar settings", exact: true }).click();
-  await page.getByLabel("Label for Asia/Kolkata").fill("Home");
+async function pickZone(page, zone) {
+  await page.getByRole("combobox", { name: "Time zone", exact: true }).fill(zone);
+  await page.getByRole("option").first().click();
+}
+async function zoneMenu(page, zone) {
+  await page.getByRole("button", { name: `Time zone ${zone}`, exact: true }).click();
+}
+test("timezone rail adds, renames, promotes and persists four columns", async ({ page }) => {
+  await expect(page.getByRole("button", { name: "Personal Default", exact: true })).toBeVisible();
   for (const zone of ["Europe/London", "America/New_York", "UTC"]) {
-    await page.getByLabel("Add time zone", { exact: true }).fill(zone);
-    await page.getByRole("button", { name: "Add zone", exact: true }).click();
+    await page.getByRole("button", { name: "Add time zone", exact: true }).click();
+    await pickZone(page, zone);
   }
-  await expect(page.getByLabel("Add time zone", { exact: true })).toHaveCount(0);
-  await page.getByLabel("Label for Europe/London").fill("Team");
-  await page.getByRole("button", { name: "Move Europe/London up", exact: true }).click();
-  await page.getByRole("button", { name: "Save preferences" }).click();
-  await expect(page.locator('[data-calendar-zone-labels]')).toHaveText("TeamHomeNew YorkUTC");
+  await expect(page.getByRole("button", { name: "Add time zone", exact: true })).toBeDisabled();
+  await zoneMenu(page, "Europe/London");
+  await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
+  await page.getByLabel("Time zone label", { exact: true }).fill("Team");
+  await page.getByRole("button", { name: "Save label" }).click();
+  await zoneMenu(page, "Europe/London");
+  await page.getByRole("menuitem", { name: "Make time zone primary" }).click();
+  await expect(page.locator('[data-calendar-zone-labels]')).toHaveText("+UTCNew YorkKolkataTeam");
   await page.reload();
-  await expect(page.locator('[data-calendar-zone-labels]')).toHaveText("TeamHomeNew YorkUTC");
-  await page.getByRole("button", { name: "Calendar settings", exact: true }).click();
-  await page.getByRole("button", { name: "Remove UTC", exact: true }).click();
-  await page.getByRole("button", { name: "Save preferences" }).click();
-  await expect(page.locator('[data-calendar-zone-labels]')).toHaveText("TeamHomeNew York");
+  await expect(page.locator('[data-calendar-zone-labels]')).toHaveText("+UTCNew YorkKolkataTeam");
+  await zoneMenu(page, "Europe/London");
+  await expect(page.getByRole("menuitem", { name: "Remove time zone from list" })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await zoneMenu(page, "UTC");
+  await page.getByRole("menuitem", { name: "Remove time zone from list" }).click();
+  await expect(page.locator('[data-calendar-zone-labels]')).toHaveText("+New YorkKolkataTeam");
 });
 
-test("travel mode previews without saving and supports restore and explicit save", async ({ page }) => {
+test("Z previews travel without saving and heading actions restore or save", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Personal Default", exact: true })).toBeVisible();
   const saved = await page.locator('[data-calendar-zone-labels]').textContent();
   const writes = [];
   page.on("request", request => { if (request.method() === "PUT" && request.url().endsWith("/preferences")) writes.push(request.postDataJSON()); });
-  await page.getByRole("button", { name: "Travel time zone", exact: true }).click();
-  await page.getByLabel("Travel time zone name", { exact: true }).fill("Europe/London");
-  await page.getByRole("button", { name: "Preview zone", exact: true }).click();
+  await page.keyboard.press("z");
+  await pickZone(page, "Europe/London");
   await expect(page.locator('[data-calendar-zone-labels]')).toContainText("London");
   expect(writes).toHaveLength(0);
-  await page.getByRole("button", { name: "Restore saved zone", exact: true }).click();
+  await zoneMenu(page, "Europe/London");
+  await page.getByRole("menuitem", { name: "Restore saved time zone" }).click();
   await expect(page.locator('[data-calendar-zone-labels]')).toHaveText(saved);
-  await page.getByLabel("Travel time zone name", { exact: true }).fill("Europe/London");
-  await page.getByRole("button", { name: "Preview zone", exact: true }).click();
-  await page.getByRole("button", { name: "Save as primary zone", exact: true }).click();
+  await page.keyboard.press("z");
+  await pickZone(page, "Europe/London");
+  await zoneMenu(page, "Europe/London");
+  await page.getByRole("menuitem", { name: "Add as primary time zone" }).click();
   await expect.poll(() => writes.length).toBe(1);
   await page.reload();
   await expect(page.locator('[data-calendar-zone-labels]')).toContainText("London");
-  await expect(page.getByRole("button", { name: "Travel time zone", exact: true })).toHaveText("Travel");
+  await expect(page.getByRole("button", { name: "Travel time zone", exact: true })).toHaveCount(0);
+});
+test("timezone picker supports right-click, keyboard selection, recent zones and rejected saves", async ({ page }) => {
+  await expect(page.getByRole("button", { name: "Personal Default", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Time zone Asia/Kolkata", exact: true }).click({ button: "right" });
+  await page.getByRole("menuitem", { name: /Change time zone/ }).click();
+  await page.getByRole("combobox", { name: "Time zone", exact: true }).fill("London");
+  await page.keyboard.press("ArrowDown"); await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Time zone Europe/London", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Add time zone", exact: true }).click();
+  await page.getByRole("combobox", { name: "Time zone", exact: true }).fill("Kolkata");
+  await expect(page.getByRole("option").first()).toContainText("GMT+05:30");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("combobox", { name: "Time zone", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add time zone", exact: true })).toBeFocused();
+  await page.keyboard.press("z");
+  await expect(page.getByRole("group", { name: "Recent" })).toContainText("London");
+  await page.keyboard.press("Escape");
+  await page.route("**/preferences", async route => route.request().method() === "PUT" ? route.fulfill({ status: 503, json: { message: "Preferences unavailable" } }) : route.fallback());
+  await page.getByRole("button", { name: "Add time zone", exact: true }).click();
+  await pickZone(page, "America/New_York");
+  await expect(page.getByRole("alert").filter({ hasText: "Preferences unavailable" }).first()).toBeVisible();
+  await expect(page.locator('[data-calendar-zone-labels]')).not.toContainText("New York");
 });

@@ -1,3 +1,5 @@
+import { CalendarTimeZones } from "../preferences/calendar-time-zones";
+import { useCalendarPreferences } from "../preferences/use-calendar-preferences";
 import { createPortal } from "react-dom";
 import { CalendarSearchResults } from "./calendar-search-results";
 import { useCalendarDisplayPreferences } from "../preferences/calendar-travel";
@@ -26,6 +28,7 @@ function AccountData({ connection, userId, start, end, onData }: { connection: C
   return null;
 }
 export function CalendarSchedule({ connections, userId, preferences: savedPreferences, preferenceWorkspaceId }: { preferenceWorkspaceId?: string; connections: CalendarConnection[]; userId: string; preferences: CalendarPreferences }) {
+  const preferenceStore = useCalendarPreferences(preferenceWorkspaceId ?? connections[0]!.workspaceId);
   const preferences = useCalendarDisplayPreferences(savedPreferences);
   const workspace = useCalendarWorkspace();
   const { query } = workspace;
@@ -124,7 +127,7 @@ export function CalendarSchedule({ connections, userId, preferences: savedPrefer
       <Button className="shrink-0" disabled={!online || !Boolean(resolveDefaultCalendar(calendars, preferences))} onClick={() => create()}>Create event</Button>
     </div>
     <CalendarStatus data={data} online={online} error={undefined} />
-    {query.trim() ? <CalendarSearchResults query={query} connections={connections} calendars={calendars} preferences={preferences} cached={events} online={online} userId={userId} onSelect={open} /> : <CalendarSurface items={items} date={date} view={view} preferences={displayPreferences} onNavigate={setPeriod} onRangeChange={setRange} onSelect={selectItem} onCreate={online ? create : undefined} onChange={changeItem} onError={onGeometryError} />}
+    {query.trim() ? <CalendarSearchResults query={query} connections={connections} calendars={calendars} preferences={preferences} cached={events} online={online} userId={userId} onSelect={open} /> : <CalendarSurface zoneControls={<CalendarTimeZones value={savedPreferences} onChange={value => preferenceStore.save.mutateAsync(value)} travelZone={workspace.travelZone} onRestore={() => workspace.setTravelZone(null)} date={new Date(`${date}T12:00:00Z`)} />} items={items} date={date} view={view} preferences={displayPreferences} onNavigate={setPeriod} onRangeChange={setRange} onSelect={selectItem} onCreate={online ? create : undefined} onChange={changeItem} onError={onGeometryError} />}
     {workspace.source ? sourceConnection && sourceCalendar ? <CalendarSourcePanel key={`${sourceConnection.bindingId}:${sourceCalendar.id}`} connection={sourceConnection} calendar={sourceCalendar} allCalendars={calendars} userId={userId} preferences={preferences} preferenceWorkspaceId={preferenceWorkspaceId ?? connections[0]!.workspaceId} onSelect={open} onCreate={() => create(todayInZone(preferences.timeZone), 9, 30, sourceCalendar)} /> : createPortal(<div data-calendar-event-panel className="grid gap-3 p-3"><p role="status">{!sourceConnection || snapshots[sourceConnection.bindingId]?.loaded ? "This calendar is no longer available." : "Loading calendar…"}</p><Button variant="outline" onClick={workspace.closePanel}>Close</Button></div>, workspace.panelElement) : <CalendarEventPanel preview={workspace.panelOpen ? <CalendarMeetingPreview connections={connections} userId={userId} preferences={preferences} onSelect={open} /> : undefined} selected={selection.event} database={selection.database} calendars={selection.calendars} online={online} editing={editing} creating={creating} mapsProvider={preferences.mapsProvider} zone={preferences.timeZone} timeFormat={preferences.timeFormat} onClose={workspace.closePanel} onEdit={() => setEditing(true)} onDuplicate={() => { if (!selected) return; setSelected({ ...selected, eventId: `local-${crypto.randomUUID()}`, etag: "", title: `${selected.title} (copy)`, attendees: [], recurringEventId: undefined, originalStartTime: undefined, recurrence: undefined }); setCreating(true); setEditing(true) }} />}
   </div>;
 }

@@ -5,6 +5,7 @@ type PanelActions = { close: () => void; create: () => void };
 function useWorkspaceState() {
   const [panelElement] = useState(() => { const element = document.createElement("div"); element.className = "h-full min-h-0"; return element; });
   const [featureCommands, setFeatureCommands] = useState<CalendarCommand[]>([]);
+  const [travelPickerOpen, setTravelPickerOpen] = useState(false);
   const [travelZone, setTravelZone] = useState<string | null>(null);
   const [source, setSource] = useState<{ bindingId: string; calendarId: string } | null>(null);
   const [query, setQuery] = useState("");
@@ -22,9 +23,9 @@ function useWorkspaceState() {
   }, []);
   const suspendPanel = useCallback(() => setPanelOpen(false), []);
   const register = useCallback((value: PanelActions) => { actions.current = value; return () => { actions.current = null; }; }, []);
-  const reset = useCallback(() => { setFeatureCommands([]); setTravelZone(null); setPanelOpen(false); setSource(null); setQuery(""); actions.current = null; trigger.current = null; }, []);
+  const reset = useCallback(() => { setFeatureCommands([]); setTravelZone(null); setTravelPickerOpen(false); setPanelOpen(false); setSource(null); setQuery(""); actions.current = null; trigger.current = null; }, []);
   const create = useCallback(() => actions.current?.create(), []);
-  return useMemo(() => ({ featureCommands, setFeatureCommands, travelZone, setTravelZone, source, showSource, panelElement, query, setQuery, panelOpen, openPanel, closePanel, suspendPanel, register, reset, create }), [featureCommands, travelZone, source, showSource, panelElement, query, panelOpen, openPanel, closePanel, suspendPanel, register, reset, create]);
+  return useMemo(() => ({ travelPickerOpen, setTravelPickerOpen, featureCommands, setFeatureCommands, travelZone, setTravelZone, source, showSource, panelElement, query, setQuery, panelOpen, openPanel, closePanel, suspendPanel, register, reset, create }), [travelPickerOpen, featureCommands, travelZone, source, showSource, panelElement, query, panelOpen, openPanel, closePanel, suspendPanel, register, reset, create]);
 }
 const CalendarWorkspaceContext = createContext<ReturnType<typeof useWorkspaceState> | null>(null);
 export function CalendarWorkspaceProvider({ children }: { children: ReactNode }) {
