@@ -17,7 +17,7 @@ export type CalendarEvent = CalendarIdentity & {
   colorId: string | null; htmlLink: string; conferenceUrl?: string; conferenceStatus?: "pending" | "success" | "failure";
 }
 export type CalendarOccurrence = CalendarEvent
-export type CalendarView = "day" | "week" | "month" | "agenda"
+export type CalendarView = "day" | "week" | "month"
 export type CalendarRangeRequest = { calendarId: string; start: string; end: string; pageToken?: string }
 export type CalendarRangeResponse = { calendarId: string; start: string; end: string; generation: number; revision: number; events: CalendarOccurrence[]; nextPageToken: string | null; complete: boolean }
 export type CalendarSyncRequest = { calendarId?: string }

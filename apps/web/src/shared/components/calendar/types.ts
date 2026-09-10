@@ -24,8 +24,6 @@ export type CalendarSurfaceProps = {
   date: string;
   view: CalendarView;
   preferences: CalendarDisplayPreferences;
-  /** Display search results as an agenda without changing the controlled period. */
-  agenda?: boolean;
   onNavigate: (date: string, view: CalendarView) => void;
   onRangeChange?: (range: CalendarRange) => void;
   onSelect?: (item: CalendarItem) => void;

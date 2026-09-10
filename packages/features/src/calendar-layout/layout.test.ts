@@ -48,3 +48,10 @@ test("midnight clipping preserves exclusive ends and DST ambiguity remains expli
   assert.equal(after.top, 0); assert.equal(after.bottom, 30);
   assert.deepEqual(timedLayout([span("ends", "2026-09-09T23:00:00Z", "2026-09-10T00:00:00Z")], "2026-09-10", "UTC", e => e.id), []);
 });
+test("retired and absent views normalize to Week", async () => {
+  const { normalizeCalendarView } = await import("./index");
+  assert.equal(normalizeCalendarView("agenda"), "week");
+  assert.equal(normalizeCalendarView(undefined), "week");
+  assert.equal(normalizeCalendarView("month"), "month");
+  assert.equal(normalizeCalendarView("day"), "day");
+});

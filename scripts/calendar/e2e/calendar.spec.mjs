@@ -136,7 +136,7 @@ for (const view of ["day", "week"]) {
 
 test("every calendar view scrolls vertically in a short viewport", async ({ page }) => {
   await page.setViewportSize({ width: 1100, height: 480 });
-  for (const view of ["day", "week", "month", "agenda"]) {
+  for (const view of ["day", "week", "month"]) {
     await page.evaluate(view => window.calendarFixture.navigate(view), view);
     const scroll = view === "day" || view === "week"
       ? page.locator('[data-calendar-period="1"] [data-calendar-scroll]')

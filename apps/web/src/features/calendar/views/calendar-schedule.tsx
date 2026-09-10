@@ -8,7 +8,7 @@ import { newCalendarEvent } from "../events/event-editor";
 import { PALETTE, type ColorTokenId } from "@/shared/lib/color-tokens";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { calendarDays, todayInZone, dayInstant, addCalendarDays, shiftCalendarPeriod, calendarEventKey, calendarApiBasePath, type CalendarConnection, type CalendarEvent, type CalendarPreferences, type CalendarRecord, type CalendarView } from "@zilobase/features/calendar";
+import { calendarDays, normalizeCalendarView, todayInZone, dayInstant, addCalendarDays, shiftCalendarPeriod, calendarEventKey, calendarApiBasePath, type CalendarConnection, type CalendarEvent, type CalendarPreferences, type CalendarRecord, type CalendarView } from "@zilobase/features/calendar";
 import { useCalendarCache } from "../sync/use-calendar-cache";
 import { calendarSelectionKey, calendarIsVisible, resolveDefaultCalendar } from "../connections/calendar-selection";
 import { Button } from "@/shared/ui/button";
@@ -24,7 +24,7 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
   const workspace = useCalendarWorkspace();
   const { query } = workspace;
   const search = useSearch({ from: "/app/calendar" }), navigate = useNavigate();
-  const view = search.view ?? preferences.view, date = search.date ?? todayInZone(preferences.timeZone);
+  const view = normalizeCalendarView(search.view ?? preferences.view), date = search.date ?? todayInZone(preferences.timeZone);
   const allDays = useMemo(() => calendarDays(date, view, preferences.weekStartsOn), [date, view, preferences.weekStartsOn]);
   const [range, setRange] = useState<CalendarRange | null>(null);
   const cacheStart = range?.start ?? dayInstant(allDays[0]!, preferences.timeZone);
@@ -116,7 +116,7 @@ export function CalendarSchedule({ connections, userId, preferences }: { connect
       <Button className="shrink-0" disabled={!online || !Boolean(resolveDefaultCalendar(calendars, preferences))} onClick={() => create()}>Create event</Button>
     </div>
     <CalendarStatus data={data} online={online} error={searchError} />
-    <CalendarSurface items={items} date={date} view={view} agenda={Boolean(query)} preferences={preferences} onNavigate={setPeriod} onRangeChange={setRange} onSelect={selectItem} onCreate={online ? create : undefined} onChange={changeItem} onError={onGeometryError} />
+    <CalendarSurface items={items} date={date} view={view} preferences={preferences} onNavigate={setPeriod} onRangeChange={setRange} onSelect={selectItem} onCreate={online ? create : undefined} onChange={changeItem} onError={onGeometryError} />
     <CalendarEventPanel selected={selection.event} database={selection.database} calendars={selection.calendars} online={online} editing={editing} creating={creating} zone={preferences.timeZone} timeFormat={preferences.timeFormat} onClose={workspace.closePanel} onEdit={() => setEditing(true)} onDuplicate={() => { if (!selected) return; setSelected({ ...selected, eventId: `local-${crypto.randomUUID()}`, etag: "", title: `${selected.title} (copy)`, attendees: [], recurringEventId: undefined, originalStartTime: undefined, recurrence: undefined }); setCreating(true); setEditing(true) }} />
   </div>;
 }

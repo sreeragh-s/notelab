@@ -14,12 +14,11 @@ export function eventOverlaps(event: CalendarSpan, start: string, end: string, z
 export function calendarDays(date: string, view: CalendarView, weekStartsOn: number) {
   const anchor = Temporal.PlainDate.from(date);
   if (view === "day") return [date];
-  if (view === "agenda") return Array.from({ length: 30 }, (_, i) => anchor.add({ days: i }).toString());
   const first = view === "month" ? anchor.with({ day: 1 }) : anchor;
   const offset = (first.dayOfWeek % 7 - weekStartsOn + 7) % 7, start = first.subtract({ days: offset });
   return Array.from({ length: view === "month" ? Math.ceil((offset + anchor.daysInMonth) / 7) * 7 : 7 }, (_, i) => start.add({ days: i }).toString());
 }
-export function shiftCalendarPeriod(date: string, view: CalendarView, direction: number) { return Temporal.PlainDate.from(date).add(view === "month" ? { months: direction } : { days: direction * (view === "day" ? 1 : view === "agenda" ? 30 : 7) }).toString() }
+export function shiftCalendarPeriod(date: string, view: CalendarView, direction: number) { return Temporal.PlainDate.from(date).add(view === "month" ? { months: direction } : { days: direction * (view === "day" ? 1 : 7) }).toString() }
 const clockFormatters = new Map<string, Intl.DateTimeFormat>();
 function clockFormatter(zone: string, format: "12" | "24") {
   const key = `${zone}:${format}`;

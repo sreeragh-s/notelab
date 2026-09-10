@@ -1,4 +1,4 @@
-import { CalendarOverflow } from "./calendar-agenda";
+import { CalendarOverflow } from "./calendar-overflow";
 import { CalendarDragContext } from "./drag-context";
 import { calendarItemKey, type CalendarItem, type CalendarDisplayPreferences } from "./types";
 import { memo, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";

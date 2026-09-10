@@ -136,7 +136,7 @@ function calendarSearchDate(value: unknown) {
   const parsed = new Date(value);
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value ? value : undefined;
 }
-export function validateCalendarSearch(search: Record<string, unknown>): { view?: "day" | "week" | "month" | "agenda"; date?: string; binding?: string; calendar?: string; event?: string } {
-  const views = ["day", "week", "month", "agenda"] as const;
-  return { view: views.find(view => view === search.view), date: calendarSearchDate(search.date), binding: calendarSearchString(search.binding), calendar: calendarSearchString(search.calendar), event: calendarSearchString(search.event) };
+export function validateCalendarSearch(search: Record<string, unknown>): { view?: "day" | "week" | "month"; date?: string; binding?: string; calendar?: string; event?: string } {
+  const views = ["day", "week", "month"] as const;
+  return { view: search.view === "agenda" ? "week" : views.find(view => view === search.view), date: calendarSearchDate(search.date), binding: calendarSearchString(search.binding), calendar: calendarSearchString(search.calendar), event: calendarSearchString(search.event) };
 }

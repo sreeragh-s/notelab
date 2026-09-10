@@ -6,7 +6,7 @@ test("plain items render without providers and instances navigate independently"
   await first.getByRole("button", { name: /Plain meeting/ }).first().click();
   await expect(first.locator("output")).toContainText("selected:meeting");
   await expect(second.locator("output")).not.toContainText("selected:");
-  for (const view of ["month", "agenda", "day", "week"]) {
+  for (const view of ["month", "day", "week"]) {
     await first.getByRole("button", { name: view, exact: true }).click();
     await expect(first.getByRole("button", { name: /Plain meeting/ }).first()).toBeVisible();
     await expect(second.locator("[data-calendar-period-scroll]")).toHaveCount(1);

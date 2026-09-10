@@ -3,3 +3,4 @@ export { calendarApiBasePath, calendarKeys, calendarEventKey, defaultCalendarPre
 export { calendarDate, dayInstant, addCalendarDays, todayInZone, wallTime, eventInstant, eventOverlaps, calendarDays, shiftCalendarPeriod, eventClock, timedLayout } from "./time"
 
 export { calendarMetric, type CalendarMetricName } from "./telemetry";
+export { normalizeCalendarView } from "../calendar-layout/types";
