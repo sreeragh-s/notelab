@@ -37,3 +37,14 @@ test("heap layout retains first-free-column behavior and connected overlap group
   assert.equal(new Set(dense.map(e => e.column)).size, same.length);
   assert.ok(dense.every(e => e.columns === same.length));
 });
+test("midnight clipping preserves exclusive ends and DST ambiguity remains explicit", async () => {
+  const { wallTime } = await import("./time");
+  assert.throws(() => wallTime("2026-11-01", "01:30", "America/New_York"));
+  assert.equal(Date.parse(wallTime("2026-11-01", "01:30", "America/New_York", "later")) - Date.parse(wallTime("2026-11-01", "01:30", "America/New_York", "earlier")), 3600000);
+  const event = span("night", "2026-09-09T23:30:00Z", "2026-09-10T00:30:00Z");
+  const before = timedLayout([event], "2026-09-09", "UTC", e => e.id)[0]!;
+  const after = timedLayout([event], "2026-09-10", "UTC", e => e.id)[0]!;
+  assert.equal(before.top, 1410); assert.equal(before.bottom, 1440);
+  assert.equal(after.top, 0); assert.equal(after.bottom, 30);
+  assert.deepEqual(timedLayout([span("ends", "2026-09-09T23:00:00Z", "2026-09-10T00:00:00Z")], "2026-09-10", "UTC", e => e.id), []);
+});
