@@ -43,7 +43,7 @@ export function CalendarPeriodScroller({ periods, periodKey, view, eventsByDay, 
           {allDayCollapsed ? <><ChevronUpIcon className="size-3" /><ChevronDownIcon className="size-3" /></> : <><ChevronDownIcon className="size-3" /><ChevronUpIcon className="size-3" /></>}
         </button>
       </div>
-      <div data-calendar-time-axis ref={axis} className="min-h-0 flex-1 overflow-hidden" onWheel={event => { if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) horizontal(event.deltaX); else scrollGroup.scrollBy(event.deltaY); }}><TimeAxis day={periods[1]![0]!} preferences={actions.preferences} /></div>
+      <div data-calendar-time-axis ref={axis} className="min-h-0 flex-1 overflow-hidden" onWheel={event => { if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) horizontal(event.deltaX); else scrollGroup.scrollBy(event.deltaY); }}><TimeAxis day={periods[1]![0]!} days={periods[1]!} preferences={actions.preferences} /></div>
     </div>
     <div ref={viewport} aria-label="Calendar periods" data-calendar-period-scroll className="flex min-h-0 min-w-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain" onScroll={event => {
       if (event.target !== event.currentTarget || navigating.current) return;
@@ -59,7 +59,7 @@ export function CalendarPeriodScroller({ periods, periodKey, view, eventsByDay, 
       {periods.map((days, index) => {
         const prepared = index === 1 || preparedPeriod === periodKey;
         return <div key={index} data-calendar-period={index} data-calendar-period-ready={prepared} aria-hidden={!prepared} inert={!prepared} className="flex h-full min-h-0 w-full min-w-0 shrink-0">
-          {days.map(day => <CalendarDayColumn key={day} {...actions} day={day} items={eventsByDay[day] ?? EMPTY_ITEMS} prepared={prepared} allDayCollapsed={allDayCollapsed} onExpandAllDay={expand} scrollGroup={scrollGroup} onHorizontalScroll={horizontal} />)}
+          {days.map(day => <CalendarDayColumn key={day} {...actions} day={day} periodDays={days} items={eventsByDay[day] ?? EMPTY_ITEMS} prepared={prepared} allDayCollapsed={allDayCollapsed} onExpandAllDay={expand} scrollGroup={scrollGroup} onHorizontalScroll={horizontal} />)}
         </div>;
       })}
     </div>
