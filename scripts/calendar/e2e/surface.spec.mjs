@@ -60,14 +60,14 @@ test("display preferences change independently and preserve event instants", asy
 test("pointer bursts produce one preview update and cancel pending work", async ({ page }, testInfo) => {
   const first = page.getByRole("region", { name: "First calendar" });
   const card = first.getByRole("button", { name: /Plain meeting/ }).first();
-  await expect(first.locator("[data-calendar-period] [data-calendar-scroll]")).toHaveCount(3);
+  await expect(first.locator('[data-calendar-period-ready="true"]')).toHaveCount(3);
   await expect(card).toBeVisible();
   const box = await card.boundingBox();
   const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   await page.mouse.move(point.x, point.y); await page.mouse.down();
   const result = await card.locator("..").evaluate(async (element, point) => {
     let writes = 0;
-    const observer = new MutationObserver(records => { writes += records.length; });
+    const observer = new MutationObserver(() => { writes++; });
     observer.observe(element, { attributes: true, attributeFilter: ["style"] });
     const begin = performance.now();
     for (let i = 1; i <= 100; i++) element.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerId: 1, buttons: 1, clientX: point.x, clientY: point.y + i * .24 }));
@@ -80,4 +80,50 @@ test("pointer bursts produce one preview update and cancel pending work", async 
   await card.locator("..").dispatchEvent("pointercancel"); await page.mouse.up();
   await expect(first.locator("output")).not.toContainText("changed:");
   await testInfo.attach("drag-preview.json", { body: JSON.stringify(result), contentType: "application/json" });
+});
+test("day and week compose complete columns and use an icon-only disclosure", async ({ page }) => {
+  const first = page.getByRole("region", { name: "First calendar" });
+  const active = first.locator('[data-calendar-period="1"]');
+  await expect(active.locator("[data-calendar-day-column]")).toHaveCount(7);
+  for (const column of await active.locator("[data-calendar-day-column]").all()) {
+    await expect(column.locator(":scope > [data-calendar-column-header]")).toHaveCount(1);
+    await expect(column.locator(":scope > [data-calendar-scroll]")).toHaveCount(1);
+  }
+  const bodies = active.locator("[data-calendar-scroll]");
+  await bodies.nth(3).evaluate(element => { element.scrollTop = 240; });
+  await expect.poll(() => bodies.evaluateAll(elements => elements.every(element => element.scrollTop === 240))).toBe(true);
+  const toggle = first.locator("[data-calendar-all-day-toggle]");
+  await expect(toggle).toHaveText("");
+  await expect(toggle.locator("svg")).toHaveCount(2);
+  await expect(toggle).toHaveAttribute("data-direction", "inward");
+  await toggle.hover();
+  expect(await toggle.evaluate(element => getComputedStyle(element).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(toggle).toHaveAttribute("data-direction", "outward");
+  await expect.poll(() => bodies.first().evaluate(element => element.scrollTop)).toBe(240);
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("data-direction", "inward");
+  await first.getByRole("button", { name: "day", exact: true }).click();
+  await expect(active.locator("[data-calendar-day-column]")).toHaveCount(1);
+  await page.screenshot({ animations: "disabled", path: ".dev/calendar-e2e-results/unified-day-column.png" });
+});
+test("drag previews cross column scroll boundaries and disappear on drop", async ({ page }) => {
+  const first = page.getByRole("region", { name: "First calendar" });
+  await expect(first.locator('[data-calendar-period-ready="true"]')).toHaveCount(3);
+  const card = first.getByRole("button", { name: /Plain meeting/ }).first();
+  const box = await card.boundingBox();
+  const column = first.locator('[data-calendar-day-column="2026-09-09"]');
+  const width = await column.evaluate(element => element.clientWidth);
+  const x = box.x + box.width / 2, y = box.y + box.height / 2;
+  await page.mouse.move(x, y); await page.mouse.down();
+  await page.mouse.move(x + width, y, { steps: 3 });
+  const preview = page.locator("[data-calendar-drag-preview]");
+  await expect(preview).toBeVisible();
+  expect((await preview.boundingBox()).x).toBeGreaterThan(box.x + width - 2);
+  expect(await preview.evaluate(element => element.parentElement === document.body)).toBe(true);
+  await page.mouse.up();
+  await expect(preview).toHaveCount(0);
+  await expect(first.locator("output")).toContainText("changed:meeting");
+  await expect(first.locator('[data-calendar-day-column="2026-09-10"]').getByRole("button", { name: /Plain meeting/ })).toBeVisible();
 });

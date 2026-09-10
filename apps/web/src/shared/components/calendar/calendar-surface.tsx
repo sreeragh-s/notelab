@@ -1,5 +1,5 @@
 import { CalendarDragContext } from "./drag-context";
-import { useId, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useId, useCallback, useEffect, useMemo, useState } from "react";
 import { addCalendarDays, calendarDays, dayInstant, eventClock, createEventIndex, shiftCalendarPeriod } from "@zilobase/features/calendar-layout";
 import { Button } from "@/shared/ui/button";
 import { CalendarMonthView } from "./calendar-month-view";
@@ -9,8 +9,6 @@ import { type CalendarItem, type CalendarSurfaceProps } from "./types";
 export function CalendarSurface({ items, date, view, preferences, onNavigate, onRangeChange, onSelect, onCreate, onChange, onError, renderItem }: CalendarSurfaceProps) {
   const scope = useId();
   const dragContext = useMemo(() => ({ scope, items: new Map(items.map(item => [item.id, item])) }), [scope, items]);
-  const gridScroll = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (gridScroll.current) gridScroll.current.scrollTop = 7 * 48; }, [view]);
   const allDays = useMemo(() => calendarDays(date, view, preferences.weekStartsOn), [date, view, preferences.weekStartsOn]);
   const periods = useMemo(() => [-1, 0, 1].map(direction => calendarDays(shiftCalendarPeriod(date, view, direction), view, preferences.weekStartsOn).filter(day => preferences.showWeekends || view === "day" || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()))), [date, view, preferences.weekStartsOn, preferences.showWeekends]);
   const [monthDays, setMonthDays] = useState<string[]>([]);
@@ -34,6 +32,6 @@ export function CalendarSurface({ items, date, view, preferences, onNavigate, on
   }, [scope, view, writable, onSelect, renderItem, preferences.timeZone, preferences.timeFormat]);
   let content;
   if (view === "month") content = <CalendarMonthView date={date} onDate={navigateDate} onRangeChange={setMonthDays} days={days} eventsByDay={eventsByDay} preferences={preferences} online={Boolean(onChange)} writable={writable} card={card} onDay={day} onChange={change} onError={onError} />;
-  else content = <CalendarPeriodScroller canCreate={Boolean(onCreate)} periods={periods} periodKey={`${view}:${date}`} onPeriod={navigatePeriod} eventsByDay={eventsByDay} preferences={preferences} online={Boolean(onChange)} scrollRef={gridScroll} card={card} writable={writable} onDay={day} onCreate={create} onChange={change} onError={onError} background={event => event.backgroundClass ?? ""} />;
+  else content = <CalendarPeriodScroller view={view} canCreate={Boolean(onCreate)} periods={periods} periodKey={`${view}:${date}`} onPeriod={navigatePeriod} eventsByDay={eventsByDay} preferences={preferences} card={card} writable={writable} onDay={day} onCreate={create} onChange={change} onError={onError} />;
   return <CalendarDragContext.Provider value={dragContext}>{content}</CalendarDragContext.Provider>;
 }

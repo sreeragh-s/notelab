@@ -118,7 +118,7 @@ for (const view of ["day", "week"]) {
   test(`${view} snaps between periods and preserves the vertical time position`, async ({ page }) => {
     await page.evaluate(view => window.calendarFixture.navigate(view), view);
     const pager = page.locator("[data-calendar-period-scroll]");
-    const activeGrid = page.locator('[data-calendar-period="1"] [data-calendar-scroll]');
+    const activeGrid = page.locator('[data-calendar-period="1"] [data-calendar-scroll]').first();
     await expect(pager).toBeVisible();
     await activeGrid.evaluate(element => { element.scrollTop = 240 });
     await activeGrid.hover();
@@ -139,7 +139,7 @@ test("every calendar view scrolls vertically in a short viewport", async ({ page
   for (const view of ["day", "week", "month"]) {
     await page.evaluate(view => window.calendarFixture.navigate(view), view);
     const scroll = view === "day" || view === "week"
-      ? page.locator('[data-calendar-period="1"] [data-calendar-scroll]')
+      ? page.locator('[data-calendar-period="1"] [data-calendar-scroll]').first()
       : page.locator("[data-calendar-scroll]");
     await expect(scroll).toBeVisible();
     await expect.poll(() => scroll.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
@@ -164,14 +164,15 @@ test("a healthy socket without provider watches retains one-minute recovery", as
 
 for (const view of ["day", "week"]) test(`${view} pins headers and timezone rail in both scroll directions`, async ({ page }) => {
   await page.evaluate(view => window.calendarFixture.navigate(view), view);
-  const header = page.locator("[data-calendar-grid-header]"), axis = page.locator("[data-calendar-time-axis]"), pager = page.locator("[data-calendar-period-scroll]");
+  const header = page.locator('[data-calendar-period="1"] [data-calendar-column-header]').first(), axis = page.locator("[data-calendar-time-axis]"), pager = page.locator("[data-calendar-period-scroll]");
   const headerBox = await header.boundingBox(), axisBox = await axis.boundingBox();
-  const active = page.locator('[data-calendar-period="1"] [data-calendar-scroll]');
+  const active = page.locator('[data-calendar-period="1"] [data-calendar-scroll]').first();
   await active.evaluate(element => { element.scrollTop = 240 });
   await expect.poll(() => axis.evaluate(element => element.scrollTop)).toBe(240);
   await pager.evaluate(element => { element.scrollLeft = element.clientWidth * 2 });
   await expect(page.getByRole("button", { name: `Create event ${view === "day" ? "2026-09-10" : "2026-09-14"} 9:00`, exact: true })).toBeAttached();
   expect((await header.boundingBox()).y).toBe(headerBox.y);
+  await expect.poll(() => pager.evaluate(element => Math.abs(element.scrollLeft - element.clientWidth))).toBeLessThan(2);
   expect((await header.boundingBox()).x).toBe(headerBox.x);
   expect((await axis.boundingBox()).x).toBe(axisBox.x);
   await expect.poll(() => axis.evaluate(element => element.scrollTop)).toBe(240);
@@ -349,11 +350,11 @@ test("week snaps by day and moves dates and all-day cells with the grid", async 
   await page.route('**/ranges?**', route => { const url = new URL(route.request().url()); return route.fulfill({ json: { calendarId: 'primary', start: url.searchParams.get('start'), end: url.searchParams.get('end'), generation: 2, revision: 10, events: [event, holiday], complete: true, nextPageToken: null } }); });
   await page.reload();
   const pager = page.locator('[data-calendar-period-scroll]');
-  const active = page.locator('[data-calendar-period="1"] [data-calendar-scroll]');
+  const active = page.locator('[data-calendar-period="1"] [data-calendar-scroll]').first();
   const header = page.locator('[data-calendar-date-header="2026-09-09"]');
   const allDay = page.locator('[data-calendar-all-day="2026-09-09"]');
   const slot = page.getByRole('button', { name: 'Create event 2026-09-09 9:00', exact: true });
-  await expect(page.getByText('All-day', { exact: true })).toBeVisible();
+  await expect(page.getByText('All-day', { exact: true })).toHaveCount(0);
   await expect(allDay.getByRole('button', { name: 'All-day holiday', exact: true })).toBeVisible();
   const toggle = page.getByRole('button', { name: 'Collapse all-day events', exact: true });
   const zoneBox = await page.locator('[data-calendar-zone-labels]').boundingBox();
@@ -370,7 +371,7 @@ test("week snaps by day and moves dates and all-day cells with the grid", async 
   await expect.poll(() => pager.evaluate(element => Math.abs(element.scrollLeft - element.clientWidth * (1 + 1 / 7)))).toBeLessThan(2);
   await active.evaluate(element => { element.scrollTop = 400; });
   expect((await header.boundingBox()).y).toBe(before.y);
-  await expect(page.getByText('All-day', { exact: true })).toBeVisible();
+  await expect(page.getByText('All-day', { exact: true })).toHaveCount(0);
   const offset = await pager.evaluate(element => element.scrollLeft);
   await toggle.focus();
   await page.keyboard.press('Space');
@@ -390,11 +391,11 @@ test("week snaps by day and moves dates and all-day cells with the grid", async 
 test("vertical wheel over the pinned all-day row scrolls time and does not page", async ({ page }) => {
   await page.evaluate(() => window.calendarFixture.navigate("week"));
   const pager = page.locator("[data-calendar-period-scroll]");
-  const active = page.locator('[data-calendar-period="1"] [data-calendar-scroll]');
+  const active = page.locator('[data-calendar-period="1"] [data-calendar-scroll]').first();
   const allDay = page.locator('[data-calendar-all-day="2026-09-09"]');
-  const header = page.locator("[data-calendar-grid-header]");
+  const header = page.locator('[data-calendar-period="1"] [data-calendar-column-header]').first();
   await expect(allDay).toBeVisible();
-  await expect(page.locator("[data-calendar-period] [data-calendar-scroll]")).toHaveCount(3);
+  await expect(page.locator('[data-calendar-period-ready="true"]')).toHaveCount(3);
   const left = await pager.evaluate(element => element.scrollLeft);
   const top = await active.evaluate(element => element.scrollTop);
   const headerY = (await header.boundingBox()).y;
@@ -407,4 +408,11 @@ test("vertical wheel over the pinned all-day row scrolls time and does not page"
   await page.mouse.wheel(await pager.evaluate(element => element.clientWidth), 0);
   await expect(page.getByRole("button", { name: "Create event 2026-09-14 9:00", exact: true })).toBeAttached();
   expect((await header.boundingBox()).y).toBe(headerY);
+});
+test("retired agenda links open Week and the menu only offers supported views", async ({ page }) => {
+  await page.evaluate(() => window.calendarFixture.navigate("agenda"));
+  await expect(page.getByRole("combobox")).toContainText("Week");
+  await page.getByRole("combobox").click();
+  await expect(page.getByRole("option", { name: "Agenda", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("option")).toHaveCount(3);
 });
