@@ -31,6 +31,16 @@ test("calendar renders all appearance families", async ({ page }) => {
   }
 });
 
+test("create event sits at the trailing edge of the month heading", async ({ page }) => {
+  const heading = page.getByRole("heading", { name: "September 2026", exact: true });
+  const create = page.getByRole("button", { name: "Create event", exact: true });
+  const headingBox = await heading.boundingBox();
+  const createBox = await create.boundingBox();
+  const rowBox = await heading.evaluate(element => element.parentElement.getBoundingClientRect());
+  expect(createBox.x).toBeGreaterThan(headingBox.x + headingBox.width);
+  expect(rowBox.right - (createBox.x + createBox.width)).toBeLessThanOrEqual(20);
+});
+
 test("create event persists through the actual editor", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Create event", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "Create event", exact: true }).click();
@@ -345,6 +355,12 @@ test("week snaps by day and moves dates and all-day cells with the grid", async 
   const slot = page.getByRole('button', { name: 'Create event 2026-09-09 9:00', exact: true });
   await expect(page.getByText('All-day', { exact: true })).toBeVisible();
   await expect(allDay.getByRole('button', { name: 'All-day holiday', exact: true })).toBeVisible();
+  const toggle = page.getByRole('button', { name: 'Collapse all-day events', exact: true });
+  const zoneBox = await page.locator('[data-calendar-zone-labels]').boundingBox();
+  const toggleBox = await toggle.boundingBox();
+  const allDayBox = await allDay.boundingBox();
+  expect(toggleBox.y - (zoneBox.y + zoneBox.height)).toBeGreaterThanOrEqual(8);
+  expect(allDayBox.height).toBeGreaterThanOrEqual(48);
   const before = await header.boundingBox();
   await pager.evaluate(element => { element.style.scrollSnapType = 'none'; element.scrollLeft += element.clientWidth / 14; });
   await expect.poll(async () => Math.abs((await header.boundingBox()).x - (await slot.boundingBox()).x)).toBeLessThan(2);
@@ -356,8 +372,7 @@ test("week snaps by day and moves dates and all-day cells with the grid", async 
   expect((await header.boundingBox()).y).toBe(before.y);
   await expect(page.getByText('All-day', { exact: true })).toBeVisible();
   const offset = await pager.evaluate(element => element.scrollLeft);
-  const collapse = page.getByRole('button', { name: 'Collapse all-day events', exact: true });
-  await collapse.focus();
+  await toggle.focus();
   await page.keyboard.press('Space');
   await expect(page.getByRole('button', { name: 'Expand all-day events', exact: true })).toHaveAttribute('aria-expanded', 'false');
   await expect(allDay.getByRole('button', { name: 'All-day holiday', exact: true })).toHaveCount(0);
@@ -370,4 +385,26 @@ test("week snaps by day and moves dates and all-day cells with the grid", async 
   await expect(page.getByRole('button', { name: 'Collapse all-day events', exact: true })).toHaveAttribute('aria-expanded', 'true');
   await expect(page.getByRole('button', { name: 'Collapse all-day events', exact: true })).toBeFocused();
   await page.screenshot({ animations: 'disabled', path: '.dev/calendar-e2e-results/day-column-scroll.png' });
+});
+
+test("vertical wheel over the pinned all-day row scrolls time and does not page", async ({ page }) => {
+  await page.evaluate(() => window.calendarFixture.navigate("week"));
+  const pager = page.locator("[data-calendar-period-scroll]");
+  const active = page.locator('[data-calendar-period="1"] [data-calendar-scroll]');
+  const allDay = page.locator('[data-calendar-all-day="2026-09-09"]');
+  const header = page.locator("[data-calendar-grid-header]");
+  await expect(allDay).toBeVisible();
+  await expect(page.locator("[data-calendar-period] [data-calendar-scroll]")).toHaveCount(3);
+  const left = await pager.evaluate(element => element.scrollLeft);
+  const top = await active.evaluate(element => element.scrollTop);
+  const headerY = (await header.boundingBox()).y;
+  await allDay.hover();
+  await page.mouse.wheel(200, 400);
+  await expect.poll(() => active.evaluate(element => element.scrollTop)).toBeGreaterThan(top);
+  await expect.poll(() => pager.evaluate(element => element.scrollLeft)).toBe(left);
+  expect((await header.boundingBox()).y).toBe(headerY);
+  await allDay.hover();
+  await page.mouse.wheel(await pager.evaluate(element => element.clientWidth), 0);
+  await expect(page.getByRole("button", { name: "Create event 2026-09-14 9:00", exact: true })).toBeAttached();
+  expect((await header.boundingBox()).y).toBe(headerY);
 });

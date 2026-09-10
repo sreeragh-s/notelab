@@ -58,12 +58,17 @@ export function CalendarPeriodScroller({ periods, periodKey, onPeriod, ...grid }
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div data-calendar-grid-header className="z-20 flex shrink-0 border-b border-stroke-default bg-surface-canvas" onWheel={event => {
+        if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+          viewport.current?.scrollBy({ left: event.deltaX });
+          return;
+        }
+        const allDayEvents = (event.target as HTMLElement).closest<HTMLElement>("[data-calendar-all-day-events]");
+        if (allDayEvents && allDayEvents.scrollHeight > allDayEvents.clientHeight) return;
         if (grid.scrollRef.current) grid.scrollRef.current.scrollTop += event.deltaY;
-        viewport.current?.scrollBy({ left: event.deltaX });
       }}>
         <div className="flex shrink-0 flex-col" style={{ width: 56 * (1 + grid.preferences.secondaryTimeZones.length) }}>
           <div data-calendar-zone-labels className="flex h-8 text-[10px] text-content-secondary">{[grid.preferences.timeZone, ...grid.preferences.secondaryTimeZones].map(zone => <span key={zone} title={zone} className="w-14 truncate p-1">{zone.split("/").at(-1)}</span>)}</div>
-          <div className="min-h-8 flex-1 border-t border-stroke-default px-1 py-1 text-right text-xs/relaxed whitespace-nowrap text-content-secondary"><Button ref={allDayToggle} size="sm" variant="ghost" className="w-full gap-0 px-0 [&_svg]:size-2.5" aria-expanded={!allDayCollapsed} aria-label={allDayCollapsed ? "Expand all-day events" : "Collapse all-day events"} title={allDayCollapsed ? "Expand all-day events" : "Collapse all-day events"} onClick={() => setAllDayCollapsed(value => !value)}><span>All-day</span>{allDayCollapsed ? <ChevronDownIcon /> : <ChevronUpIcon />}</Button></div>
+          <div className="flex min-h-12 flex-1 items-center border-t border-stroke-default px-1 py-2 text-xs/relaxed whitespace-nowrap text-content-secondary"><Button ref={allDayToggle} size="sm" variant="ghost" className="w-full gap-0.5 px-1 [&_svg]:size-2.5" aria-expanded={!allDayCollapsed} aria-label={allDayCollapsed ? "Expand all-day events" : "Collapse all-day events"} title={allDayCollapsed ? "Expand all-day events" : "Collapse all-day events"} onClick={() => setAllDayCollapsed(value => !value)}><span>All-day</span>{allDayCollapsed ? <ChevronDownIcon /> : <ChevronUpIcon />}</Button></div>
         </div>
         <div ref={header} className="min-w-0 flex-1 overflow-hidden"><div className="w-[300%]"><CalendarTimeGridHeader {...grid} days={periods.flat()} visibleDayCount={periods[1]!.length} allDayCollapsed={allDayCollapsed} onExpandAllDay={() => { setAllDayCollapsed(false); allDayToggle.current?.focus(); }} /></div></div>
       </div>

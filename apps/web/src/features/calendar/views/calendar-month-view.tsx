@@ -73,7 +73,7 @@ export function CalendarMonthView(props: MonthProps & { date: string; onDate: (d
   const first = Math.max(0, Math.floor(position.top / WEEK_HEIGHT) - 2);
   const last = Math.min(windowWeeks, Math.ceil((position.top + position.height) / WEEK_HEIGHT) + 2);
   const weeks = Array.from({ length: last - first }, (_, index) => days.slice((first + index) * 7, (first + index + 1) * 7).filter(day => props.preferences.showWeekends || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay())));
-  return <div data-calendar-scroll data-calendar-month-scroll ref={viewport} className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [overflow-anchor:none]" onScroll={event => {
+  return <div data-calendar-scroll data-calendar-month-scroll ref={viewport} className="min-h-0 flex-1 overflow-y-auto overscroll-y-none [overflow-anchor:none]" onScroll={event => {
     const element = event.currentTarget;
     if (adjusting.current) return;
     const top = element.scrollTop;
