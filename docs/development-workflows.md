@@ -38,12 +38,9 @@ Each repository exposes commands only for state it owns:
 | Landing | Marketing-site development, preview, build, and deployment |
 
 The adapter does not launch Community web or desktop clients. Use
-`npm run dev:local` from this repository for the public Node profile.
-If the private profile is present, enable it with:
-
-```sh
-ZILOBASE_ENABLE_WORKER=1 npm run dev:local -- --target all
-```
+`npm run dev:local` from this repository. If the private adapter repository is
+present as a sibling, that profile starts automatically; otherwise the command
+stays on the public Node profile.
 
 ## Requirements
 
@@ -81,21 +78,19 @@ Install dependencies:
 
 ```sh
 cd zilobase
-npm install
-
-cd ../zilobase
-npm run dev:doctor
-npm run dev:setup
+npm run setup
 npm run dev:local
 ```
 
-`dev:setup` is idempotent. It copies committed examples only when a destination
+`npm run setup` installs workspace dependencies if needed, creates missing
+local files, and pre-pulls PostgreSQL, MinIO, and Mailpit images. `dev:setup`
+is the narrower command: it copies committed examples only when a destination
 does not exist, generates local secrets under `.dev/local/env`, writes private
 files with mode `0600`, and reports incompatible legacy values. It never
 replaces an existing environment file.
 
-The first `dev:local` run may take longer while Docker pulls PostgreSQL, MinIO,
-and Mailpit. Later starts reuse those dependency containers and their volumes.
+The first `dev:local` run may take longer if images were not pulled during
+setup. Later starts reuse those dependency containers and their volumes.
 
 ## What the dual workflow starts
 
@@ -104,10 +99,10 @@ The default workflow performs these operations in order:
 1. Validates selected ports before starting processes.
 2. Starts dependency-only PostgreSQL, MinIO, and Mailpit containers.
 3. Creates independent Node and optional private-adapter databases and buckets.
-4. Runs migrations once for each selected runtime.
+4. Runs migrations once for each started runtime.
 5. Starts the Node API with source maps and the Node inspector.
-6. Starts optional adapter runtime components in the private repo when enabled.
-7. Starts one Vite client for Node and, when enabled, one client for the adapter.
+6. Starts adapter runtime components when the sibling adapter repository is present.
+7. Starts one Vite client for Node and, when the adapter is present, one client for the adapter.
 8. Waits for readiness and prints the runtime URLs.
 9. Triggers each selected runtime's scheduled handler every minute.
 
@@ -206,19 +201,6 @@ The Node process is intentionally launched directly under the debugger rather
 than under an additional file-watcher. This gives stable inspector attachment;
 restart the supervisor after server-side Node changes.
 
-### Focused source profiles
-
-Run only the implementation being changed when simultaneous comparison is not
-needed:
-
-```sh
-ZILOBASE_ENABLE_WORKER=1 npm run dev:local -- --target all
-npm run dev:local -- --target node
-```
-
-These profiles retain the same ports and isolated state used by `dev:local`, so
-switching between focused and dual mode does not move data unexpectedly.
-
 ### Foreground shutdown
 
 Press Ctrl-C once in the supervisor terminal. It terminates the Node, Wrangler,
@@ -252,7 +234,7 @@ pollute the supervisor or the other runtime. Shell values deliberately win,
 which makes one-command overrides possible:
 
 ```sh
-PORT=3100 ZILOBASE_NODE_WEB_PORT=1520 npm run dev:local -- --target node
+PORT=3100 ZILOBASE_NODE_WEB_PORT=1520 npm run dev:local
 ```
 
 Common overrides include:
@@ -338,12 +320,12 @@ and confirm the matching inspector port is listening.
 Start the corresponding source workflow first, then launch a desktop profile:
 
 ```sh
-npm run dev:local -- --target node
+npm run dev:local
 npm run dev:desktop:node
 ```
 
-Run the same two commands with `ZILOBASE_ENABLE_WORKER=1` to exercise the optional
-adapter workflow.
+If the private adapter repository is present, `npm run dev:local` already starts
+that profile; launch the matching desktop profile against it.
 
 The Tauri profile reuses the existing Vite client instead of starting another
 web server. Only one desktop profile should run at a time.
@@ -556,7 +538,7 @@ process and does not run under a file watcher.
 
 ### Adapter state looks stale
 
-First restart `npm run dev:local -- --target all` with `ZILOBASE_ENABLE_WORKER=1`.
+First restart `npm run dev:local`.
 Adapter persistence intentionally survives normal restarts. If the test specifically
 requires empty state, use the scoped reset rather than deleting the entire `.dev`
 directory.
@@ -577,11 +559,11 @@ longer needed; do not delete unrelated Docker containers or kind clusters.
 
 | Command | Purpose |
 | --- | --- |
+| `npm run setup` | Install workspace dependencies, create local files, and pull dependency images |
+| `npm run setup:check` | Validate required and optional tooling |
 | `npm run dev:doctor` | Validate required and optional tooling |
 | `npm run dev:setup` | Create missing environments and local secrets safely |
-| `npm run dev:local` | Run Node and, when enabled, the optional adapter profile |
-| `npm run dev:local -- --target node` | Run only Node and its Vite client |
-| `ZILOBASE_ENABLE_WORKER=1 npm run dev:local -- --target all` | Run both Node and optional adapter workflows |
+| `npm run dev:local` | Run Node and, if the sibling adapter repo is present, the adapter profile |
 | `npm run dev:status` | Inspect dependencies, recorded processes, and endpoints |
 | `npm run dev:logs` | Follow prefixed, redacted runtime logs |
 | `npm run dev:down` | Stop source processes and containers while preserving data |

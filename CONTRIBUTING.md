@@ -13,9 +13,7 @@ Prerequisites:
 Install the workspace dependencies from the repository root:
 
 ```sh
-npm install
-npm run dev:doctor
-npm run dev:setup
+npm run setup
 npm run dev:local
 ```
 

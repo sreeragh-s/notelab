@@ -125,10 +125,11 @@ Common commands:
 
 | Command | Purpose |
 | --- | --- |
+| `npm run setup` | Run local bootstrap: install workspace dependencies, create local development files, and pull dependency images. |
+| `npm run setup:check` | Check prerequisites and optional tooling without running bootstrap steps. |
 | `npm run dev:doctor` | Validate source and optional Kubernetes tooling. |
 | `npm run dev:setup` | Create missing private development files without overwriting. |
-| `npm run dev:local` | Run the public local development profile (database + web). |
-| `npm run dev:local -- --target node` | Run only the Node source profile. |
+| `npm run dev:local` | Run Node and, if the sibling adapter repo is present, the adapter profile. |
 | `npm run dev:status` | Inspect dependency and runtime health. |
 | `npm run dev:web` | Start the web client. |
 | `npm run build:web` | Type-check and build the web client. |
@@ -148,11 +149,8 @@ See the [unified local-development guide](./docs/development-workflows.md) for
 runtime URLs, debugger profiles, Kubernetes workflows, dotenvx precedence,
 failure recovery, and safe target-scoped resets.
 
-To run the private hosted profile (requires the private adapter repository), use:
-
-```sh
-ZILOBASE_ENABLE_WORKER=1 npm run dev:local -- --target all
-```
+If the private adapter repository is a sibling of this repo, `npm run dev:local`
+starts that profile too.
 
 `npm run dev:desktop` talks to the local API at `http://localhost:3000`. Packaged
 releases default to Zilobase Cloud at `https://api.zilobase.com`. On the server
