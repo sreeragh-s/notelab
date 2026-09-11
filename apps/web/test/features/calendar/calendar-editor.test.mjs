@@ -4,7 +4,16 @@ export function register({ assert, loadModule, readSource, test }) {
     const month = await readSource("/src/shared/components/calendar/calendar-month-view.tsx");
     assert.doesNotMatch(timed + month, /lastSafe|snap-mandatory|preparedPeriod|restoringTop/);
     assert.match(timed, /overflow-auto overscroll-none/);
+    assert.match(timed, /snapTimelineOffset/);
+    assert.match(timed, /timelineRetargets/);
+    assert.match(timed, /onViewport\(first, last, true\)/);
     assert.match(month, /overflow-y-auto overscroll-none/);
+    const schedule = await readSource("/src/features/calendar/views/calendar-schedule.tsx");
+    const navigation = await readSource("/src/features/calendar/workspace/calendar-navigation.ts");
+    assert.match(schedule, /bookmarkVisibleDate/);
+    assert.match(schedule, /date: anchorDate/);
+    assert.match(navigation, /useCalendarVisibleDate/);
+    assert.match(navigation, /lastBookmark/);
   });
   test("drag hit testing includes scroll displacement and hidden weekends", async () => {
     const { calendarDragDisplacement } = await loadModule("/src/shared/components/calendar/event-geometry.ts");

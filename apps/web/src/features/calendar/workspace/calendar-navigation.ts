@@ -1,7 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { addCalendarDays, calendarDays, dayInstant, type CalendarPreferences, type CalendarView } from "@zilobase/features/calendar";
+import { addCalendarDays, calendarDays, dayInstant, todayInZone, type CalendarPreferences, type CalendarView } from "@zilobase/features/calendar";
 import { type CalendarWindow } from "../sync/range-coverage";
 export type CalendarDestination = { date: string; view: CalendarView; days?: number; align?: boolean };
+/** Chrome (toolbar, mini-calendar, heading) follows settled viewport, then the route, then today. */
+export function chromeCalendarDate(visibleDate: string | null | undefined, routeDate: string | undefined, zone: string) {
+  return visibleDate ?? routeDate ?? todayInZone(zone);
+}
+/** Bookmark writes of the settled date must not copy the route into the jump target. */
+function calendarRouteRetargets(routeDate: string | undefined, bookmarkDate: string | null) {
+  return Boolean(routeDate) && routeDate !== bookmarkDate;
+}
+/** Jump target stays on explicit navigation; chrome date follows the viewport. */
+export function useCalendarVisibleDate(routeDate: string, searchDate: string | undefined, zone: string, visibleDate: string | null, setVisibleDate: (date: string) => void) {
+  const [anchorDate, setAnchorDate] = useState(routeDate);
+  const lastBookmark = useRef<string | null>(null);
+  const anchorRef = useRef(anchorDate);
+  anchorRef.current = anchorDate;
+  const date = chromeCalendarDate(visibleDate, searchDate, zone);
+  useEffect(() => { if (!visibleDate) setVisibleDate(anchorDate); }, []);
+  useEffect(() => {
+    if (!calendarRouteRetargets(searchDate, lastBookmark.current) || !searchDate || searchDate === anchorRef.current) return;
+    lastBookmark.current = null;
+    setAnchorDate(searchDate);
+    setVisibleDate(searchDate);
+  }, [searchDate, setVisibleDate]);
+  const markExplicit = useCallback((next: string) => { lastBookmark.current = null; setAnchorDate(next); setVisibleDate(next); }, [setVisibleDate]);
+  const markBookmark = useCallback((next: string) => { lastBookmark.current = next; setVisibleDate(next); }, [setVisibleDate]);
+  return { anchorDate, date, lastBookmark, markExplicit, markBookmark };
+}
 export function calendarDestinationRange(next: CalendarDestination, preferences: CalendarPreferences): CalendarWindow {
   const days = calendarDays(next.date, next.view, preferences.weekStartsOn, next.days, preferences.showWeekends, next.align);
   // Month opens at its first week; reserve enough weeks for a tall viewport.

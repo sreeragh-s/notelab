@@ -6,11 +6,12 @@ import { Command, CommandDialog, CommandInput, CommandList, CommandEmpty, Comman
 import { Button } from "@/shared/ui/button";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/platform/network/api";
+import { chromeCalendarDate } from "./calendar-navigation";
 import { useCalendarWorkspace, type CalendarCommand } from "./calendar-workspace";
 export function CalendarCommands({ preferences, onPreferences, onSettings, onSearch }: { onSearch: () => void; preferences: CalendarPreferences; onPreferences?: (value: CalendarPreferences) => Promise<unknown>; onSettings: () => void }) {
   const workspace = useCalendarWorkspace(), navigate = useNavigate(), search = useSearch({ from: "/app/calendar" });
   const [mode, setMode] = useState<"commands" | "help" | null>(null), [pending, setPending] = useState(false);
-  const view = normalizeCalendarView(search.view ?? preferences.view), date = search.date ?? todayInZone(workspace.travelZone ?? preferences.timeZone);
+  const view = normalizeCalendarView(search.view ?? preferences.view), date = chromeCalendarDate(workspace.visibleDate, search.date, workspace.travelZone ?? preferences.timeZone);
   const route = (search: import("./calendar-navigation").CalendarDestination) => workspace.navigateCalendar(search, () => { void navigate({ to: "/calendar", search }); });
   const period = (date: string, nextView: CalendarView = view, align = search.align) => route({ date, view: nextView, days: search.days, align });
   const save = async (value: CalendarPreferences) => { if (!onPreferences || pending) return; setPending(true); try { await onPreferences(value); } catch (error) { toast.error(getApiErrorMessage(error)); } finally { setPending(false); } };

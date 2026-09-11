@@ -1,3 +1,4 @@
+import { chromeCalendarDate } from "../workspace/calendar-navigation";
 import { useCalendarWorkspace } from "../workspace/calendar-workspace";
 import { useCalendarDisplayPreferences } from "../preferences/calendar-travel";
 import { useEffect, useState } from "react";
@@ -11,7 +12,7 @@ export function CalendarMiniCalendar({ preferences: savedPreferences }: { prefer
   const search = useSearch({ strict: false }) as { align?: boolean; days?: number; date?: string; view?: CalendarPreferences["view"] };
   const navigate = useNavigate();
   const route = (search: import("../workspace/calendar-navigation").CalendarDestination) => workspace.navigateCalendar(search, () => { void navigate({ to: "/calendar", search }); });
-  const date = search.date ?? todayInZone(preferences.timeZone);
+  const date = chromeCalendarDate(workspace.visibleDate, search.date, preferences.timeZone);
   const selected = new Date(`${date}T12:00:00`);
   const [month, setMonth] = useState(selected);
   useEffect(() => setMonth(new Date(`${date}T12:00:00`)), [date]);

@@ -9,13 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/shared/ui/dropdown-menu";
 import { SearchIcon, SidebarSimpleIcon, ChevronLeftIcon, ChevronRightIcon, SettingsIcon, MoreHorizontalIcon } from "@/shared/components/icons";
+import { chromeCalendarDate } from "./calendar-navigation";
 import { useCalendarWorkspace } from "./calendar-workspace";
 export function CalendarToolbar({ preferences: savedPreferences, onSettings, onPreferences }: { preferences: CalendarPreferences; onSettings: () => void; onPreferences?: (preferences: CalendarPreferences) => Promise<unknown> }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const preferences = useCalendarDisplayPreferences(savedPreferences);
   const workspace = useCalendarWorkspace(), search = useSearch({ from: "/app/calendar" }), navigate = useNavigate();
   const route = (search: import("../workspace/calendar-navigation").CalendarDestination) => workspace.navigateCalendar(search, () => { void navigate({ to: "/calendar", search }); });
-  const date = search.date ?? todayInZone(preferences.timeZone), view = normalizeCalendarView(search.view ?? preferences.view);
+  const date = chromeCalendarDate(workspace.visibleDate, search.date, preferences.timeZone), view = normalizeCalendarView(search.view ?? preferences.view);
   const period = (date: string, view: CalendarView) => route({ date, view, align: search.align, days: search.days });
   const today = () => route({ date: todayInZone(preferences.timeZone), view, days: search.days, align: preferences.todayAlignment === "start" || undefined });
   const shift = (direction: number) => period(shiftCalendarPeriod(date, view, direction, search.days, preferences.showWeekends, search.align), view);

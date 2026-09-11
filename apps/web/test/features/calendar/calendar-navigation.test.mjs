@@ -45,6 +45,11 @@ export function register({ assert, loadModule, test }) {
       assert.equal((await readCalendarRangeCache(db, "c", at(1), at(10))).loaded, true);
     } finally { await destroyCalendarDatabase(db.name); }
   });
+  test("chrome date prefers settled viewport over the route bookmark", async () => {
+    const { chromeCalendarDate } = await loadModule("/src/features/calendar/workspace/calendar-navigation.ts");
+    assert.equal(chromeCalendarDate("2026-10-20", "2026-09-09", "UTC"), "2026-10-20");
+    assert.equal(chromeCalendarDate(null, "2026-09-09", "UTC"), "2026-09-09");
+  });
   test("readiness requires each visible account and rejects another user's snapshot", async () => {
     const { calendarRangeReady } = await loadModule("/src/features/calendar/sync/range-coverage.ts");
     const range = { start: "2026-09-01T00:00:00Z", end: "2026-10-01T00:00:00Z" };
