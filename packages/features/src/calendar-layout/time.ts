@@ -50,7 +50,7 @@ function clockFormatter(zone: string, format: "12" | "24") {
 export function eventClock(time: CalendarEventTime, zone: string, format: "12" | "24" = "24") {
   return time.date ? "All day" : clockFormatter(zone, format).format(new Date(time.dateTime!));
 }
-export function timedLayout<T extends CalendarSpan>(events: T[], date: string, zone: string, key: (event: T) => string) {
+export function timedLayoutByKey<T extends CalendarSpan>(events: T[], date: string, zone: string, key: (event: T) => string) {
   const start = Date.parse(dayInstant(date, zone)), end = Date.parse(dayInstant(addCalendarDays(date, 1), zone));
   const items = events.filter(e => { const span = normalizeSpan(e, zone); return !e.start.date && span.from < end && span.until > start; }).map(event => {
     const span = normalizeSpan(event, zone);

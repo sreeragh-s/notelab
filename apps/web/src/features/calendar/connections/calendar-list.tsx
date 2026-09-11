@@ -10,7 +10,6 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/shared/ui/alert-dialog";
 import { getApiErrorMessage } from "@/platform/network/api";
 import { calendarSelectionKey } from "./calendar-selection";
-export { calendarSelectionKey } from "./calendar-selection";
 const colors: CalendarColor[] = ["red", "orange", "yellow", "green", "blue", "purple", "gray"];
 const colorName = (color: CalendarColor) => color === "gray" ? "Grey" : PALETTE[color].name;
 type Props = { calendars: CalendarRecord[]; allCalendars: CalendarRecord[]; preferences: CalendarPreferences; onPreferences: (preferences: CalendarPreferences) => Promise<unknown>; disabled: boolean };

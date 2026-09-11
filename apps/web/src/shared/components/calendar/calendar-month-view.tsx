@@ -1,11 +1,11 @@
 import { useVirtualizer, defaultRangeExtractor } from "@tanstack/react-virtual";
-import { civilDayOrdinal } from "@zilobase/features/calendar-layout";
+import { civilDayOrdinal } from "@zilobase/features/calendar";
 import { CalendarDateLabel } from "./current-time";
 import { CalendarOverflow } from "./calendar-overflow";
 import { calendarItemKey, type CalendarItem, type CalendarDisplayPreferences } from "./types";
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getISOWeek } from "date-fns";
-import { addCalendarDays, calendarDays } from "@zilobase/features/calendar-layout";
+import { addCalendarDays, calendarDays } from "@zilobase/features/calendar";
 import { Button } from "@/shared/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { DraggableEvent } from "./draggable-event";
