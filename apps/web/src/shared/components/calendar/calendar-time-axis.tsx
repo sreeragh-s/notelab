@@ -1,6 +1,6 @@
 import { CurrentTimeLabel } from "./current-time";
 import { memo } from "react";
-import { eventClock, wallTime } from "@zilobase/features/calendar-layout";
+import { eventClock, wallTime } from "@zilobase/features/calendar";
 import type { CalendarDisplayPreferences } from "./types";
 export const TimeAxis = memo(function TimeAxis({ day, days, preferences }: { day: string; days: string[]; preferences: CalendarDisplayPreferences }) {
   const zones = [preferences.timeZone, ...preferences.secondaryTimeZones].reverse();

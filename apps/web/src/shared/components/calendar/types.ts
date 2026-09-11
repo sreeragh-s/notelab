@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import type { CalendarSpan, CalendarView } from "@zilobase/features/calendar-layout";
-export type { CalendarTime, CalendarView } from "@zilobase/features/calendar-layout";
+import type { CalendarSpan, CalendarView } from "@zilobase/features/calendar";
+export type { CalendarTime, CalendarView } from "@zilobase/features/calendar";
 export type CalendarItem = CalendarSpan & {
   id: string;
   title: string;

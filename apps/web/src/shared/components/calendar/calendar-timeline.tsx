@@ -1,7 +1,7 @@
 import { TimelineCurrentTime } from "./current-time";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useVirtualizer, defaultRangeExtractor } from "@tanstack/react-virtual";
-import { timelineGeometry } from "@zilobase/features/calendar-layout";
+import { timelineGeometry } from "@zilobase/features/calendar";
 import { CalendarDayColumn, type CalendarColumnActions } from "./calendar-day-column";
 import { TimeAxis } from "./calendar-time-axis";
 import type { CalendarItem } from "./types";

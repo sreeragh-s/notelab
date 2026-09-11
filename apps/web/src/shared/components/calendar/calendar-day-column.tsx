@@ -1,5 +1,5 @@
 import { memo, useMemo, useRef, type ReactNode } from "react";
-import { timedLayout } from "@zilobase/features/calendar-layout";
+import { timedLayoutByKey } from "@zilobase/features/calendar";
 import { Button } from "@/shared/ui/button";
 import { CalendarDateLabel } from "./current-time";
 import { DraggableEvent } from "./draggable-event";
@@ -29,7 +29,7 @@ export const CalendarDayColumn = memo(function CalendarDayColumn({ day, items, p
   const header = useRef<HTMLElement>(null), body = useRef<HTMLDivElement>(null);
   const slot = useRef<{ y: number; hour: number } | null>(null);
   const allDay = useMemo(() => items.filter(item => item.start.date), [items]);
-  const layout = useMemo(() => prepared ? timedLayout(items, day, preferences.timeZone, calendarItemKey) : [], [items, day, preferences.timeZone, prepared]);
+  const layout = useMemo(() => prepared ? timedLayoutByKey(items, day, preferences.timeZone, calendarItemKey) : [], [items, day, preferences.timeZone, prepared]);
   return <section inert={!prepared} data-calendar-day-column={day} data-calendar-columns={1} className="flex h-full min-h-0 min-w-0 flex-col border-l border-stroke-default">
     <header data-calendar-column-header ref={header} className="sticky top-0 z-20 shrink-0 bg-surface-canvas">
       <div data-calendar-date-header={day} className="flex h-8 items-center px-1"><Button size="sm" variant="ghost" className="w-full" onClick={() => onDay(day)}><CalendarDateLabel day={day} zone={preferences.timeZone} /></Button></div>

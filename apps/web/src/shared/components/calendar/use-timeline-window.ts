@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { addCalendarDays, calendarDays, civilDayOrdinal, contiguousTimeline, dayInstant } from "@zilobase/features/calendar-layout";
+import { addCalendarDays, calendarDays, civilDayOrdinal, contiguousTimeline, dayInstant } from "@zilobase/features/calendar";
 import type { CalendarSurfaceProps } from "./types";
 
 export function useTimelineWindow({ date, view, preferences: p, isRangeReady, onRangeChange, onViewportRangeChange, items, onMetric }: CalendarSurfaceProps) {

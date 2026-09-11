@@ -3,7 +3,7 @@ import { CalendarClockProvider } from "./current-time";
 import { useTimelineWindow } from "./use-timeline-window";
 import { CalendarTimeline } from "./calendar-timeline";
 import { useEffect, useCallback, useMemo, useState, useRef } from "react";
-import { calendarDays, eventClock, createEventIndex } from "@zilobase/features/calendar-layout";
+import { calendarDays, eventClock, createEventIndex } from "@zilobase/features/calendar";
 import { Button } from "@/shared/ui/button";
 import { CalendarMonthView } from "./calendar-month-view";
 import { type CalendarItem, type CalendarSurfaceProps } from "./types";

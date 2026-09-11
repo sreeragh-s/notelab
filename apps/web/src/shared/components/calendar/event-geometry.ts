@@ -1,5 +1,5 @@
 import type { CalendarItem } from "./types";
-import { addCalendarDays, calendarDate, wallTime, civilDayOrdinal, dateFromRank, visibleDateRank } from "@zilobase/features/calendar-layout";
+import { addCalendarDays, calendarDate, wallTime, civilDayOrdinal, dateFromRank, visibleDateRank } from "@zilobase/features/calendar";
 export function shiftEventGeometry(event: CalendarItem, zone: string, days: number, minutes: number, resize: "start" | "end" | null = null): CalendarItem {
   if (event.start.date && event.end.date) {
     const start = resize === "end" ? event.start : { date: addCalendarDays(event.start.date, days) };

@@ -1,5 +1,5 @@
 import { memo, useEffect, useState, createContext, useContext, type ReactNode } from "react";
-import { eventClock } from "@zilobase/features/calendar-layout";
+import { eventClock } from "@zilobase/features/calendar";
 
 // Reuse formatters across the bounded visible columns and month cells.
 const clockFormatters = new Map<string, Intl.DateTimeFormat>();
