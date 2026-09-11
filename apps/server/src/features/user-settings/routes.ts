@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { and, eq, isNotNull } from "drizzle-orm";
-import { z } from "zod";
+import { Schema, SchemaTransformation } from "effect";
 import {
   normalizeSidebarConfig,
   type SidebarConfig,
@@ -9,6 +9,7 @@ import { db } from "../../infrastructure/database";
 import { account, user, pageSettings } from "../../infrastructure/database/schema";
 import type { AppBindings } from "../../shared/types";
 import { readJsonBody } from "../../shared/http/request";
+import { parseJsonBody, parseUnknown } from "../../shared/http/schema-json";
 
 export const pageSettingsRoutes = new Hono<AppBindings>();
 
@@ -20,15 +21,46 @@ type UserSettingsPayload = {
   sidebarConfig: SidebarConfig;
 };
 
-const updateProfileSchema = z
-  .object({
-    email: z.string().trim().toLowerCase().email().optional(),
-    name: z.string().trim().min(1, "Name is required.").max(120).optional(),
-  })
-  .refine(
-    (value) => value.name !== undefined || value.email !== undefined,
-    "Provide at least one field to update.",
-  );
+const UpdateProfile = Schema.Struct({
+  email: Schema.optionalKey(
+    Schema.String.pipe(
+      Schema.decode(SchemaTransformation.trim()),
+      Schema.decode(SchemaTransformation.toLowerCase()),
+      Schema.check(Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)),
+    ),
+  ),
+  name: Schema.optionalKey(
+    Schema.String.pipe(
+      Schema.decode(SchemaTransformation.trim()),
+      Schema.check(
+        Schema.isMinLength(1, { message: "Name is required." }),
+        Schema.isMaxLength(120),
+      ),
+    ),
+  ),
+}).check(
+  Schema.makeFilter((value) =>
+    value.name !== undefined || value.email !== undefined
+      ? undefined
+      : "Provide at least one field to update.",
+  ),
+);
+
+const UpdateUserSettings = Schema.Struct({
+  embeddedItemsOpenAs: Schema.optionalKey(
+    Schema.Literals(["dialog", "sidepanel"]),
+  ),
+  pageFullWidth: Schema.optionalKey(Schema.Boolean),
+  sidebarConfig: Schema.optionalKey(
+    Schema.Unknown.check(
+      Schema.makeFilter((value) =>
+        typeof value === "object" && value !== null && !Array.isArray(value)
+          ? undefined
+          : "sidebarConfig must be an object",
+      ),
+    ),
+  ),
+});
 
 pageSettingsRoutes.get("/", async (c) => {
   const user = c.get("user");
@@ -53,46 +85,25 @@ pageSettingsRoutes.patch("/", async (c) => {
     return c.json({ error: "A JSON body is required" }, 400);
   }
 
-  const patch = body as {
-    embeddedItemsOpenAs?: unknown;
-    pageFullWidth?: unknown;
-    sidebarConfig?: unknown;
-  };
+  const parsed = await parseUnknown(UpdateUserSettings, body);
+  if (!parsed.ok) {
+    return c.json({ error: parsed.message }, 400);
+  }
+
+  const patch = parsed.data;
   const values: Partial<typeof pageSettings.$inferInsert> = {
     updatedAt: new Date(),
   };
 
   if (patch.pageFullWidth !== undefined) {
-    if (typeof patch.pageFullWidth !== "boolean") {
-      return c.json({ error: "pageFullWidth must be a boolean" }, 400);
-    }
-
     values.pageFullWidth = patch.pageFullWidth;
   }
 
   if (patch.embeddedItemsOpenAs !== undefined) {
-    if (
-      patch.embeddedItemsOpenAs !== "dialog" &&
-      patch.embeddedItemsOpenAs !== "sidepanel"
-    ) {
-      return c.json(
-        { error: "embeddedItemsOpenAs must be 'dialog' or 'sidepanel'" },
-        400,
-      );
-    }
-
     values.embeddedItemsOpenAs = patch.embeddedItemsOpenAs;
   }
 
   if (patch.sidebarConfig !== undefined) {
-    if (
-      typeof patch.sidebarConfig !== "object" ||
-      patch.sidebarConfig === null ||
-      Array.isArray(patch.sidebarConfig)
-    ) {
-      return c.json({ error: "sidebarConfig must be an object" }, 400);
-    }
-
     values.sidebarConfig = normalizeSidebarConfig(patch.sidebarConfig);
   }
 
@@ -121,15 +132,14 @@ pageSettingsRoutes.patch("/profile", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const body = await readJsonBody(c.req);
-  const parsed = updateProfileSchema.safeParse(body);
+  const parsed = await parseJsonBody(c.req, UpdateProfile);
 
-  if (!parsed.success) {
-    return c.json({ error: parsed.error.issues[0]?.message ?? "Invalid request." }, 400);
+  if (!parsed.ok) {
+    return c.json({ error: parsed.message || "Invalid request." }, 400);
   }
 
-  const nextName = parsed.data.name?.trim();
-  const nextEmail = parsed.data.email?.trim().toLowerCase();
+  const nextName = parsed.data.name;
+  const nextEmail = parsed.data.email;
 
   if (nextEmail && nextEmail !== currentUser.email) {
     const [existingUser] = await db

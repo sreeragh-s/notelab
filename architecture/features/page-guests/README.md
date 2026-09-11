@@ -7,7 +7,7 @@
 
 ## Main flow
 
-Guest workflows submit invitations or approval requests, approve/reject them, accept invitations, and revoke or promote guests. These operations coordinate membership behavior with page-specific grants. Invitation lookup and accept live at `/page-guest-invitations/:invitationId` and are Node API paths.
+Guest workflows submit invitations or approval requests, approve/reject them, accept invitations, and revoke or promote guests. These operations coordinate membership behavior with page-specific grants. Invitation lookup and accept live at `/page-guest-invitations/:invitationId` and are Node API paths. Invitation and guest-policy JSON bodies decode with Schema (`onExcessProperty: "error"`); invalid policy still returns `{ error: "Invalid guest policy." }`.
 
 ## Authorization and persistence
 

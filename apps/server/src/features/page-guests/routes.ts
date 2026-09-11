@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { z } from "zod";
+import { Schema, SchemaTransformation } from "effect";
 
 import { getMembership, isPrivilegedOrgRole } from "../access";
 import { rejectMismatchedApiKeyWorkspace } from "../api-keys";
@@ -25,27 +25,34 @@ import {
   updateWorkspaceGuestInvitePolicy,
 } from "./service";
 import type { AppBindings } from "../../shared/types";
-import { readJsonBody } from "../../shared/http/request";
+import { parseJsonBody } from "../../shared/http/schema-json";
 import { getPageTeamspaceSecurityPolicy } from "../teamspaces";
 
 export const pageGuestRoutes = new Hono<AppBindings>();
 
-const invitationSchema = z
-  .object({
-    accessLevel: z.enum(["view", "comment", "edit", "full"]),
-    email: z.string().trim().email(),
-  })
-  .strict();
+const strictJson = { onExcessProperty: "error" as const };
+
+const GuestInvitation = Schema.Struct({
+  accessLevel: Schema.Literals(["view", "comment", "edit", "full"]),
+  email: Schema.String.pipe(
+    Schema.decode(SchemaTransformation.trim()),
+    Schema.check(Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)),
+  ),
+});
+
+const GuestPolicy = Schema.Struct({
+  mode: Schema.Literals(["direct", "request", "owners_only"]),
+});
 
 pageGuestRoutes.post("/pages/:pageId/guest-invitations", async (c) => {
   const requestUser = c.get("user");
 
   if (!requestUser) return c.json({ error: "Unauthorized" }, 401);
-  const parsed = invitationSchema.safeParse(await readJsonBody(c.req));
+  const parsed = await parseJsonBody(c.req, GuestInvitation, strictJson);
 
-  if (!parsed.success) {
+  if (!parsed.ok) {
     return c.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid page invitation." },
+      { error: parsed.message || "Invalid page invitation." },
       400,
     );
   }
@@ -225,11 +232,8 @@ pageGuestRoutes.patch("/workspaces/:workspaceId/guest-policy", async (c) => {
   const workspaceId = c.req.param("workspaceId");
   const mismatch = rejectMismatchedApiKeyWorkspace(c, workspaceId);
   if (mismatch) return mismatch;
-  const parsed = z
-    .object({ mode: z.enum(["direct", "request", "owners_only"]) })
-    .strict()
-    .safeParse(await readJsonBody(c.req));
-  if (!parsed.success) return c.json({ error: "Invalid guest policy." }, 400);
+  const parsed = await parseJsonBody(c.req, GuestPolicy, strictJson);
+  if (!parsed.ok) return c.json({ error: "Invalid guest policy." }, 400);
   try {
     return c.json({
       policy: await updateWorkspaceGuestInvitePolicy({

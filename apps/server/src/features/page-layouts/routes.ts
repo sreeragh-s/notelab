@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, isNull } from "drizzle-orm"
 import { Hono } from "hono"
-import { z } from "zod"
+import { Schema } from "effect"
 
 import {
   createDefaultPageLayout,
@@ -26,14 +26,14 @@ import {
   pageLayout,
 } from "../../infrastructure/database/schema"
 import type { AppBindings } from "../../shared/types"
-import { readJsonBody } from "../../shared/http/request";
+import { parseJsonBody, parseUnknown } from "../../shared/http/schema-json"
 
 export const pageLayoutRoutes = new Hono<AppBindings>()
 
-const scopeSchema = z.enum(["workspace", "database", "page"])
-const saveSchema = z.object({
-  clearPageOverrides: z.boolean().optional(),
-  config: z.unknown(),
+const PageLayoutScopeSchema = Schema.Literals(["workspace", "database", "page"])
+const SavePageLayout = Schema.Struct({
+  clearPageOverrides: Schema.optionalKey(Schema.Boolean),
+  config: Schema.Unknown,
 })
 
 type PageLayoutWriteInput = {
@@ -241,9 +241,9 @@ async function canEditScope(scope: PageLayoutScope, scopeId: string, workspaceId
 pageLayoutRoutes.put("/:scope/:scopeId", async (c) => {
   const user = c.get("user")
   if (!user) return c.json({ error: "Unauthorized" }, 401)
-  const scopeResult = scopeSchema.safeParse(c.req.param("scope"))
-  const bodyResult = saveSchema.safeParse(await readJsonBody(c.req))
-  if (!scopeResult.success || !bodyResult.success) return c.json({ error: "Invalid layout." }, 400)
+  const scopeResult = await parseUnknown(PageLayoutScopeSchema, c.req.param("scope"))
+  const bodyResult = await parseJsonBody(c.req, SavePageLayout)
+  if (!scopeResult.ok || !bodyResult.ok) return c.json({ error: "Invalid layout." }, 400)
 
   const scope = scopeResult.data
   const scopeId = c.req.param("scopeId")
@@ -285,8 +285,8 @@ pageLayoutRoutes.put("/:scope/:scopeId", async (c) => {
 pageLayoutRoutes.delete("/:scope/:scopeId", async (c) => {
   const user = c.get("user")
   if (!user) return c.json({ error: "Unauthorized" }, 401)
-  const scopeResult = scopeSchema.safeParse(c.req.param("scope"))
-  if (!scopeResult.success) return c.json({ error: "Invalid scope." }, 400)
+  const scopeResult = await parseUnknown(PageLayoutScopeSchema, c.req.param("scope"))
+  if (!scopeResult.ok) return c.json({ error: "Invalid scope." }, 400)
   const scope = scopeResult.data
   const scopeId = c.req.param("scopeId")
   const context = await resolveScopeContext(scope, scopeId)

@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
-import * as z from "zod";
+import { Schema, SchemaTransformation } from "effect";
 
 import {
   API_KEY_DEFAULT_EXPIRES_IN_SECONDS,
@@ -13,24 +13,36 @@ import { getMembership } from "../access";
 import { db } from "../../infrastructure/database";
 import { apikey } from "../../infrastructure/database/schema";
 import type { AppBindings } from "../../shared/types";
-import { readJsonBody } from "../../shared/http/request";
+import { parseJsonBody } from "../../shared/http/schema-json";
 
 export const apiKeyRoutes = new Hono<AppBindings>();
 
-const createApiKeySchema = z.object({
-  expiresIn: z.number().int().positive().nullable().optional(),
-  name: z.string().trim().min(1).max(80),
-  workspaceId: z.string().trim().min(1),
+const trimmedName = Schema.String.pipe(
+  Schema.decode(SchemaTransformation.trim()),
+  Schema.check(Schema.isMinLength(1), Schema.isMaxLength(80)),
+);
+
+const CreateApiKey = Schema.Struct({
+  expiresIn: Schema.optionalKey(
+    Schema.NullOr(Schema.Int.check(Schema.isGreaterThan(0))),
+  ),
+  name: trimmedName,
+  workspaceId: Schema.String.pipe(
+    Schema.decode(SchemaTransformation.trim()),
+    Schema.check(Schema.isMinLength(1)),
+  ),
 });
 
-const updateApiKeySchema = z
-  .object({
-    enabled: z.boolean().optional(),
-    name: z.string().trim().min(1).max(80).optional(),
-  })
-  .refine((value) => value.enabled !== undefined || value.name !== undefined, {
-    message: "At least one field is required",
-  });
+const UpdateApiKey = Schema.Struct({
+  enabled: Schema.optionalKey(Schema.Boolean),
+  name: Schema.optionalKey(trimmedName),
+}).check(
+  Schema.makeFilter((value) =>
+    value.enabled !== undefined || value.name !== undefined
+      ? undefined
+      : "At least one field is required",
+  ),
+);
 
 apiKeyRoutes.get("/", async (c) => {
   const auth = await requireSessionUser(c);
@@ -68,13 +80,13 @@ apiKeyRoutes.post("/", async (c) => {
     return authContext.response;
   }
 
-  const parsed = createApiKeySchema.safeParse(await readJsonBody(c.req));
+  const parsed = await parseJsonBody(c.req, CreateApiKey);
 
-  if (!parsed.success) {
+  if (!parsed.ok) {
     return c.json(
       {
         error: "Invalid API key input",
-        message: parsed.error.issues[0]?.message ?? "Invalid API key input",
+        message: parsed.message || "Invalid API key input",
       },
       400,
     );
@@ -136,13 +148,13 @@ apiKeyRoutes.patch("/:id", async (c) => {
     return c.json({ error: "Forbidden" }, 403);
   }
 
-  const parsed = updateApiKeySchema.safeParse(await readJsonBody(c.req));
+  const parsed = await parseJsonBody(c.req, UpdateApiKey);
 
-  if (!parsed.success) {
+  if (!parsed.ok) {
     return c.json(
       {
         error: "Invalid API key input",
-        message: parsed.error.issues[0]?.message ?? "Invalid API key input",
+        message: parsed.message || "Invalid API key input",
       },
       400,
     );
