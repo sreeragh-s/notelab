@@ -16,6 +16,6 @@ Increasing three-pane buffers preserves the snapping abstraction. Rendering unli
 
 ## Consequences
 
-Loading may stop at a slow visible source. Buffered reads reduce those stops, and users can hide a failing source. Prepending and idle retirement require anchor-preserving origin changes. Week rows remain the month virtualization unit to preserve multi-day bars.
+Loading may stop at a slow visible source. Buffered reads reduce those stops, and users can hide a failing source. Prepending and idle retirement require anchor-preserving origin changes. Week rows remain the month virtualization unit to preserve multi-day bars. Civil-date column snapping is allowed so rest positions coincide with date starts; period-sized pane snapping remains rejected. The route date is a bookmark of rest position, not the scroll origin.
 
 See the [Calendar guide](../features/calendar/README.md).
