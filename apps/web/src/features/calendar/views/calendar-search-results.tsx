@@ -29,8 +29,8 @@ export function CalendarSearchResults({ query, connections, calendars, preferenc
     getNextPageParam: page => page.nextPageToken ? { source: page.source, token: page.nextPageToken } : page.source + 1 < sources.length ? { source: page.source + 1 } : undefined,
     staleTime: 30_000,
   });
-  const loaded = online ? query.trim() === debounced ? results.data?.pages.flatMap(page => page.events) ?? [] : [] : cached.filter(event => `${event.title} ${event.description} ${event.location}`.toLowerCase().includes(query.toLowerCase()));
-  const events = [...new Map(loaded.filter(event => event.status !== "cancelled" && sources.some(({ calendar }) => calendar.id === event.calendarId && calendar.bindingId === event.bindingId) && (preferences.showDeclined || !event.attendees.some(attendee => attendee.self && attendee.responseStatus === "declined")) && (!from || Date.parse(eventInstant(event.end, preferences.timeZone)) > Date.parse(dayInstant(from, preferences.timeZone))) && (!until || Date.parse(eventInstant(event.start, preferences.timeZone)) < Date.parse(dayInstant(addCalendarDays(until, 1), preferences.timeZone)))).map(event => [calendarEventKey(event), event])).values()].sort((a, b) => Date.parse(eventInstant(a.start, preferences.timeZone)) - Date.parse(eventInstant(b.start, preferences.timeZone)));
+  const loaded = searchLoadedEvents(online, query, debounced, results.data?.pages.flatMap(page => page.events) ?? [], cached);
+  const events = uniqueSearchEvents(loaded.filter(event => matchesSearchEvent(event, sources, preferences, from, until)), preferences.timeZone);
   return <section aria-label="Calendar search results" className="min-h-0 flex-1 overflow-y-auto p-4">
     <div className="mb-4 flex flex-wrap items-end gap-3"><Select value={source} onValueChange={setSource}><SelectTrigger aria-label="Search source" className="w-56"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All visible calendars</SelectItem>{readable.map(calendar => <SelectItem key={calendarSelectionKey(calendar.bindingId, calendar.id)} value={calendarSelectionKey(calendar.bindingId, calendar.id)}>{calendar.name} · {connections.find(connection => connection.bindingId === calendar.bindingId)?.email}</SelectItem>)}</SelectContent></Select><label className="text-xs">From<Input aria-label="Search from date" type="date" value={from} onChange={event => setFrom(event.target.value)} /></label><label className="text-xs">Through<Input aria-label="Search through date" type="date" value={until} onChange={event => setUntil(event.target.value)} /></label></div>
     {invalidRange && <p role="alert">The end date must not precede the start date.</p>}
@@ -40,4 +40,23 @@ export function CalendarSearchResults({ query, connections, calendars, preferenc
     {results.isFetching || query.trim() !== debounced ? <p role="status">Searching…</p> : !events.length && !invalidRange && <p>No matching events.</p>}
     {online && results.hasNextPage && <Button className="mt-3" disabled={results.isFetching} onClick={() => void results.fetchNextPage()}>Load more results</Button>}
   </section>;
+}
+function searchLoadedEvents(online: boolean, query: string, debounced: string, pages: CalendarEvent[], cached: CalendarEvent[]) {
+  if (!online) return cached.filter(event => `${event.title} ${event.description} ${event.location}`.toLowerCase().includes(query.toLowerCase()));
+  if (query.trim() !== debounced) return [];
+  return pages;
+}
+function matchesSearchEvent(event: CalendarEvent, sources: { calendar: CalendarRecord }[], preferences: CalendarPreferences, from: string, until: string) {
+  if (event.status === "cancelled") return false;
+  if (!sources.some(({ calendar }) => calendar.id === event.calendarId && calendar.bindingId === event.bindingId)) return false;
+  if (!preferences.showDeclined && event.attendees.some(attendee => attendee.self && attendee.responseStatus === "declined")) return false;
+  return matchesSearchRange(event, preferences.timeZone, from, until);
+}
+function matchesSearchRange(event: CalendarEvent, zone: string, from: string, until: string) {
+  if (from && Date.parse(eventInstant(event.end, zone)) <= Date.parse(dayInstant(from, zone))) return false;
+  if (until && Date.parse(eventInstant(event.start, zone)) >= Date.parse(dayInstant(addCalendarDays(until, 1), zone))) return false;
+  return true;
+}
+function uniqueSearchEvents(events: CalendarEvent[], zone: string) {
+  return [...new Map(events.map(event => [calendarEventKey(event), event])).values()].sort((a, b) => Date.parse(eventInstant(a.start, zone)) - Date.parse(eventInstant(b.start, zone)));
 }

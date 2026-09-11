@@ -53,20 +53,7 @@ export function CalendarTimeline({ days, target, eventsByDay, zoneControls, onVi
   const mounted = virtual.getVirtualItems();
   useEffect(() => onMetric?.("mounted_columns", mounted.length), [mounted.length, onMetric]);
   return <div className="relative min-h-0 flex-1">
-    <div ref={viewport} data-calendar-scroll data-calendar-timeline-scroll data-calendar-rail-width={rail} onFocusCapture={event => setFocusedDay((event.target as HTMLElement).closest<HTMLElement>("[data-calendar-day-column]")?.dataset.calendarDayColumn ?? null)} className="h-full overflow-auto overscroll-none [overflow-anchor:none] [scrollbar-gutter:stable]" onPointerDown={() => { active.current = true; }} onPointerUp={() => { active.current = false; }} onScroll={event => {
-      const element = event.currentTarget;
-      if (previous.current) previous.current.anchor = geometry.anchor(element.scrollLeft);
-      const before = element.scrollLeft < 2, after = element.scrollLeft + element.clientWidth >= element.scrollWidth - 2;
-      setEdges(old => old.before === before && old.after === after ? old : { before, after });
-      setTop(old => Math.abs(old - element.scrollTop) > hourHeight ? element.scrollTop : old);
-      const now = performance.now(); setFast(Math.abs(element.scrollLeft - lastScroll.current) / Math.max(16, now - sampleAt.current) > columnWidth / 250); sampleAt.current = now;
-      const nextDirection = element.scrollLeft >= lastScroll.current ? 1 : -1; lastScroll.current = element.scrollLeft; setDirection(nextDirection);
-      const first = geometry.positionToDate(element.scrollLeft), last = geometry.positionToDate(element.scrollLeft + Math.max(0, element.clientWidth - rail - 1));
-      onViewport(first, last, true);
-      if (settle.current) clearTimeout(settle.current);
-      const finish = () => { if (active.current) { settle.current = setTimeout(finish, 100); return; } onViewport(first, last); emitted.current = first; onVisibleDate(first); };
-      settle.current = setTimeout(finish, 100);
-    }}>
+    <div ref={viewport} data-calendar-scroll data-calendar-timeline-scroll data-calendar-rail-width={rail} onFocusCapture={event => setFocusedDay((event.target as HTMLElement).closest<HTMLElement>("[data-calendar-day-column]")?.dataset.calendarDayColumn ?? null)} className="h-full overflow-auto overscroll-none [overflow-anchor:none] [scrollbar-gutter:stable]" onPointerDown={() => { active.current = true; }} onPointerUp={() => { active.current = false; }} onScroll={event => handleTimelineScroll(event.currentTarget, { geometry, hourHeight, columnWidth, rail, previous, lastScroll, sampleAt, settle, active, emitted, setEdges, setTop, setFast, setDirection, onViewport, onVisibleDate })}>
       <div className="relative flex" style={{ width: rail + days.length * columnWidth, minHeight: headerHeight + hourHeight * 24 }}>
         <div className="sticky left-0 z-30 shrink-0 bg-surface-canvas" style={{ width: rail }}>
           <div className="sticky top-0 z-40 bg-surface-canvas" style={{ height: headerHeight }}><div className="h-8">{zoneControls}</div><button type="button" className="w-full border-y border-stroke-default text-xs" style={{ height: headerHeight - 32 }} aria-expanded={!collapsed} onClick={() => collapse(!collapsed)}>{collapsed ? "Expand all-day" : "Collapse all-day"}</button></div>
@@ -81,4 +68,24 @@ export function CalendarTimeline({ days, target, eventsByDay, zoneControls, onVi
     {beforeLoading && edges.before && <div role="status" className=" absolute bottom-1 left-1 max-w-48 truncate text-xs text-content-secondary">{loadingMessage ?? "← Loading"}{loadingMessage && onRetry && <button type="button" className="ml-2 underline" onClick={onRetry}>Retry</button>}</div>}
     {afterLoading && edges.after && <div role="status" className=" absolute bottom-1 right-1 max-w-48 truncate text-xs text-content-secondary">{loadingMessage ?? "Loading →"}{loadingMessage && onRetry && <button type="button" className="ml-2 underline" onClick={onRetry}>Retry</button>}</div>}
   </div>;
+}
+function handleTimelineScroll(element: HTMLDivElement, ctx: {
+  geometry: ReturnType<typeof timelineGeometry>; hourHeight: number; columnWidth: number; rail: number;
+  previous: { current: { geometry: ReturnType<typeof timelineGeometry>; target: string; hourHeight: number; anchor: ReturnType<ReturnType<typeof timelineGeometry>["anchor"]> } | null };
+  lastScroll: { current: number }; sampleAt: { current: number }; settle: { current: ReturnType<typeof setTimeout> | null }; active: { current: boolean }; emitted: { current: string | null };
+  setEdges: (value: { before: boolean; after: boolean } | ((old: { before: boolean; after: boolean }) => { before: boolean; after: boolean })) => void;
+  setTop: (value: number | ((old: number) => number)) => void; setFast: (value: boolean) => void; setDirection: (value: number) => void;
+  onViewport: (first: string, last: string, retain?: boolean) => void; onVisibleDate: (date: string) => void;
+}) {
+  if (ctx.previous.current) ctx.previous.current.anchor = ctx.geometry.anchor(element.scrollLeft);
+  const before = element.scrollLeft < 2, after = element.scrollLeft + element.clientWidth >= element.scrollWidth - 2;
+  ctx.setEdges(old => old.before === before && old.after === after ? old : { before, after });
+  ctx.setTop(old => Math.abs(old - element.scrollTop) > ctx.hourHeight ? element.scrollTop : old);
+  const now = performance.now(); ctx.setFast(Math.abs(element.scrollLeft - ctx.lastScroll.current) / Math.max(16, now - ctx.sampleAt.current) > ctx.columnWidth / 250); ctx.sampleAt.current = now;
+  const nextDirection = element.scrollLeft >= ctx.lastScroll.current ? 1 : -1; ctx.lastScroll.current = element.scrollLeft; ctx.setDirection(nextDirection);
+  const first = ctx.geometry.positionToDate(element.scrollLeft), last = ctx.geometry.positionToDate(element.scrollLeft + Math.max(0, element.clientWidth - ctx.rail - 1));
+  ctx.onViewport(first, last, true);
+  if (ctx.settle.current) clearTimeout(ctx.settle.current);
+  const finish = () => { if (ctx.active.current) { ctx.settle.current = setTimeout(finish, 100); return; } ctx.onViewport(first, last); ctx.emitted.current = first; ctx.onVisibleDate(first); };
+  ctx.settle.current = setTimeout(finish, 100);
 }

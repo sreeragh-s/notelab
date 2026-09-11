@@ -12,33 +12,40 @@ export function wallTime(date: string, time: string, zone: string, choice: "reje
 export function eventInstant(time: CalendarEventTime, zone: string) { return time.date ? dayInstant(time.date, zone) : time.dateTime! }
 export function eventOverlaps(event: CalendarSpan, start: string, end: string, zone: string) { return Date.parse(eventInstant(event.start, zone)) < Date.parse(end) && Date.parse(eventInstant(event.end, zone)) > Date.parse(start) }
 export function calendarDays(date: string, view: CalendarView, weekStartsOn: number, dayCount = 7, showWeekends = true, alignStart = false) {
-  const anchor = Temporal.PlainDate.from(date);
   if (view === "day") return [date];
-  if (view === "week" && (dayCount !== 7 || alignStart)) {
-    const days: string[] = [];
-    let day = anchor;
-    while (days.length < Math.max(1, Math.min(31, Math.trunc(dayCount)))) {
-      if (showWeekends || day.dayOfWeek < 6) days.push(day.toString());
-      day = day.add({ days: 1 });
-    }
-    return days;
+  if (view === "month") return alignedPeriodDays(date, weekStartsOn, true);
+  if (dayCount !== 7 || alignStart) return customWeekDays(date, dayCount, showWeekends);
+  return alignedPeriodDays(date, weekStartsOn, false);
+}
+function customWeekDays(date: string, dayCount: number, showWeekends: boolean) {
+  const days: string[] = [];
+  let day = Temporal.PlainDate.from(date);
+  while (days.length < Math.max(1, Math.min(31, Math.trunc(dayCount)))) {
+    if (showWeekends || day.dayOfWeek < 6) days.push(day.toString());
+    day = day.add({ days: 1 });
   }
-  const first = view === "month" ? anchor.with({ day: 1 }) : anchor;
+  return days;
+}
+function alignedPeriodDays(date: string, weekStartsOn: number, month: boolean) {
+  const anchor = Temporal.PlainDate.from(date);
+  const first = month ? anchor.with({ day: 1 }) : anchor;
   const offset = (first.dayOfWeek % 7 - weekStartsOn + 7) % 7, start = first.subtract({ days: offset });
-  return Array.from({ length: view === "month" ? Math.ceil((offset + anchor.daysInMonth) / 7) * 7 : 7 }, (_, i) => start.add({ days: i }).toString());
+  return Array.from({ length: month ? Math.ceil((offset + anchor.daysInMonth) / 7) * 7 : 7 }, (_, i) => start.add({ days: i }).toString());
 }
 export function shiftCalendarPeriod(date: string, view: CalendarView, direction: number, dayCount = 7, showWeekends = true, alignStart = false) {
+  if (view === "week" && (dayCount !== 7 || alignStart) && !showWeekends) return shiftBusinessDays(date, direction, dayCount);
+  const span = view === "month" ? { months: direction } : { days: direction * (view === "day" ? 1 : Math.max(1, Math.min(31, Math.trunc(dayCount)))) };
+  return Temporal.PlainDate.from(date).add(span).toString();
+}
+function shiftBusinessDays(date: string, direction: number, dayCount: number) {
   let anchor = Temporal.PlainDate.from(date);
-  if (view === "week" && (dayCount !== 7 || alignStart) && !showWeekends) {
-    while (anchor.dayOfWeek > 5) anchor = anchor.add({ days: 1 });
-    let remaining = Math.abs(direction) * Math.max(1, Math.min(31, Math.trunc(dayCount)));
-    while (remaining > 0) {
-      anchor = anchor.add({ days: Math.sign(direction) });
-      if (anchor.dayOfWeek < 6) remaining--;
-    }
-    return anchor.toString();
+  while (anchor.dayOfWeek > 5) anchor = anchor.add({ days: 1 });
+  let remaining = Math.abs(direction) * Math.max(1, Math.min(31, Math.trunc(dayCount)));
+  while (remaining > 0) {
+    anchor = anchor.add({ days: Math.sign(direction) });
+    if (anchor.dayOfWeek < 6) remaining--;
   }
-  return anchor.add(view === "month" ? { months: direction } : { days: direction * (view === "day" ? 1 : Math.max(1, Math.min(31, Math.trunc(dayCount)))) }).toString();
+  return anchor.toString();
 }
 const clockFormatters = new Map<string, Intl.DateTimeFormat>();
 function clockFormatter(zone: string, format: "12" | "24") {

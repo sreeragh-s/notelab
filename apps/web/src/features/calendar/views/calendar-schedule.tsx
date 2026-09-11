@@ -12,7 +12,7 @@ import { CalendarSourcePanel } from "./calendar-source-panel";
 import { useCalendarWorkspace, type CalendarCommand } from "../workspace/calendar-workspace";
 import { CalendarEventPanel } from "./calendar-event-panel";
 import { CalendarStatus } from "./calendar-status";
-import { CalendarSurface, type CalendarItem, type CalendarRange } from "@/shared/components/calendar";
+import { CalendarSurface, type CalendarDisplayPreferences, type CalendarItem, type CalendarRange } from "@/shared/components/calendar";
 import { runCalendarMutation } from "../events/calendar-mutations";
 import { toast } from "sonner";
 import { newCalendarEvent } from "../events/event-editor";
@@ -82,34 +82,19 @@ export function CalendarSchedule({ connections, userId, preferences: savedPrefer
   const commandState = useRef({ events, selected, create, open });
   commandState.current = { events, selected, create, open };
   const canCreate = online && Boolean(resolveDefaultCalendar(calendars, preferences)), canTraverse = events.length > 0;
-  const featureCommands = useMemo<CalendarCommand[]>(() => {
-    const traverse = (direction: -1 | 1) => {
-      const { events, selected, open } = commandState.current;
-      const ordered = [...events].sort((a, b) => Date.parse(a.start.dateTime ?? a.start.date!) - Date.parse(b.start.dateTime ?? b.start.date!));
-      const current = ordered.findIndex(event => selected && calendarEventKey(event) === calendarEventKey(selected));
-      const target = ordered[current < 0 ? direction > 0 ? 0 : ordered.length - 1 : (current + direction + ordered.length) % ordered.length];
-      if (target) open(target);
-    };
-    return [
-      { id: "create", label: "Create event", shortcut: "C", disabled: !canCreate, run: () => commandState.current.create() },
-      { id: "next-event", label: "Next event", shortcut: "J", disabled: !canTraverse, run: () => traverse(1) },
-      { id: "previous-event", label: "Previous event", shortcut: "K", disabled: !canTraverse, run: () => traverse(-1) },
-      ...calendars.map(calendar => ({ id: `source:${calendarSelectionKey(calendar.bindingId, calendar.id)}`, label: `Open calendar: ${calendar.name} · ${connections.find(connection => connection.bindingId === calendar.bindingId)?.email ?? ""}`, run: () => workspace.showSource({ bindingId: calendar.bindingId, calendarId: calendar.id }) })),
-    ];
-  }, [canCreate, canTraverse, calendars, connections, workspace.showSource]);
+  const featureCommands = useMemo<CalendarCommand[]>(() => [
+    { id: "create", label: "Create event", shortcut: "C", disabled: !canCreate, run: () => commandState.current.create() },
+    { id: "next-event", label: "Next event", shortcut: "J", disabled: !canTraverse, run: () => traverseCalendarEvents(commandState.current, 1) },
+    { id: "previous-event", label: "Previous event", shortcut: "K", disabled: !canTraverse, run: () => traverseCalendarEvents(commandState.current, -1) },
+    ...calendars.map(calendar => ({ id: `source:${calendarSelectionKey(calendar.bindingId, calendar.id)}`, label: `Open calendar: ${calendar.name} · ${connections.find(connection => connection.bindingId === calendar.bindingId)?.email ?? ""}`, run: () => workspace.showSource({ bindingId: calendar.bindingId, calendarId: calendar.id }) })),
+  ], [canCreate, canTraverse, calendars, connections, workspace.showSource]);
   useEffect(() => { workspace.setFeatureCommands(featureCommands); }, [featureCommands, workspace.setFeatureCommands]);
   const changeGeometry = useCallback(async (event: CalendarEvent) => {
     const snapshot = snapshots[event.bindingId]; if (!online || !snapshot?.database) return;
     if (event.recurringEventId || event.attendees.length) { workspace.openPanel(); setSelected(event); setCreating(false); setEditing(true); return }
     try { await runCalendarMutation({ database: snapshot.database, event, action: "update", write: { operationId: crypto.randomUUID(), etag: event.etag, sendUpdates: "all", event: { start: event.start, end: event.end } } }) } catch (error) { toast.error(getApiErrorMessage(error)) }
   }, [snapshots, online, workspace.openPanel]);
-  const color = (event: CalendarEvent) => {
-    const override = preferences.calendarColors?.[calendarSelectionKey(event.bindingId, event.calendarId)];
-    if (!event.colorId && override) return PALETTE[override];
-    const providerColor = event.colorId ?? calendarsByKey.get(calendarSelectionKey(event.bindingId, event.calendarId))?.colorId;
-    const hues: ColorTokenId[] = ["blue", "purple", "green", "purple", "red", "yellow", "orange", "blue", "gray", "blue", "green", "red"];
-    return PALETTE[hues[Number(providerColor ?? 0) % hues.length] ?? "blue"];
-  };
+  const color = (event: CalendarEvent) => eventSurfaceColor(event, preferences, calendarsByKey);
   const close = () => { setSelected(null); setEditing(false); setCreating(false); void navigate({ to: "/calendar", search: { date, view, align: search.align, days: search.days } }); };
   useEffect(() => workspace.register({ close, create: () => create() }));
   useEffect(() => { if (search.event) workspace.openPanel(); }, [search.event, workspace.openPanel]);
@@ -120,13 +105,7 @@ export function CalendarSchedule({ connections, userId, preferences: savedPrefer
   const previousItems = useRef<CalendarItem[]>([]);
   const items = useMemo(() => {
     const cache = new Map<string, CalendarItem>();
-    const next = visible.map(event => {
-      const id = calendarEventKey(event), style = color(event);
-      const candidate: CalendarItem = { id, title: event.title, start: event.start, end: event.end, backgroundClass: style.backgroundClass, textClass: style.textClass, dashed: event.attendees.some(a => a.self && a.responseStatus === "needsAction"), editable: online && calendarCapability("update", calendarsByKey.get(calendarSelectionKey(event.bindingId, event.calendarId))?.permissions, event).allowed };
-      const old = itemCache.current.get(id);
-      const item = old && old.title === candidate.title && old.start.date === candidate.start.date && old.start.dateTime === candidate.start.dateTime && old.start.timeZone === candidate.start.timeZone && old.end.date === candidate.end.date && old.end.dateTime === candidate.end.dateTime && old.end.timeZone === candidate.end.timeZone && old.backgroundClass === candidate.backgroundClass && old.textClass === candidate.textClass && old.dashed === candidate.dashed && old.editable === candidate.editable ? old : candidate;
-      cache.set(id, item); return item;
-    });
+    const next = visible.map(event => calendarSurfaceItem(event, color(event), online, calendarsByKey, itemCache.current, cache));
     itemCache.current = cache;
     if (next.length === previousItems.current.length && next.every((item, index) => item === previousItems.current[index])) return previousItems.current;
     previousItems.current = next; return next;
@@ -145,14 +124,58 @@ export function CalendarSchedule({ connections, userId, preferences: savedPrefer
     <CalendarStatus data={data} online={online} error={undefined} />
     {!navigation.pending && data.some(d => d.error) && <Button variant="ghost" className="self-start" onClick={navigation.retry}>Retry loading dates</Button>}
     {navigation.pending && <div className="flex shrink-0 items-center gap-2 px-4 py-1 text-xs text-content-secondary" role={navigation.error ? "alert" : "status"}>{navigation.error ? getApiErrorMessage(navigation.error) : "Opening date…"}{Boolean(navigation.error) && <Button variant="ghost" onClick={navigation.retry}>Retry</Button>}<Button variant="ghost" onClick={navigation.cancel}>Cancel</Button></div>}
-    {query.trim() ? <CalendarSearchResults query={query} connections={connections} calendars={calendars} preferences={preferences} cached={events} online={online} userId={userId} onSelect={open} /> : <CalendarSurface onMetric={emitCalendarMetric} loadingMessage={!online ? "These dates are not cached. Connect to load them." : data.some(d => d.error) ? "Unable to load dates. Use Retry above." : undefined} isRangeReady={isRangeReady} onViewportRangeChange={onViewportRange} onRetryRange={navigation.retry} onVisibleDateChange={next => { passiveDate.current = JSON.stringify([next, view, search.days, search.align, preferences.timeZone]); void navigate({ to: "/calendar", replace: true, search: previous => ({ ...previous, date: next }) }); }} zoneControls={<CalendarTimeZones value={savedPreferences} onChange={value => preferenceStore.save.mutateAsync(value)} travelZone={workspace.travelZone} onRestore={() => workspace.setTravelZone(null)} date={new Date(`${date}T12:00:00Z`)} />} items={items} date={date} view={view} preferences={displayPreferences} onNavigate={setPeriod} onRangeChange={setRange} onSelect={selectItem} onCreate={online ? create : undefined} onChange={changeItem} onError={onGeometryError} />}
-    {workspace.source ? sourceConnection && sourceCalendar ? <CalendarSourcePanel key={`${sourceConnection.bindingId}:${sourceCalendar.id}`} connection={sourceConnection} calendar={sourceCalendar} allCalendars={calendars} userId={userId} preferences={preferences} preferenceWorkspaceId={preferenceWorkspaceId ?? connections[0]!.workspaceId} onSelect={open} onCreate={() => create(todayInZone(preferences.timeZone), 9, 30, sourceCalendar)} /> : createPortal(<div data-calendar-event-panel className="grid gap-3 p-3"><p role="status">{!sourceConnection || snapshots[sourceConnection.bindingId]?.loaded ? "This calendar is no longer available." : "Loading calendar…"}</p><Button variant="outline" onClick={workspace.closePanel}>Close</Button></div>, workspace.panelElement) : <CalendarEventPanel preview={workspace.panelOpen ? <CalendarMeetingPreview connections={connections} userId={userId} preferences={preferences} onSelect={open} /> : undefined} selected={selection.event} database={selection.database} calendars={selection.calendars} online={online} editing={editing} creating={creating} mapsProvider={preferences.mapsProvider} zone={preferences.timeZone} timeFormat={preferences.timeFormat} onClose={workspace.closePanel} onEdit={() => setEditing(true)} onDuplicate={() => { if (!selected) return; setSelected({ ...selected, eventId: `local-${crypto.randomUUID()}`, etag: "", title: `${selected.title} (copy)`, attendees: [], recurringEventId: undefined, originalStartTime: undefined, recurrence: undefined }); setCreating(true); setEditing(true) }} />}
+    {scheduleMainView({ query, connections, calendars, preferences, events, online, userId, open, emit: emitCalendarMetric, loadingMessage: scheduleLoadingMessage(online, data), isRangeReady, onViewportRange, navigation, passiveDate, view, search, navigate, savedPreferences, preferenceStore, workspace, date, items, displayPreferences, setPeriod, setRange, selectItem, create, changeItem, onGeometryError })}
+    {scheduleDock({ workspace, sourceConnection, sourceCalendar, calendars, userId, preferences, preferenceWorkspaceId, connections, open, create, snapshots, selection, online, editing, creating, selected, setSelected, setCreating, setEditing })}
   </div>;
 }
 
+function traverseCalendarEvents(state: { events: CalendarEvent[]; selected: CalendarEvent | null; open: (event: CalendarEvent) => void }, direction: -1 | 1) {
+  const ordered = [...state.events].sort((a, b) => Date.parse(a.start.dateTime ?? a.start.date!) - Date.parse(b.start.dateTime ?? b.start.date!));
+  const current = ordered.findIndex(event => state.selected && calendarEventKey(event) === calendarEventKey(state.selected));
+  const start = direction > 0 ? 0 : ordered.length - 1;
+  const target = ordered[current < 0 ? start : (current + direction + ordered.length) % ordered.length];
+  if (target) state.open(target);
+}
+function scheduleLoadingMessage(online: boolean, data: Snapshot[]) {
+  if (!online) return "These dates are not cached. Connect to load them.";
+  if (data.some(d => d.error)) return "Unable to load dates. Use Retry above.";
+}
+function scheduleMainView(props: { query: string; connections: CalendarConnection[]; calendars: CalendarRecord[]; preferences: CalendarPreferences; events: CalendarEvent[]; online: boolean; userId: string; open: (event: CalendarEvent) => void; emit: typeof emitCalendarMetric; loadingMessage?: string; isRangeReady: (range: CalendarRange) => boolean; onViewportRange: (range: CalendarRange) => void; navigation: ReturnType<typeof useCalendarNavigation>; passiveDate: { current: string | null }; view: CalendarView; search: { days?: number; align?: boolean }; navigate: ReturnType<typeof useNavigate>; savedPreferences: CalendarPreferences; preferenceStore: ReturnType<typeof useCalendarPreferences>; workspace: ReturnType<typeof useCalendarWorkspace>; date: string; items: CalendarItem[]; displayPreferences: CalendarDisplayPreferences; setPeriod: (next: string, view?: CalendarView) => void; setRange: (range: CalendarRange | null) => void; selectItem: (item: CalendarItem) => void; create: (day?: string, hour?: number, duration?: number, target?: CalendarRecord) => void; changeItem: (item: CalendarItem) => void; onGeometryError: (error: Error) => void }) {
+  if (props.query.trim()) return <CalendarSearchResults query={props.query} connections={props.connections} calendars={props.calendars} preferences={props.preferences} cached={props.events} online={props.online} userId={props.userId} onSelect={props.open} />;
+  return <CalendarSurface onMetric={props.emit} loadingMessage={props.loadingMessage} isRangeReady={props.isRangeReady} onViewportRangeChange={props.onViewportRange} onRetryRange={props.navigation.retry} onVisibleDateChange={next => { props.passiveDate.current = JSON.stringify([next, props.view, props.search.days, props.search.align, props.preferences.timeZone]); void props.navigate({ to: "/calendar", replace: true, search: previous => ({ ...previous, date: next }) }); }} zoneControls={<CalendarTimeZones value={props.savedPreferences} onChange={value => props.preferenceStore.save.mutateAsync(value)} travelZone={props.workspace.travelZone} onRestore={() => props.workspace.setTravelZone(null)} date={new Date(`${props.date}T12:00:00Z`)} />} items={props.items} date={props.date} view={props.view} preferences={props.displayPreferences} onNavigate={props.setPeriod} onRangeChange={props.setRange} onSelect={props.selectItem} onCreate={props.online ? props.create : undefined} onChange={props.changeItem} onError={props.onGeometryError} />;
+}
+function scheduleDock(props: { workspace: ReturnType<typeof useCalendarWorkspace>; sourceConnection?: CalendarConnection; sourceCalendar?: CalendarRecord; calendars: CalendarRecord[]; userId: string; preferences: CalendarPreferences; preferenceWorkspaceId?: string; connections: CalendarConnection[]; open: (event: CalendarEvent) => void; create: (day?: string, hour?: number, duration?: number, target?: CalendarRecord) => void; snapshots: Record<string, Snapshot>; selection: ReturnType<typeof selectionData>; online: boolean; editing: boolean; creating: boolean; selected: CalendarEvent | null; setSelected: (event: CalendarEvent | null) => void; setCreating: (value: boolean) => void; setEditing: (value: boolean) => void }) {
+  if (!props.workspace.source) return <CalendarEventPanel preview={props.workspace.panelOpen ? <CalendarMeetingPreview connections={props.connections} userId={props.userId} preferences={props.preferences} onSelect={props.open} /> : undefined} selected={props.selection.event} database={props.selection.database} calendars={props.selection.calendars} online={props.online} editing={props.editing} creating={props.creating} mapsProvider={props.preferences.mapsProvider} zone={props.preferences.timeZone} timeFormat={props.preferences.timeFormat} onClose={props.workspace.closePanel} onEdit={() => props.setEditing(true)} onDuplicate={() => { if (!props.selected) return; props.setSelected({ ...props.selected, eventId: `local-${crypto.randomUUID()}`, etag: "", title: `${props.selected.title} (copy)`, attendees: [], recurringEventId: undefined, originalStartTime: undefined, recurrence: undefined }); props.setCreating(true); props.setEditing(true) }} />;
+  if (props.sourceConnection && props.sourceCalendar) return <CalendarSourcePanel key={`${props.sourceConnection.bindingId}:${props.sourceCalendar.id}`} connection={props.sourceConnection} calendar={props.sourceCalendar} allCalendars={props.calendars} userId={props.userId} preferences={props.preferences} preferenceWorkspaceId={props.preferenceWorkspaceId ?? props.connections[0]!.workspaceId} onSelect={props.open} onCreate={() => props.create(todayInZone(props.preferences.timeZone), 9, 30, props.sourceCalendar)} />;
+  return createPortal(<div data-calendar-event-panel className="grid gap-3 p-3"><p role="status">{!props.sourceConnection || props.snapshots[props.sourceConnection.bindingId]?.loaded ? "This calendar is no longer available." : "Loading calendar…"}</p><Button variant="outline" onClick={props.workspace.closePanel}>Close</Button></div>, props.workspace.panelElement);
+}
+function sameInstant(left: CalendarItem["start"], right: CalendarItem["start"]) {
+  return left.date === right.date && left.dateTime === right.dateTime && left.timeZone === right.timeZone;
+}
+function sameCalendarItem(old: CalendarItem, candidate: CalendarItem) {
+  return old.title === candidate.title && sameInstant(old.start, candidate.start) && sameInstant(old.end, candidate.end) && old.backgroundClass === candidate.backgroundClass && old.textClass === candidate.textClass && old.dashed === candidate.dashed && old.editable === candidate.editable;
+}
+function calendarSurfaceItem(event: CalendarEvent, style: { backgroundClass: string; textClass: string }, online: boolean, calendarsByKey: Map<string, CalendarRecord>, previous: Map<string, CalendarItem>, cache: Map<string, CalendarItem>) {
+  const id = calendarEventKey(event);
+  const candidate: CalendarItem = { id, title: event.title, start: event.start, end: event.end, backgroundClass: style.backgroundClass, textClass: style.textClass, dashed: event.attendees.some(a => a.self && a.responseStatus === "needsAction"), editable: online && calendarCapability("update", calendarsByKey.get(calendarSelectionKey(event.bindingId, event.calendarId))?.permissions, event).allowed };
+  const old = previous.get(id);
+  const item = old && sameCalendarItem(old, candidate) ? old : candidate;
+  cache.set(id, item);
+  return item;
+}
+function eventSurfaceColor(event: CalendarEvent, preferences: CalendarPreferences, calendarsByKey: Map<string, CalendarRecord>) {
+  const override = preferences.calendarColors?.[calendarSelectionKey(event.bindingId, event.calendarId)];
+  if (!event.colorId && override) return PALETTE[override];
+  const providerColor = event.colorId ?? calendarsByKey.get(calendarSelectionKey(event.bindingId, event.calendarId))?.colorId;
+  const hues: ColorTokenId[] = ["blue", "purple", "green", "purple", "red", "yellow", "orange", "blue", "gray", "blue", "green", "red"];
+  return PALETTE[hues[Number(providerColor ?? 0) % hues.length] ?? "blue"];
+}
+function selectionMissing(event: CalendarEvent, snapshot: Snapshot | undefined, connections: CalendarConnection[]) {
+  if (!connections.some(c => c.bindingId === event.bindingId)) return true;
+  return Boolean(snapshot?.catalogLoaded && !snapshot.calendars.some(calendar => calendar.id === event.calendarId));
+}
 function selectionData(event: CalendarEvent | null, snapshots: Record<string, Snapshot>, connections: CalendarConnection[]) {
- if (!event || !connections.some(c => c.bindingId === event.bindingId)) return { event: null, database: null, calendars: [] };
- const snapshot = snapshots[event.bindingId];
- if (snapshot?.catalogLoaded && !snapshot.calendars.some(calendar => calendar.id === event.calendarId)) return { event: null, database: null, calendars: [] };
- return { event, database: snapshot?.database ?? null, calendars: snapshot?.calendars ?? [] };
+  if (!event || selectionMissing(event, snapshots[event.bindingId], connections)) return { event: null, database: null, calendars: [] };
+  const snapshot = snapshots[event.bindingId];
+  return { event, database: snapshot?.database ?? null, calendars: snapshot?.calendars ?? [] };
 }

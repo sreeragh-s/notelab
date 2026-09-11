@@ -55,10 +55,12 @@ export async function executeProviderWrite(gateway: CalendarGateway, accountId: 
   const query = new URLSearchParams({ sendUpdates: input.write.sendUpdates, conferenceDataVersion: "1" });
   if (input.action === "delete") return gateway.request(`${path}/${encodeURIComponent(eventId)}?${query}`, { method: "DELETE", headers: { "If-Match": input.write.etag! } });
   if (input.action === "move") return moveEvent(gateway, accountId, input, raw!, path, query);
-  const body = createBody(raw, input, eventId);
+  return writeEventBody(gateway, path, query, eventId, creating, createBody(raw, input, eventId), input.write.etag);
+}
+function writeEventBody(gateway: CalendarGateway, path: string, query: URLSearchParams, eventId: string, creating: boolean, body: ReturnType<typeof createBody>, etag?: string) {
   if (creating) {
-    for (const key of ["etag", "recurringEventId", "originalStartTime", "iCalUID", "created", "updated", "organizer", "creator"]) delete body[key];
+    for (const key of ["etag", "recurringEventId", "originalStartTime", "iCalUID", "created", "updated", "organizer", "creator"] as const) delete body[key];
     body.id = eventId;
   }
-  return gateway.request(`${path}${creating ? "" : `/${encodeURIComponent(eventId)}`}?${query}`, { method: creating ? "POST" : "PUT", body: JSON.stringify(body), ...(!creating ? { headers: { "If-Match": input.write.etag! } } : {}) });
+  return gateway.request(`${path}${creating ? "" : `/${encodeURIComponent(eventId)}`}?${query}`, { method: creating ? "POST" : "PUT", body: JSON.stringify(body), ...(creating ? {} : { headers: { "If-Match": etag! } }) });
 }

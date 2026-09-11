@@ -4,7 +4,7 @@ import type { CalendarSurfaceProps } from "./types";
 
 export function useTimelineWindow({ date, view, preferences: p, isRangeReady, onRangeChange, onViewportRangeChange, items, onMetric }: CalendarSurfaceProps) {
   const initial = useMemo(() => calendarDays(date, view, p.weekStartsOn, p.visibleDayCount, p.showWeekends, p.alignStart), [date, view, p.weekStartsOn, p.visibleDayCount, p.showWeekends, p.alignStart]);
-  const before = items.length > 20_000 ? 7 : p.bufferBefore ?? (view === "month" ? 56 : 28), after = items.length > 20_000 ? 7 : p.bufferAfter ?? (view === "month" ? 56 : 28);
+  const { before, after } = timelineBuffers(items.length, view, p);
   const windowFor = (first: string, last: string) => ({ first: addCalendarDays(first, -before - (view === "month" ? 7 : 0)), last: addCalendarDays(last, after + (view === "month" ? 7 : 0)) });
   const [window, setWindow] = useState(() => windowFor(initial[0]!, initial.at(-1)!));
   const visible = useRef({ first: initial[0]!, last: initial.at(-1)! });
@@ -26,8 +26,8 @@ export function useTimelineWindow({ date, view, preferences: p, isRangeReady, on
   // Enabling a source cannot contract the already visible viewport.
   const pinnedFirst = jumped ? initial[0]! : visible.current.first, pinnedLast = jumped ? initial.at(-1)! : visible.current.last;
   const complete = coverage.last >= coverage.first;
-  const first = complete ? days[coverage.first]! < pinnedFirst ? days[coverage.first]! : pinnedFirst : pinnedFirst;
-  const last = complete ? days[coverage.last]! > pinnedLast ? days[coverage.last]! : pinnedLast : pinnedLast;
+  const first = preferPinned(complete, days[coverage.first]!, pinnedFirst, true);
+  const last = preferPinned(complete, days[coverage.last]!, pinnedLast, false);
   const reachable = useMemo(() => Array.from({ length: civilDayOrdinal(last) - civilDayOrdinal(first) + 1 }, (_, i) => addCalendarDays(first, i)), [first, last]);
   const sample = useRef({ date, at: performance.now(), velocity: 0 });
   useEffect(() => { if (!complete) onMetric?.("edge_stall", 1); }, [complete, onMetric]);
@@ -37,14 +37,32 @@ export function useTimelineWindow({ date, view, preferences: p, isRangeReady, on
     if (sample.current.date !== first) sample.current = { date: first, at: now, velocity: Math.abs(civilDayOrdinal(first) - civilDayOrdinal(sample.current.date)) / Math.max(16, elapsed) };
     const lead = sample.current.velocity * (p.prefetchLeadMs ?? 1000);
     visible.current = { first, last };
-    setWindow(current => {
-      const left = civilDayOrdinal(first) - civilDayOrdinal(current.first), right = civilDayOrdinal(current.last) - civilDayOrdinal(last);
-      if (left > Math.max(before / 2, Math.min(before, lead)) && right > Math.max(after / 2, Math.min(after, lead)) && (retain || left < before * 2 && right < after * 2)) return current;
-      const next = windowFor(first, last);
-      const result = retain ? { first: next.first < current.first ? next.first : current.first, last: next.last > current.last ? next.last : current.last } : next;
-      return result.first === current.first && result.last === current.last ? current : result;
-    });
+    setWindow(current => advanceTimelineWindow(current, windowFor(first, last), first, last, before, after, lead, retain));
   }, [before, after, view, instant, onViewportRangeChange, p.prefetchLeadMs]);
   const markEmitted = (date: string) => { emitted.current = date; };
   return { days: reachable, ready, report, markEmitted, initial, jumped, loading: !ready(pinnedFirst, pinnedLast), beforeLoading: first > activeWindow.first, afterLoading: last < activeWindow.last };
+}
+function timelineBuffers(count: number, view: CalendarSurfaceProps["view"], p: CalendarSurfaceProps["preferences"]) {
+  if (count > 20_000) return { before: 7, after: 7 };
+  const fallback = view === "month" ? 56 : 28;
+  return { before: p.bufferBefore ?? fallback, after: p.bufferAfter ?? fallback };
+}
+function preferPinned(complete: boolean, covered: string, pinned: string, earlier: boolean) {
+  if (!complete) return pinned;
+  if (earlier) return covered < pinned ? covered : pinned;
+  return covered > pinned ? covered : pinned;
+}
+function windowHasLead(left: number, right: number, before: number, after: number, lead: number, retain: boolean) {
+  if (left <= Math.max(before / 2, Math.min(before, lead)) || right <= Math.max(after / 2, Math.min(after, lead))) return false;
+  return retain || left < before * 2 && right < after * 2;
+}
+function mergeWindow(current: { first: string; last: string }, next: { first: string; last: string }, retain: boolean) {
+  if (!retain) return next;
+  return { first: next.first < current.first ? next.first : current.first, last: next.last > current.last ? next.last : current.last };
+}
+function advanceTimelineWindow(current: { first: string; last: string }, next: { first: string; last: string }, first: string, last: string, before: number, after: number, lead: number, retain: boolean) {
+  const left = civilDayOrdinal(first) - civilDayOrdinal(current.first), right = civilDayOrdinal(current.last) - civilDayOrdinal(last);
+  if (windowHasLead(left, right, before, after, lead, retain)) return current;
+  const result = mergeWindow(current, next, retain);
+  return result.first === current.first && result.last === current.last ? current : result;
 }

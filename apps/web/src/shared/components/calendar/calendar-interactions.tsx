@@ -45,20 +45,25 @@ export function CalendarInteractionHost({ children, ready, weekends, items }: { 
   }} onPointerUp={pointer => {
     const s = session.current; if (!s || s.pointer !== pointer.pointerId) return;
     s.clientX = pointer.clientX; s.clientY = pointer.clientY;
-    if (s.moved) {
-      const move = geometry(s);
-      try {
-        const box = s.scroll.getBoundingClientRect(), rail = Number(s.scroll.dataset.calendarRailWidth ?? 0);
-        if (s.clientX < box.left + rail || s.clientX > box.right || s.clientY < box.top || s.clientY > box.bottom) throw new Error("Drop the event inside the calendar to move it.");
-        if (!itemsRef.current.get(s.event.id)?.editable) throw new Error("This event is no longer editable.");
-        const next = shiftEventGeometry(s.event, s.zone, move.days, s.event.start.date || s.month ? 0 : move.minutes, s.resize);
-        if (!readyRef.current(move.target)) throw new Error("Those dates are still loading. The event was not moved.");
-        s.onChange(next);
-      } catch (error) { s.onError?.(error instanceof Error ? error : new Error("Invalid event time")); }
-    }
+    if (s.moved) commitCalendarDrag(s, geometry(s), itemsRef.current, readyRef.current);
     cancel();
   }} onPointerCancel={cancel} onKeyDown={event => { if (event.key === "Escape") cancel(); }} onClickCapture={event => { if (suppressClick.current) { suppressClick.current = false; event.preventDefault(); event.stopPropagation(); } }}>
     {children}
     {preview && <div data-calendar-drag-preview aria-hidden="true" inert className="pointer-events-none fixed z-50" style={{ left: preview.session.rect.left + preview.x, top: preview.session.rect.top + (preview.session.event.start.date ? 0 : preview.y), width: preview.session.rect.width, height: preview.session.rect.height }}>{preview.session.content}</div>}
   </div></InteractionContext.Provider>;
+}
+function dropInsideCalendar(session: Session) {
+  const box = session.scroll.getBoundingClientRect(), rail = Number(session.scroll.dataset.calendarRailWidth ?? 0);
+  return session.clientX >= box.left + rail && session.clientX <= box.right && session.clientY >= box.top && session.clientY <= box.bottom;
+}
+function commitCalendarDrag(session: Session, move: { days: number; minutes: number; target: string }, items: ReadonlyMap<string, CalendarItem>, ready: (first: string, last?: string) => boolean) {
+  try { applyCalendarDrag(session, move, items, ready); }
+  catch (error) { session.onError?.(error instanceof Error ? error : new Error("Invalid event time")); }
+}
+function applyCalendarDrag(session: Session, move: { days: number; minutes: number; target: string }, items: ReadonlyMap<string, CalendarItem>, ready: (first: string, last?: string) => boolean) {
+  if (!dropInsideCalendar(session)) throw new Error("Drop the event inside the calendar to move it.");
+  if (!items.get(session.event.id)?.editable) throw new Error("This event is no longer editable.");
+  const next = shiftEventGeometry(session.event, session.zone, move.days, session.event.start.date || session.month ? 0 : move.minutes, session.resize);
+  if (!ready(move.target)) throw new Error("Those dates are still loading. The event was not moved.");
+  session.onChange(next);
 }

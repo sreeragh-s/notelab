@@ -39,13 +39,8 @@ export function useCalendarCache(connection: CalendarConnection, userId: string,
     setTimeout(() => prior?.abort(), 100);
     setSyncing(true);
     try {
-      const hiddenKeys: string[] = JSON.parse(hiddenKey);
-      const metadataLoaded = missingOnly && Boolean(await database.state.get("last_recovery"));
-      const began = performance.now();
-      if (targetStart && targetEnd) await synchronizeCalendarCache(database, targetStart, targetEnd, apiFetch, recover, { missingOnly, metadataLoaded, accountId: connection.accountId, hiddenKeys, priority: 10, signal: controller.signal, requestId: `${requestKey}:${generation}:target`, isCurrent: () => generation === activeRequest.current });
-      if (generation !== activeRequest.current) return null;
-      if (targetStart) { const elapsed = performance.now() - began; setReadLatency(old => old * 0.75 + elapsed * 0.25); emitCalendarMetric("foreground_latency", elapsed); }
-      await synchronizeCalendarCache(database, start, end, apiFetch, targetStart ? false : recover, { missingOnly, accountId: connection.accountId, signal: controller.signal, metadataLoaded: Boolean(targetStart) || metadataLoaded, hiddenKeys, requestId: `${requestKey}:${generation}`, isCurrent: () => generation === activeRequest.current }); if (database.isOpen()) client.setQueryData(calendarKeys.calendars(connection), { calendars: await database.calendars.toArray() }); if (generation === activeRequest.current) setError(undefined); return true } catch (cause) { if (generation === activeRequest.current) setError(cause); return null } finally { if (generation === activeRequest.current) setSyncing(false) }
+      return await refreshCalendarWindows({ database, connection, client, hiddenKey, missingOnly, recover, targetStart, targetEnd, start, end, requestKey, generation, current: () => generation === activeRequest.current, controller, setReadLatency, setError });
+    } catch (cause) { if (generation === activeRequest.current) setError(cause); return null } finally { if (generation === activeRequest.current) setSyncing(false) }
   }, [database, requestKey, online]);
   const initialized = useRef<string | null>(null);
   useEffect(() => {
@@ -77,4 +72,20 @@ export function useCalendarCache(connection: CalendarConnection, userId: string,
     });
   }, [database, materializationKey]);
   return { readLatencyMs, events: cached?.events, calendars: cached?.calendars, coverage: cached?.coverage, catalogLoaded: cached?.catalogLoaded, loaded: cached?.loaded, stale: cached?.stale, requestKey: cached?.requestKey, database, refresh, error, syncing, online };
+}
+async function refreshCalendarWindows(input: {
+  database: CalendarDatabase; connection: CalendarConnection; client: ReturnType<typeof useQueryClient>; hiddenKey: string; missingOnly: boolean; recover: boolean;
+  targetStart?: string; targetEnd?: string; start: string; end: string; requestKey: string; generation: number; current: () => boolean; controller: AbortController;
+  setReadLatency: (value: number | ((old: number) => number)) => void; setError: (value: unknown) => void;
+}) {
+  const hiddenKeys: string[] = JSON.parse(input.hiddenKey);
+  const metadataLoaded = input.missingOnly && Boolean(await input.database.state.get("last_recovery"));
+  const began = performance.now();
+  if (input.targetStart && input.targetEnd) await synchronizeCalendarCache(input.database, input.targetStart, input.targetEnd, apiFetch, input.recover, { missingOnly: input.missingOnly, metadataLoaded, accountId: input.connection.accountId, hiddenKeys, priority: 10, signal: input.controller.signal, requestId: `${input.requestKey}:${input.generation}:target`, isCurrent: input.current });
+  if (!input.current()) return null;
+  if (input.targetStart) { const elapsed = performance.now() - began; input.setReadLatency(old => old * 0.75 + elapsed * 0.25); emitCalendarMetric("foreground_latency", elapsed); }
+  await synchronizeCalendarCache(input.database, input.start, input.end, apiFetch, input.targetStart ? false : input.recover, { missingOnly: input.missingOnly, accountId: input.connection.accountId, signal: input.controller.signal, metadataLoaded: Boolean(input.targetStart) || metadataLoaded, hiddenKeys, requestId: `${input.requestKey}:${input.generation}`, isCurrent: input.current });
+  if (input.database.isOpen()) input.client.setQueryData(calendarKeys.calendars(input.connection), { calendars: await input.database.calendars.toArray() });
+  if (input.current()) input.setError(undefined);
+  return true;
 }

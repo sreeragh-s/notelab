@@ -7,9 +7,15 @@ import { sha256Hex } from "../../../shared/crypto/sha256";
 import { CalendarGateway, CalendarProviderError } from "../provider/gateway";
 import { createCalendarGateway } from "../provider/oauth";
 import { refreshCalendarList } from "../sync/sync";
-export async function acceptCalendarWebhook(headers: Headers, dispatch?: (accountId: string, calendarId: string | null) => Promise<void>) {
+function webhookChannelHeaders(headers: Headers) {
   const id = headers.get("x-goog-channel-id"), token = headers.get("x-goog-channel-token"), resourceId = headers.get("x-goog-resource-id"), number = headers.get("x-goog-message-number");
-  if (!id || !token || !resourceId || !number || !/^\d{1,30}$/.test(number) || token.length > 512 || resourceId.length > 1024) return false;
+  if (!id || !token || !resourceId || !number || !/^\d{1,30}$/.test(number) || token.length > 512 || resourceId.length > 1024) return null;
+  return { id, token, resourceId, number };
+}
+export async function acceptCalendarWebhook(headers: Headers, dispatch?: (accountId: string, calendarId: string | null) => Promise<void>) {
+  const channel = webhookChannelHeaders(headers);
+  if (!channel) return false;
+  const { id, token, resourceId, number } = channel;
   const accepted = await db.transaction(async tx => {
     const [channel] = await tx.select().from(calendarWatchChannel).where(and(eq(calendarWatchChannel.id, id), gt(calendarWatchChannel.expiresAt, new Date()))).for("update");
     if (!channel || channel.tokenHash !== await sha256Hex(token) || (channel.resourceId && channel.resourceId !== resourceId)) return false;

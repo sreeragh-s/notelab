@@ -21,9 +21,18 @@ export function CalendarEventPanel(props: PanelProps) {
     if (key.key === "Escape" && !key.defaultPrevented) { key.preventDefault(); props.onClose(); }
   }}>
     <header className="flex h-12 shrink-0 items-center gap-2 border-b border-stroke-default px-3">
-      <h2 ref={heading} tabIndex={-1} className="min-w-0 flex-1 truncate text-xs/relaxed font-medium outline-none">{event ? props.editing ? "Edit event" : "Event" : "Calendar event"}</h2>
+      <h2 ref={heading} tabIndex={-1} className="min-w-0 flex-1 truncate text-xs/relaxed font-medium outline-none">{eventPanelHeading(event, props.editing)}</h2>
       <Button variant="ghost" size="icon" aria-label="Close calendar event panel" onClick={props.onClose}><XIcon /></Button>
     </header>
-    <div className={`@container min-h-0 flex-1 overflow-y-auto ${props.editing || !event ? "p-3" : ""}`}>{event ? props.editing && props.database ? <EventEditor key={event.eventId} event={event} database={props.database} calendars={props.calendars} online={props.online} isNew={props.creating} onSaved={props.onClose} /> : <CalendarEventDetails key={event.eventId} {...props} selected={event} /> : <div className="grid gap-3 text-xs/relaxed">{props.preview}<p className="text-content-secondary">Select an event to see its details.</p><Button onClick={workspace.create}>Create event</Button></div>}</div>
+    <div className={`@container min-h-0 flex-1 overflow-y-auto ${props.editing || !event ? "p-3" : ""}`}>{eventPanelBody(event, props, workspace.create)}</div>
   </div>, workspace.panelElement);
+}
+function eventPanelHeading(event: CalendarEvent | null, editing: boolean) {
+  if (!event) return "Calendar event";
+  return editing ? "Edit event" : "Event";
+}
+function eventPanelBody(event: CalendarEvent | null, props: PanelProps, create: () => void) {
+  if (!event) return <div className="grid gap-3 text-xs/relaxed">{props.preview}<p className="text-content-secondary">Select an event to see its details.</p><Button onClick={create}>Create event</Button></div>;
+  if (props.editing && props.database) return <EventEditor key={event.eventId} event={event} database={props.database} calendars={props.calendars} online={props.online} isNew={props.creating} onSaved={props.onClose} />;
+  return <CalendarEventDetails key={event.eventId} {...props} selected={event} />;
 }
