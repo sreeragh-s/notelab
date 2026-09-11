@@ -33,15 +33,7 @@ export function CalendarTimeline({ days, target, eventsByDay, zoneControls, onVi
   const emitted = useRef<string | null>(null);
   useLayoutEffect(() => {
     const element = viewport.current; if (!element) return;
-    const old = previous.current;
-    const anchor = old?.anchor;
-    const explicit = !old || old.target !== target && target !== emitted.current;
-    element.scrollLeft = explicit ? geometry.dateToPosition(target) : anchor ? geometry.restore(anchor) : 0;
-    if (!old) element.scrollTop = 7 * hourHeight;
-    else if (old.hourHeight !== hourHeight) element.scrollTop = element.scrollTop / old.hourHeight * hourHeight;
-    previous.current = { geometry, target, hourHeight, anchor: geometry.anchor(element.scrollLeft) };
-    virtual.measure();
-    setEdges({ before: element.scrollLeft < 2, after: element.scrollLeft + element.clientWidth >= element.scrollWidth - 2 });
+    restoreTimelineScroll(element, previous, emitted, geometry, target, hourHeight, virtual, setEdges);
   }, [geometry, target, hourHeight]);
   useLayoutEffect(() => {
     const element = viewport.current; if (!element) return;
@@ -65,9 +57,30 @@ export function CalendarTimeline({ days, target, eventsByDay, zoneControls, onVi
         </div>
       </div>
     </div>
-    {beforeLoading && edges.before && <div role="status" className=" absolute bottom-1 left-1 max-w-48 truncate text-xs text-content-secondary">{loadingMessage ?? "← Loading"}{loadingMessage && onRetry && <button type="button" className="ml-2 underline" onClick={onRetry}>Retry</button>}</div>}
-    {afterLoading && edges.after && <div role="status" className=" absolute bottom-1 right-1 max-w-48 truncate text-xs text-content-secondary">{loadingMessage ?? "Loading →"}{loadingMessage && onRetry && <button type="button" className="ml-2 underline" onClick={onRetry}>Retry</button>}</div>}
+    <TimelineEdge label={loadingMessage ?? "← Loading"} show={beforeLoading && edges.before} loadingMessage={loadingMessage} onRetry={onRetry} className="absolute bottom-1 left-1 max-w-48 truncate text-xs text-content-secondary" />
+    <TimelineEdge label={loadingMessage ?? "Loading →"} show={afterLoading && edges.after} loadingMessage={loadingMessage} onRetry={onRetry} className="absolute bottom-1 right-1 max-w-48 truncate text-xs text-content-secondary" />
   </div>;
+}
+function TimelineEdge({ label, show, loadingMessage, onRetry, className }: { label: string; show: boolean; loadingMessage?: string; onRetry?: () => void; className: string }) {
+  if (!show) return null;
+  return <div role="status" className={className}>{label}{loadingMessage && onRetry && <button type="button" className="ml-2 underline" onClick={onRetry}>Retry</button>}</div>;
+}
+function restoreTimelineScroll(element: HTMLDivElement, previous: { current: { geometry: ReturnType<typeof timelineGeometry>; target: string; hourHeight: number; anchor: ReturnType<ReturnType<typeof timelineGeometry>["anchor"]> } | null }, emitted: { current: string | null }, geometry: ReturnType<typeof timelineGeometry>, target: string, hourHeight: number, virtual: { measure: () => void }, setEdges: (value: { before: boolean; after: boolean }) => void) {
+  const old = previous.current;
+  element.scrollLeft = timelineScrollLeft(old, emitted.current, geometry, target);
+  element.scrollTop = timelineScrollTop(old, element.scrollTop, hourHeight);
+  previous.current = { geometry, target, hourHeight, anchor: geometry.anchor(element.scrollLeft) };
+  virtual.measure();
+  setEdges({ before: element.scrollLeft < 2, after: element.scrollLeft + element.clientWidth >= element.scrollWidth - 2 });
+}
+function timelineScrollLeft(old: { target: string; anchor?: ReturnType<ReturnType<typeof timelineGeometry>["anchor"]> } | null, emitted: string | null, geometry: ReturnType<typeof timelineGeometry>, target: string) {
+  if (!old || old.target !== target && target !== emitted) return geometry.dateToPosition(target);
+  return old.anchor ? geometry.restore(old.anchor) : 0;
+}
+function timelineScrollTop(old: { hourHeight: number } | null, current: number, hourHeight: number) {
+  if (!old) return 7 * hourHeight;
+  if (old.hourHeight !== hourHeight) return current / old.hourHeight * hourHeight;
+  return current;
 }
 function handleTimelineScroll(element: HTMLDivElement, ctx: {
   geometry: ReturnType<typeof timelineGeometry>; hourHeight: number; columnWidth: number; rail: number;

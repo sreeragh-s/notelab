@@ -38,24 +38,32 @@ export async function synchronizeCalendarCache(database: CalendarDatabase, start
     }, options.priority);
     const pinned: string[] = [];
     sync = { calendars: await database.calendars.toArray() };
-    await Promise.all(sync.calendars.filter(c => c.permissions.read && !c.permissions.freeBusyOnly && !options.hiddenKeys?.includes(JSON.stringify([database.identity.bindingId, c.id]))).map(async calendar => {
-      const cached = await database.ranges.where("calendarId").equals(calendar.id).toArray();
-      const dense = await database.state.get(`density:${calendar.id}`);
-      const requested = options.missingOnly ? missingCalendarRanges(start, end, cached) : [{ start, end }];
-      pinned.push(...cached.filter(r => Date.parse(r.start) < Date.parse(end) && Date.parse(r.end) > Date.parse(start)).map(r => r.key));
-      for (const request of requested) {
-        for (const range of calendarRequestRanges(request.start, request.end, dense?.revision ? 7 : 28)) {
-          if (options.isCurrent && !options.isCurrent()) return;
-          if ((options.priority ?? 0) < 10 && !calendarBufferBudgetAvailable(database)) return;
-          await requestCalendarIntervals(`${database.name}:${calendar.id}`, JSON.stringify([database.identity.apiOrigin, database.identity.userId, options.accountId ?? database.identity.bindingId]), range, (span, signal) => loadLockedCalendarRange(database, calendar.id, base, fetcher, options, span, signal), options.priority, options.signal);
-          pinned.push(calendarRangeKey(calendar.id, range.start, range.end));
-        }
-      }
-    }));
+    await Promise.all(sync.calendars.filter(c => readableCalendar(c, options.hiddenKeys, database.identity.bindingId)).map(calendar => syncCalendarRanges(database, calendar, start, end, base, fetcher, options, pinned)));
     await evictCalendarRanges(database, pinned);
   })();
 }
 
+function readableCalendar(calendar: { permissions: { read: boolean; freeBusyOnly: boolean }; id: string }, hiddenKeys: string[] | undefined, bindingId: string) {
+  return calendar.permissions.read && !calendar.permissions.freeBusyOnly && !hiddenKeys?.includes(JSON.stringify([bindingId, calendar.id]));
+}
+async function syncCalendarRanges(database: CalendarDatabase, calendar: { id: string }, start: string, end: string, base: string, fetcher: Transport, options: { missingOnly?: boolean; priority?: number; isCurrent?: () => boolean; accountId?: string; signal?: AbortSignal; hiddenKeys?: string[] }, pinned: string[]) {
+  const cached = await database.ranges.where("calendarId").equals(calendar.id).toArray();
+  const dense = await database.state.get(`density:${calendar.id}`);
+  const requested = options.missingOnly ? missingCalendarRanges(start, end, cached) : [{ start, end }];
+  pinned.push(...cached.filter(r => Date.parse(r.start) < Date.parse(end) && Date.parse(r.end) > Date.parse(start)).map(r => r.key));
+  for (const request of requested) await requestCalendarChunks(database, calendar, request, dense, base, fetcher, options, pinned);
+}
+async function requestCalendarChunks(database: CalendarDatabase, calendar: { id: string }, request: { start: string; end: string }, dense: { revision?: number } | undefined, base: string, fetcher: Transport, options: { priority?: number; isCurrent?: () => boolean; accountId?: string; signal?: AbortSignal; missingOnly?: boolean }, pinned: string[]) {
+  for (const range of calendarRequestRanges(request.start, request.end, dense?.revision ? 7 : 28)) {
+    if (shouldStopCalendarChunks(options, database)) return;
+    await requestCalendarIntervals(`${database.name}:${calendar.id}`, JSON.stringify([database.identity.apiOrigin, database.identity.userId, options.accountId ?? database.identity.bindingId]), range, (span, signal) => loadLockedCalendarRange(database, calendar.id, base, fetcher, options, span, signal), options.priority, options.signal);
+    pinned.push(calendarRangeKey(calendar.id, range.start, range.end));
+  }
+}
+function shouldStopCalendarChunks(options: { isCurrent?: () => boolean; priority?: number }, database: CalendarDatabase) {
+  if (options.isCurrent && !options.isCurrent()) return true;
+  return (options.priority ?? 0) < 10 && !calendarBufferBudgetAvailable(database);
+}
 async function loadLockedCalendarRange(database: CalendarDatabase, calendarId: string, base: string, fetcher: Transport, options: { missingOnly?: boolean }, span: { start: string; end: string }, signal: AbortSignal) {
   const load = () => loadCalendarRangePages(database, calendarId, base, fetcher, options, span, signal);
   if (typeof navigator !== "undefined" && navigator.locks) await navigator.locks.request(`${database.name}:range:${calendarId}:${span.start}:${span.end}`, { signal }, load);

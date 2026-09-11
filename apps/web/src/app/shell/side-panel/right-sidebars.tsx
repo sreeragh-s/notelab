@@ -355,8 +355,8 @@ function calendarPanelSelection(open: boolean, panel?: ReactNode): SidebarPanelS
 }
 
 function useCalendarDockPanel() {
-  const pathname = useRouterState({ select: (state) => state.location.pathname })
   const calendar = useCalendarWorkspace()
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
   if (pathname !== "/calendar") return { calendarOpen: false, calendarPanel: undefined as ReactNode }
   return { calendarOpen: calendar.panelOpen, calendarPanel: <CalendarDockMount /> }
 }

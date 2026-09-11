@@ -29,15 +29,8 @@ export function EventEditor({ event, calendars, database, online, isNew, onSaved
   const setMeet = (value: EventEditorDraft["meet"]) => setDraft(current => ({ ...current, meet: value }));
   const [error, setError] = useState<unknown>(), [pending, setPending] = useState(false), [uncertain, setUncertain] = useState(false);
   const [recurrence, setRecurrence] = useState<string[] | undefined>(), [scope, setScope] = useState<"occurrence" | "following" | "series">("occurrence");
-  const capability = calendarCapability(isNew ? "create" : scope === "following" ? "following" : "update", calendars.find(c => c.id === calendarId && c.bindingId === event.bindingId)?.permissions, event);
-  const save = async () => {
-    if (!online || !capability.allowed) return; setPending(true); setError(undefined);
-    try {
-      const write = editorWrite(event, draft, isNew, recurrence, scope);
-      const result = await runCalendarMutation({ database, event: { ...event, calendarId }, action: isNew ? "create" : "update", write });
-      if (result.status === "succeeded") onSaved(); else { setUncertain(true); setError(new Error("Delivery is being checked. Do not create another copy.")) }
-    } catch (cause) { setError(cause); setUncertain(await database.pending.count() > 0) } finally { setPending(false) }
-  };
+  const capability = eventEditorCapability(isNew, scope, calendars, event, calendarId);
+  const save = async () => { await saveEventEditor({ online, capability, setPending, setError, setUncertain, event, draft, isNew, recurrence, scope, database, calendarId, onSaved }); };
   return <form className="grid gap-4 text-xs/relaxed" onSubmit={e => { e.preventDefault(); void save() }}>
     <fieldset className="grid gap-4" disabled={!online || pending || uncertain || !capability.allowed}>
       <Label className="grid min-w-0 gap-2">Title<Input required value={title} onChange={e => setTitle(e.target.value)} /></Label>
@@ -54,10 +47,34 @@ export function EventEditor({ event, calendars, database, online, isNew, onSaved
       <Label className="flex items-center gap-2"><Checkbox checked={sendUpdates === "all"} onCheckedChange={v => setSendUpdates(v ? "all" : "none")} />Send updates to guests</Label>
       <Button type="submit">{pending ? "Saving…" : "Save event"}</Button>
     </fieldset>
-    {!capability.allowed && <p role="status">{capability.reason}</p>}
-    {!online && <p>Reconnect to edit events.</p>}{error ? <p role="alert" className="text-feedback-danger-text">{getApiErrorMessage(error)}</p> : null}
-    {uncertain && <Button type="button" variant="outline" onClick={async () => { await reconcileCalendarMutations(database); if (!await database.pending.count()) onSaved() }}>Check delivery status</Button>}
+    <EventEditorAlerts capability={capability} online={online} error={error} uncertain={uncertain} database={database} onSaved={onSaved} />
   </form>;
+}
+function EventEditorAlerts({ capability, online, error, uncertain, database, onSaved }: { capability: ReturnType<typeof calendarCapability>; online: boolean; error: unknown; uncertain: boolean; database: CalendarDatabase; onSaved: () => void }) {
+  return <>
+    {!capability.allowed && <p role="status">{capability.reason}</p>}
+    {!online && <p>Reconnect to edit events.</p>}
+    {error ? <p role="alert" className="text-feedback-danger-text">{getApiErrorMessage(error)}</p> : null}
+    {uncertain && <Button type="button" variant="outline" onClick={async () => { await reconcileCalendarMutations(database); if (!await database.pending.count()) onSaved() }}>Check delivery status</Button>}
+  </>;
+}
+function eventEditorCapability(isNew: boolean, scope: "occurrence" | "following" | "series", calendars: CalendarRecord[], event: CalendarEvent, calendarId: string) {
+  const operation = isNew ? "create" : scope === "following" ? "following" : "update";
+  return calendarCapability(operation, calendars.find(c => c.id === calendarId && c.bindingId === event.bindingId)?.permissions, event);
+}
+async function saveEventEditor(input: {
+  online: boolean; capability: ReturnType<typeof calendarCapability>; setPending: (value: boolean) => void; setError: (value: unknown) => void; setUncertain: (value: boolean) => void;
+  event: CalendarEvent; draft: EventEditorDraft; isNew: boolean; recurrence: string[] | undefined; scope: "occurrence" | "following" | "series"; database: CalendarDatabase; calendarId: string; onSaved: () => void;
+}) {
+  if (!input.online || !input.capability.allowed) return;
+  input.setPending(true); input.setError(undefined);
+  try {
+    const write = editorWrite(input.event, input.draft, input.isNew, input.recurrence, input.scope);
+    const result = await runCalendarMutation({ database: input.database, event: { ...input.event, calendarId: input.calendarId }, action: input.isNew ? "create" : "update", write });
+    if (result.status === "succeeded") input.onSaved();
+    else { input.setUncertain(true); input.setError(new Error("Delivery is being checked. Do not create another copy.")); }
+  } catch (cause) { input.setError(cause); input.setUncertain(await input.database.pending.count() > 0); }
+  finally { input.setPending(false); }
 }
 export function newCalendarEvent(input: { workspaceId: string; bindingId: string; calendarId: string; date: string; timeZone: string; hour?: number }): CalendarEvent {
   const start = input.hour === undefined ? dayInstant(input.date, input.timeZone) : wallTime(input.date, `${String(Math.floor(input.hour)).padStart(2, "0")}:${String(Math.round(input.hour % 1 * 60)).padStart(2, "0")}`, input.timeZone);

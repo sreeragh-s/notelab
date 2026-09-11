@@ -9,12 +9,12 @@ export function register({ assert, readSource, test }) {
     const { CalendarWorkspaceProvider, useCalendarWorkspace } = new Function("React", ...Object.keys(React), `${workspace.code}; return { CalendarWorkspaceProvider, useCalendarWorkspace };`)(React, ...Object.values(React));
     const source = await readSource("/src/app/shell/content/app-layout.tsx");
     // Execute the real shell composition, replacing unrelated services and surfaces.
-    const shell = source.slice(source.indexOf("export function AppLayout("), source.indexOf("function AppLayoutContentInner("));
+    const shell = source.slice(source.indexOf("export function AppLayout("), source.indexOf("function AppLayoutContent("));
     const { code } = await transform(shell.replace("export function AppLayout", "function AppLayout"), { loader: "tsx", jsx: "transform" });
     const contexts = [];
     const passthrough = ({ children }) => children;
     const consumer = () => { contexts.push(useCalendarWorkspace()); return null; };
-    const dependencies = { React, ...React, SidebarProvider: passthrough, AppSearchProvider: passthrough, PageLayoutSidebarProvider: passthrough, LayoutEditorProvider: passthrough, AppSidebar: consumer, AppLayoutContentInner: consumer, CalendarWorkspaceProvider, APP_SIDEBAR_PANEL_WIDTH: 256, useRouterState: () => "/calendar", useNavigate: () => () => {}, useRoutePageId: () => null, getSettingsSection: () => "preferences" };
+    const dependencies = { React, ...React, SidebarProvider: passthrough, AppSearchProvider: passthrough, PageLayoutSidebarProvider: passthrough, LayoutEditorProvider: passthrough, AppSidebar: consumer, AppLayoutContent: consumer, CalendarWorkspaceProvider, APP_SIDEBAR_PANEL_WIDTH: 256, useRouterState: () => "/calendar", useNavigate: () => () => {}, useRoutePageId: () => null, getSettingsSection: () => "preferences" };
     const AppLayout = new Function(...Object.keys(dependencies), `${code}; return AppLayout;`)(...Object.values(dependencies));
     const previousDocument = globalThis.document;
     globalThis.document = { createElement: () => ({ className: "" }) };
