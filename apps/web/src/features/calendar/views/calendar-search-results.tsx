@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { addCalendarDays, calendarApiBasePath, calendarEventKey, dayInstant, eventClock, eventInstant, type CalendarConnection, type CalendarEvent, type CalendarPreferences, type CalendarRecord } from "@zilobase/features/calendar";
-import { calendarIsVisible, calendarSelectionKey } from "../connections/calendar-selection";
+import { createCalendarSelectionMatcher, calendarSelectionKey } from "../connections/calendar-selection";
 import { apiFetch, getApiErrorMessage } from "@/platform/network/api";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -11,7 +11,8 @@ export function CalendarSearchResults({ query, connections, calendars, preferenc
   const [debounced, setDebounced] = useState(""), [source, setSource] = useState("all"), [from, setFrom] = useState(""), [until, setUntil] = useState("");
   useEffect(() => { const timer = setTimeout(() => setDebounced(query.trim()), 350); return () => clearTimeout(timer); }, [query]);
   const readable = calendars.filter(calendar => calendar.permissions.read && !calendar.permissions.freeBusyOnly);
-  const sources = searchSources(readable, connections, source, preferences);
+  const matcher = createCalendarSelectionMatcher(preferences);
+  const sources = searchSources(readable, connections, source, matcher);
   const invalidRange = Boolean(from && until && until < from);
   const results = useInfiniteQuery({
     queryKey: ["calendar", "search", userId, sources.map(({ connection, calendar }) => [connection.workspaceId, connection.bindingId, calendar.id]), debounced, from, until, preferences.timeZone],
@@ -54,15 +55,15 @@ function nextSearchPage(page: { nextPageToken: string | null; source: number }, 
   if (page.nextPageToken) return { source: page.source, token: page.nextPageToken };
   if (page.source + 1 < sourceCount) return { source: page.source + 1 };
 }
-function searchSources(readable: CalendarRecord[], connections: CalendarConnection[], source: string, preferences: CalendarPreferences) {
+function searchSources(readable: CalendarRecord[], connections: CalendarConnection[], source: string, matcher: ReturnType<typeof createCalendarSelectionMatcher>) {
   return readable.flatMap(calendar => {
     const connection = connections.find(connection => connection.bindingId === calendar.bindingId);
-    if (!connection || !sourceIncludesCalendar(source, preferences, calendar)) return [];
+    if (!connection || !sourceIncludesCalendar(source, matcher, calendar)) return [];
     return [{ calendar, connection }];
   }).sort((a, b) => calendarSelectionKey(a.calendar.bindingId, a.calendar.id).localeCompare(calendarSelectionKey(b.calendar.bindingId, b.calendar.id)));
 }
-function sourceIncludesCalendar(source: string, preferences: CalendarPreferences, calendar: CalendarRecord) {
-  if (source === "all") return calendarIsVisible(preferences, calendar.bindingId, calendar.id);
+function sourceIncludesCalendar(source: string, matcher: ReturnType<typeof createCalendarSelectionMatcher>, calendar: CalendarRecord) {
+  if (source === "all") return matcher.isVisible(calendar.bindingId, calendar.id);
   return source === calendarSelectionKey(calendar.bindingId, calendar.id);
 }
 function searchLoadedEvents(online: boolean, query: string, debounced: string, pages: CalendarEvent[], cached: CalendarEvent[]) {

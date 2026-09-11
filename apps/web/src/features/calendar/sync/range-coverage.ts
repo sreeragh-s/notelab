@@ -1,5 +1,5 @@
 import type { CalendarConnection, CalendarRecord, CalendarPreferences } from "@zilobase/features/calendar";
-import { calendarIsVisible } from "../connections/calendar-selection";
+import { createCalendarSelectionMatcher } from "../connections/calendar-selection";
 export type CalendarWindow = { start: string; end: string };
 /** Return only holes, composing adjacent and overlapping complete snapshots. */
 export function missingCalendarRanges(start: string, end: string, ranges: CalendarWindow[]) {
@@ -22,8 +22,9 @@ export function calendarSnapshotMatches(snapshot: Pick<CalendarCoverageSnapshot,
   return Boolean(snapshot?.requestKey?.startsWith(JSON.stringify([userId, connection.workspaceId, connection.bindingId]).slice(0, -1) + ","));
 }
 export function calendarRangeReady(connections: Pick<CalendarConnection, "workspaceId" | "bindingId">[], snapshots: Record<string, CalendarCoverageSnapshot>, userId: string, preferences: CalendarPreferences, range: CalendarWindow) {
+  const matcher = createCalendarSelectionMatcher(preferences);
   return connections.every(connection => {
     const snapshot = snapshots[connection.bindingId];
-    return calendarSnapshotMatches(snapshot, userId, connection) && snapshot?.catalogLoaded && snapshot.calendars.filter(calendar => calendar.permissions.read && !calendar.permissions.freeBusyOnly && calendarIsVisible(preferences, connection.bindingId, calendar.id)).every(calendar => coversCalendarRange(snapshot.coverage.find(c => c.calendarId === calendar.id)?.ranges ?? [], range));
+    return calendarSnapshotMatches(snapshot, userId, connection) && snapshot?.catalogLoaded && snapshot.calendars.filter(calendar => calendar.permissions.read && !calendar.permissions.freeBusyOnly && matcher.isVisible(connection.bindingId, calendar.id)).every(calendar => coversCalendarRange(snapshot.coverage.find(c => c.calendarId === calendar.id)?.ranges ?? [], range));
   });
 }
