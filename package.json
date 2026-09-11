@@ -18,6 +18,8 @@
   ],
   "scripts": {
     "dev": "npm run dev:web",
+    "setup": "node scripts/dev/cli.mjs setup",
+    "setup:check": "node scripts/dev/cli.mjs setup-check",
     "build": "npm run build:web",
     "dev:web": "npm run dev --workspace @zilobase/web",
     "dev:clipper": "npm run dev --workspace @zilobase/clipper",
@@ -33,7 +35,7 @@
     "build:desktop": "npm run build --workspace @zilobase/desktop",
     "dev:server": "npm run dev --workspace @zilobase/server",
     "dev:doctor": "node scripts/dev/cli.mjs doctor",
-    "dev:setup": "node scripts/dev/cli.mjs setup",
+    "dev:setup": "node scripts/dev/cli.mjs env-setup",
     "dev:local": "node scripts/dev/cli.mjs local",
     "dev:status": "node scripts/dev/cli.mjs status",
     "dev:logs": "node scripts/dev/cli.mjs logs",

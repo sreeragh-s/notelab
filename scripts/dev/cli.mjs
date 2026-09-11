@@ -3,8 +3,10 @@ import { spawn } from "node:child_process";
 import { constants } from "node:fs";
 import { access, chmod, copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { run } from "./process.mjs";
 
-import { coreDir } from "./config.mjs";
+import { composeFile, coreDir, generatedEnvironmentFiles } from "./config.mjs";
+import { ensureDockerSocket, resolveComposeRunner } from "./docker.mjs";
 import { doctor } from "./doctor.mjs";
 import {
   checkEnvironment,
@@ -33,8 +35,14 @@ const args = process.argv.slice(3);
 try {
   if (command === "doctor") await doctor();
   else if (command === "setup") {
+    await ensureDependencies();
     await ensureDevelopmentEnvironment({ reportLegacy: true });
     await printEnvironmentCheck();
+  } else if (command === "env-setup") {
+    await ensureDevelopmentEnvironment({ reportLegacy: true });
+    await printEnvironmentCheck();
+  } else if (command === "setup-check") {
+    await doctor();
   } else if (command === "env-check") await printEnvironmentCheck();
   else if (command === "env-encrypt") await runDotenvx("encrypt");
   else if (command === "env-decrypt") await runDotenvx("decrypt");
@@ -45,7 +53,8 @@ try {
       );
     }
     await startLocal();
-  } else if (command === "status") await showStatus();
+  }
+  else if (command === "status") await showStatus();
   else if (command === "logs") await followLocalLogs();
   else if (command === "down") await stopLocal();
   else if (command === "reset") {
@@ -74,6 +83,40 @@ async function printEnvironmentCheck() {
   }
   if (results.some((result) => result.missing.length)) {
     throw new Error("Development environment validation failed.");
+  }
+}
+
+async function ensureDependencies() {
+  await ensureDevelopmentEnvironment();
+  const nodeModules = path.join(coreDir, "node_modules");
+  if (!(await exists(nodeModules))) {
+    console.info("Installing workspace dependencies...");
+    await run("npm", ["install"], { cwd: coreDir, stdio: "inherit" });
+    console.info("Dependencies installed.");
+  }
+  try {
+    ensureDockerSocket(
+      "Docker daemon is not running. Start it (Docker.app or `colima start`) and re-run setup.",
+    );
+    const runner = resolveComposeRunner();
+    await run(runner.command, [
+      ...runner.args,
+      "--env-file",
+      generatedEnvironmentFiles.dependencies,
+      "-f",
+      composeFile,
+      "pull",
+      "postgres",
+      "minio",
+      "mailpit",
+    ], {
+      cwd: coreDir,
+      stdio: "inherit",
+    });
+  } catch (error) {
+    throw new Error(
+      `Failed to pre-pull local dependency images: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
