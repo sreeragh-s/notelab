@@ -37,6 +37,8 @@ export type CalendarSurfaceProps = {
   view: CalendarView;
   preferences: CalendarDisplayPreferences;
   onVisibleDateChange?: (date: string) => void;
+  /** Live leftmost/visible date while scrolling; must not write the route. */
+  onPreviewDate?: (date: string) => void;
   onNavigate: (date: string, view: CalendarView) => void;
   onRangeChange?: (range: CalendarRange) => void;
   onSelect?: (item: CalendarItem) => void;

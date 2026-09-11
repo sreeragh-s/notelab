@@ -3,7 +3,7 @@ import { CalendarClockProvider } from "./current-time";
 import { useTimelineWindow } from "./use-timeline-window";
 import { CalendarTimeline } from "./calendar-timeline";
 import { useEffect, useCallback, useMemo, useState, useRef } from "react";
-import { calendarDays, eventClock, createEventIndex } from "@zilobase/features/calendar";
+import { addCalendarDays, calendarDays, eventClock, createEventIndex } from "@zilobase/features/calendar";
 import { Button } from "@/shared/ui/button";
 import { CalendarMonthView } from "./calendar-month-view";
 import { type CalendarItem, type CalendarSurfaceProps } from "./types";
@@ -43,8 +43,12 @@ function surfaceShowsLoading(loading: boolean, painted: boolean, blocked: boolea
 function surfaceView(input: {
   view: CalendarSurfaceProps["view"]; loadingMessage?: string; timeline: ReturnType<typeof useTimelineWindow>; date: string; props: CalendarSurfaceProps; eventsByDay: Record<string, CalendarItem[]>; preferences: CalendarSurfaceProps["preferences"]; onChange?: CalendarSurfaceProps["onChange"]; writable: (item: CalendarItem) => boolean; card: (item: CalendarItem) => React.ReactNode; day: (next: string) => void; create: (day: string, hour: number, duration: number) => void; zoneControls?: CalendarSurfaceProps["zoneControls"]; days: string[]; onItemChange: (item: CalendarItem) => void;
 }) {
-  if (input.view === "month") return <CalendarMonthView loadingMessage={input.loadingMessage} beforeLoading={input.timeline.beforeLoading} afterLoading={input.timeline.afterLoading} date={input.date} onDate={next => { input.timeline.markEmitted(next); input.props.onVisibleDateChange?.(next); }} onViewport={input.timeline.report} days={input.timeline.days} eventsByDay={input.eventsByDay} preferences={input.preferences} online={Boolean(input.onChange)} writable={input.writable} card={input.card} onDay={input.day} onChange={input.onItemChange} onError={input.props.onError} />;
-  return <CalendarTimeline onRetry={input.props.onRetryRange} onMetric={input.props.onMetric} loadingMessage={input.loadingMessage} beforeLoading={input.timeline.beforeLoading} afterLoading={input.timeline.afterLoading} zoneControls={input.zoneControls} canCreate={Boolean(input.props.onCreate)} days={input.timeline.days.filter(day => visibleSurfaceDay(day, input.view, input.preferences.showWeekends))} target={input.days[0]!} onViewport={input.timeline.report} onVisibleDate={next => { input.timeline.markEmitted(next); input.props.onVisibleDateChange?.(next); }} eventsByDay={input.eventsByDay} preferences={{ ...input.preferences, showWeekends: input.preferences.showWeekends || input.view === "day", visibleDayCount: input.view === "day" ? 1 : input.days.length }} card={input.card} writable={input.writable} onDay={input.day} onCreate={input.create} onChange={input.onItemChange} onError={input.props.onError} />;
+  const report = (first: string, last: string, retain?: boolean) => {
+    input.props.onPreviewDate?.(input.view === "month" ? addCalendarDays(first, 3) : first);
+    input.timeline.report(first, last, retain);
+  };
+  if (input.view === "month") return <CalendarMonthView loadingMessage={input.loadingMessage} beforeLoading={input.timeline.beforeLoading} afterLoading={input.timeline.afterLoading} date={input.date} onDate={next => { input.timeline.markEmitted(next); input.props.onVisibleDateChange?.(next); }} onViewport={report} days={input.timeline.days} eventsByDay={input.eventsByDay} preferences={input.preferences} online={Boolean(input.onChange)} writable={input.writable} card={input.card} onDay={input.day} onChange={input.onItemChange} onError={input.props.onError} />;
+  return <CalendarTimeline onRetry={input.props.onRetryRange} onMetric={input.props.onMetric} loadingMessage={input.loadingMessage} beforeLoading={input.timeline.beforeLoading} afterLoading={input.timeline.afterLoading} zoneControls={input.zoneControls} canCreate={Boolean(input.props.onCreate)} days={input.timeline.days.filter(day => visibleSurfaceDay(day, input.view, input.preferences.showWeekends))} date={input.date} target={input.days[0]!} onViewport={report} onVisibleDate={next => { input.timeline.markEmitted(next); input.props.onVisibleDateChange?.(next); }} eventsByDay={input.eventsByDay} preferences={{ ...input.preferences, showWeekends: input.preferences.showWeekends || input.view === "day", visibleDayCount: input.view === "day" ? 1 : input.days.length }} card={input.card} writable={input.writable} onDay={input.day} onCreate={input.create} onChange={input.onItemChange} onError={input.props.onError} />;
 }
 function visibleSurfaceDay(day: string, view: CalendarSurfaceProps["view"], showWeekends: boolean) {
   return showWeekends || view === "day" || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay());

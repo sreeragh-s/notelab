@@ -80,12 +80,18 @@ export function CalendarMonthView(props: MonthProps & { loadingMessage?: string;
     sample.current = { top, at: now };
     setMotion(old => old.direction === direction && old.fast === fast ? old : { direction, fast });
     props.onViewport(weeks[Math.min(count - 1, Math.floor(top / WEEK_HEIGHT))]![0]!, weeks[Math.min(count - 1, Math.floor((top + height - 1) / WEEK_HEIGHT))]![6]!, true);
-    const finish = () => {
-      if (pointer.current) { idle.current = setTimeout(finish, 100); return; }
-      const firstIndex = Math.min(count - 1, Math.floor(top / WEEK_HEIGHT)), lastIndex = Math.min(count - 1, Math.floor((top + height - 1) / WEEK_HEIGHT));
-      const start = weeks[firstIndex]![0]!, end = weeks[lastIndex]![6]!;
-      props.onViewport(start, end); const labelDate = addCalendarDays(start, 3); emitted.current = labelDate; props.onDate(labelDate);
-    }; idle.current = setTimeout(finish, 100);
+    const arm = () => {
+      if (idle.current) clearTimeout(idle.current);
+      const origin = element.scrollTop;
+      idle.current = setTimeout(() => {
+        if (pointer.current || element.scrollTop !== origin) { arm(); return; }
+        const settled = element.scrollTop, settledHeight = element.clientHeight;
+        const firstIndex = Math.min(count - 1, Math.floor(settled / WEEK_HEIGHT)), lastIndex = Math.min(count - 1, Math.floor((settled + settledHeight - 1) / WEEK_HEIGHT));
+        const start = weeks[firstIndex]![0]!, end = weeks[lastIndex]![6]!;
+        props.onViewport(start, end, true); const labelDate = addCalendarDays(start, 3); emitted.current = labelDate; props.onDate(labelDate);
+      }, 120);
+    };
+    arm();
   }}>
     <div className="relative" style={{ height: count * WEEK_HEIGHT }}>{virtual.getVirtualItems().map(row => <div key={row.key} data-calendar-week={weeks[row.index]![0]} className="absolute inset-x-0 top-0" style={{ transform: `translateY(${row.start}px)` }}><CalendarMonthWeek {...props} days={weeks[row.index]!.filter(day => props.preferences.showWeekends || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()))} /></div>)}</div>
   </div>{props.beforeLoading && edges.before && <div role="status" className="pointer-events-none absolute left-1 top-1 text-xs text-content-secondary">{props.loadingMessage ?? "Loading earlier dates…"}</div>}{props.afterLoading && edges.after && <div role="status" className="pointer-events-none absolute bottom-1 right-1 text-xs text-content-secondary">{props.loadingMessage ?? "Loading later dates…"}</div>}</div>;
