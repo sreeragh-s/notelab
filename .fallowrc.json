@@ -10,8 +10,10 @@
     "packages/**/*.test.ts",
     // Root scripts are not npm workspace packages, so list them explicitly.
     "scripts/**/*.mjs",
-    // Calendar fixture is loaded by the Vite HTML entry in its Playwright harness.
+    // Calendar fixtures are loaded by the Vite HTML entries in the Playwright harness.
     "scripts/calendar/e2e/fixture.tsx",
+    "scripts/calendar/e2e/benchmark-fixture.tsx",
+    "scripts/calendar/e2e/surface-fixture.tsx",
     // Mail fixture is loaded by the Vite HTML entry in its Playwright harness.
     "scripts/mail/e2e/fixture.tsx",
     "apps/desktop/e2e/**/*.mjs"
@@ -38,6 +40,12 @@
   // Capability rules enforce the documented production dependency direction.
   "boundaries": {
     "zones": [
+      {
+        // Provider-independent calendar grid. It may import published calendar
+        // layout helpers; other shared UI stays isolated from packages.
+        "name": "web-calendar-surface",
+        "patterns": ["apps/web/src/shared/components/calendar/**"]
+      },
       {
         "name": "web-shared",
         "patterns": ["apps/web/src/shared/**"]
@@ -203,6 +211,7 @@
       }
     ],
     "rules": [
+      { "from": "web-calendar-surface", "allow": ["web-calendar-surface", "web-shared", "package-features"] },
       { "from": "web-shared", "allow": ["web-shared"] },
       {
         "from": "web-app",

@@ -77,12 +77,25 @@ export function register({ assert, loadModule, test }) {
   });
 
   test("moving month windows request contiguous ranges below the provider limit", async () => {
-    const { calendarRequestRanges } = await loadModule("/src/features/calendar/sync/calendar-cache-sync.ts");
+    const fake = await import("fake-indexeddb"); globalThis.indexedDB = fake.indexedDB; globalThis.IDBKeyRange = fake.IDBKeyRange;
+    const { openCalendarDatabase, destroyCalendarDatabase } = await loadModule("/src/features/calendar/storage/calendar-database.ts");
+    const { synchronizeCalendarCache } = await loadModule("/src/features/calendar/sync/calendar-cache-sync.ts");
+    const database = await openCalendarDatabase({ apiOrigin: "https://calendar-ranges.example", userId: "user", workspaceId: "workspace", bindingId: "binding" });
     const start = "2026-08-02T18:30:00.000Z", end = "2026-11-22T18:30:00.000Z";
-    const ranges = calendarRequestRanges(start, end);
-    assert.equal(ranges.length, 4); assert.equal(ranges[0].start, start); assert.equal(ranges.at(-1).end, end);
-    assert.equal(ranges[0].end, ranges[1].start);
-    for (const range of ranges) assert.ok(Date.parse(range.end) - Date.parse(range.start) <= 62 * 86400000);
+    try {
+      await database.calendars.put({ id: "c", bindingId: "binding", permissions: { read: true } });
+      const ranges = [];
+      await synchronizeCalendarCache(database, start, end, async path => {
+        const query = path.split("?")[1];
+        if (!query) return { calendars: [] };
+        const params = new URLSearchParams(query);
+        ranges.push({ start: params.get("start"), end: params.get("end") });
+        return { calendarId: "c", start: params.get("start"), end: params.get("end"), generation: 1, revision: 1, events: [], complete: true, nextPageToken: null };
+      }, false, { metadataLoaded: true });
+      assert.equal(ranges.length, 4); assert.equal(ranges[0].start, start); assert.equal(ranges.at(-1).end, end);
+      assert.equal(ranges[0].end, ranges[1].start);
+      for (const range of ranges) assert.ok(Date.parse(range.end) - Date.parse(range.start) <= 62 * 86400000);
+    } finally { await destroyCalendarDatabase(database.name); }
   });
 
 }

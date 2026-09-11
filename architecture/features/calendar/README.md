@@ -52,7 +52,7 @@ The Calendar schedule composes authorized cache subscriptions into a continuous 
 
 [Month](../../../apps/web/src/shared/components/calendar/calendar-month-view.tsx) virtualizes fixed 144px week rows with stable unfiltered week-start keys and multi-day event bars. Only complete adjacent dates/weeks extend native scroll extents. Appending leaves the offset unchanged; prepending and idle retirement restore a fractional date anchor before paint. Scroll handlers never roll back attempted offsets or replay input. Civil-day positions use [timeline geometry](../../../packages/features/src/calendar-layout/timeline.ts), not elapsed zoned milliseconds.
 
-[Time utilities](../../../packages/features/src/calendar/time.ts) reject ambiguous/nonexistent mutation input unless explicitly disambiguated and preserve date-only exclusive-end values. Event details render descriptions as text.
+[Time utilities](../../../packages/features/src/calendar/time.ts) reject ambiguous/nonexistent mutation input unless explicitly disambiguated and preserve date-only exclusive-end values. The shared calendar surface imports those layout helpers through `@zilobase/features/calendar` rather than the layout subpath. Event details render descriptions as text.
 
 ## Event writes
 
