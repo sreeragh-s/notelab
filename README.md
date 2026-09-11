@@ -127,9 +127,8 @@ Common commands:
 | --- | --- |
 | `npm run dev:doctor` | Validate source and optional Kubernetes tooling. |
 | `npm run dev:setup` | Create missing private development files without overwriting. |
-| `npm run dev:local` | Run Node and Worker profiles with two web clients. |
-| `npm run dev:local:node` | Run only the Node source profile. |
-| `npm run dev:local:worker` | Run only the Cloudflare source profile. |
+| `npm run dev:local` | Run the public local development profile (database + web). |
+| `npm run dev:local -- --target node` | Run only the Node source profile. |
 | `npm run dev:status` | Inspect dependency and runtime health. |
 | `npm run dev:web` | Start the web client. |
 | `npm run build:web` | Type-check and build the web client. |
@@ -148,6 +147,12 @@ Common commands:
 See the [unified local-development guide](./docs/development-workflows.md) for
 runtime URLs, debugger profiles, Kubernetes workflows, dotenvx precedence,
 failure recovery, and safe target-scoped resets.
+
+To run the private hosted profile (requires the private adapter repository), use:
+
+```sh
+ZILOBASE_ENABLE_WORKER=1 npm run dev:local -- --target all
+```
 
 `npm run dev:desktop` talks to the local API at `http://localhost:3000`. Packaged
 releases default to Zilobase Cloud at `https://api.zilobase.com`. On the server

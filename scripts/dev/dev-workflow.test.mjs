@@ -49,7 +49,7 @@ test("runtime profiles have isolated ports, databases, and identities", () => {
   assert.notEqual(node.appHost, worker.appHost);
 });
 
-test("only the hosted Worker profile enables demo seeding", () => {
+test("only the hosted private profile enables demo seeding", () => {
   const dependencies = {
     MAILPIT_SMTP_PORT: "11025",
     MINIO_API_PORT: "19100",

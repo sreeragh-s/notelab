@@ -268,25 +268,30 @@ dashboard link before enabling Gmail for general users.
 ## Source development profiles
 
 Put the flags and Gmail credentials in the core `.env.development` for Node,
-or the adjacent cloud adapter `.env.development` for Worker. Generated local
+or the adjacent cloud adapter `.env.development` for the optional private adapter.
+Generated local
 infrastructure does not override `MAIL_ENABLED`. Set both `MAIL_ENABLED=true`
 and `VITE_FEATURE_MAIL=true`, then run `npm run dev:setup` and
-`npm run dev:local:node` or `npm run dev:local:worker`.
-Validate the effective profile with `npm run mail:config:check -- --profile=node`
-(or `worker`). The checker prints readiness and URLs, never secrets.
+`npm run dev:local` for Node. If you have private-adapter access, use
+`ZILOBASE_ENABLE_WORKER=1 npm run dev:local -- --target all` to validate that path.
+Validate the profile with `npm run mail:config:check -- --profile=node` (or the
+matching private profile setting). The checker prints readiness and URLs, never
+secrets.
 The exact source callbacks are `http://localhost:3000/mail/oauth/google/callback`
-and `http://127.0.0.1:3010/mail/oauth/google/callback` respectively.
+and `http://127.0.0.1:3010/mail/oauth/google/callback` for the optional private
+profile.
 
 ### Same-origin local push canary
 
 Set `ZILOBASE_DEV_PUBLIC_ORIGIN=https://YOUR_DEV_HOST` in the selected profile's
 development file, and forward your HTTPS tunnel to the **web** port (Node 1420,
-Worker 1422). Open Zilobase through that HTTPS URL. The profile sets API, OAuth,
+private adapter 1422). Open Zilobase through that HTTPS URL. The profile sets API, OAuth,
 web and realtime origins consistently, while Vite proxies API traffic to the local
 backend. Add `https://YOUR_DEV_HOST/mail/oauth/google/callback` to Google's Web
 client and set the Pub/Sub audience/endpoint to
 `https://YOUR_DEV_HOST/mail/google/pubsub`. Configure all four push variables.
-Run `npm run mail:config:check -- --profile=node` (or `worker`) before connecting.
+Run `npm run mail:config:check -- --profile=node` (or the optional private profile)
+before connecting.
 Use one profile/test account at a time or separate accounts and subscriptions.
 Desktop started with the selected profile uses the same configured API origin.
 Remove the public-origin value to return to ordinary loopback testing.
@@ -323,8 +328,9 @@ not. Clients should reconcile through normal sync instead of offering a fresh se
 
 ### Real-Google acceptance matrix
 
-Run each scenario on Node web, Worker web, desktop/Node, and desktop/Worker with
-two controlled accounts. Record results without OAuth codes, tokens or mail content.
+Run each scenario on Node web and the optional private profile web, plus desktop
+variants, with two controlled accounts. Record results without OAuth codes, tokens
+or mail content.
 
 | Scenario | Required evidence |
 | --- | --- |

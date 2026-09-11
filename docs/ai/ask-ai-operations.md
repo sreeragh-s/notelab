@@ -70,7 +70,7 @@ Provider calls have total, per-step, and stalled-chunk timeouts plus bounded
 retries. Failures use finite error codes such as `provider_timeout`,
 `provider_rate_limited`, `permission_denied`, and `capability_unavailable`.
 
-Node deployments run a PostgreSQL leased AI-job worker continuously and
+Node deployments run a PostgreSQL leased AI-job execution lane continuously and
 maintenance on startup and every five minutes. Runtime adapters can invoke the
 same exported idempotent handlers using their own queue implementation. Upload
 extraction, meeting summaries, and thread compaction expose durable job status

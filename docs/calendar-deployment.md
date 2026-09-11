@@ -30,7 +30,7 @@ allowlist described below.
 4. Set `CALENDAR_WEBHOOK_URL` to the publicly reachable HTTPS API origin plus `/calendar/google/webhook`. Preserve Google's `X-Goog-*` headers through the proxy. This endpoint authenticates channel secrets/resource identity; it does not use the user's browser session.
 5. Build the web client with `VITE_FEATURE_CALENDAR=true`. Set server `CALENDAR_ENABLED=true` and `CALENDAR_ENABLED_WORKSPACE_IDS` to an explicit comma-separated pilot workspace allowlist. Empty allowlists disable access. Reserve `*` for a separately approved general rollout.
 6. Keep the existing background maintenance runner active. `calendar.sync_recovery` runs every minute under the existing durable maintenance lease and advances sync, maintains watches and drains notification receipts. Node must attach `/calendar-realtime` and use the existing realtime bus; multi-instance deployments need the shared bus configuration. Proxies must support WebSocket upgrade and at least the 20-second heartbeat interval.
-7. For Cloudflare, deploy the matching adapter with its Calendar Durable Object migration, binding, background queue and cron configuration. Follow the adapter's `docs/calendar-deployment.md`; a core-only deployment cannot supply the Worker notification adapter.
+7. For Cloudflare, deploy the matching adapter with its Calendar Durable Object migration, binding, background queue and cron configuration. Follow the adapter's `docs/calendar-deployment.md`; a core-only deployment cannot supply that hosted notification adapter.
 8. As a pilot user, request `GET /workspaces/:workspaceId/calendar/configuration`. All returned checks must pass. This authenticated endpoint exposes booleans only. It checks configuration presence/format and runtime capabilities; actual callback reachability and provider consent still require the live checks below.
 
 OAuth requests `openid`, `email`, `calendar.events`, `calendar.calendarlist`, and `calendar.calendars.readonly` (Calendar scopes use the `https://www.googleapis.com/auth/` prefix). Completion rejects missing required grants. Configure Google consent/test users and any required verification before expanding access. Do not log authorization codes, refresh tokens, event bodies, attendees or raw provider responses.
@@ -50,11 +50,11 @@ npm run test:calendar:browser
 
 The integration runner creates, migrates and drops a disposable PostgreSQL database using the local Node development profile. It never runs the fixture against the application database. Browser acceptance uses an isolated fixture server and mocked provider transport with real IndexedDB, route interactions and sockets. It saves twelve theme screenshots and verifies that cached day/week/month navigation with 1,000 occurrences stays below 100 ms. These tests do not establish live Google acceptance.
 
-Run `npm run build` and `npm test` in the cloud adapter against the matching core checkout. The adapter suite includes real Worker Durable Object/socket tests. The audit base is the original core branch point (`415caa0c`), pinned because local `main` can move independently; inherited findings in older Mail/clipper work must not be mistaken for Calendar regressions. No audit thresholds are relaxed.
+Run `npm run build` and `npm test` in the cloud adapter against the matching core checkout. The adapter suite includes real durable-object/socket tests. The audit base is the original core branch point (`415caa0c`), pinned because local `main` can move independently; inherited findings in older Mail/clipper work must not be mistaken for Calendar regressions. No audit thresholds are relaxed.
 
 ## Live acceptance — required before general availability
 
-Use disposable calendars, two explicitly authorized Google accounts, and consenting test invitees. Record runtime/version, date, expected behavior and observed result for every row. Run the web checks on both Node and Worker deployments and the callback/notification checks on desktop.
+Use disposable calendars, two explicitly authorized Google accounts, and consenting test invitees. Record runtime/version, date, expected behavior and observed result for every row. Run the web checks on both Node and hosted adapter deployments and the callback/notification checks on desktop.
 
 | Check | Required observation |
 | --- | --- |

@@ -157,7 +157,7 @@ export default defineConfig(async () => ({
     strictPort: true,
     ...(process.env.VITE_DEV_PUBLIC_ORIGIN ? { allowedHosts: [new URL(process.env.VITE_DEV_PUBLIC_ORIGIN).hostname] } : {}),
     host: host || process.env.VITE_DEV_HOST || "0.0.0.0",
-    // Local Node and Worker profiles reuse stable cache directories. Prevent a
+    // Local Node and private profiles reuse stable cache directories. Prevent a
     // browser from retaining an optimized-dependency response across a Vite
     // cache regeneration, which otherwise leaves old chunk URLs returning
     // `504 Outdated Optimize Dep` until that browser's site cache is cleared.

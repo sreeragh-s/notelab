@@ -7,7 +7,7 @@ export const coreDir = path.resolve(
 );
 export const platformDir = path.dirname(coreDir);
 export const adapterDir = path.resolve(
-  process.env.ZILOBASE_ADAPTER_DIR ?? path.join(platformDir, "zilobase-cloud-adapter"),
+  process.env.ZILOBASE_ADAPTER_DIR ?? path.join(platformDir, "zilobase-cloudflare-adapter"),
 );
 
 export const stateDir = path.resolve(

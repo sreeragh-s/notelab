@@ -14,7 +14,7 @@ Roll out in this order: dark capture, internal workspaces, internal actions, sch
 
 ## Required configuration
 
-- Core: `DATABASE_URL`, the workspace capability gate, and the normal queue/worker adapter.
+- Core: `DATABASE_URL`, the workspace capability gate, and the normal queue/background adapter.
 - Operational health: a high-entropy `ZILOBASE_OPERATIONS_TOKEN` for the deployment-wide `GET /health/background` endpoint.
 - Retention: `DATABASE_AUTOMATION_STEP_RETENTION_DAYS` defaults to 7 (range 1–90); `DATABASE_AUTOMATION_RUN_RETENTION_DAYS` defaults to 30 (range 1–365).
 - Webhooks: `AUTOMATION_SECRET_ENCRYPTION_KEY`; self-hosted HTTP additionally requires exact `AUTOMATION_WEBHOOK_HTTP_DOMAINS` entries.
@@ -31,8 +31,8 @@ The protected health endpoint returns 503 with `Retry-After: 30` when durable ba
 
 1. Identify whether the growth is capture, evaluation, run execution, notification outbox, or a connector delivery.
 2. Disable the smallest affected capability. Use the global execution kill switch only for cross-capability failures.
-3. Preserve the database and worker logs. Inspect aggregate health and the redacted source audit export; do not query or paste encrypted secret columns.
-4. Repair authority, connector, schema dependency, or worker capacity. Expired leases are reclaimed automatically, and stable receipts make replay safe.
+3. Preserve the database and background logs. Inspect aggregate health and the redacted source audit export; do not query or paste encrypted secret columns.
+4. Repair authority, connector, schema dependency, or background capacity. Expired leases are reclaimed automatically, and stable receipts make replay safe.
 5. Re-enable in one internal workspace, observe backlog age and duplicate-delivery signals, then continue the rollout.
 6. Explicitly repair/resume automations left in `error`; saving a definition never silently resumes it.
 
@@ -40,6 +40,6 @@ The protected health endpoint returns 503 with `Retry-After: 30` when durable ba
 
 The leased maintenance table schedules retention hourly and reruns it after one minute while deletions remain. Cleanup deletes at most 1,000 terminal records of each class per invocation, never queued/running work. Detailed steps and delivery receipts use the detail window; terminal run summaries, closed event windows, and deleted automations use the summary window.
 
-Before and after upgrades, run clean-install and upgrade-from-`0072` migrations, the full server/features/web suites, hosted adapter tests, and a self-hosted worker restart test. During failover, start only workers sharing the same PostgreSQL database; advisory workspace locks, row leases, unique occurrences, action receipts, and stable delivery IDs provide recovery boundaries.
+Before and after upgrades, run clean-install and upgrade-from-`0072` migrations, the full server/features/web suites, hosted adapter tests, and a self-hosted background restart test. During failover, start only background processors sharing the same PostgreSQL database; advisory workspace locks, row leases, unique occurrences, action receipts, and stable delivery IDs provide recovery boundaries.
 
 The authenticated source audit endpoint is `GET /databases/:databaseId/automations/audit?dataSourceId=...`. It exports lifecycle/version/hash, action types, aggregate dependencies, and run counts. It deliberately excludes definitions, values, recipients, connector metadata, and secrets.

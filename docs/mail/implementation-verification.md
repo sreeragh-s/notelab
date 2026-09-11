@@ -20,7 +20,7 @@ reconciliation, bounded offline cache reads, and a same-origin push tunnel profi
   transport, six concurrent send claims, and concurrent OAuth credential binding.
 - Chrome acceptance: eight tests, including a styled screenshot equality check.
 - Web test harness, architecture links/exports and deployment checks passed.
-- Adapter: 90 tests plus 22 Worker-runtime tests passed; TypeScript build passed.
+- Adapter: 90 tests plus 22 hosted-runtime tests passed; TypeScript build passed.
 - Desktop: formatting, Clippy and 44 Rust tests passed.
 - Web production build and bundle budget passed: initial bundle approximately 0.96 MB.
 - Fake IndexedDB fixture with 10,000 threads: bounded query materialized 51 rows in
@@ -33,8 +33,9 @@ Real mail has not been sent. Google consent, recipient delivery, authenticated
 Pub/Sub push through an operator-controlled tunnel, and desktop interactive OAuth
 remain pending the two controlled test accounts and configuration.
 
-At inspection time, Node had its runtime mail flag disabled and no Gmail OAuth
-credentials. Worker had the three OAuth values and runtime mail enabled, but its
-frontend flag disabled. No credentials are copied into this report. Follow
+- At inspection time, Node had its runtime mail flag disabled and no Gmail OAuth
+credentials. The hosted adapter profile had the three OAuth values and runtime
+mail enabled, but its frontend flag disabled. No credentials are copied into this
+report. Follow
 [gmail-deployment.md](gmail-deployment.md) to enable the desired local profile and
 complete the real-Google acceptance matrix.

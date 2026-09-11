@@ -30,12 +30,42 @@ import {
 } from "./process.mjs";
 
 export async function startLocal(target = "all") {
-  const names = target === "all" ? ["node", "worker"] : [target];
-  if (names.some((name) => !localProfiles[name])) {
-    throw new Error("Local target must be node, worker, or all.");
+  const names = [];
+  const requestedNames = target === "all" ? ["node", "worker"] : [target];
+  const adapterAvailable = await exists(path.join(adapterDir, "package.json"));
+
+  for (const name of requestedNames) {
+    if (!localProfiles[name]) throw new Error("Local target must be node, worker, or all.");
+
+    if (name === "worker" && !adapterAvailable) {
+      if (target === "all" && isWorkerProfileEnabled()) {
+        throw new Error(
+          `Cloud adapter repository not found at ${adapterDir}. Install and configure the private adapter ` +
+          "or run with node-only mode only."
+        );
+      }
+      if (target === "worker") {
+        throw new Error(
+          `Cloud adapter repository not found at ${adapterDir}. Install and configure the private adapter ` +
+          "before running private adapter mode."
+        );
+      }
+      continue;
+    }
+
+    names.push(name);
   }
-  if (names.includes("worker") && !(await exists(path.join(adapterDir, "package.json")))) {
-    throw new Error(`Cloud adapter repository not found at ${adapterDir}.`);
+
+  if (!names.length) {
+    throw new Error(
+      "No local targets are available. Set ZILOBASE_ENABLE_WORKER=1 after installing the private adapter."
+    );
+  }
+
+  if (target === "all" && names.includes("node") && !names.includes("worker") && !isWorkerProfileEnabled()) {
+    console.info(
+      "Cloud profile is not configured in this environment; running node profile only.",
+    );
   }
 
   await ensureDevelopmentEnvironment();
@@ -301,6 +331,11 @@ export async function resetLocal(target, confirmed) {
   }
   await rm(path.join(stateDir, `k8s-${target}-smoke.json`), { force: true });
   console.info(`Reset isolated ${target} Kubernetes data.`);
+}
+
+function isWorkerProfileEnabled() {
+  const value = process.env.ZILOBASE_ENABLE_WORKER?.toLowerCase();
+  return value === "1" || value === "true";
 }
 
 function spawnWeb(name, profile, env, color) {

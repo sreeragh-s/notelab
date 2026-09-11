@@ -1,8 +1,7 @@
 # Unified local development
 
 This repository is the development control plane for the open-source Node
-runtime and the sibling Cloudflare adapter. The normal inner loop runs the
-serverful and serverless implementations side by side with isolated data and
+runtime. The normal inner loop runs the local stack with isolated data and
 separate browser sessions. Kubernetes is an opt-in validation loop rather than
 a requirement for everyday application development.
 
@@ -13,17 +12,17 @@ private implementation.
 
 ## Repository layout
 
-The Worker profile expects the Cloudflare adapter to be a sibling of this
-repository:
+An optional private profile expects an adapter repository to be a sibling of
+this repository:
 
 ```text
 platform/zilobase/
 ├── zilobase/
-└── zilobase-cloud-adapter/
+└── zilobase-cloud-adapter/   # optional private adapter
 ```
 
 The sibling can be relocated with `ZILOBASE_ADAPTER_DIR`. Private repositories
-are not required for Community Node, Worker, or Kubernetes development.
+are required only for the optional hosted/private profile.
 
 ### Command ownership
 
@@ -31,16 +30,20 @@ Each repository exposes commands only for state it owns:
 
 | Repository | Owns |
 | --- | --- |
-| Community core | Cross-runtime Node/Worker orchestration, web and desktop clients, Community kind, packaged Community self-host validation |
-| Cloudflare adapter | Standalone API/background Worker development and hosted Cloudflare deployment |
+| Community core | Cross-runtime Node and optional adapter orchestration, web and desktop clients, Community kind, packaged Community self-host validation |
+| Cloudflare adapter | Optional standalone API/background hosted profile development and deployment |
 | Private edition | Private runtime, licensing, private kind profiles, and packaged private deployment |
 | Console | Console development, signing-provider tests, and licensing lifecycle infrastructure |
 | CLI | Installer build, tests, and package synchronization |
 | Landing | Marketing-site development, preview, build, and deployment |
 
 The adapter does not launch Community web or desktop clients. Use
-`npm run dev:local:worker` from this repository when a Worker client is needed;
-use `npm run dev` inside the adapter only when the clients are already running.
+`npm run dev:local` from this repository for the public Node profile.
+If the private profile is present, enable it with:
+
+```sh
+ZILOBASE_ENABLE_WORKER=1 npm run dev:local -- --target all
+```
 
 ## Requirements
 
@@ -51,7 +54,10 @@ The normal source loop requires:
 - Node.js 24 or newer
 - npm 11 or newer
 - Docker with Docker Compose
-- the Community and Cloudflare adapter repositories
+- Node.js 24 or newer
+- npm 11 or newer
+- Docker with Docker Compose
+- optional private adapter repository
 
 Kubernetes development additionally requires:
 
@@ -67,17 +73,14 @@ npm run dev:doctor
 ```
 
 Missing Kubernetes tools are reported as optional. They do not prevent the
-Node and Worker source loops from running.
+Node source loop or optional private-adapter loop from running.
 
 ## Five-minute first run
 
-Install dependencies in both repositories:
+Install dependencies:
 
 ```sh
 cd zilobase
-npm install
-
-cd ../zilobase-cloud-adapter
 npm install
 
 cd ../zilobase
@@ -100,16 +103,16 @@ The default workflow performs these operations in order:
 
 1. Validates selected ports before starting processes.
 2. Starts dependency-only PostgreSQL, MinIO, and Mailpit containers.
-3. Creates independent Node and Worker databases and buckets.
+3. Creates independent Node and optional private-adapter databases and buckets.
 4. Runs migrations once for each selected runtime.
 5. Starts the Node API with source maps and the Node inspector.
-6. Starts the API Worker and background Worker through Wrangler.
-7. Starts one Vite client for Node and another for Worker.
+6. Starts optional adapter runtime components in the private repo when enabled.
+7. Starts one Vite client for Node and, when enabled, one client for the adapter.
 8. Waits for readiness and prints the runtime URLs.
-9. Triggers the local Worker scheduled handler every minute.
+9. Triggers each selected runtime's scheduled handler every minute.
 
-The self-hosted Node database stays empty until you complete `/setup`. Only the
-hosted Worker profile receives the optional demo seed; bootstrap and demo seed
+The self-hosted Node database stays empty until you complete `/setup`. If you enable
+the optional private adapter, it receives the optional demo seed; bootstrap and demo seed
 must never run against the same database.
 
 Bootstrap creates a verified owner and signs that owner in with the submitted
@@ -126,8 +129,8 @@ stops the remaining foreground children instead of leaving a partial stack.
 | Profile | Browser | API or service | Inspector | Isolated state |
 | --- | --- | --- | --- | --- |
 | Node | `http://localhost:1420` | `http://localhost:3000` | `127.0.0.1:9229` | `zilobase_node`, `zilobase-node` bucket |
-| Worker | `http://127.0.0.1:1422` | `http://127.0.0.1:3010` | `127.0.0.1:9231` | `zilobase_worker`, `.dev/local/wrangler/worker` |
-| Worker background | none | `http://127.0.0.1:3012` | `127.0.0.1:9232` | Worker Wrangler persistence |
+| Private adapter | `http://127.0.0.1:1422` | `http://127.0.0.1:3010` | `127.0.0.1:9231` | Adapter database and adapter persistence |
+| Private adapter background | none | `http://127.0.0.1:3012` | `127.0.0.1:9232` | Adapter Wrangler persistence |
 | Community kind | `http://community.zilobase.localhost:3200` | port-forwarded Helm service | `127.0.0.1:9233` | `zilobase-community-dev` namespace |
 
 Dependency-only Compose ports are deliberately outside the packaged self-host
@@ -143,8 +146,8 @@ range:
 
 Community Kubernetes exposes MinIO on `3210` and Mailpit on `3225`.
 
-Node uses the literal `localhost` host while Worker uses the loopback address
-`127.0.0.1`. Google accepts both for local OAuth callbacks, and the distinct
+Node uses the literal `localhost` host while the optional adapter uses the loopback
+address `127.0.0.1`. Google accepts both for local OAuth callbacks, and the distinct
 hosts keep cookies and sessions from colliding between runtimes.
 
 For Google sign-in, register these exact local JavaScript origins on the Web
@@ -173,10 +176,10 @@ git switch -c feat/my-feature
 npm run dev:local
 ```
 
-Use the Node browser for the serverful behavior and the Worker browser for the
-serverless behavior. When testing a feature, perform the same action in both
-clients and confirm that behavior is equivalent while records remain isolated.
-Creating a page in Node must not make it visible in Worker, and vice versa.
+Use the Node browser for the public control-plane behavior and the optional adapter
+browser for parity checks when private-repo access is available. When testing a
+feature, compare both clients where available and confirm behavior remains equivalent
+while records stay isolated.
 
 Useful commands in a second terminal:
 
@@ -193,7 +196,7 @@ the supervisor's prefixed logs and applies secret redaction.
 | Change | Expected behavior |
 | --- | --- |
 | `apps/web` | Both Vite clients update through HMR |
-| Cloudflare adapter Worker source | Wrangler rebuilds and reloads the affected Worker |
+| Cloudflare adapter source | Wrangler rebuilds and reloads the affected adapter runtime |
 | Node server source | Stop and restart `dev:local` to reload the Node process |
 | Environment values | Restart the selected workflow |
 | Database migrations | Restart so the selected runtime migrates before serving |
@@ -209,8 +212,8 @@ Run only the implementation being changed when simultaneous comparison is not
 needed:
 
 ```sh
-npm run dev:local:node
-npm run dev:local:worker
+ZILOBASE_ENABLE_WORKER=1 npm run dev:local -- --target all
+npm run dev:local -- --target node
 ```
 
 These profiles retain the same ports and isolated state used by `dev:local`, so
@@ -237,7 +240,7 @@ Each runtime has its own tracked, encrypted environment file:
 | Runtime | Environment file |
 | --- | --- |
 | Node/core | `zilobase/.env.development` |
-| Worker | `zilobase-cloud-adapter/.env.development` |
+| Private adapter | `zilobase-cloud-adapter/.env.development` |
 
 Environment precedence is:
 
@@ -249,7 +252,7 @@ pollute the supervisor or the other runtime. Shell values deliberately win,
 which makes one-command overrides possible:
 
 ```sh
-PORT=3100 ZILOBASE_NODE_WEB_PORT=1520 npm run dev:local:node
+PORT=3100 ZILOBASE_NODE_WEB_PORT=1520 npm run dev:local -- --target node
 ```
 
 Common overrides include:
@@ -313,38 +316,34 @@ are intentionally excluded.
 
 For simultaneous debugging:
 
-1. Run the **Dev: Node + Worker** task.
-2. Launch the **Debug: Node + Worker parity** compound.
+1. Run the **Dev: Node + Adapter** task.
+2. Launch the **Debug: Node + Adapter parity** compound.
 3. Place breakpoints in Community or adapter TypeScript.
-4. Use the separately launched Node and Worker browser profiles.
+4. Use the separately launched Node and optional adapter browser profiles.
 
 The compound attaches to:
 
 - Node API on `9229`
-- API Worker on `9231`
-- background Worker on `9232`
+- Adapter API on `9231`
+- Adapter background on `9232`
 - the Node browser at `localhost:1420`
-- the Worker browser at `127.0.0.1:1422`
+- the adapter browser at `127.0.0.1:1422`
 
-Source-map overrides map bundled Worker and Node locations back to their local
+Source-map overrides map bundled adapter and Node locations back to their local
 TypeScript sources. If an attachment stays pending, run `npm run dev:status`
 and confirm the matching inspector port is listening.
 
 ### Desktop profiles
 
-Start the corresponding source workflow first, then launch one desktop profile:
+Start the corresponding source workflow first, then launch a desktop profile:
 
 ```sh
-npm run dev:local:node
+npm run dev:local -- --target node
 npm run dev:desktop:node
 ```
 
-or:
-
-```sh
-npm run dev:local:worker
-npm run dev:desktop:worker
-```
+Run the same two commands with `ZILOBASE_ENABLE_WORKER=1` to exercise the optional
+adapter workflow.
 
 The Tauri profile reuses the existing Vite client instead of starting another
 web server. Only one desktop profile should run at a time.
@@ -378,7 +377,7 @@ execution, web readiness, and identity/data isolation. A parity failure should
 be fixed in the owning runtime rather than hidden by pointing both clients at
 one backend.
 
-### Cloudflare adapter changes
+### Hosted adapter changes
 
 From the sibling adapter repository:
 
@@ -488,19 +487,20 @@ Reset commands require both an explicit target and `--yes`:
 
 ```sh
 npm run dev:reset -- --target node --yes
-npm run dev:reset -- --target worker --yes
 npm run dev:reset -- --target community --yes
 npm run dev:reset -- --target all --yes
 ```
+
+For optional adapter work, private-target resets can be run from the private setup.
 
 Reset scope is deliberately narrow:
 
 | Target | Deleted |
 | --- | --- |
 | `node` | `zilobase_node` database and Node MinIO bucket |
-| `worker` | `zilobase_worker` database and Worker Wrangler persistence |
+| `private adapter` (target in script internals) | Adapter database and adapter persistence |
 | `community` | Community development namespace and smoke state |
-| `all` | Source Compose volumes, Worker persistence, and the named Community kind cluster |
+| `all` | Source Compose volumes, adapter persistence, and the named Community kind cluster |
 
 A reset never targets an unspecified database, namespace, cluster, home
 directory, or workspace root.
@@ -521,7 +521,7 @@ a partial workflow.
 
 ### PostgreSQL connection timeouts
 
-If both Node background lanes and Worker scheduled events report terminated
+If both Node background lanes and optional-adapter scheduled events report terminated
 connections, check `npm run dev:status` and the PostgreSQL dependency health.
 Restore the database service before restarting the affected development profile;
 do not reset database volumes for a connection outage. Node maintenance failures
@@ -554,11 +554,12 @@ Do not replace an encrypted file with plaintext to bypass the check.
 Stop and restart `dev:local`. The Node API uses a stable direct inspector
 process and does not run under a file watcher.
 
-### Worker state looks stale
+### Adapter state looks stale
 
-First restart `dev:local:worker`. Wrangler persistence intentionally survives
-normal restarts. If the test specifically requires empty state, use the scoped
-Worker reset rather than deleting the entire `.dev` directory.
+First restart `npm run dev:local -- --target all` with `ZILOBASE_ENABLE_WORKER=1`.
+Adapter persistence intentionally survives normal restarts. If the test specifically
+requires empty state, use the scoped reset rather than deleting the entire `.dev`
+directory.
 
 ### Kubernetes port-forward disappeared
 
@@ -568,7 +569,7 @@ cluster and restore the forwards.
 
 ### Kubernetes is resource constrained
 
-Use the normal Node/Worker source loop for application work and keep Kubernetes
+Use the normal Node/optional adapter source loop for application work and keep Kubernetes
 opt-in. Remove only the named Community development cluster when its data is no
 longer needed; do not delete unrelated Docker containers or kind clusters.
 
@@ -578,9 +579,9 @@ longer needed; do not delete unrelated Docker containers or kind clusters.
 | --- | --- |
 | `npm run dev:doctor` | Validate required and optional tooling |
 | `npm run dev:setup` | Create missing environments and local secrets safely |
-| `npm run dev:local` | Run Node, both Workers, and both Vite clients |
-| `npm run dev:local:node` | Run only Node and its Vite client |
-| `npm run dev:local:worker` | Run only both Workers and their Vite client |
+| `npm run dev:local` | Run Node and, when enabled, the optional adapter profile |
+| `npm run dev:local -- --target node` | Run only Node and its Vite client |
+| `ZILOBASE_ENABLE_WORKER=1 npm run dev:local -- --target all` | Run both Node and optional adapter workflows |
 | `npm run dev:status` | Inspect dependencies, recorded processes, and endpoints |
 | `npm run dev:logs` | Follow prefixed, redacted runtime logs |
 | `npm run dev:down` | Stop source processes and containers while preserving data |
@@ -588,7 +589,6 @@ longer needed; do not delete unrelated Docker containers or kind clusters.
 | `npm run env:decrypt` | Create temporary mode-`0600` plaintext editing copies |
 | `npm run env:encrypt` | Update encrypted files and remove plaintext copies |
 | `npm run dev:desktop:node` | Run Tauri against the existing Node client |
-| `npm run dev:desktop:worker` | Run Tauri against the existing Worker client |
 | `npm run test:runtime-parity` | Compare runtime behavior and isolation |
 | `npm run test:dev-workflow` | Test orchestration safety and environment behavior |
 | `npm run test:community-boundary` | Reject private runtime leakage |
