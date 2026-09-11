@@ -5,3 +5,6 @@ export function validCalendarInvalidation(value: unknown, scope: { workspaceId: 
   const e = value as Record<string, unknown>;
   return e.type === "calendar.invalidate" && e.workspaceId === scope.workspaceId && e.bindingId === scope.bindingId && typeof e.calendarId === "string" && [e.revision, e.generation].every(value => Number.isSafeInteger(value) && Number(value) >= 0);
 }
+export function calendarPushHealthy(lastPong: number, watchExpiresAt: number, now = Date.now()) {
+  return lastPong > 0 && now - lastPong < 45_000 && watchExpiresAt > now;
+}

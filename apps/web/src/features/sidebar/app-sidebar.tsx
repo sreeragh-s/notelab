@@ -1,5 +1,3 @@
-import { CalendarIcon } from "@/shared/components/icons";
-import { Button as CalendarNavButton } from "@/shared/ui/button";
 "use client"
 
 import {
@@ -107,6 +105,8 @@ const sidebarNavigationIcons: SidebarNavigationIcons<React.ReactNode> = {
   getPageIcon: getPageIconNode,
 }
 
+const CalendarAccountsSidebar = React.lazy(() => import("@/features/calendar/connections/calendar-accounts-sidebar").then((module) => ({ default: module.CalendarAccountsSidebar })))
+
 export function AppSidebar({
   onOpenSettings,
   settingsOpen = false,
@@ -156,7 +156,8 @@ export function AppSidebar({
   const layout = React.useMemo(
     () => {
       const resolved = resolveSidebarWorkspaceLayout(sidebarConfig, workspaceId)
-      return isFeatureEnabled("mail") ? resolved : withoutMailFeatures(resolved)
+      const enabledLayout = isFeatureEnabled("mail") ? resolved : withoutMailFeatures(resolved)
+      return isFeatureEnabled("calendar") ? enabledLayout : { ...enabledLayout, tabs: enabledLayout.tabs.filter((tab) => tab.id !== "calendar") }
     },
     [sidebarConfig, workspaceId],
   )
@@ -178,15 +179,17 @@ export function AppSidebar({
     selectTab(tabId)
     if (tabId === "mail") {
       void navigate({ search: { view: "inbox" }, to: "/mail" })
+    } else if (tabId === "calendar") {
+      void navigate({ to: "/calendar" })
     } else if (tabId === "ai") {
       void navigate({ search: { thread: activeThreadId ?? undefined }, to: "/ai" })
-    } else if (pathname === "/mail" || pathname === "/ai") {
+    } else if (pathname === "/mail" || pathname === "/ai" || pathname === "/calendar") {
       void navigate({ search: { view: "recents" }, to: "/recents" })
     }
   }, [activeThreadId, navigate, pathname, selectTab])
   React.useEffect(() => {
     if (customizing) return
-    const staticTabId = pathname === "/mail" ? "mail" : pathname === "/ai" ? "ai" : null
+    const staticTabId = pathname === "/mail" ? "mail" : pathname === "/ai" ? "ai" : pathname === "/calendar" ? "calendar" : null
     if (staticTabId && layout.tabs.some((tab) => tab.id === staticTabId)) {
       setActiveTabId(staticTabId)
       return
@@ -325,15 +328,16 @@ export function AppSidebar({
         <SidebarCustomizePanel activeTabId={activeTabId} databases={navigation?.databases ?? []} disabled={updateUserSettings.isPending} key={`${workspaceId}:${JSON.stringify(layout)}`} layout={layout} onActiveTabChange={selectTab} onCancel={() => setCustomizing(false)} onDone={saveLayout} onOpenSearch={openSearch} pages={navigation?.pages ?? []} workspaceId={workspaceId} />
       ) : (
         <>
-          {activeTab.id !== "mail" && (
+          {activeTab.id !== "mail" && activeTab.id !== "calendar" && (
             <div className="shrink-0 pt-3" data-sidebar="shortcuts">
               <SidebarShortcutList databases={navigation?.databases ?? []} onCreateChat={handleCreateChat} onCreateDatabase={handleCreateDatabase} onCreatePage={handleCreatePage} onOpenSettings={onOpenSettings} pages={navigation?.pages ?? []} settingsOpen={settingsOpen} shortcuts={activeTab.shortcuts} />
             </div>
           )}
           <SidebarContent className="block overflow-x-hidden overflow-y-auto overscroll-y-contain" aria-label="Sidebar sections">
-            {isFeatureEnabled("calendar") && <CalendarNavButton variant="ghost" className="mx-2 justify-start" onClick={() => void navigate({ to: "/calendar" })}><CalendarIcon />Calendar</CalendarNavButton>}
             {activeTab.id === "mail" ? (
               <WorkspaceMailNavigation workspaceId={workspaceId} />
+            ) : activeTab.id === "calendar" ? (
+              workspaceId ? <React.Suspense fallback={null}><CalendarAccountsSidebar key={workspaceId} workspaceId={workspaceId} /></React.Suspense> : null
             ) : (
               <>
                 <AgentsSection activeAgentId={activeAgentId} />

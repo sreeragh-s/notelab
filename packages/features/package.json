@@ -284,6 +284,10 @@
     "./calendar/contracts": {
       "types": "./src/calendar/contracts.ts",
       "default": "./src/calendar/contracts.ts"
+    },
+    "./calendar-layout": {
+      "types": "./src/calendar-layout/index.ts",
+      "default": "./src/calendar-layout/index.ts"
     }
   }
 }

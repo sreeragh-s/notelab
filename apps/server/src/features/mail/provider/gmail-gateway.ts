@@ -13,7 +13,7 @@ const GMAIL_BATCH_URL = "https://gmail.googleapis.com/batch/gmail/v1"
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 const REQUEST_TIMEOUT_MS = 15_000
 const SAFE_READ_RETRIES = 2
-const GMAIL_BATCH_SIZE = 50
+const GMAIL_BATCH_SIZE = 10
 const MAX_ATTACHMENT_DOWNLOAD_BYTES = 30 * 1024 * 1024
 const ACCESS_TOKEN_REFRESH_SKEW_MS = 60_000
 const ACCESS_TOKEN_FALLBACK_TTL_MS = 5 * 60_000
@@ -469,7 +469,7 @@ export class GmailGateway {
     } catch (error) {
       throw normalizeGmailTransportError(error)
     }
-    if (!response.ok) throw normalizeGmailError(response.status, undefined, response.headers.get("retry-after"))
+    if (!response.ok) throw normalizeGmailError(response.status, undefined, response.headers.get("retry-after"), await response.json().catch(() => null))
     if (response.status === 204) return undefined as T
     return (await response.json()) as T
   }
@@ -489,8 +489,8 @@ export class GmailGateway {
         throw lastError
       }
       if (response.ok) return response
-      const error = normalizeGmailError(response.status, operation, response.headers.get("retry-after"))
-      if (!error.retryable || attempt === SAFE_READ_RETRIES) throw error
+      const error = normalizeGmailError(response.status, operation, response.headers.get("retry-after"), await response.json().catch(() => null))
+      if (error.code === "quota_exceeded" || !error.retryable || attempt === SAFE_READ_RETRIES) throw error
       lastError = error
     }
     throw lastError ?? new GmailApiError("Gmail request failed.", 502, "provider_error")
@@ -534,7 +534,7 @@ export class GmailGateway {
         throw lastError
       }
       if (!response.ok) {
-        lastError = normalizeGmailError(response.status, undefined, response.headers.get("retry-after"))
+        lastError = normalizeGmailError(response.status, undefined, response.headers.get("retry-after"), await response.json().catch(() => null))
       } else {
         try {
           return parseGmailBatchThreads(await response.text(), response.headers.get("content-type"))
@@ -544,7 +544,7 @@ export class GmailGateway {
             : new GmailApiError("Gmail returned an invalid batch response.", 502, "provider_error", true)
         }
       }
-      if (!lastError.retryable || attempt === SAFE_READ_RETRIES) throw lastError
+      if (lastError.code === "quota_exceeded" || !lastError.retryable || attempt === SAFE_READ_RETRIES) throw lastError
     }
     throw lastError ?? new GmailApiError("Gmail batch request failed.", 502, "provider_error")
   }
@@ -573,7 +573,12 @@ function parseGmailBatchThreads(body: string, contentType: string | null) {
     const bodyMatch = /\r?\n\r?\n/.exec(responsePart)
     if (!statusMatch || !bodyMatch) throw new GmailApiError("Gmail returned an invalid batch response.", 502, "provider_error", true)
     const status = Number(statusMatch[1])
-    if (status < 200 || status >= 300) throw normalizeGmailError(status)
+    if (status < 200 || status >= 300) {
+      let payload: unknown = null
+      try { payload = JSON.parse(responsePart.slice(bodyMatch.index + bodyMatch[0].length).trim()) } catch { /* Status still classifies malformed provider errors. */ }
+      const retryAfter = responsePart.slice(0, bodyMatch.index).match(/(?:^|\r?\n)retry-after:\s*([^\r\n]+)/i)?.[1]
+      throw normalizeGmailError(status, undefined, retryAfter, payload)
+    }
     try {
       threads.push(JSON.parse(responsePart.slice(bodyMatch.index + bodyMatch[0].length).trim()) as GmailThread)
     } catch {
@@ -682,21 +687,26 @@ function normalizeGmailError(
   status: number,
   operation?: "history",
   retryAfter?: string | null,
+  payload?: unknown,
 ) {
-  if (status === 401 || status === 403) {
+  if (status === 401) {
     return new GmailApiError("Gmail authorization is no longer valid.", 401, "authorization_revoked")
   }
   if (operation === "history" && status === 404) {
     return new GmailApiError("The Gmail history cursor expired.", 409, "history_cursor_invalid")
   }
-  if (status === 429) {
+  if (status === 429 || (status === 403 && hasGmailQuotaReason(payload))) {
     return new GmailApiError(
-      "Gmail quota is temporarily exhausted.",
+      "Gmail quota is temporarily exhausted. Sync will retry after a pause.",
       429,
       "quota_exceeded",
       true,
-      boundedGmailRetryAfter(retryAfter),
+      Math.max(60_000, boundedGmailRetryAfter(retryAfter) ?? 0),
     )
+  }
+  // Forbidden requests can reflect API configuration or policy, not revoked credentials.
+  if (status === 403) {
+    return new GmailApiError("Google denied this Gmail request. Check Gmail API configuration and account permissions.", 403, "provider_error")
   }
   const retryable = status >= 500
   return new GmailApiError(
@@ -705,6 +715,14 @@ function normalizeGmailError(
     "provider_error",
     retryable,
   )
+}
+
+function hasGmailQuotaReason(payload: unknown) {
+  if (!payload || typeof payload !== "object" || !("error" in payload)) return false
+  const error = payload.error
+  if (!error || typeof error !== "object" || !("errors" in error) || !Array.isArray(error.errors)) return false
+  return error.errors.some((item: unknown) => item !== null && typeof item === "object" && "reason" in item &&
+    ["rateLimitExceeded", "userRateLimitExceeded", "dailyLimitExceeded", "quotaExceeded"].includes(String(item.reason)))
 }
 
 function boundedGmailRetryAfter(value: string | null | undefined) {

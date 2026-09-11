@@ -53,6 +53,18 @@ export async function applyCalendarRange(database: CalendarDatabase, response: C
       if (!matchesIdentity(event, database.identity, response.calendarId)) throw new Error("Calendar response identity mismatch");
       const eventKey = calendarEventKey(event); if (!pending.has(eventKey)) await database.events.put({ key: eventKey, event });
     }
+    // An authoritative absence must also leave older overlapping memberships.
+    const incoming = new Set(events.map(calendarEventKey));
+    const older = await database.ranges.where("calendarId").equals(response.calendarId).toArray();
+    for (const range of older) {
+      if (newerRevision(range, response)) continue;
+      const rows = await database.events.bulkGet(range.eventKeys);
+      const eventKeys = range.eventKeys.filter((eventKey, index) => {
+        const event = rows[index]?.event;
+        return pending.has(eventKey) || incoming.has(eventKey) || !event || !eventOverlaps(event, response.start, response.end, event.start.timeZone ?? "UTC");
+      });
+      if (eventKeys.length !== range.eventKeys.length) await database.ranges.update(range.key, { eventKeys });
+    }
     await database.ranges.put({ key, calendarId: response.calendarId, start: response.start, end: response.end, eventKeys: [...new Set([...events.map(calendarEventKey).filter(key => !pending.has(key)), ...pendingRows.filter(row => row.optimistic?.calendarId === response.calendarId && eventOverlaps(row.optimistic, response.start, response.end, row.optimistic.start.timeZone ?? "UTC")).map(row => row.eventKey)])], generation: response.generation, revision: response.revision, fetchedAt: Date.now(), accessedAt: Date.now() });
     await database.state.put({ key: response.calendarId, generation: response.generation, revision: response.revision });
     return true;
@@ -68,27 +80,53 @@ export async function readCalendarRangeCache(database: CalendarDatabase, calenda
     selected.push(range); coveredUntil = Date.parse(range.end); if (coveredUntil >= Date.parse(end)) break;
   }
   emitCalendarMetric("cache_hit", coveredUntil >= Date.parse(end) ? 1 : 0);
-  const ranges = selected.length ? selected : candidates;
+  // Read all overlapping snapshots even when a hole separates cached windows.
+  const ranges = candidates;
+  touchRanges(database, ranges.map(range => range.key));
   const state = await database.state.get(calendarId), calendar = await database.calendars.get(calendarId);
   const rows = await database.events.bulkGet([...new Set(ranges.flatMap(range => range.eventKeys))]);
   return { events: rows.flatMap(row => row && eventOverlaps(row.event, start, end, calendar?.timeZone ?? "UTC") ? [row.event] : []), loaded: coveredUntil >= Date.parse(end), stale: coveredUntil < Date.parse(end) || !state || ranges.some(range => state.generation !== range.generation || state.revision > range.revision || Date.now() - range.fetchedAt > 300_000) };
 }
+const retainedPins = new Map<string, Set<string>>();
+const cacheBudgets = new Map<string, number>();
+export function calendarBufferBudgetAvailable(database: CalendarDatabase) {
+  return (cacheBudgets.get(JSON.stringify([database.identity.apiOrigin, database.identity.userId])) ?? 0) < 50 * 1024 * 1024;
+}
 export async function evictCalendarRanges(database: CalendarDatabase, pinnedKeys: string[]) {
-  await database.transaction("rw", database.ranges, database.events, database.pending, async () => {
-    const rows = await database.ranges.orderBy("accessedAt").reverse().toArray(), pinned = new Set(pinnedKeys);
-    const pendingKeys = new Set((await database.pending.toArray()).map(row => row.eventKey));
-    for (const row of rows) if (row.eventKeys.some(key => pendingKeys.has(key))) pinned.add(row.key);
-    const buckets = new Set<string>();
-    for (const row of rows) {
-      const bucket = row.start.slice(0, 7);
-      if (pinned.has(row.key) || buckets.has(bucket) || buckets.size < 12) { buckets.add(bucket); continue }
-      await database.ranges.delete(row.key);
-    }
-    const retained = new Set((await database.ranges.toArray()).flatMap(row => row.eventKeys));
-    for (const row of await database.pending.toArray()) retained.add(row.eventKey);
-    const orphaned = (await database.events.toCollection().primaryKeys()).filter(key => !retained.has(String(key)));
-    await database.events.bulkDelete(orphaned);
-  });
+  retainedPins.set(database.name, new Set(pinnedKeys));
+  const related = [...openDatabases.values()].filter(db => db.isOpen() && db.identity.apiOrigin === database.identity.apiOrigin && db.identity.userId === database.identity.userId);
+  const snapshots = await Promise.all(related.map(async db => ({ db, ranges: await db.ranges.toArray(), events: await db.events.toArray(), pending: await db.pending.toArray() })));
+  for (const snapshot of snapshots) {
+    const retained = new Set([...snapshot.ranges.flatMap(range => range.eventKeys), ...snapshot.pending.map(row => row.eventKey)]);
+    const orphaned = snapshot.events.filter(row => !retained.has(row.key));
+    if (orphaned.length) await snapshot.db.events.bulkDelete(orphaned.map(row => row.key));
+    snapshot.events = snapshot.events.filter(row => retained.has(row.key));
+  }
+  const encoder = new TextEncoder();
+  let bytes = snapshots.reduce((sum, snapshot) => sum + encoder.encode(JSON.stringify(snapshot.events)).byteLength, 0);
+  const candidates = snapshots.flatMap(snapshot => snapshot.ranges.map(range => ({ snapshot, range }))).sort((a, b) => a.range.accessedAt - b.range.accessedAt);
+  for (const { snapshot, range } of candidates) {
+    if (bytes <= 50 * 1024 * 1024) break;
+    if (retainedPins.get(snapshot.db.name)?.has(range.key) || snapshot.pending.some(row => range.eventKeys.includes(row.eventKey))) continue;
+    await snapshot.db.ranges.delete(range.key);
+    snapshot.ranges = snapshot.ranges.filter(row => row.key !== range.key);
+    const retained = new Set([...snapshot.ranges.flatMap(row => row.eventKeys), ...snapshot.pending.map(row => row.eventKey)]);
+    const orphaned = snapshot.events.filter(row => !retained.has(row.key));
+    await snapshot.db.events.bulkDelete(orphaned.map(row => row.key));
+    bytes -= orphaned.reduce((sum, row) => sum + encoder.encode(JSON.stringify(row)).byteLength, 0);
+    snapshot.events = snapshot.events.filter(row => retained.has(row.key));
+  }
+  cacheBudgets.set(JSON.stringify([database.identity.apiOrigin, database.identity.userId]), bytes);
+  emitCalendarMetric("retained_bytes", bytes);
+}
+const accessed = new Map<string, number>();
+function touchRanges(database: CalendarDatabase, keys: string[]) {
+  const now = Date.now();
+  const pending = keys.filter(key => now - (accessed.get(`${database.name}:${key}`) ?? 0) > 60_000);
+  if (!pending.length) return;
+  for (const key of pending) accessed.set(`${database.name}:${key}`, now);
+  if (accessed.size > 4096) accessed.clear();
+  setTimeout(() => { if (database.isOpen()) void database.transaction("rw", database.ranges, async () => { for (const key of pending) await database.ranges.update(key, { accessedAt: now }); }).catch(() => {}); }, 0);
 }
 
 function newerRevision(prior: { generation: number; revision: number } | undefined, incoming: { generation: number; revision: number }) { return Boolean(prior && (prior.generation > incoming.generation || (prior.generation === incoming.generation && prior.revision > incoming.revision))) }

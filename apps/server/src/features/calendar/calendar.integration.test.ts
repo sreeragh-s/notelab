@@ -32,18 +32,29 @@ test.skipIf(!enabled)("disconnect removes only its own binding and last account"
   expect(rows.some(row => row.id === secondAccount)).toBe(true);
 });
 
-import { beginCalendarOAuth, completeCalendarOAuth, CALENDAR_SCOPES } from "./provider/oauth";
+import { beginCalendarOAuth, consumeCalendarOAuthAttempt, completeCalendarOAuth, CALENDAR_SCOPES } from "./provider/oauth";
 import * as identityVerifier from "../../shared/security/google-id-token";
 test.skipIf(!enabled)("OAuth commits verified accounts, rejects replay and missing scopes", async () => {
   const env = { CALENDAR_ENABLED: "true", CALENDAR_ENABLED_WORKSPACE_IDS: workspaceId, CALENDAR_GOOGLE_CLIENT_ID: "fixture", CALENDAR_GOOGLE_CLIENT_SECRET: "fixture", CALENDAR_TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 5).toString("base64"), BETTER_AUTH_URL: "http://localhost:3000", CLIENT_URL: "http://localhost:1420" };
   const verified = vi.spyOn(identityVerifier, "verifyGoogleIdToken").mockResolvedValue({ subject: "oauth-fixture", email: "oauth@example.test" });
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ access_token: "access", refresh_token: "refresh", id_token: "identity", scope: CALENDAR_SCOPES.join(" ") })));
+  vi.stubGlobal("fetch", vi.fn(async () => Response.json({ access_token: "access", refresh_token: "refresh", id_token: "identity", scope: CALENDAR_SCOPES.join(" ") })));
   try {
     const url = new URL(await runWithDb(database!, () => beginCalendarOAuth(env, { userId, workspaceId, clientKind: "web" })));
     expect(url.searchParams.get("code_challenge_method")).toBe("S256");
     const state = url.searchParams.get("state")!;
     await runWithDb(database!, () => completeCalendarOAuth(env, state, "code"));
     await expect(runWithDb(database!, () => completeCalendarOAuth(env, state, "code"))).rejects.toThrow("expired_oauth_attempt");
+    const again = new URL(await runWithDb(database!, () => beginCalendarOAuth(env, { userId, workspaceId, clientKind: "desktop" })));
+    const completed = await runWithDb(database!, () => completeCalendarOAuth(env, again.searchParams.get("state")!, "code"));
+    expect(completed.workspaceId).toBe(workspaceId);
+    expect(completed.clientKind).toBe("desktop");
+    const oauthAccounts = (await database!.select().from(schema.calendarAccount)).filter(account => account.googleSubject === "oauth-fixture");
+    expect(oauthAccounts).toHaveLength(1);
+    expect((await database!.select().from(schema.calendarBinding)).filter(binding => binding.accountId === oauthAccounts[0]!.id)).toHaveLength(1);
+    const cancel = new URL(await runWithDb(database!, () => beginCalendarOAuth(env, { userId, workspaceId, clientKind: "web" })));
+    const cancelled = await runWithDb(database!, () => consumeCalendarOAuthAttempt(env, cancel.searchParams.get("state")!));
+    expect(cancelled.workspaceId).toBe(workspaceId);
+    await expect(runWithDb(database!, () => completeCalendarOAuth(env, cancel.searchParams.get("state")!, "code"))).rejects.toThrow("expired_oauth_attempt");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ access_token: "access", refresh_token: "refresh", id_token: "identity", scope: "openid email" })));
     const denied = new URL(await runWithDb(database!, () => beginCalendarOAuth(env, { userId, workspaceId, clientKind: "web" })));
     await expect(runWithDb(database!, () => completeCalendarOAuth(env, denied.searchParams.get("state")!, "code"))).rejects.toThrow("missing_calendar_scopes");
@@ -70,13 +81,21 @@ test.skipIf(!enabled)("sync advances only final checkpoints and range cursors is
   [state] = await database!.select().from(schema.calendarProviderCalendar);
   expect(state!.syncToken).toBe("checkpoint"); expect(state!.revision).toBe(1);
   let rangeCalls = 0;
-  const ranges = new CalendarGateway("fixture", async () => { rangeCalls++; return Response.json({ items: [], ...(rangeCalls === 1 ? { nextPageToken: "next" } : {}) }) });
+  const occurrence = { id: "range-occurrence", summary: "Weekly event", start: { dateTime: "2026-09-10T19:30:00+05:30", timeZone: "Asia/Kolkata" }, end: { dateTime: "2026-09-10T20:30:00+05:30", timeZone: "Asia/Kolkata" } };
+  const ranges = new CalendarGateway("fixture", async () => { rangeCalls++; return Response.json({ items: [occurrence], ...(rangeCalls === 1 ? { nextPageToken: "next" } : {}) }) });
   const input = { accountId: secondAccount, bindingId: binding!.id, workspaceId, calendarId: "primary", timeZone: "UTC", generation: 1, revision: 1, start: "2026-09-01T00:00:00Z", end: "2026-10-01T00:00:00Z" };
   const first = await runWithDb(database!, () => readCalendarRange(input, ranges));
   expect(first.complete).toBe(false);
   await expect(runWithDb(database!, () => readCalendarRange({ ...input, accountId: "other", pageToken: first.nextPageToken! }, ranges))).rejects.toThrow("expired_range_cursor");
   const final = await runWithDb(database!, () => readCalendarRange({ ...input, revision: 9, pageToken: first.nextPageToken! }, ranges));
   expect(final.complete).toBe(true); expect(final.revision).toBe(1);
+  expect(final.events).toHaveLength(1);
+  expect(final.events[0]!.start).toEqual(occurrence.start);
+  expect(final.events[0]!.end).toEqual(occurrence.end);
+  expect(final.events[0]).not.toHaveProperty("pageToken");
+  const { eventOverlaps, timedLayout } = await import("@zilobase/features/calendar");
+  expect(eventOverlaps(final.events[0]!, input.start, input.end, "UTC")).toBe(true);
+  expect(timedLayout(final.events, "2026-09-10", "UTC")[0]?.top).toBe(14 * 60);
 });
 
 import { mutateCalendarEvent, reconcileCalendarOperation } from "./events/mutations";
@@ -123,11 +142,16 @@ test.skipIf(!enabled)("webhooks authenticate early callbacks, deduplicate replay
   const id = randomUUID(), token = randomUUID();
   await database!.insert(schema.calendarWatchChannel).values({ id, accountId: secondAccount, calendarId: "primary", tokenHash: await sha256Hex(token), expiresAt: new Date(Date.now() + 60000) });
   const headers = new Headers({ "x-goog-channel-id": id, "x-goog-channel-token": token, "x-goog-resource-id": "resource", "x-goog-message-number": "1" });
-  expect(await runWithDb(database!, () => acceptCalendarWebhook(headers))).toBe(true);
-  expect(await runWithDb(database!, () => acceptCalendarWebhook(headers))).toBe(true);
+  const dispatched: unknown[] = [];
+  const dispatch = async (accountId: string, calendarId: string | null) => { dispatched.push([accountId, calendarId]); };
+  expect(await runWithDb(database!, () => acceptCalendarWebhook(headers, dispatch))).toBe(true);
+  expect(await runWithDb(database!, () => acceptCalendarWebhook(headers, dispatch))).toBe(true);
+  expect(dispatched).toEqual([[secondAccount, "primary"]]);
+  headers.set("x-goog-message-number", "2");
+  expect(await runWithDb(database!, () => acceptCalendarWebhook(headers, async () => { throw new Error("queue unavailable"); }))).toBe(true);
   headers.set("x-goog-resource-id", "spoofed"); expect(await runWithDb(database!, () => acceptCalendarWebhook(headers))).toBe(false);
   const [channel] = (await database!.select().from(schema.calendarWatchChannel)).filter(c => c.id === id);
-  expect(channel!.messageNumber).toBe("1"); expect(channel!.dirtyAt).toBeInstanceOf(Date); expect(channel!.resourceId).toBe("resource");
+  expect(channel!.messageNumber).toBe("2"); expect(channel!.dirtyAt).toBeInstanceOf(Date); expect(channel!.resourceId).toBe("resource");
 });
 
 test.skipIf(!enabled)("expired sync tokens preserve cached canonical events until recovery commits", async () => {
@@ -155,4 +179,80 @@ test.skipIf(!enabled)("outbox retries failed publication and emits only currentl
   expect(await database!.select().from(schema.calendarNotificationOutbox)).toHaveLength(0);
   expect(published.length).toBeGreaterThan(0);
   for (const event of published) expect(Object.keys(event as object).sort()).toEqual(["accountId", "bindingId", "calendarId", "generation", "revision", "userId", "workspaceId"]);
+});
+
+// A refresh reads the local catalog; it must not depend on a Google request.
+test.skipIf(!enabled)("catalog refresh is mounted, scoped, and provider-independent", async () => {
+  const { Hono } = await import("hono");
+  const { calendarSyncRoutes } = await import("./sync/routes");
+  const { CalendarAccessError } = await import("./connections/ownership");
+  const [binding] = (await database!.select().from(schema.calendarBinding)).filter(row => row.accountId === secondAccount);
+  const users = await database!.select().from(schema.user);
+  let identity = userId;
+  const app = new Hono<import("../../shared/types").AppBindings>();
+  app.use("*", async (c, next) => { c.set("user", users.find(user => user.id === identity)!); await next(); });
+  app.onError((error, c) => c.json({ error: error.message }, error instanceof CalendarAccessError ? error.status : 500));
+  app.route("/workspaces/:workspaceId/calendar", calendarSyncRoutes);
+  const fetchSpy = vi.fn(() => { throw new Error("Catalog must not call Google"); });
+  vi.stubGlobal("fetch", fetchSpy);
+  try {
+    const path = `/workspaces/${workspaceId}/calendar/connections/${binding!.id}/catalog`;
+    const response = await runWithDb(database!, async () => app.request(path));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.calendars).toEqual(expect.arrayContaining([expect.objectContaining({ id: "primary", bindingId: binding!.id })]));
+    identity = otherUser;
+    expect((await runWithDb(database!, async () => app.request(path))).status).toBe(404);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  } finally { vi.unstubAllGlobals(); }
+});
+
+
+test.skipIf(!enabled)("event capabilities reject unsupported writes before provider delivery", async () => {
+  const [binding] = (await database!.select().from(schema.calendarBinding)).filter(row => row.accountId === secondAccount);
+  let writes = 0;
+  const raw = { id: "capability-event", etag: "v1", eventType: "focusTime", organizer: { self: true, email: "owner@example.test" }, start: { date: "2026-09-09" }, end: { date: "2026-09-10" } };
+  const gateway = new CalendarGateway("fixture", async (_url, options) => {
+    if (options?.method && options.method !== "GET") writes++;
+    return Response.json(raw);
+  });
+  const input = { userId, workspaceId, bindingId: binding!.id, calendarId: "primary", eventId: raw.id, action: "update" as const, write: { operationId: randomUUID(), etag: "v1", sendUpdates: "none" as const, event: { title: "Denied" } } };
+  await expect(runWithDb(database!, () => mutateCalendarEvent({}, input, gateway))).rejects.toThrow("specialized_event_read_only");
+  expect(writes).toBe(0);
+  raw.eventType = "default";
+  raw.organizer.self = false;
+  await expect(runWithDb(database!, () => mutateCalendarEvent({}, { ...input, action: "move", destination: "primary", write: { ...input.write, operationId: randomUUID() } }, gateway))).rejects.toThrow("event_move_not_allowed");
+  expect(writes).toBe(0);
+});
+
+
+import { personalCalendarSources } from "./connections/catalog";
+test.skipIf(!enabled)("personal sources isolate owners, deduplicate accounts and reject expired memberships", async () => {
+  const remoteWorkspace = randomUUID(), expiredWorkspace = randomUUID(), remoteAccount = randomUUID(), privateAccount = randomUUID();
+  await database!.insert(schema.workspace).values([remoteWorkspace, expiredWorkspace].map(id => ({ id, name: "Other workspace", slug: id })));
+  await database!.insert(schema.member).values([
+    { id: randomUUID(), organizationId: remoteWorkspace, userId, role: "member" },
+    { id: randomUUID(), organizationId: remoteWorkspace, userId: otherUser, role: "member" },
+    { id: randomUUID(), organizationId: expiredWorkspace, userId, role: "temporary", accessExpiresAt: new Date(0) },
+  ]);
+  await database!.insert(schema.calendarAccount).values([
+    { id: remoteAccount, userId, googleSubject: remoteAccount, email: "remote@example.test", secret: { ciphertext: "fixture", iv: "fixture", keyVersion: "v1" }, scopes: [] },
+    { id: privateAccount, userId: otherUser, googleSubject: privateAccount, email: "private@example.test", secret: { ciphertext: "fixture", iv: "fixture", keyVersion: "v1" }, scopes: [] },
+  ]);
+  await database!.insert(schema.calendarBinding).values([
+    { id: randomUUID(), userId, workspaceId: remoteWorkspace, accountId: secondAccount },
+    { id: randomUUID(), userId, workspaceId: remoteWorkspace, accountId: remoteAccount },
+    { id: randomUUID(), userId: otherUser, workspaceId: remoteWorkspace, accountId: privateAccount },
+    { id: randomUUID(), userId, workspaceId: expiredWorkspace, accountId: remoteAccount },
+  ]);
+  const env = { CALENDAR_ENABLED: "true", CALENDAR_ENABLED_WORKSPACE_IDS: "*" };
+  const sources = await runWithDb(database!, () => personalCalendarSources(env, userId, workspaceId));
+  expect(sources.filter(source => source.accountId === secondAccount)).toHaveLength(1);
+  expect(sources.find(source => source.accountId === secondAccount)?.workspaceId).toBe(workspaceId);
+  expect(sources.find(source => source.accountId === remoteAccount)?.workspaceId).toBe(remoteWorkspace);
+  expect(sources.some(source => source.accountId === privateAccount || source.workspaceId === expiredWorkspace)).toBe(false);
+  expect(JSON.stringify(sources)).not.toContain("ciphertext");
+  const restricted = await runWithDb(database!, () => personalCalendarSources({ ...env, CALENDAR_ENABLED_WORKSPACE_IDS: workspaceId }, userId, workspaceId));
+  expect(restricted.some(source => source.accountId === remoteAccount)).toBe(false);
+  await expect(runWithDb(database!, () => personalCalendarSources(env, userId, expiredWorkspace))).rejects.toThrow("Workspace access required");
 });

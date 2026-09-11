@@ -18,9 +18,11 @@ The [page duplication model](../../../apps/web/src/features/sidebar/model/page-d
 
 ## Authorization and persistence
 
-Navigation reflects accessible content and user sidebar preferences. Page graph/hierarchy ownership stays with page modules; sidebar visibility is not a server authorization decision.
+Navigation reflects accessible content and user sidebar preferences. [Sidebar configuration](../../../packages/features/src/user-settings/sidebar-config.ts) normalizes Home, AI, Mail and Calendar as fixed tabs, including existing saved layouts. Calendar is a static route tab with account controls instead of customizable shortcuts and sections. The [application sidebar](../../../apps/web/src/features/sidebar/app-sidebar.tsx) filters Calendar by its independent feature flag and keeps selection synchronized with the Calendar route, restoring the saved workspace tab when leaving it. Page graph/hierarchy ownership stays with page modules; sidebar visibility is not a server authorization decision.
 
 ## Side effects, failures and recovery
+
+Calendar sidebar controls share the content pane's Calendar controller through a single provider in the [application layout](../../../apps/web/src/app/shell/content/app-layout.tsx), above both sibling subtrees. This boundary keeps source selection, dock actions and travel-zone display synchronized. The [provider regression test](../../../apps/web/test/app/calendar-provider-boundary.test.mjs) renders the real shell composition with unrelated surfaces stubbed and asserts both consumers receive the same context.
 
 Hierarchy changes and workspace switches invalidate navigation state. Preserve expansion, ordering, recency, selected view and realtime reconciliation while separating actions from rendering.
 

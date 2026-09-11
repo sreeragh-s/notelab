@@ -46,7 +46,7 @@ test("mail index records queryable metadata but omit bodies and snippets", () =>
 test("index work is bounded, resumable, history-driven, and deletion-safe", async () => {
   const source = await readFile(new URL("./mail-index.ts", import.meta.url), "utf8")
 
-  assert.match(source, /BACKFILL_PAGE_SIZE = 100/)
+  assert.match(source, /BACKFILL_PAGE_SIZE = 20/)
   assert.match(source, /MAX_HISTORY_PAGES_PER_ADVANCE = 5/)
   assert.match(source, /INDEX_LEASE_MS/)
   assert.match(source, /isNull\(mailIndexState\.leaseExpiresAt\)/)

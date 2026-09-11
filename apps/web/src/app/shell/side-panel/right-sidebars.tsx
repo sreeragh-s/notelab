@@ -13,6 +13,8 @@ import type {
   ReactNode,
 } from "react"
 import type { PanelImperativeHandle } from "react-resizable-panels"
+import { useRouterState } from "@tanstack/react-router"
+import { CalendarDockMount, useCalendarWorkspace } from "@/features/calendar/workspace/calendar-workspace"
 
 import {
   APP_SIDEBAR_PANEL_WIDTH,
@@ -306,7 +308,7 @@ function OverlayRightSidebarPanel({
   )
 }
 
-type SidebarPanelKey = "discussions" | "page" | "view-settings"
+type SidebarPanelKey = "calendar" | "discussions" | "page" | "view-settings"
 
 type SidebarPanelSelection = {
   ariaLabel: string
@@ -336,6 +338,8 @@ function useRetainedSidebarPanel(
 }
 
 type PrimarySidebarPanelOptions = {
+  calendarOpen?: boolean
+  calendarPanel?: ReactNode
   discussionsEnabled: boolean
   discussionsOpen: boolean
   discussionsPanel?: ReactNode
@@ -345,7 +349,23 @@ type PrimarySidebarPanelOptions = {
   utilitySidebarPanel?: ReactNode
 }
 
-function selectPrimarySidebarPanel({
+function calendarPanelSelection(open: boolean, panel?: ReactNode): SidebarPanelSelection | null {
+  if (open && panel != null) return { ariaLabel: "Calendar event sidebar", key: "calendar", panel }
+  return null
+}
+
+function useCalendarDockPanel() {
+  const calendar = useCalendarWorkspace()
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  if (pathname !== "/calendar") return { calendarOpen: false, calendarPanel: undefined as ReactNode }
+  return { calendarOpen: calendar.panelOpen, calendarPanel: <CalendarDockMount /> }
+}
+
+function selectPrimarySidebarPanel(options: PrimarySidebarPanelOptions): SidebarPanelSelection | null {
+  return calendarPanelSelection(options.calendarOpen === true, options.calendarPanel) ?? selectWorkspaceSidebarPanel(options)
+}
+
+function selectWorkspaceSidebarPanel({
   discussionsEnabled,
   discussionsOpen,
   discussionsPanel,
@@ -440,7 +460,10 @@ export function RightSidebars({
   utilitySidebarOpen?: boolean
   utilitySidebarPanel?: ReactNode
 }) {
+  const { calendarOpen, calendarPanel } = useCalendarDockPanel()
   const primaryPanel = selectPrimarySidebarPanel({
+    calendarOpen,
+    calendarPanel,
     discussionsEnabled,
     discussionsOpen,
     discussionsPanel,
@@ -450,6 +473,7 @@ export function RightSidebars({
     utilitySidebarPanel,
   })
   const renderedPrimaryPanel = useRetainedSidebarPanel(primaryPanel, {
+    calendar: calendarPanel,
     discussions: discussionsPanel,
     page: pageSidebarPanel,
     "view-settings": utilitySidebarPanel,
@@ -541,7 +565,10 @@ export function RightSidebarMobilePanels({
   pageSidebarOpen?: boolean
   pageSidebarPanel?: ReactNode
 }) {
+  const { calendarOpen, calendarPanel } = useCalendarDockPanel()
   const primaryPanel = selectPrimarySidebarPanel({
+    calendarOpen,
+    calendarPanel,
     discussionsEnabled,
     discussionsOpen,
     discussionsPanel,
@@ -549,11 +576,12 @@ export function RightSidebarMobilePanels({
     pageSidebarPanel,
   })
   const renderedPrimaryPanel = useRetainedSidebarPanel(primaryPanel, {
+    calendar: calendarPanel,
     discussions: discussionsPanel,
     page: pageSidebarPanel,
   })
   const primaryPanelAvailable =
-    pageSidebarPanel != null || discussionsPanel != null
+    calendarPanel != null || pageSidebarPanel != null || discussionsPanel != null
 
   if (!isMobile) return null
 

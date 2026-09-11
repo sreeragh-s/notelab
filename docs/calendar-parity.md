@@ -1,0 +1,120 @@
+# Calendar parity implementation ledger
+
+Accepted scope: Google-backed web, macOS and Windows workflows using Zilobase UI and workspace content. Additional calendar providers and mobile are deferred. Each pass has a separate feature commit.
+
+Reference: [Notion Calendar documentation](https://www.notion.com/help/category/notion-calendar/all), reviewed September 10, 2026.
+
+| Pass | Feature | Status | Evidence |
+| --- | --- | --- | --- |
+| 1 | Google event capabilities | Implemented | Shared capability tests; Calendar integration tests; web editor regression; workspace typecheck; architecture link checks. |
+| 2 | Personal calendar source catalog | Implemented | 12 Calendar integration tests including owner isolation, account deduplication, expired memberships and rollout filtering; server/web typechecks; architecture checks. |
+| 3 | Google connection onboarding | Implemented | Return-path test; OAuth replay/cancellation and reconnect deduplication integration tests; server/web typechecks; architecture checks. Live desktop OAuth acceptance pending. |
+| 4 | Source organization | Implemented | Source-order behavioral tests; preference schema tests; web typecheck; selection regression. |
+| 5 | Calendar-specific event panel | Implemented | Seven sidebar browser tests including independent pagination, selected-source creation, read-only creation denial and persistent ordering; source-order tests; web typecheck; architecture checks. |
+| 6 | Configurable multi-day views | Implemented | Shared layout tests exercise all 31 counts with weekends on/off across DST; browser test covers count controls, navigation, reload and mini-calendar selection; web typecheck. |
+| 7 | Grid density | Implemented | Browser test verifies preserved time anchor, quarter-hour creation, one-hour drag at double density and reset; preference migration/bounds tests; web typecheck. |
+| 8 | General preferences | Implemented | Preference persistence/Today-alignment browser test; shared preview exclusion and safe maps-link tests; schema bounds/defaults tests; web typecheck. Source: [General settings](https://www.notion.com/help/notion-calendar-settings). |
+| 9 | Labeled time zones | Implemented | Browser add/rename/reorder/remove and four-column reload test; server preference migration/promotion/limits tests; web/server typechecks. |
+| 10 | Travel time zones | Implemented | Browser preview/restore/explicit-save test asserts no preference writes during preview; shared immutability/restore/invalid-zone tests; web typecheck. |
+| 11 | Cross-period search | Implemented | Browser finds/opens events years outside the grid, paginates and resets cursors on date filters; server unbounded-range/pagination and permission tests; server/web typechecks. Google [event-list search contract](https://developers.google.com/workspace/calendar/api/v3/reference/events/list). |
+| 12 | Commands and shortcut discovery | Implemented | Browser command-menu/help test covers view switching, searchable actions, typing focus and disabled offline creation. Uses shared shortcut registration and command UI. Milestone validation recorded below. |
+| 13 | Formatted descriptions | Pending | — |
+| 14 | Participant response notes | Pending | — |
+| 15 | Merged event presentation | Pending | — |
+| 16 | Multiple event selection | Pending | — |
+| 17 | Bulk event changes | Pending | — |
+| 18 | Focus time | Pending | — |
+| 19 | Out of office | Pending | — |
+| 20 | Birthdays | Pending | — |
+| 21 | Event-type conversion | Pending | — |
+| 22 | Contact search | Pending | — |
+| 23 | Room booking | Pending | — |
+| 24 | Teammate overlays | Pending | — |
+| 25 | Teammate drag-to-create | Pending | — |
+| 26 | Conferencing defaults | Pending | — |
+| 27 | Zoom generation | Pending | — |
+| 28 | Meeting join actions | Pending | — |
+| 29 | Page and link attachments | Pending | — |
+| 30 | Workspace sources | Pending | — |
+| 31 | Database date projection | Pending | — |
+| 32 | Database grid scheduling | Pending | — |
+| 33 | Unscheduled database items | Pending | — |
+| 34 | Database property editing | Pending | — |
+| 35 | Database duplication and moves | Pending | — |
+| 36 | Meeting notes | Pending | — |
+| 37 | Automatic meeting notes | Pending | — |
+| 38 | Home upcoming events | Pending | — |
+| 39 | Individual and bulk blocking | Pending | — |
+| 40 | Automatic blocking rules | Pending | — |
+| 41 | Blocking recovery | Pending | — |
+| 42 | One-off scheduling drafts | Pending | — |
+| 43 | Public booking | Pending | — |
+| 44 | Recurring availability | Pending | — |
+| 45 | Booking management | Pending | — |
+| 46 | Event-to-availability conversion | Pending | — |
+| 47 | Invitation notifications | Pending | — |
+| 48 | Meeting alerts | Pending | — |
+| 49 | Upcoming meeting context | Pending | — |
+| 50 | Desktop tray agenda | Pending | — |
+| 51 | Global shortcuts | Pending | — |
+| 52 | Desktop background lifecycle | Pending | — |
+| 53 | Native scale controls | Pending | — |
+| 54 | Local event links | Pending | — |
+| 55 | Account lifecycle | Pending | — |
+| 56 | Connection health | Pending | — |
+| 57 | Language selection | Pending | — |
+
+## Release acceptance
+
+Implementation status is not live-provider certification. Google/Zoom live checks and macOS/Windows acceptance remain pending. Public scheduling remains disabled until concurrency, privacy and recovery checks pass.
+
+## Milestone A manual acceptance (passes 1–12)
+
+The requested stopping point is pass 12. Passes 13–57 are not part of this review.
+
+- Connect/reconnect two Google accounts; verify cancellation, workspace return, defaults and private source ownership. Repeat an account in two workspaces and revoke one membership.
+- Reorder/collapse accounts and calendars, reload, and open a calendar's upcoming panel. Page beyond the grid and create on its selected calendar. Verify read-only calendars cannot create or mutate.
+- Try 1, 3, 7 and 31 days, hidden weekends, Today alignment, mini-calendar selection, arrow navigation and reload.
+- Change hour height, drag/resize/create, and reset. Verify the same time remains at the top.
+- Add four zones, rename/reorder/promote/remove them. Preview a travel zone, restore, and explicitly save. Verify existing event instants in Google stay unchanged.
+- Search for events outside the displayed month, load another page, change source/date filters, open a result, and retry a failed/offline search.
+- Open commands with Cmd/Ctrl+K and help with ?. Check navigation, event traversal, source selection, density, zones, disabled actions, and typing in an editor.
+- Check maps preference and the upcoming meeting preview. Recheck permission denial and desktop OAuth callbacks on macOS/Windows.
+
+Live Google and desktop acceptance remains a manual gate; mocked browser and integration evidence does not replace it.
+
+## Milestone A automated validation
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck` | Passed across workspaces. |
+| `npm run test:packages` | Passed, including Calendar capability, date-range, ordering, context and travel tests. |
+| `npm run test:web` | Passed. |
+| `npm run test:server` | Passed: 1,164 tests and 310 query-regression tests; coverage and server build passed. |
+| `npm run test:calendar:integration` | Passed: 12 tests against disposable PostgreSQL. |
+| `npm run build:web` | Passed; final bundle budget passed. |
+| `npm run test:architecture` | Passed. |
+| `npm run test:calendar:browser` | Passed: all 59 tests in the final run. Cached day/week/month navigation measured 19/65/65 ms against the unchanged 100 ms gate. |
+| `npm run test:runtime-parity` | Blocked by local environment: Node `/demo/bootstrap` returned HTTP 404. |
+| Live Google and macOS/Windows OAuth | Pending manual acceptance. |
+
+The initial browser run exposed a source-panel focus race and a navigation timing regression. The source pending state now retains sidebar focus; stable display/command metadata and mounting preview subscriptions only for an open dock reduce unnecessary navigation work. The 100 ms benchmark threshold remains unchanged.
+
+Timezone correction: rail + picker and heading menus replace toolbar travel. Primary renders nearest the grid; Z previews, heading actions restore/save. Browser acceptance: `timezone rail adds, renames, promotes and persists four columns` and `Z previews travel without saving and heading actions restore or save`; model coverage includes alias rejection, four-zone retention and DST offsets.
+
+Navigation correction: loaded-date boundaries cover arrows, Today, keyboard, mini-calendar, view/day-count controls and scroll. Cache coverage includes committed empty ranges, composes holes, and excludes hidden sources from the gate. Destination jobs precede queued prefetch; obsolete jobs stop at range boundaries. Behavioral evidence is in `navigation.spec.mjs` (delayed range completion, latest destination, horizontal/month anchors, failure/retry, offline boundaries) and `calendar-navigation.test.mjs` (coverage composition, queue priority/deduplication, gap-only reads). Existing synchronization and provider acceptance remains required; this correction does not advance beyond pass 12.
+
+Correction acceptance (2026-09-10): all 66 Calendar browser scenarios pass. Cached day/week/month navigation measured 24/75/95 ms against the unchanged 100 ms threshold. Workspace typecheck, package tests, web tests, 12 PostgreSQL Calendar integration tests, web build/bundle budget and architecture/link checks pass. The browser fixtures explicitly wait for initialization and loaded ranges before measuring loaded scrolling; separate delayed-response tests assert unloaded boundaries. Live Google latency and desktop interaction remain part of manual acceptance. Work remains stopped at pass 12.
+
+## Continuous timeline corrections
+
+- Geometry: civil-date/DST/leap-day, business-day and fractional anchor tests live in `packages/features/src/calendar-layout/timeline.test.ts`. UI acceptance remains manual.
+- Range coordination: overlapping-consumer/cancellation tests accompany cache completeness and identity tests in `calendar-cache.test.mjs`.
+- Read delivery: provider gateway tests and typechecking validate abort propagation; range pagination retains complete-only publication.
+- Rolling buffers: advanced preferences isolate user/server settings; request chunks remain below the server limit and cache retention pins active ranges.
+- Timed renderer: independent date keys, shared native scroller and bounded column/event overscan; trackpad and sticky-header acceptance remains manual.
+- Month renderer: complete week extents and stable week keys replace four-week recentering. Manual acceptance covers prepend anchoring and scrollbar dragging.
+- Interactions: shared pointer ownership and continuous clock replace cell-owned lifetime; geometry unit tests cover weekend displacement and DST rejection. Manual acceptance covers cross-window drag and resize.
+- Navigation: viewport and explicit destination demands are separate; cached destinations commit without network waits. No date-loading overlay is rendered.
+- Pane retirement: mandatory snapping, previous-offset rollback, independent column scroll groups and date overlays are removed. Release remains under existing Calendar rollout; UI acceptance is pending.
+- Non-browser validation: 12 Calendar integration tests and package/web/server suites; runtime smoke is blocked by local `/demo/bootstrap` returning 404. Manual scrolling and desktop acceptance is still required.

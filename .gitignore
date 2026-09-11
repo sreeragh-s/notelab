@@ -57,3 +57,6 @@ apps/desktop/src-tauri/local-resources/
 
 # Calendar browser acceptance artifacts
 .dev/calendar-e2e-results/
+
+# Generated renderer snapshot for calendar benchmark comparisons
+.dev/calendar-baseline/

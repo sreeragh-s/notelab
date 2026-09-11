@@ -24,7 +24,7 @@ import { recordMailMetric } from "../mail-metrics"
 import { publishMailNotification } from "../../../infrastructure/runtime/runtime-adapter"
 import { recordRecoveredBackgroundLease } from "../../../infrastructure/background/telemetry"
 
-const BACKFILL_PAGE_SIZE = 100
+const BACKFILL_PAGE_SIZE = 20
 const MAX_HISTORY_PAGES_PER_ADVANCE = 5
 const INDEX_LEASE_MS = 2 * 60 * 1_000
 
@@ -81,8 +81,9 @@ export async function advanceMailIndex(
     ))
     .returning()
   if (!claimed) return serializeProgress(state)
-  if (state.leaseExpiresAt) recordRecoveredBackgroundLease(env, "mail.index")
+  if (state.leaseExpiresAt && state.leaseToken) recordRecoveredBackgroundLease(env, "mail.index")
   state = claimed
+  let nextAdvanceAt: Date | null = null
   try {
     try {
       const gateway = await createGmailGateway(env, account)
@@ -91,6 +92,7 @@ export async function advanceMailIndex(
       } else {
         state = await advanceBackfill(env, gateway, state)
       }
+      if (state.status === "backfilling" || state.status === "syncing") nextAdvanceAt = new Date(Date.now() + 5_000)
       return serializeProgress(state)
     } catch (error) {
       if (error instanceof GmailApiError && error.code === "history_cursor_invalid") {
@@ -111,6 +113,9 @@ export async function advanceMailIndex(
           .returning()
         return serializeProgress(reset ?? state)
       }
+      if (error instanceof GmailApiError && error.code === "quota_exceeded") {
+        nextAdvanceAt = new Date(Date.now() + Math.max(60_000, error.retryAfterMs ?? 0))
+      }
       const code = error instanceof GmailApiError ? error.code : "index_failed"
       const [failed] = await db
         .update(mailIndexState)
@@ -123,7 +128,7 @@ export async function advanceMailIndex(
   } finally {
     await db
       .update(mailIndexState)
-      .set({ leaseExpiresAt: null, leaseToken: null, updatedAt: new Date() })
+      .set({ leaseExpiresAt: nextAdvanceAt, leaseToken: null, updatedAt: new Date() })
       .where(and(
         eq(mailIndexState.gmailAccountId, gmailAccountId),
         eq(mailIndexState.leaseToken, leaseToken),

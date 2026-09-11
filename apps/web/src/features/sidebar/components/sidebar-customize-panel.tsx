@@ -304,7 +304,8 @@ export function SidebarCustomizePanel({
         tabs={draft.tabs}
       />
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 pb-4 pt-3">
-        <AddShortcutMenu databases={databases} onAdd={addShortcut} pages={pages} tabId={activeTab.id} workspaceId={workspaceId} />
+        {activeTab.id !== "calendar" && <AddShortcutMenu databases={databases} onAdd={addShortcut} pages={pages} tabId={activeTab.id} workspaceId={workspaceId} />}
+        {activeTab.id === "calendar" && <p className="px-2 text-sm text-content-secondary">Connected accounts and calendars appear here.</p>}
         <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd} sensors={sensors}>
           <SortableContext items={activeTab.shortcuts.map((shortcut) => `shortcuts:${shortcut.id}`)} strategy={verticalListSortingStrategy}>
             <div className="space-y-0.5 py-1">
@@ -340,7 +341,7 @@ export function SidebarCustomizePanel({
             </div>
           </SortableContext>
 
-          {activeTab.id !== "mail" ? <>
+          {activeTab.id !== "mail" && activeTab.id !== "calendar" ? <>
             <div className="my-2 h-px bg-stroke-default" />
             <AddSectionMenu databases={databases} onAdd={addSection} onAddDatabase={addDatabaseSection} tabId={activeTab.id} workspaceId={workspaceId} />
             <SortableContext items={activeTab.sections.map((section) => `sections:${section.id}`)} strategy={verticalListSortingStrategy}>

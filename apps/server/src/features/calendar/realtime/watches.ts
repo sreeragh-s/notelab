@@ -7,17 +7,29 @@ import { sha256Hex } from "../../../shared/crypto/sha256";
 import { CalendarGateway, CalendarProviderError } from "../provider/gateway";
 import { createCalendarGateway } from "../provider/oauth";
 import { refreshCalendarList } from "../sync/sync";
-export async function acceptCalendarWebhook(headers: Headers) {
+function webhookChannelHeaders(headers: Headers) {
   const id = headers.get("x-goog-channel-id"), token = headers.get("x-goog-channel-token"), resourceId = headers.get("x-goog-resource-id"), number = headers.get("x-goog-message-number");
-  if (!id || !token || !resourceId || !number || !/^\d{1,30}$/.test(number) || token.length > 512 || resourceId.length > 1024) return false;
-  return db.transaction(async tx => {
+  if (!id || !token || !resourceId || !number || !/^\d{1,30}$/.test(number) || token.length > 512 || resourceId.length > 1024) return null;
+  return { id, token, resourceId, number };
+}
+export async function acceptCalendarWebhook(headers: Headers, dispatch?: (accountId: string, calendarId: string | null) => Promise<void>) {
+  const channel = webhookChannelHeaders(headers);
+  if (!channel) return false;
+  const { id, token, resourceId, number } = channel;
+  const accepted = await db.transaction(async tx => {
     const [channel] = await tx.select().from(calendarWatchChannel).where(and(eq(calendarWatchChannel.id, id), gt(calendarWatchChannel.expiresAt, new Date()))).for("update");
     if (!channel || channel.tokenHash !== await sha256Hex(token) || (channel.resourceId && channel.resourceId !== resourceId)) return false;
-    if (BigInt(number) <= BigInt(channel.messageNumber)) return true;
+    if (BigInt(number) <= BigInt(channel.messageNumber)) return { accountId: channel.accountId, calendarId: channel.calendarId, changed: false };
     await tx.update(calendarWatchChannel).set({ resourceId, messageNumber: number, dirtyAt: new Date() }).where(eq(calendarWatchChannel.id, id));
     if (channel.calendarId) await tx.update(calendarProviderCalendar).set({ dirtyAt: new Date() }).where(and(eq(calendarProviderCalendar.accountId, channel.accountId), eq(calendarProviderCalendar.calendarId, channel.calendarId)));
-    return true;
+    return { accountId: channel.accountId, calendarId: channel.calendarId, changed: true };
   });
+  if (!accepted) return false;
+  if (accepted.changed && dispatch) {
+    try { await dispatch(accepted.accountId, accepted.calendarId); }
+    catch { recordCalendarMetric("reconnect", 1, "failure"); /* Dirty markers survive dispatch failure for maintenance recovery. */ }
+  }
+  return true;
 }
 async function startWatch(accountId: string, calendarId: string | null, gateway: CalendarGateway, address: string) {
   const id = crypto.randomUUID(), token = crypto.randomUUID() + crypto.randomUUID();
@@ -62,17 +74,19 @@ async function retireChannels(channels: (typeof calendarWatchChannel.$inferSelec
       }
 }
 
-async function maintainAccountWatches(account: typeof calendarAccount.$inferSelect, env: RuntimeEnv, address: string) {
+export async function maintainAccountWatches(account: typeof calendarAccount.$inferSelect, env: RuntimeEnv, address: string) {
       const binding = (await db.select().from(calendarBinding).where(eq(calendarBinding.accountId, account.id))).find(b => isCalendarFeatureEnabled(env, b.workspaceId));
       if (!binding) return;
       let channels = await db.select().from(calendarWatchChannel).where(eq(calendarWatchChannel.accountId, account.id));
-      const calendars = await db.select().from(calendarProviderCalendar).where(eq(calendarProviderCalendar.accountId, account.id));
-      const desired = [null, ...calendars.filter(c => c.data.permissions.read && !c.data.permissions.freeBusyOnly).map(c => c.calendarId)];
+      let calendars = await db.select().from(calendarProviderCalendar).where(eq(calendarProviderCalendar.accountId, account.id));
+      let desired = [null, ...calendars.filter(c => c.data.permissions.read && !c.data.permissions.freeBusyOnly).map(c => c.calendarId)];
       const listDirty = channels.find(c => c.calendarId === null && c.dirtyAt);
       if (!listDirty && desired.every(id => channels.some(c => c.calendarId === id && c.expiresAt.getTime() > Date.now() + 3600_000 && c.status === "active"))) return;
       const gateway = await createCalendarGateway(env, account);
       if (listDirty) {
         await refreshCalendarList(account.id, binding.id, gateway);
+        calendars = await db.select().from(calendarProviderCalendar).where(eq(calendarProviderCalendar.accountId, account.id));
+        desired = [null, ...calendars.filter(c => c.data.permissions.read && !c.data.permissions.freeBusyOnly).map(c => c.calendarId)];
         await db.update(calendarWatchChannel).set({ dirtyAt: null }).where(and(eq(calendarWatchChannel.accountId, account.id), isNull(calendarWatchChannel.calendarId), lte(calendarWatchChannel.dirtyAt, listDirty.dirtyAt!)));
       }
       for (const id of desired) if (!channels.some(c => c.calendarId === id && c.expiresAt.getTime() > Date.now() + (c.status === "pending" ? 0 : 3600_000))) await startWatch(account.id, id, gateway, address);

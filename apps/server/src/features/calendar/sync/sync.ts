@@ -5,12 +5,16 @@ import { calendarAccount, calendarBinding, calendarEventRecord, calendarProvider
 import { isCalendarFeatureEnabled, type RuntimeEnv } from "../../../shared/config/config";
 import { CalendarGateway, CalendarProviderError, normalizeEvent } from "../provider/gateway";
 import { createCalendarGateway } from "../provider/oauth";
-import { createBackgroundTask, type BackgroundTaskResult } from "../../../infrastructure/background/contracts";
+import { createBackgroundTask } from "../../../infrastructure/background/contracts";
 import { dispatchBackgroundTasks } from "../../../infrastructure/background/dispatch";
 export async function refreshCalendarList(accountId: string, bindingId: string, gateway: CalendarGateway) {
   const calendars = await gateway.calendars(bindingId);
   await db.transaction(async tx => {
     for (const calendar of calendars) await tx.insert(calendarProviderCalendar).values({ accountId, calendarId: calendar.id, data: calendar, dirtyAt: new Date() }).onConflictDoUpdate({ target: [calendarProviderCalendar.accountId, calendarProviderCalendar.calendarId], set: { data: calendar } });
+    const oldCalendars = await tx.select().from(calendarProviderCalendar).where(eq(calendarProviderCalendar.accountId, accountId));
+    for (const old of oldCalendars) if (!calendars.some(calendar => calendar.id === old.calendarId)) {
+      await tx.insert(calendarNotificationOutbox).values({ id: crypto.randomUUID(), accountId, calendarId: old.calendarId, revision: old.revision + 1, generation: old.generation });
+    }
     await tx.delete(calendarProviderCalendar).where(and(eq(calendarProviderCalendar.accountId, accountId), calendars.length ? notInArray(calendarProviderCalendar.calendarId, calendars.map(c => c.id)) : undefined));
   });
   return calendars;
@@ -55,11 +59,6 @@ export async function advanceCalendarSync(env: RuntimeEnv, accountId: string, ca
   } finally {
     await db.update(calendarProviderCalendar).set({ leaseId: null, leaseExpiresAt: null }).where(and(scope, eq(calendarProviderCalendar.leaseId, leaseId)));
   }
-}
-export async function processCalendarSyncTask(env: RuntimeEnv, resourceId: string): Promise<BackgroundTaskResult> {
-  const ids: unknown = JSON.parse(resourceId);
-  if (!Array.isArray(ids) || ids.length !== 2 || ids.some(id => typeof id !== "string")) return { outcome: "terminal", errorCode: "invalid_calendar_task" };
-  return await advanceCalendarSync(env, ids[0], ids[1]) ? { outcome: "retry", availableAt: new Date(Date.now() + 5000).toISOString() } : { outcome: "completed" };
 }
 export async function advancePendingCalendars(env: RuntimeEnv) {
   if (!isCalendarFeatureEnabled(env)) return;

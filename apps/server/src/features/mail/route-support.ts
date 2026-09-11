@@ -149,9 +149,9 @@ export async function requireWorkspaceMember(
   return membership ?? c.json({ message: "Workspace membership is required." }, 403)
 }
 
-function statusCode(status: number): 400 | 401 | 404 | 409 | 429 | 500 | 502 | 504 {
-  return [400, 401, 404, 409, 429, 500, 502, 504].includes(status)
-    ? status as 400 | 401 | 404 | 409 | 429 | 500 | 502 | 504
+function statusCode(status: number): 400 | 401 | 403 | 404 | 409 | 429 | 500 | 502 | 504 {
+  return [400, 401, 403, 404, 409, 429, 500, 502, 504].includes(status)
+    ? status as 400 | 401 | 403 | 404 | 409 | 429 | 500 | 502 | 504
     : 500
 }
 

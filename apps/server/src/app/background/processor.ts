@@ -1,4 +1,4 @@
-import { processCalendarSyncTask } from "../../features/calendar/sync/sync";
+import { processCalendarSyncTask } from "../../features/calendar/background";
 import { AI_JOB_HANDLERS } from "../../features/ai/jobs/ai-job-handlers";
 import { runAiJobById } from "../../features/ai/jobs/ai-jobs";
 import { processAgentRun } from "../../features/ai/execution/agent-run-service";

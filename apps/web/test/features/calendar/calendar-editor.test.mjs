@@ -1,6 +1,20 @@
-export function register({ assert, loadModule, test }) {
+export function register({ assert, loadModule, readSource, test }) {
+  test("continuous renderers never restore an attempted boundary offset or snap panes", async () => {
+    const timed = await readSource("/src/shared/components/calendar/calendar-timeline.tsx");
+    const month = await readSource("/src/shared/components/calendar/calendar-month-view.tsx");
+    assert.doesNotMatch(timed + month, /lastSafe|snap-mandatory|preparedPeriod|restoringTop/);
+    assert.match(timed, /overflow-auto overscroll-none/);
+    assert.match(month, /overflow-y-auto overscroll-none/);
+  });
+  test("drag hit testing includes scroll displacement and hidden weekends", async () => {
+    const { calendarDragDisplacement } = await loadModule("/src/shared/components/calendar/event-geometry.ts");
+    const forward = calendarDragDisplacement("2026-09-11", 120.5, 120.5, 24, false, false, 48);
+    assert.deepEqual(forward, { target: "2026-09-14", days: 3, minutes: 30 });
+    assert.equal(calendarDragDisplacement("2026-09-14", 120, -120, 0, false, false, 48).days, -3);
+    assert.equal(calendarDragDisplacement("2026-09-07", 120, 0, 144, false, true, 48).days, 7);
+  });
   test("Calendar drag preserves all-day boundaries and rejects DST gaps and inverted resizing", async () => {
-    const { shiftEventGeometry } = await loadModule("/src/features/calendar/events/event-geometry.ts");
+    const { shiftEventGeometry } = await loadModule("/src/shared/components/calendar/event-geometry.ts");
     const allDay = { start: { date: "2026-09-09" }, end: { date: "2026-09-11" } };
     const moved = shiftEventGeometry(allDay, "Asia/Kolkata", 2, 0);
     assert.equal(moved.start.date, "2026-09-11"); assert.equal(moved.end.date, "2026-09-13");

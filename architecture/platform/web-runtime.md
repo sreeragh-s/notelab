@@ -36,3 +36,14 @@ adapts these menus to mobile drawers with larger touch targets and subpages.
 The [manual checklist](../../docs/testing/dropdown-menus.md) maps consumers to
 application areas. Navigation behavior is covered by
 [dropdown tests](../../apps/web/test/shared/dropdown-navigation.test.mjs).
+
+## Calendar and the right dock
+
+[App layout](../../apps/web/src/app/shell/content/app-layout.tsx) installs the
+Calendar workspace provider and arbitrates Calendar versus AI visibility.
+[Right sidebars](../../apps/web/src/app/shell/side-panel/right-sidebars.tsx) accepts
+Calendar content as a primary panel and applies existing sizing, transitions,
+resizing and mobile presentation. Calendar owns its event editor and portals it
+through a stable target; the shell does not own event data or mutation logic.
+Hidden Calendar content remains mounted and inert so temporary AI use preserves
+drafts. AI's saved sidebar/floating preference is independent of this visibility.

@@ -7,14 +7,28 @@ import { calendarPreference } from "../../infrastructure/database/schema";
 import type { AppBindings } from "../../shared/types";
 const timeZone = z.string().max(100).refine(value => { try { new Intl.DateTimeFormat("en", { timeZone: value }); return true } catch { return false } });
 export const calendarPreferencesSchema = z.object({
-  view: z.enum(["day", "week", "month", "agenda"]), hiddenCalendarKeys: z.array(z.string().max(1024)).max(500), defaultCalendarKey: z.string().max(1024).nullable(),
+  promptTimeZoneChanges: z.boolean().default(false),
+  timeZoneColumns: z.array(z.object({ zone: timeZone, label: z.string().trim().min(1).max(32) })).min(1).max(4).refine(columns => new Set(columns.map(column => column.zone)).size === columns.length, "Time zones must be unique").optional(),
+  todayAlignment: z.enum(["week", "start"]).default("week"),
+  meetingPreviewMinutes: z.number().int().min(0).max(1440).default(15),
+  mapsProvider: z.enum(["google", "apple"]).default("google"),
+  hourHeight: z.number().int().min(32).max(120).default(48),
+  accountOrder: z.array(z.string().max(1024)).max(500).default([]),
+  calendarOrder: z.array(z.string().max(1024)).max(500).default([]),
+  collapsedAccountIds: z.array(z.string().max(1024)).max(500).default([]),
+  calendarColors: z.record(z.string().max(1024), z.enum(["red", "orange", "yellow", "green", "blue", "purple", "gray"])).refine(value => Object.keys(value).length <= 500).default({}),
+  removedCalendarKeys: z.array(z.string().max(1024)).max(500).default([]),
+  view: z.preprocess(value => value === "agenda" ? "week" : value, z.enum(["day", "week", "month"])), hiddenCalendarKeys: z.array(z.string().max(1024)).max(500), defaultCalendarKey: z.string().max(1024).nullable(),
   weekStartsOn: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]), showWeekends: z.boolean(), showDeclined: z.boolean(), showWeekNumbers: z.boolean(),
-  timeFormat: z.enum(["12", "24"]), timeZone, secondaryTimeZones: z.array(timeZone).max(2), remindersEnabled: z.boolean(),
+  timeFormat: z.enum(["12", "24"]), timeZone, secondaryTimeZones: z.array(timeZone).max(3), remindersEnabled: z.boolean(),
+}).transform(value => {
+  const columns = value.timeZoneColumns ?? [...new Set([value.timeZone, ...value.secondaryTimeZones])].map(zone => ({ zone, label: zone.split("/").at(-1)!.replaceAll("_", " ") }));
+  return { ...value, timeZoneColumns: columns, timeZone: columns[0]!.zone, secondaryTimeZones: columns.slice(1).map(column => column.zone) };
 });
 export const calendarPreferenceRoutes = new Hono<AppBindings>();
 calendarPreferenceRoutes.get("/preferences", async c => {
   const [row] = await db.select().from(calendarPreference).where(and(eq(calendarPreference.userId, c.get("user")!.id), eq(calendarPreference.workspaceId, c.req.param("workspaceId")!)));
-  return c.json(row?.data ?? defaultCalendarPreferences());
+  return c.json(calendarPreferencesSchema.parse({ ...defaultCalendarPreferences(), ...row?.data }));
 });
 calendarPreferenceRoutes.put("/preferences", async c => {
   const data = calendarPreferencesSchema.parse(await c.req.json());

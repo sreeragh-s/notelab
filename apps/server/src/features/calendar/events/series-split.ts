@@ -5,7 +5,7 @@ import { calendarBinding, calendarMutationReceipt } from "../../../infrastructur
 import { sha256Hex } from "../../../shared/crypto/sha256";
 import { CalendarGateway, CalendarProviderError, googleEventSchema, normalizeEvent, type GoogleCalendarEvent } from "../provider/gateway";
 import { splitRecurrence } from "./recurrence";
-import { markOperation, operationMarker, writableCalendar } from "./provider-writes";
+import { markOperation, operationMarker, writableCalendar, requireEventCapability } from "./provider-writes";
 import { providerEventPatch, validateEventInterval, type CalendarWrite } from "./input";
 import type { CalendarMutationInput } from "./mutations";
 type SplitSteps = { action: "split"; headId: string; headEtag: string; headBody: Record<string, unknown>; tailBody: Record<string, unknown> | null; headDone: boolean; zone: string; sendUpdates: string; headOnly: boolean; deleteHead: boolean };
@@ -18,8 +18,6 @@ async function loadSeries(input: CalendarMutationInput, gateway: CalendarGateway
   return { head, occurrence };
 }
 function validateSeries(head: GoogleCalendarEvent) {
-  if (head.eventType && head.eventType !== "default") throw new CalendarProviderError(403, "specialized_event_read_only");
-  if (head.organizer?.self !== true) throw new CalendarProviderError(403, "series_edit_not_allowed");
   if (!head.start || !head.recurrence) throw new CalendarProviderError(409, "series_unavailable");
 }
 function precedes(item: unknown, original: CalendarEventTime) {
@@ -67,6 +65,7 @@ async function reserveSplit(accountId: string, input: CalendarMutationInput, ste
 export async function prepareSeriesSplit(input: CalendarMutationInput, accountId: string, gateway: CalendarGateway, hash: string) {
   const calendar = await writableCalendar(accountId, input.calendarId), path = `/calendars/${encodeURIComponent(input.calendarId)}/events`;
   const { head, occurrence } = await loadSeries(input, gateway, path);
+  requireEventCapability("following", calendar.data.permissions, head);
   const original = occurrence.originalStartTime as CalendarEventTime;
   const first = original.date ? original.date === head.start!.date : Date.parse(original.dateTime!) === Date.parse(head.start!.dateTime!);
   const preceding = await countPreceding(head, original, gateway, path, calendar.data.timeZone);

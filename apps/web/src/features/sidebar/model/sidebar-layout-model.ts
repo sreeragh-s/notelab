@@ -166,7 +166,7 @@ export function moveLayoutEntry(
 }
 
 function isStaticTabId(tabId: string) {
-  return tabId === "ai" || tabId === "mail"
+  return tabId === "ai" || tabId === "mail" || tabId === "calendar"
 }
 
 export function hasShortcutTarget(tab: SidebarTab, target: SidebarShortcut["target"]) {

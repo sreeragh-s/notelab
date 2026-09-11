@@ -1,3 +1,4 @@
+import { CalendarWorkspaceProvider } from "@/features/calendar/workspace/calendar-workspace";
 import { isFeatureEnabled } from "@/shared/config/feature-flags";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Dispatch, ReactNode, SetStateAction } from "react"
@@ -114,13 +115,15 @@ export function AppLayout({
       }
     >
       <AppSearchProvider>
-        <AppLayoutWithRoutePage
-          pathname={pathname}
-          utilitySidebar={utilitySidebar}
-          utilitySidebarOpen={utilitySidebarOpen}
-        >
-          {children}
-        </AppLayoutWithRoutePage>
+        <CalendarWorkspaceProvider>
+          <AppLayoutWithRoutePage
+            pathname={pathname}
+            utilitySidebar={utilitySidebar}
+            utilitySidebarOpen={utilitySidebarOpen}
+          >
+            {children}
+          </AppLayoutWithRoutePage>
+        </CalendarWorkspaceProvider>
       </AppSearchProvider>
     </SidebarProvider>
   )

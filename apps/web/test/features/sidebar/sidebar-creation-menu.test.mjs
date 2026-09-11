@@ -165,7 +165,7 @@ export function register({ readSource, assert, test }) {
     assert.match(sidebarSource, /setActiveThreadId\(null\)/)
     assert.match(sidebarSource, /tabId === "mail"[\s\S]*search: \{ view: "inbox" \}[\s\S]*to: "\/mail"/)
     assert.match(sidebarSource, /tabId === "ai"[\s\S]*activeThreadId \?\? undefined[\s\S]*to: "\/ai"/)
-    assert.match(sidebarSource, /staticTabId = pathname === "\/mail" \? "mail" : pathname === "\/ai" \? "ai" : null/)
+    assert.match(sidebarSource, /staticTabId = pathname === "\/mail" \? "mail" : pathname === "\/ai" \? "ai" : pathname === "\/calendar" \? "calendar" : null/)
     assert.match(sidebarSource, /!staticTabId && isStaticSidebarTabId\(activeTabId\)[\s\S]*readActiveSidebarTab\(workspaceId\)/)
     assert.match(
       sidebarShortcutSource,
