@@ -47,29 +47,7 @@ export async function synchronizeCalendarCache(database: CalendarDatabase, start
         for (const range of calendarRequestRanges(request.start, request.end, dense?.revision ? 7 : 28)) {
           if (options.isCurrent && !options.isCurrent()) return;
           if ((options.priority ?? 0) < 10 && !calendarBufferBudgetAvailable(database)) return;
-          await requestCalendarIntervals(`${database.name}:${calendar.id}`, JSON.stringify([database.identity.apiOrigin, database.identity.userId, options.accountId ?? database.identity.bindingId]), range, async ({ start, end }, signal) => {
-            const load = async () => {
-              signal.throwIfAborted();
-              const covered = await database.ranges.where("calendarId").equals(calendar.id).toArray();
-              if (options.missingOnly && !missingCalendarRanges(start, end, covered).length) return;
-              const prior = await database.ranges.get(calendarRangeKey(calendar.id, start, end));
-              const state = await database.state.get(calendar.id);
-              if (prior && Date.now() - prior.fetchedAt < 2000 && (!state || (state.revision <= prior.revision && state.generation <= prior.generation))) return;
-              let pageToken: string | null = null; let pages = 0;
-              do {
-                const params: URLSearchParams = new URLSearchParams({ calendarId: calendar.id, start, end, ...(pageToken ? { pageToken } : {}) });
-                const response: CalendarRangeResponse = await fetcher<CalendarRangeResponse>(`${base}/ranges?${params}`, { signal });
-                if (!database.isOpen()) return;
-                pages++;
-                if (pages > 1) await database.state.put({ key: `density:${calendar.id}`, revision: 1, generation: 1 });
-                await applyCalendarRange(database, response); pageToken = response.nextPageToken;
-                signal.throwIfAborted();
-              } while (pageToken);
-              emitCalendarMetric("range_pages", pages);
-            };
-            if (typeof navigator !== "undefined" && navigator.locks) await navigator.locks.request(`${database.name}:range:${calendar.id}:${start}:${end}`, { signal }, load);
-            else await load();
-          }, options.priority, options.signal);
+          await requestCalendarIntervals(`${database.name}:${calendar.id}`, JSON.stringify([database.identity.apiOrigin, database.identity.userId, options.accountId ?? database.identity.bindingId]), range, (span, signal) => loadLockedCalendarRange(database, calendar.id, base, fetcher, options, span, signal), options.priority, options.signal);
           pinned.push(calendarRangeKey(calendar.id, range.start, range.end));
         }
       }
@@ -78,6 +56,33 @@ export async function synchronizeCalendarCache(database: CalendarDatabase, start
   })();
 }
 
+async function loadLockedCalendarRange(database: CalendarDatabase, calendarId: string, base: string, fetcher: Transport, options: { missingOnly?: boolean }, span: { start: string; end: string }, signal: AbortSignal) {
+  const load = () => loadCalendarRangePages(database, calendarId, base, fetcher, options, span, signal);
+  if (typeof navigator !== "undefined" && navigator.locks) await navigator.locks.request(`${database.name}:range:${calendarId}:${span.start}:${span.end}`, { signal }, load);
+  else await load();
+}
+async function loadCalendarRangePages(database: CalendarDatabase, calendarId: string, base: string, fetcher: Transport, options: { missingOnly?: boolean }, span: { start: string; end: string }, signal: AbortSignal) {
+  signal.throwIfAborted();
+  const covered = await database.ranges.where("calendarId").equals(calendarId).toArray();
+  if (options.missingOnly && !missingCalendarRanges(span.start, span.end, covered).length) return;
+  const prior = await database.ranges.get(calendarRangeKey(calendarId, span.start, span.end));
+  const state = await database.state.get(calendarId);
+  if (freshCalendarRange(prior, state)) return;
+  let pageToken: string | null = null, pages = 0;
+  do {
+    const params: URLSearchParams = new URLSearchParams({ calendarId, start: span.start, end: span.end, ...(pageToken ? { pageToken } : {}) });
+    const response: CalendarRangeResponse = await fetcher<CalendarRangeResponse>(`${base}/ranges?${params}`, { signal });
+    if (!database.isOpen()) return;
+    pages++;
+    if (pages > 1) await database.state.put({ key: `density:${calendarId}`, revision: 1, generation: 1 });
+    await applyCalendarRange(database, response); pageToken = response.nextPageToken;
+    signal.throwIfAborted();
+  } while (pageToken);
+  emitCalendarMetric("range_pages", pages);
+}
+function freshCalendarRange(prior: { fetchedAt: number; revision: number; generation: number } | undefined, state: { revision: number; generation: number } | undefined) {
+  return Boolean(prior && Date.now() - prior.fetchedAt < 2000 && (!state || (state.revision <= prior.revision && state.generation <= prior.generation)));
+}
 // Keep moving month windows within the server's 62-day per-request limit.
 function calendarRequestRanges(start: string, end: string, chunkDays = 28) {
   const ranges: { start: string; end: string }[] = [];

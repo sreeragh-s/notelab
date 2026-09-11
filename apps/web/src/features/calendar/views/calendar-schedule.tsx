@@ -120,15 +120,20 @@ export function CalendarSchedule({ connections, userId, preferences: savedPrefer
       <h1 className="min-w-0 truncate text-xl font-semibold">{new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`))}</h1>
       <Button className="shrink-0" disabled={!online || !Boolean(resolveDefaultCalendar(calendars, preferences))} onClick={() => create()}>Create event</Button>
     </div>
-    <div className="h-5 shrink-0 px-4 text-xs text-content-secondary" role="status">{!navigation.pending && viewportRange && !isRangeReady(viewportRange) ? "Loading enabled calendars…" : null}</div>
-    <CalendarStatus data={data} online={online} error={undefined} />
-    {!navigation.pending && data.some(d => d.error) && <Button variant="ghost" className="self-start" onClick={navigation.retry}>Retry loading dates</Button>}
-    {navigation.pending && <div className="flex shrink-0 items-center gap-2 px-4 py-1 text-xs text-content-secondary" role={navigation.error ? "alert" : "status"}>{navigation.error ? getApiErrorMessage(navigation.error) : "Opening date…"}{Boolean(navigation.error) && <Button variant="ghost" onClick={navigation.retry}>Retry</Button>}<Button variant="ghost" onClick={navigation.cancel}>Cancel</Button></div>}
+    <CalendarScheduleStatus navigation={navigation} viewportRange={viewportRange} isRangeReady={isRangeReady} data={data} />
     {scheduleMainView({ query, connections, calendars, preferences, events, online, userId, open, emit: emitCalendarMetric, loadingMessage: scheduleLoadingMessage(online, data), isRangeReady, onViewportRange, navigation, passiveDate, view, search, navigate, savedPreferences, preferenceStore, workspace, date, items, displayPreferences, setPeriod, setRange, selectItem, create, changeItem, onGeometryError })}
     {scheduleDock({ workspace, sourceConnection, sourceCalendar, calendars, userId, preferences, preferenceWorkspaceId, connections, open, create, snapshots, selection, online, editing, creating, selected, setSelected, setCreating, setEditing })}
   </div>;
 }
 
+function CalendarScheduleStatus({ navigation, viewportRange, isRangeReady, data }: { navigation: ReturnType<typeof useCalendarNavigation>; viewportRange: CalendarRange | null; isRangeReady: (range: CalendarRange) => boolean; data: Snapshot[] }) {
+  return <>
+    <div className="h-5 shrink-0 px-4 text-xs text-content-secondary" role="status">{!navigation.pending && viewportRange && !isRangeReady(viewportRange) ? "Loading enabled calendars…" : null}</div>
+    <CalendarStatus data={data} online={data.every(d => d.online)} error={undefined} />
+    {!navigation.pending && data.some(d => d.error) && <Button variant="ghost" className="self-start" onClick={navigation.retry}>Retry loading dates</Button>}
+    {navigation.pending && <div className="flex shrink-0 items-center gap-2 px-4 py-1 text-xs text-content-secondary" role={navigation.error ? "alert" : "status"}>{navigation.error ? getApiErrorMessage(navigation.error) : "Opening date…"}{Boolean(navigation.error) && <Button variant="ghost" onClick={navigation.retry}>Retry</Button>}<Button variant="ghost" onClick={navigation.cancel}>Cancel</Button></div>}
+  </>;
+}
 function traverseCalendarEvents(state: { events: CalendarEvent[]; selected: CalendarEvent | null; open: (event: CalendarEvent) => void }, direction: -1 | 1) {
   const ordered = [...state.events].sort((a, b) => Date.parse(a.start.dateTime ?? a.start.date!) - Date.parse(b.start.dateTime ?? b.start.date!));
   const current = ordered.findIndex(event => state.selected && calendarEventKey(event) === calendarEventKey(state.selected));
