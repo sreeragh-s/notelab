@@ -28,6 +28,14 @@ export function timelineGeometry(origin: string, size: number, weekends = true) 
     restore: (anchor: TimelineAnchor) => (visibleDateRank(anchor.date, weekends) - base + anchor.fraction) * size,
   };
 }
+/** Passive scroll updates keep the visual origin; only explicit date changes jump. */
+export function timelineRetargets(previousDate: string | null, date: string, emitted: string | null) {
+  return previousDate == null || previousDate !== date && date !== emitted;
+}
+export function snapTimelineOffset(offset: number, size: number) {
+  if (!(size > 0)) return 0;
+  return Math.round(offset / size) * size;
+}
 export const timeToPosition = (minute: number, hourHeight: number) => minute * hourHeight / 60;
 export const positionToTime = (position: number, hourHeight: number) => position * 60 / hourHeight;
 

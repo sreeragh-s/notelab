@@ -6,7 +6,7 @@ export { calendarApiBasePath, calendarKeys, calendarEventKey, defaultCalendarPre
 export { calendarDate, dayInstant, addCalendarDays, todayInZone, wallTime, eventInstant, eventOverlaps, calendarDays, shiftCalendarPeriod, eventClock, timedLayout } from "./time"
 export type { CalendarSpan } from "../calendar-layout/types";
 export { createEventIndex } from "../calendar-layout/event-index";
-export { timelineGeometry, civilDayOrdinal, dateFromOrdinal, dateFromRank, visibleDateRank, contiguousTimeline, timeToPosition, positionToTime } from "../calendar-layout/timeline";
+export { timelineGeometry, civilDayOrdinal, dateFromOrdinal, dateFromRank, visibleDateRank, contiguousTimeline, timeToPosition, positionToTime, timelineRetargets, snapTimelineOffset } from "../calendar-layout/timeline";
 export { timedLayoutByKey } from "../calendar-layout/time";
 
 export { calendarMetric, type CalendarMetricName } from "./telemetry";

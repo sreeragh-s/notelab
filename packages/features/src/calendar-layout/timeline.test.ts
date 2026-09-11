@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { civilDayOrdinal, dateFromOrdinal, dateFromRank, visibleDateRank, timelineGeometry, contiguousTimeline } from "./timeline";
+import { civilDayOrdinal, dateFromOrdinal, dateFromRank, visibleDateRank, timelineGeometry, contiguousTimeline, timelineRetargets, snapTimelineOffset } from "./timeline";
 
 test("civil dates round trip across DST, leap days and negative ordinals", () => {
   for (const date of ["1969-12-31", "2024-02-29", "2026-03-08", "2026-11-01"]) assert.equal(dateFromOrdinal(civilDayOrdinal(date)), date);
@@ -21,4 +21,17 @@ test("fractional anchor survives prepend and resize", () => {
 test("coverage stops at holes even when distant items are cached", () => {
   assert.deepEqual(contiguousTimeline(3, 8, i => i !== 1 && i !== 6), { first: 2, last: 5 });
   assert.deepEqual(contiguousTimeline(1, 8, i => i !== 1), { first: 1, last: 0 });
+});
+test("passive visible dates do not retarget; explicit navigation does", () => {
+  assert.equal(timelineRetargets(null, "2026-09-09", null), true);
+  assert.equal(timelineRetargets("2026-09-07", "2026-09-16", "2026-09-16"), false);
+  assert.equal(timelineRetargets("2026-09-07", "2026-09-16", "2026-09-09"), true);
+  assert.equal(timelineRetargets("2026-09-16", "2026-09-16", "2026-09-16"), false);
+});
+test("timeline offsets snap to the nearest civil-date column", () => {
+  assert.equal(snapTimelineOffset(0, 140), 0);
+  assert.equal(snapTimelineOffset(69, 140), 0);
+  assert.equal(snapTimelineOffset(70, 140), 140);
+  assert.equal(snapTimelineOffset(209, 140), 140);
+  assert.equal(snapTimelineOffset(211, 140), 280);
 });
