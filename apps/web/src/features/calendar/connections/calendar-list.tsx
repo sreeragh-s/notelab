@@ -34,24 +34,7 @@ function CalendarRow({ calendar, calendars, allCalendars, preferences, onPrefere
       <CalendarIcon className={PALETTE[color].textClass} /><span className={`min-w-0 flex-1 truncate ${hidden ? "text-content-secondary!" : "text-content-primary"}`}>{calendar.name}</span>
       {preferences.defaultCalendarKey === key && <span className="shrink-0 overflow-visible! whitespace-nowrap text-xs text-content-secondary">Default</span>}
     </SidebarMenuButton>
-    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} defaultSubDisplayMode="inline">
-      <DropdownMenuTrigger asChild><SidebarNavItemAction variant="menu" style={{ position: "relative", top: "auto", right: "auto", translate: "none" }} className="w-0 shrink-0 overflow-hidden opacity-0 transition-[width,opacity] group-hover/nav-row:w-5 group-focus-within/nav-row:w-5 group-focus-within/nav-row:opacity-100 group-data-[menu-open]/nav-row:w-5 after:hidden!" aria-label={`Options for ${calendar.name}`}><MoreHorizontalIcon /></SidebarNavItemAction></DropdownMenuTrigger>
-      <DropdownMenuContent side="right" align="start" className="w-64" onCloseAutoFocus={event => { if (removing) event.preventDefault(); }}>
-        <DropdownMenuSub title="Color"><DropdownMenuSubTrigger disabled={disabled}><span className={`size-4 rounded-sm ${PALETTE[color].swatchClass}`} /><span className="flex-1">Color</span><span className="text-content-secondary">{colorName(color)}</span></DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>{colors.map(option => <DropdownMenuItem key={option} disabled={disabled} onSelect={() => save({ ...preferences, calendarColors: { ...preferences.calendarColors, [key]: option } })}><span className={`size-4 rounded-sm ${PALETTE[option].swatchClass}`} /><span className="flex-1">{colorName(option)}</span>{option === color && <CheckIcon />}</DropdownMenuItem>)}</DropdownMenuSubContent>
-        </DropdownMenuSub>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem disabled={disabled || position <= 0} onSelect={() => save({ ...preferences, calendarOrder: moveCalendarSource(preferences.calendarOrder ?? [], siblings, key, -1) })}>Move up</DropdownMenuItem>
-        <DropdownMenuItem disabled={disabled || position === siblings.length - 1} onSelect={() => save({ ...preferences, calendarOrder: moveCalendarSource(preferences.calendarOrder ?? [], siblings, key, 1) })}>Move down</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem disabled={disabled || !calendar.permissions.write || preferences.defaultCalendarKey === key} onSelect={() => save({ ...preferences, defaultCalendarKey: key })}><CalendarIcon />Make default calendar</DropdownMenuItem>
-        <DropdownMenuItem disabled={disabled} onSelect={() => save({ ...preferences, hiddenCalendarKeys: allCalendars.map(c => calendarSelectionKey(c.bindingId, c.id)).filter(id => id !== key) })}><EyeIcon />Show only this calendar</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild><a href="https://calendar.google.com/calendar/u/0/r/settings" target="_blank" rel="noopener noreferrer"><GoogleIcon /><span className="flex-1">Google Calendar settings</span><ArrowUpRightIcon /></a></DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" disabled={disabled} onSelect={() => { setError(undefined); setRemoving(true); }}><TrashIcon />Remove calendar from list</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <CalendarRowMenu calendar={calendar} color={color} disabled={disabled} keyName={key} position={position} siblings={siblings} preferences={preferences} allCalendars={allCalendars} save={save} menuOpen={menuOpen} setMenuOpen={setMenuOpen} removing={removing} setError={setError} setRemoving={setRemoving} />
     <SidebarNavItemAction variant="menu" disabled={disabled} style={{ position: "relative", top: "auto", right: "auto", translate: "none" }} className="shrink-0 opacity-100 after:hidden!" aria-pressed={!hidden} aria-label={`${hidden ? "Show" : "Hide"} ${calendar.name}`} onClick={toggle}>{hidden ? <EyeOffIcon /> : <EyeIcon />}</SidebarNavItemAction>
   </div>
   <AlertDialog open={removing} onOpenChange={open => { if (!pending) setRemoving(open); }}>
@@ -64,4 +47,27 @@ function CalendarRow({ calendar, calendars, allCalendars, preferences, onPrefere
       }}>{pending ? "Removing…" : "Remove calendar"}</AlertDialogAction></AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog></SidebarMenuItem>;
+}
+function CalendarRowMenu({ calendar, color, disabled, keyName, position, siblings, preferences, allCalendars, save, menuOpen, setMenuOpen, removing, setError, setRemoving }: {
+  calendar: CalendarRecord; color: CalendarColor; disabled: boolean; keyName: string; position: number; siblings: string[]; preferences: CalendarPreferences; allCalendars: CalendarRecord[];
+  save: (next: CalendarPreferences) => void; menuOpen: boolean; setMenuOpen: (open: boolean) => void; removing: boolean; setError: (error: unknown) => void; setRemoving: (open: boolean) => void;
+}) {
+  return <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} defaultSubDisplayMode="inline">
+    <DropdownMenuTrigger asChild><SidebarNavItemAction variant="menu" style={{ position: "relative", top: "auto", right: "auto", translate: "none" }} className="w-0 shrink-0 overflow-hidden opacity-0 transition-[width,opacity] group-hover/nav-row:w-5 group-focus-within/nav-row:w-5 group-focus-within/nav-row:opacity-100 group-data-[menu-open]/nav-row:w-5 after:hidden!" aria-label={`Options for ${calendar.name}`}><MoreHorizontalIcon /></SidebarNavItemAction></DropdownMenuTrigger>
+    <DropdownMenuContent side="right" align="start" className="w-64" onCloseAutoFocus={event => { if (removing) event.preventDefault(); }}>
+      <DropdownMenuSub title="Color"><DropdownMenuSubTrigger disabled={disabled}><span className={`size-4 rounded-sm ${PALETTE[color].swatchClass}`} /><span className="flex-1">Color</span><span className="text-content-secondary">{colorName(color)}</span></DropdownMenuSubTrigger>
+        <DropdownMenuSubContent>{colors.map(option => <DropdownMenuItem key={option} disabled={disabled} onSelect={() => save({ ...preferences, calendarColors: { ...preferences.calendarColors, [keyName]: option } })}><span className={`size-4 rounded-sm ${PALETTE[option].swatchClass}`} /><span className="flex-1">{colorName(option)}</span>{option === color && <CheckIcon />}</DropdownMenuItem>)}</DropdownMenuSubContent>
+      </DropdownMenuSub>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem disabled={disabled || position <= 0} onSelect={() => save({ ...preferences, calendarOrder: moveCalendarSource(preferences.calendarOrder ?? [], siblings, keyName, -1) })}>Move up</DropdownMenuItem>
+      <DropdownMenuItem disabled={disabled || position === siblings.length - 1} onSelect={() => save({ ...preferences, calendarOrder: moveCalendarSource(preferences.calendarOrder ?? [], siblings, keyName, 1) })}>Move down</DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem disabled={disabled || !calendar.permissions.write || preferences.defaultCalendarKey === keyName} onSelect={() => save({ ...preferences, defaultCalendarKey: keyName })}><CalendarIcon />Make default calendar</DropdownMenuItem>
+      <DropdownMenuItem disabled={disabled} onSelect={() => save({ ...preferences, hiddenCalendarKeys: allCalendars.map(c => calendarSelectionKey(c.bindingId, c.id)).filter(id => id !== keyName) })}><EyeIcon />Show only this calendar</DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem asChild><a href="https://calendar.google.com/calendar/u/0/r/settings" target="_blank" rel="noopener noreferrer"><GoogleIcon /><span className="flex-1">Google Calendar settings</span><ArrowUpRightIcon /></a></DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem variant="destructive" disabled={disabled} onSelect={() => { setError(undefined); setRemoving(true); }}><TrashIcon />Remove calendar from list</DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>;
 }

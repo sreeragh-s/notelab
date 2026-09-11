@@ -9,7 +9,7 @@ import { CalendarMonthView } from "./calendar-month-view";
 import { type CalendarItem, type CalendarSurfaceProps } from "./types";
 
 export function CalendarSurface(props: CalendarSurfaceProps) {
- const { loadingMessage, zoneControls, items, date, view, preferences, onNavigate,  onSelect, onCreate, onChange, onError, renderItem } = props;
+ const { loadingMessage, zoneControls, items, date, view, preferences, onNavigate,  onSelect, onCreate, onChange, renderItem } = props;
  const timeline = useTimelineWindow(props);
   const painted = useRef(false), blockedRoute = useRef(false);
   markSurfacePaint(timeline.jumped, timeline.loading, painted, blockedRoute);

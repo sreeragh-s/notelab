@@ -31,12 +31,7 @@ export function CalendarCommands({ preferences, onPreferences, onSettings, onSea
     { id: "restore-travel", label: "Restore saved time zone", disabled: !workspace.travelZone, run: () => workspace.setTravelZone(null) },
     { id: "help", label: "Calendar shortcut help", shortcut: "?", run: () => setMode("help") },
   ];
-  const invoke = (id: string, event: KeyboardEvent) => {
-    if ((event.target as HTMLElement)?.closest('[role="dialog"],[role="alertdialog"],[role="menu"]')) return false;
-    const command = commands.find(command => command.id === id);
-    if (!command || command.disabled) return false;
-    command.run(); return true;
-  };
+  const invoke = (id: string, event: KeyboardEvent) => invokeCalendarCommand(commands, id, event);
   useAppShortcut("openSearch", () => { setMode(current => current ? null : "commands"); return true; }, { allowInEditable: true, priority: 50 });
   useAppShortcut("calendarHelp", () => { setMode("help"); return true; }, { priority: 50 });
   useAppShortcut("calendarTravel", event => invoke("travel", event), { priority: 50 });
@@ -47,4 +42,10 @@ export function CalendarCommands({ preferences, onPreferences, onSettings, onSea
   useAppShortcut("calendarNextEvent", event => invoke("next-event", event), { priority: 50 });
   useAppShortcut("calendarPreviousEvent", event => invoke("previous-event", event), { priority: 50 });
   return <><Button variant="ghost" aria-label="Calendar commands" onClick={() => setMode("commands")}>Commands</Button><CommandDialog open={mode !== null} onOpenChange={open => { if (!open) setMode(null); }} title={mode === "help" ? "Calendar shortcuts" : "Calendar commands"} description="Search Calendar actions. Letter shortcuts are ignored while typing."><Command><CommandInput placeholder={mode === "help" ? "Search shortcuts and actions…" : "Search Calendar commands…"} /><CommandList><CommandEmpty>No matching actions.</CommandEmpty>{commands.map(command => <CommandItem key={command.id} value={`${command.label} ${command.shortcut ?? ""}`} disabled={command.disabled} onSelect={() => { if (command.disabled) return; setMode(null); command.run(); }}>{command.label}{command.shortcut && <CommandShortcut>{command.shortcut}</CommandShortcut>}</CommandItem>)}</CommandList></Command></CommandDialog></>;
+}
+function invokeCalendarCommand(commands: CalendarCommand[], id: string, event: KeyboardEvent) {
+  if ((event.target as HTMLElement)?.closest('[role="dialog"],[role="alertdialog"],[role="menu"]')) return false;
+  const command = commands.find(command => command.id === id);
+  if (!command || command.disabled) return false;
+  command.run(); return true;
 }
