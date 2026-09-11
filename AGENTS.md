@@ -29,3 +29,20 @@ Zilobase repositories are separate projects; change them only when requested.
 For setup or operational changes, also update the affected contributor guide or
 runbook. Keep command definitions and enforcement thresholds in their existing
 configuration files; link to them instead of copying values into this file.
+
+## Vendored repositories
+
+This project vendors external repositories under [repos/](repos/).
+
+- Use vendored repositories as read-only reference material when working with
+  related libraries.
+- Prefer examples and patterns from the vendored source code over generated
+  guesses or web search results.
+- Do not edit files under [repos/](repos/) unless explicitly asked.
+- Do not import from [repos/](repos/). Application code should continue importing
+  from normal package dependencies.
+
+When writing Effect code, read [repos/effect/LLMS.md](repos/effect/LLMS.md)
+first, then inspect [repos/effect/](repos/effect/) for idiomatic usage, tests,
+module structure, and API design. Treat it as the source of truth for Effect
+patterns.
