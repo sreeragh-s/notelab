@@ -9,7 +9,7 @@
 | Shared web code | Reusable UI, configuration and browser utilities | [shared](../apps/web/src/shared) |
 | Server composition | HTTP routing, Node startup, background dispatch | [app](../apps/server/src/app), [entrypoints](../apps/server/src/entrypoints) |
 | Server features | Authorization integration, feature operations and persistence | [features](../apps/server/src/features) |
-| Infrastructure | Database context, runtime capabilities, storage and telemetry | [infrastructure](../apps/server/src/infrastructure) |
+| Infrastructure | Database context, runtime capabilities, storage, telemetry and Effect runtime | [infrastructure](../apps/server/src/infrastructure), [effect](../apps/server/src/infrastructure/effect), [Db](../apps/server/src/infrastructure/database/db.ts), [ObjectStorage](../apps/server/src/infrastructure/storage/object-storage.ts) |
 | Published server interface | Entry points consumed by external runtime adapters | [public](../apps/server/src/public), [exports](../apps/server/package.json) |
 | Native host | Authentication, server selection, recording and diagnostics | [Rust modules](../apps/desktop/src-tauri/src) |
 | Shared features | Contracts, pure rules, queries and React bindings | [features package](../packages/features/src) |

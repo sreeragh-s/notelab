@@ -4,3 +4,4 @@ Record a lasting decision when its rejected alternatives explain the implementat
 
 - [Scoped architecture documentation](0001-scoped-architecture-documentation.md)
 - [Continuous calendar timeline](0002-continuous-calendar-timeline.md)
+- [Incremental Effect runtime on the server](0003-effect-runtime.md)

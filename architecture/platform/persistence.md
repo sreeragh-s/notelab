@@ -2,7 +2,7 @@
 
 ## Interface and flow
 
-The database module creates pooled self-hosted connections or standalone runtime connections and exposes a context-scoped Drizzle client. runWithDb marks its scope inactive after the callback; streaming work needs runWithIndependentDbEnv.
+The database module creates pooled self-hosted connections or standalone runtime connections and exposes a context-scoped Drizzle client. runWithDb marks its scope inactive after the callback; streaming work needs runWithIndependentDbEnv. Effect programs use the [Db](../../apps/server/src/infrastructure/database/db.ts) service, which wraps `runWithDbEnv` and fails with `DatabaseUnavailable`.
 
 Start at the [entrypoint](../../apps/server/src/infrastructure/database/index.ts); follow the [implementation](../../apps/server/src/infrastructure/database/schema.ts) and [related modules](../../apps/server/drizzle).
 

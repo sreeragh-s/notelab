@@ -46,3 +46,15 @@ When writing Effect code, read [repos/effect/LLMS.md](repos/effect/LLMS.md)
 first, then inspect [repos/effect/](repos/effect/) for idiomatic usage, tests,
 module structure, and API design. Treat it as the source of truth for Effect
 patterns.
+
+Server Effect code belongs in `@zilobase/server`. Put shared runtime helpers in
+[apps/server/src/infrastructure/effect](apps/server/src/infrastructure/effect)
+and feature services with the owning feature. Run programs through
+`ManagedRuntime`; keep Hono as the HTTP adapter. Decode untrusted input with
+`Schema` and fail with `Schema.TaggedError`. JSON POST bodies on migrated
+routes use [parseJsonBody](apps/server/src/shared/http/schema-json.ts). Database work in Effect programs uses
+[Db](apps/server/src/infrastructure/database/db.ts) (`withEnv`) rather than
+calling `runWithDbEnv` directly. Object-storage work uses
+[ObjectStorage](apps/server/src/infrastructure/storage/object-storage.ts)
+rather than calling `createImageStorage` directly. Import `effect`, not
+`repos/effect`.

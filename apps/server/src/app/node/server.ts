@@ -5,6 +5,7 @@ import { createApp } from "../../app";
 import { createNodeRuntime } from "./node-runtime";
 import { CORE_MIGRATION_SET } from "../../infrastructure/node/migrations";
 import { shutdownNodeTelemetry } from "../../infrastructure/background/node-telemetry";
+import { disposeProcessRuntimes } from "../../infrastructure/effect";
 
 loadEnv({
   path: process.env.ZILOBASE_ENV_FILE ?? path.resolve("apps/server/.env"),
@@ -24,6 +25,7 @@ const runtime = createNodeRuntime({
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.once(signal, async () => {
     await runtime.close();
+    await disposeProcessRuntimes();
     await shutdownNodeTelemetry();
     process.exit(0);
   });
@@ -31,6 +33,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 
 void runtime.start().catch(async (error) => {
   console.error("Unable to start Zilobase server", error);
+  await disposeProcessRuntimes();
   await shutdownNodeTelemetry();
   process.exit(1);
 });
