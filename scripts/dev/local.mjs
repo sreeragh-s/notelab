@@ -21,6 +21,11 @@ import {
   loadProfileEnvironment,
 } from "./env.mjs";
 import {
+  composeLogsHint,
+  ensureDockerSocket,
+  resolveComposeRunner,
+} from "./docker.mjs";
+import {
   assertPortsAvailable,
   run,
   runResult,
@@ -29,43 +34,27 @@ import {
   waitForUrl,
 } from "./process.mjs";
 
-export async function startLocal(target = "all") {
-  const names = [];
-  const requestedNames = target === "all" ? ["node", "worker"] : [target];
+export function resolveLocalProfileNames({ adapterAvailable } = {}) {
+  return adapterAvailable ? ["node", "worker"] : ["node"];
+}
+
+export async function startLocal() {
   const adapterAvailable = await exists(path.join(adapterDir, "package.json"));
+  const names = resolveLocalProfileNames({ adapterAvailable });
 
-  for (const name of requestedNames) {
-    if (!localProfiles[name]) throw new Error("Local target must be node, worker, or all.");
-
-    if (name === "worker" && !adapterAvailable) {
-      if (target === "all" && isWorkerProfileEnabled()) {
-        throw new Error(
-          `Cloud adapter repository not found at ${adapterDir}. Install and configure the private adapter ` +
-          "or run with node-only mode only."
-        );
-      }
-      if (target === "worker") {
-        throw new Error(
-          `Cloud adapter repository not found at ${adapterDir}. Install and configure the private adapter ` +
-          "before running private adapter mode."
-        );
-      }
-      continue;
-    }
-
-    names.push(name);
-  }
-
-  if (!names.length) {
-    throw new Error(
-      "No local targets are available. Set ZILOBASE_ENABLE_WORKER=1 after installing the private adapter."
-    );
-  }
-
-  if (target === "all" && names.includes("node") && !names.includes("worker") && !isWorkerProfileEnabled()) {
+  if (!names.includes("worker")) {
     console.info(
-      "Cloud profile is not configured in this environment; running node profile only.",
+      "Cloud adapter repository not found; running node profile only.",
     );
+  }
+
+  if (names.includes("worker")) {
+    const wranglerBin = path.join(adapterDir, "node_modules", "wrangler", "bin", "wrangler.js");
+    if (!(await exists(wranglerBin))) {
+      throw new Error(
+        `Cloud adapter dependencies are not installed. Run npm install in ${adapterDir}.`,
+      );
+    }
   }
 
   await ensureDevelopmentEnvironment();
@@ -263,7 +252,7 @@ export async function followLocalLogs() {
     console.info(lines.slice(-200).join("\n"));
     offsets.set(filename, Buffer.byteLength(content));
   }
-  console.info("\nFollowing runtime logs. Press Ctrl-C to stop. Dependency logs: docker compose -f scripts/dev/dependencies.compose.yml logs -f");
+  console.info(`\nFollowing runtime logs. Press Ctrl-C to stop. Dependency logs: ${composeLogsHint()}`);
   const watcher = watch(logDir);
   for await (const event of watcher) {
     if (!event.filename?.endsWith(".log")) continue;
@@ -333,11 +322,6 @@ export async function resetLocal(target, confirmed) {
   console.info(`Reset isolated ${target} Kubernetes data.`);
 }
 
-function isWorkerProfileEnabled() {
-  const value = process.env.ZILOBASE_ENABLE_WORKER?.toLowerCase();
-  return value === "1" || value === "true";
-}
-
 function spawnWeb(name, profile, env, color) {
   return spawnService(
     name,
@@ -359,9 +343,11 @@ function spawnWeb(name, profile, env, color) {
 }
 
 async function dependencies(args, options = {}) {
+  ensureDockerSocket();
+  const compose = resolveComposeRunner();
   const env = await loadGeneratedEnvironment(generatedEnvironmentFiles.dependencies);
   const commandArgs = [
-    "compose",
+    ...compose.args,
     "--project-name",
     composeProject,
     "--env-file",
@@ -370,8 +356,8 @@ async function dependencies(args, options = {}) {
     composeFile,
     ...args,
   ];
-  if (options.reject === false) return runResult("docker", commandArgs, { cwd: coreDir, env: { ...process.env, ...env } });
-  return run("docker", commandArgs, { cwd: coreDir, env: { ...process.env, ...env } });
+  if (options.reject === false) return runResult(compose.command, commandArgs, { cwd: coreDir, env: { ...process.env, ...env } });
+  return run(compose.command, commandArgs, { cwd: coreDir, env: { ...process.env, ...env } });
 }
 
 async function recreateDatabase(database) {

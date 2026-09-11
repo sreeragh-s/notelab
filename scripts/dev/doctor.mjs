@@ -1,14 +1,29 @@
 import { adapterDir } from "./config.mjs";
+import { composeCheck } from "./docker.mjs";
 import { runResult } from "./process.mjs";
 import { access } from "node:fs/promises";
 import path from "node:path";
 
 export async function doctor() {
+  const checks = await collectDependencyChecks();
+
+  for (const check of checks) {
+    console.info(`${check.ok ? "✓" : check.required === false ? "○" : "✗"} ${check.label}: ${check.detail}`);
+  }
+  const requiredFailures = checks.filter((check) => check.required !== false && !check.ok);
+  const kubeMissing = checks.filter((check) => check.label.includes("Kubernetes only") && !check.ok);
+  if (kubeMissing.length) {
+    console.info("\nKubernetes tooling is optional. On macOS: brew install kubectl kind helm");
+  }
+  if (requiredFailures.length) throw new Error("Required local-development prerequisites are missing.");
+}
+
+export async function collectDependencyChecks() {
   const checks = [
     versionCheck("Node.js 24+", process.execPath, ["--version"], nodeVersionOk),
     versionCheck("npm 11+", "npm", ["--version"], majorAtLeast(11)),
     versionCheck("Docker", "docker", ["--version"]),
-    versionCheck("Docker Compose", "docker", ["compose", "version"]),
+    composeCheck(),
     versionCheck("Docker Buildx (Kubernetes only)", "docker", ["buildx", "version"]),
     versionCheck("kubectl (Kubernetes only)", "kubectl", ["version", "--client=true"]),
     versionCheck("kind (Kubernetes only)", "kind", ["version"]),
@@ -26,15 +41,7 @@ export async function doctor() {
     });
   }
 
-  for (const check of checks) {
-    console.info(`${check.ok ? "✓" : check.required === false ? "○" : "✗"} ${check.label}: ${check.detail}`);
-  }
-  const requiredFailures = checks.filter((check) => check.required !== false && !check.ok);
-  const kubeMissing = checks.filter((check) => check.label.includes("Kubernetes only") && !check.ok);
-  if (kubeMissing.length) {
-    console.info("\nKubernetes tooling is optional. On macOS: brew install kubectl kind helm");
-  }
-  if (requiredFailures.length) throw new Error("Required local-development prerequisites are missing.");
+  return checks;
 }
 
 function versionCheck(label, executable, args, validate = () => true) {

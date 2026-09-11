@@ -35,7 +35,6 @@
     "dev:doctor": "node scripts/dev/cli.mjs doctor",
     "dev:setup": "node scripts/dev/cli.mjs setup",
     "dev:local": "node scripts/dev/cli.mjs local",
-    "dev:local:node": "node scripts/dev/cli.mjs local --target node",
     "dev:status": "node scripts/dev/cli.mjs status",
     "dev:logs": "node scripts/dev/cli.mjs logs",
     "dev:down": "node scripts/dev/cli.mjs down",

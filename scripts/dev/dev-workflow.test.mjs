@@ -19,6 +19,7 @@ import {
 import {
   databaseResetStatements,
   effectiveProfile,
+  resolveLocalProfileNames,
   runtimeEnvironment,
   resetLocal,
   webCacheDirectory,
@@ -93,6 +94,17 @@ test("setup migrates the obsolete generated Node demo default", async () => {
   assert.equal(migrated.PRESERVED_VALUE, "yes");
   assert.equal((await stat(filename)).mode & 0o777, 0o600);
   assert.equal(await migrateGeneratedNodeEnvironment(filename), false);
+});
+
+test("local starts the adapter when the sibling repository is present", () => {
+  assert.deepEqual(
+    resolveLocalProfileNames({ adapterAvailable: true }),
+    ["node", "worker"],
+  );
+  assert.deepEqual(
+    resolveLocalProfileNames({ adapterAvailable: false }),
+    ["node"],
+  );
 });
 
 test("dual web clients use separate Vite dependency caches", () => {

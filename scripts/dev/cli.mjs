@@ -12,7 +12,6 @@ import {
   environmentFilesForEncryption,
 } from "./env.mjs";
 import {
-  followDependencyLogs,
   followLocalLogs,
   resetLocal,
   showStatus,
@@ -39,16 +38,21 @@ try {
   } else if (command === "env-check") await printEnvironmentCheck();
   else if (command === "env-encrypt") await runDotenvx("encrypt");
   else if (command === "env-decrypt") await runDotenvx("decrypt");
-  else if (command === "local") await startLocal(readOption(args, "--target") ?? "all");
-  else if (command === "status") await showStatus();
+  else if (command === "local") {
+    if (args.includes("--target")) {
+      throw new Error(
+        "dev:local no longer accepts --target. It starts Node and, when the sibling adapter repository is present, the adapter profile.",
+      );
+    }
+    await startLocal();
+  } else if (command === "status") await showStatus();
   else if (command === "logs") await followLocalLogs();
   else if (command === "down") await stopLocal();
   else if (command === "reset") {
     await resetLocal(readOption(args, "--target") ?? "all", args.includes("--yes"));
   } else if (command === "parity") {
     await testRuntimeParity(readOption(args, "--target") ?? "all");
-  }
-  else if (command === "k8s") await startKubernetes(readOption(args, "--target") ?? "community");
+  } else if (command === "k8s") await startKubernetes(readOption(args, "--target") ?? "community");
   else if (command === "k8s-rebuild") await rebuildKubernetes(readOption(args, "--target"));
   else if (command === "k8s-logs") await followKubernetesLogs(readOption(args, "--target") ?? "community");
   else if (command === "k8s-down") await stopKubernetes();
