@@ -14,23 +14,9 @@
       "problemMatcher": []
     },
     {
-      "label": "Dev: Node + Worker",
+      "label": "Dev: local",
       "type": "npm",
       "script": "dev:local",
-      "isBackground": true,
-      "problemMatcher": []
-    },
-    {
-      "label": "Dev: Node only",
-      "type": "npm",
-      "script": "dev:local:node",
-      "isBackground": true,
-      "problemMatcher": []
-    },
-    {
-      "label": "Dev: Worker only",
-      "type": "npm",
-      "script": "dev:local:worker",
       "isBackground": true,
       "problemMatcher": []
     },
@@ -96,12 +82,6 @@
       "label": "Desktop: Node",
       "type": "npm",
       "script": "dev:desktop:node",
-      "problemMatcher": []
-    },
-    {
-      "label": "Desktop: Worker",
-      "type": "npm",
-      "script": "dev:desktop:worker",
       "problemMatcher": []
     }
   ],
