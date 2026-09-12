@@ -12,7 +12,7 @@ ARG VITE_FEATURE_DATABASE_REALTIME=true
 ENV VITE_FEATURE_DATABASE_REALTIME=${VITE_FEATURE_DATABASE_REALTIME}
 ARG VITE_FEATURE_MAIL=false
 ENV VITE_FEATURE_MAIL=${VITE_FEATURE_MAIL}
-RUN npm run build:web
+RUN npm run build --workspace @zilobase/web
 RUN ./apps/web/node_modules/.bin/esbuild apps/server/src/entrypoints/serverful.ts apps/server/src/scripts/migrate.ts \
   --bundle \
   --sourcemap \
