@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process"
 
 const children = [
-  spawn("npm", ["run", "dev:server"], { stdio: "inherit" }),
+  spawn("npm", ["run", "dev", "--workspace", "@zilobase/server"], { stdio: "inherit" }),
   spawn("npm", ["run", "dev", "--workspace", "@zilobase/desktop"], {
     stdio: "inherit",
   }),

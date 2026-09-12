@@ -47,9 +47,13 @@ query cache, IndexedDB/Yjs documents, app/auth stores, tabs, and session storage
 then commits the verified candidate and reloads. Returning to Cloud uses this
 same destructive workflow.
 
-`npm run dev:desktop` starts the local API and points the debug app at
-`http://localhost:3000`. Packaged releases keep Zilobase Cloud
-(`https://api.zilobase.com`) as the default.
+`npm run dev:desktop` starts its own local API and points the debug app at
+`http://localhost:3000`. Do not run it alongside `npm run dev`; they both
+bind that API port. To use the full local stack (Postgres, MinIO, Mailpit,
+and Vite), start `npm run dev` first and then `npm run dev:desktop:node`,
+which attaches Tauri to that Node profile instead of launching another API.
+Packaged releases keep Zilobase Cloud (`https://api.zilobase.com`) as the
+default.
 
 On macOS, Cargo signs the local debug executable with the first valid Apple
 Development identity before launching it. The stable `com.zilobase.debug`

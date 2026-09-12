@@ -1,0 +1,4 @@
+#!/bin/sh
+# Fast GitHub PR checks for staged files. Skip with `git commit --no-verify` or ZILOBASE_SKIP_HOOKS=1.
+cd "$(dirname "$0")/.." || exit 1
+exec node scripts/git/pre-push.mjs --staged

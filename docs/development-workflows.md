@@ -38,7 +38,7 @@ Each repository exposes commands only for state it owns:
 | Landing | Marketing-site development, preview, build, and deployment |
 
 The adapter does not launch Community web or desktop clients. Use
-`npm run dev:local` from this repository. If the private adapter repository is
+`npm run dev` from this repository. If the private adapter repository is
 present as a sibling, that profile starts automatically; otherwise the command
 stays on the public Node profile.
 
@@ -79,17 +79,21 @@ Install dependencies:
 ```sh
 cd zilobase
 npm run setup
-npm run dev:local
+npm run dev
 ```
 
 `npm run setup` installs workspace dependencies if needed, creates missing
-local files, and pre-pulls PostgreSQL, MinIO, and Mailpit images. `dev:setup`
+local files, pre-pulls PostgreSQL, MinIO, and Mailpit images, and points Git at
+`.githooks` so `git commit` and `git push` run the path-filtered GitHub
+pull-request checks. `dev:setup`
 is the narrower command: it copies committed examples only when a destination
 does not exist, generates local secrets under `.dev/local/env`, writes private
 files with mode `0600`, and reports incompatible legacy values. It never
-replaces an existing environment file.
+replaces an existing environment file. Install only the hooks with
+`npm run hooks:install`. Skip once with `git commit --no-verify` or
+`git push --no-verify`.
 
-The first `dev:local` run may take longer if images were not pulled during
+The first `dev` run may take longer if images were not pulled during
 setup. Later starts reuse those dependency containers and their volumes.
 
 ## What the dual workflow starts
@@ -170,7 +174,7 @@ Start each feature from an up-to-date branch:
 git switch main
 git pull --ff-only
 git switch -c feat/my-feature
-npm run dev:local
+npm run dev
 ```
 
 Use the Node browser for the public control-plane behavior and the optional adapter
@@ -181,12 +185,12 @@ while records stay isolated.
 Useful commands in a second terminal:
 
 ```sh
-npm run dev:studio
+npm run db:studio
 npm run dev:status
 npm run dev:logs
 ```
 
-`dev:studio` opens isolated Drizzle Studio instances for `zilobase_node` and
+`db:studio` opens isolated Drizzle Studio instances for `zilobase_node` and
 `zilobase_worker`. Worker-only tables stay in the worker database. `dev:status`
 checks dependency state and runtime endpoints. `dev:logs` follows the
 supervisor's prefixed logs and applies secret redaction.
@@ -197,7 +201,7 @@ supervisor's prefixed logs and applies secret redaction.
 | --- | --- |
 | `apps/web` | Both Vite clients update through HMR |
 | Cloudflare adapter source | Wrangler rebuilds and reloads the affected adapter runtime |
-| Node server source | Stop and restart `dev:local` to reload the Node process |
+| Node server source | Stop and restart `dev` to reload the Node process |
 | Environment values | Restart the selected workflow |
 | Database migrations | Restart so the selected runtime migrates before serving |
 | Docker or Helm resources | Use the Kubernetes rebuild workflow |
@@ -239,7 +243,7 @@ pollute the supervisor or the other runtime. Shell values deliberately win,
 which makes one-command overrides possible:
 
 ```sh
-PORT=3100 ZILOBASE_NODE_WEB_PORT=1520 npm run dev:local
+PORT=3100 ZILOBASE_NODE_WEB_PORT=1520 npm run dev
 ```
 
 Common overrides include:
@@ -322,18 +326,20 @@ and confirm the matching inspector port is listening.
 
 ### Desktop profiles
 
-Start the corresponding source workflow first, then launch a desktop profile:
+`dev:desktop` starts its own API and Tauri shell, so it fights `dev` for
+port 3000. Use it only when you are not already running the full stack.
+
+`dev:desktop:node` attaches Tauri to an already-running `dev` Node profile
+and reuses that Vite client instead of starting another web server:
 
 ```sh
-npm run dev:local
+npm run dev
 npm run dev:desktop:node
 ```
 
-If the private adapter repository is present, `npm run dev:local` already starts
-that profile; launch the matching desktop profile against it.
-
-The Tauri profile reuses the existing Vite client instead of starting another
-web server. Only one desktop profile should run at a time.
+If the private adapter repository is present, `npm run dev` already starts
+that profile; launch the matching desktop profile against it. Only one
+desktop profile should run at a time.
 
 ## Testing before a pull request
 
@@ -520,7 +526,7 @@ requests can still fail while PostgreSQL is unavailable.
 
 ```sh
 npm run dev:down
-npm run dev:local
+npm run dev
 ```
 
 `dev:down` clears recorded foreground process state and stops dependency
@@ -538,12 +544,12 @@ Do not replace an encrypted file with plaintext to bypass the check.
 
 ### Node changes are not visible
 
-Stop and restart `dev:local`. The Node API uses a stable direct inspector
+Stop and restart `dev`. The Node API uses a stable direct inspector
 process and does not run under a file watcher.
 
 ### Adapter state looks stale
 
-First restart `npm run dev:local`.
+First restart `npm run dev`.
 Adapter persistence intentionally survives normal restarts. If the test specifically
 requires empty state, use the scoped reset rather than deleting the entire `.dev`
 directory.
@@ -568,15 +574,19 @@ longer needed; do not delete unrelated Docker containers or kind clusters.
 | `npm run setup:check` | Validate required and optional tooling |
 | `npm run dev:doctor` | Validate required and optional tooling |
 | `npm run dev:setup` | Create missing environments and local secrets safely |
-| `npm run dev:local` | Run Node and, if the sibling adapter repo is present, the adapter profile |
-| `npm run dev:studio` | Open isolated Drizzle Studio for the Node and worker databases |
+| `npm run dev` | Run Node and, if the sibling adapter repo is present, the adapter profile |
+| `npm run db:studio` | Open isolated Drizzle Studio for the Node and worker databases |
 | `npm run dev:status` | Inspect dependencies, recorded processes, and endpoints |
 | `npm run dev:logs` | Follow prefixed, redacted runtime logs |
 | `npm run dev:down` | Stop source processes and containers while preserving data |
 | `npm run env:check` | Validate selected dotenvx files |
 | `npm run env:decrypt` | Create temporary mode-`0600` plaintext editing copies |
 | `npm run env:encrypt` | Update encrypted files and remove plaintext copies |
-| `npm run dev:desktop:node` | Run Tauri against the existing Node client |
+| `npm run build` | Type-check and build the web client and server |
+| `npm run build:desktop` | Build the Tauri desktop app |
+| `npm run build:clipper` | Build the browser clipper |
+| `npm run dev:desktop` | Start a standalone local API plus Tauri (do not combine with `dev`) |
+| `npm run dev:desktop:node` | Attach Tauri to an already-running `dev` Node stack |
 | `npm run test:runtime-parity` | Compare runtime behavior and isolation |
 | `npm run test:dev-workflow` | Test orchestration safety and environment behavior |
 | `npm run test:community-boundary` | Reject private runtime leakage |

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Path-filtered GitHub PR checks. Skip with `git push --no-verify` or ZILOBASE_SKIP_HOOKS=1.
+cd "$(dirname "$0")/.." || exit 1
+exec node scripts/git/pre-push.mjs --hook

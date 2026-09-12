@@ -237,7 +237,7 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
-          npm run build:web
+          npm run build
           cargo check --locked --manifest-path apps/desktop/src-tauri/Cargo.toml
 
   desktop-macos:

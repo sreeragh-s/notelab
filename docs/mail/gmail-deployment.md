@@ -272,7 +272,7 @@ or the adjacent cloud adapter `.env.development` for the optional private adapte
 Generated local
 infrastructure does not override `MAIL_ENABLED`. Set both `MAIL_ENABLED=true`
 and `VITE_FEATURE_MAIL=true`, then run `npm run dev:setup` and
-`npm run dev:local` for Node. If the private adapter repository is present,
+`npm run dev` for Node. If the private adapter repository is present,
 that same command also starts the adapter profile.
 Validate the profile with `npm run mail:config:check -- --profile=node` (or the
 matching private profile setting). The checker prints readiness and URLs, never

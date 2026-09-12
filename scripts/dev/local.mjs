@@ -327,7 +327,7 @@ export async function followLocalLogs() {
     .filter((name) => name.endsWith(".log"))
     .map((name) => path.join(logDir, name));
   if (!files.length) {
-    console.info("No runtime logs yet. Start npm run dev:local first.");
+    console.info("No runtime logs yet. Start npm run dev first.");
     return;
   }
   const offsets = new Map();
@@ -526,7 +526,7 @@ function printStudioSummary(services) {
     );
   }
   console.info("\nNode and worker databases stay separate. Worker tables that are not in Node remain only in zilobase_worker.");
-  console.info("Keep npm run dev:local in another terminal. Ctrl-C stops Studio and preserves data.\n");
+  console.info("Keep npm run dev in another terminal. Ctrl-C stops Studio and preserves data.\n");
 }
 
 function printLocalSummary(names, profiles = localProfiles) {

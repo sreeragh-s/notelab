@@ -13,6 +13,7 @@ import {
   ensureDevelopmentEnvironment,
   environmentFilesForEncryption,
 } from "./env.mjs";
+import { installGitHooks } from "../git/install-hooks.mjs";
 import {
   followLocalLogs,
   resetLocal,
@@ -38,7 +39,10 @@ try {
   else if (command === "setup") {
     await ensureDependencies();
     await ensureDevelopmentEnvironment({ reportLegacy: true });
+    await installGitHooks();
     await printEnvironmentCheck();
+  } else if (command === "hooks") {
+    await installGitHooks();
   } else if (command === "env-setup") {
     await ensureDevelopmentEnvironment({ reportLegacy: true });
     await printEnvironmentCheck();
@@ -50,14 +54,14 @@ try {
   else if (command === "local") {
     if (args.includes("--target")) {
       throw new Error(
-        "dev:local no longer accepts --target. It starts Node and, when the sibling adapter repository is present, the adapter profile.",
+        "dev no longer accepts --target. It starts Node and, when the sibling adapter repository is present, the adapter profile.",
       );
     }
     await startLocal();
   } else if (command === "studio") {
     if (args.includes("--target")) {
       throw new Error(
-        "dev:studio no longer accepts --target. It opens isolated Node and worker databases together.",
+        "db:studio no longer accepts --target. It opens isolated Node and worker databases together.",
       );
     }
     await startStudio();

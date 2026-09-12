@@ -14,7 +14,7 @@ Install the workspace dependencies from the repository root:
 
 ```sh
 npm run setup
-npm run dev:local
+npm run dev
 ```
 
 Development commands load server and Vite variables from the root
@@ -25,16 +25,15 @@ never in git. Re-encrypt after edits with `npm run env:encrypt`.
 Useful commands:
 
 ```sh
-npm run dev:web
-npm run build:web
+npm run dev
+npm run build
 npm run test:web
-npm run dev:server
-npm run build:server
+npm run db:studio
 ```
 
 The root supervisor can run the sibling Cloudflare adapter at the same time as
 the Node runtime, with isolated databases, storage, origins, and debuggers.
-`npm run dev:studio` opens Drizzle Studio against those isolated Node and
+`npm run db:studio` opens Drizzle Studio against those isolated Node and
 worker databases. See
 [Unified local development](./docs/development-workflows.md) for the complete
 command, Kubernetes, editor, environment, and reset contract.
@@ -169,7 +168,21 @@ npm run verify:core         # TypeScript packages, web, server, and changed code
 npm run verify:desktop      # Rust formatting, clippy, and tests
 npm run verify:architecture # Complete production Fallow report
 npm run verify              # All of the above
+npm run verify:commit       # Fast staged-file checks used by the commit hook
+npm run verify:push         # Path-filtered GitHub pull-request checks
+npm run verify:push -- --dry-run
 ```
+
+`npm run setup` points Git at [`.githooks`](.githooks). `git commit` runs the
+cheap path-filtered jobs (community boundary, architecture links, and tooling
+or token checks when those files are staged). `git push` then runs the same
+pull-request jobs GitHub runs: those commit checks plus Fallow's changed-code
+audit (including server tests) and the web, package, or desktop suites when
+those paths changed. Compose self-host, Community Helm, nightly desktop
+packaging, and release publishing stay on GitHub; they need Docker/kind
+clusters and take much longer. Enable the hooks later with
+`npm run hooks:install`. Skip once with `git commit --no-verify`,
+`git push --no-verify`, or `ZILOBASE_SKIP_HOOKS=1`.
 
 Verification evidence and the scope of each gate are described in [testing and quality](architecture/setup/testing-and-quality.md). Use current command output for counts and coverage; source moves and new behavioral tests change those measurements.
 

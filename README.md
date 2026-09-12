@@ -129,15 +129,15 @@ Common commands:
 | `npm run setup:check` | Check prerequisites and optional tooling without running bootstrap steps. |
 | `npm run dev:doctor` | Validate source and optional Kubernetes tooling. |
 | `npm run dev:setup` | Create missing private development files without overwriting. |
-| `npm run dev:local` | Run Node and, if the sibling adapter repo is present, the adapter profile. |
-| `npm run dev:studio` | Open isolated Drizzle Studio windows for the Node and worker databases. |
+| `npm run dev` | Run Node and, if the sibling adapter repo is present, the adapter profile. |
+| `npm run db:studio` | Open isolated Drizzle Studio windows for the Node and worker databases. |
 | `npm run dev:status` | Inspect dependency and runtime health. |
-| `npm run dev:web` | Start the web client. |
-| `npm run build:web` | Type-check and build the web client. |
+| `npm run build` | Type-check and build the web client and server. |
 | `npm run test:web` | Run web tests. |
-| `npm run dev:server` | Start the serverful API. |
-| `npm run build:server` | Type-check the server. |
-| `npm run dev:desktop` | Start the local API and Tauri desktop shell. |
+| `npm run build:desktop` | Build the Tauri desktop app. |
+| `npm run build:clipper` | Build the browser clipper. |
+| `npm run dev:desktop` | Start a standalone local API plus Tauri. Do not combine with `dev`. |
+| `npm run dev:desktop:node` | Attach Tauri to an already-running `dev` stack. |
 | `npm run selfhost:up` | Build and start the loopback-only Compose stack. |
 | `npm run selfhost:logs` | Follow development stack logs. |
 | `npm run selfhost:down` | Stop containers and preserve data volumes. |
@@ -150,7 +150,7 @@ See the [unified local-development guide](./docs/development-workflows.md) for
 runtime URLs, debugger profiles, Kubernetes workflows, dotenvx precedence,
 failure recovery, and safe target-scoped resets.
 
-If the private adapter repository is a sibling of this repo, `npm run dev:local`
+If the private adapter repository is a sibling of this repo, `npm run dev`
 starts that profile too.
 
 `npm run dev:desktop` talks to the local API at `http://localhost:3000`. Packaged

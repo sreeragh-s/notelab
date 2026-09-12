@@ -28,6 +28,7 @@ export async function collectDependencyChecks() {
     versionCheck("kubectl (Kubernetes only)", "kubectl", ["version", "--client=true"]),
     versionCheck("kind (Kubernetes only)", "kind", ["version"]),
     versionCheck("Helm (Kubernetes only)", "helm", ["version", "--short"]),
+    gitHooksCheck(),
   ];
   const repositories = [
     ["Cloud adapter", adapterDir],
@@ -42,6 +43,18 @@ export async function collectDependencyChecks() {
   }
 
   return checks;
+}
+
+function gitHooksCheck() {
+  const result = runResult("git", ["config", "--get", "core.hooksPath"]);
+  const value = (result.stdout || "").trim();
+  const ok = value === ".githooks" || value.endsWith("/.githooks");
+  return {
+    label: "Git commit and push hooks",
+    required: false,
+    ok,
+    detail: ok ? value : "not installed (npm run hooks:install)",
+  };
 }
 
 function versionCheck(label, executable, args, validate = () => true) {
