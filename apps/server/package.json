@@ -45,7 +45,7 @@
     "db:migrate:production": "tsx src/scripts/migrate.ts",
     "db:seed:demo": "dotenvx run --ignore=MISSING_ENV_FILE -f ../../.env.development --quiet -- tsx src/scripts/seed-demo.ts",
     "db:reset": "ZILOBASE_ENV_FILE=../../.env.development dotenvx run --ignore=MISSING_ENV_FILE -f ../../.env.development --quiet -- tsx src/scripts/reset-database.ts && ZILOBASE_ENV_FILE=../../.env.development dotenvx run --ignore=MISSING_ENV_FILE -f ../../.env.development --quiet -- drizzle-kit migrate",
-    "db:studio": "ZILOBASE_ENV_FILE=../../.env.development dotenvx run --ignore=MISSING_ENV_FILE -f ../../.env.development --quiet -- drizzle-kit studio"
+    "db:studio": "drizzle-kit studio --host 127.0.0.1 --port 4983"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.72",

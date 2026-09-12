@@ -20,8 +20,10 @@ import {
   databaseResetStatements,
   effectiveProfile,
   resolveLocalProfileNames,
+  resolveStudioServices,
   runtimeEnvironment,
   resetLocal,
+  studioBrowserUrl,
   webCacheDirectory,
 } from "./local.mjs";
 import { assertPortsAvailable, redact, stopChildren } from "./process.mjs";
@@ -34,11 +36,13 @@ test("runtime profiles have isolated ports, databases, and identities", () => {
     node.apiPort,
     node.healthPort,
     node.inspectorPort,
+    node.studioPort,
     worker.appPort,
     worker.apiPort,
     worker.backgroundPort,
     worker.inspectorPort,
     worker.backgroundInspectorPort,
+    worker.studioPort,
   ];
   assert.equal(new Set(ports).size, ports.length);
   assert.notEqual(node.database, worker.database);
@@ -94,6 +98,18 @@ test("setup migrates the obsolete generated Node demo default", async () => {
   assert.equal(migrated.PRESERVED_VALUE, "yes");
   assert.equal((await stat(filename)).mode & 0o777, 0o600);
   assert.equal(await migrateGeneratedNodeEnvironment(filename), false);
+});
+
+test("studio always inspects isolated node and worker databases", () => {
+  const services = resolveStudioServices();
+  assert.deepEqual(services.map((service) => service.name), ["node", "worker"]);
+  assert.deepEqual(
+    services.map((service) => service.database),
+    ["zilobase_node", "zilobase_worker"],
+  );
+  assert.deepEqual(services.map((service) => service.port), [4983, 4984]);
+  assert.equal(studioBrowserUrl(4983), "https://local.drizzle.studio");
+  assert.equal(studioBrowserUrl(4984), "https://local.drizzle.studio/?port=4984");
 });
 
 test("local starts the adapter when the sibling repository is present", () => {
@@ -188,6 +204,15 @@ test("diagnostics redact credentials and database URLs", () => {
 test("port collision detection rejects wildcard listeners", async () => {
   const server = createServer();
   await new Promise((resolve) => server.listen(0, "0.0.0.0", resolve));
+  const address = server.address();
+  assert.equal(typeof address, "object");
+  await assert.rejects(() => assertPortsAvailable([address.port]), /already in use/);
+  await new Promise((resolve) => server.close(resolve));
+});
+
+test("port collision detection rejects loopback listeners", async () => {
+  const server = createServer();
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   assert.equal(typeof address, "object");
   await assert.rejects(() => assertPortsAvailable([address.port]), /already in use/);

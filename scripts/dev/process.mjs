@@ -115,15 +115,18 @@ export function redact(line) {
     .replace(/postgres(?:ql)?:\/\/[^\s]+/gi, "postgresql://[redacted]");
 }
 
-function isPortAvailable(port) {
+async function isPortAvailable(port) {
+  // Probe both wildcard and loopback. On macOS a loopback-only listener can
+  // coexist with a brief 0.0.0.0 probe, and the reverse is also true.
+  return (await canListen("0.0.0.0", port)) && (await canListen("127.0.0.1", port));
+}
+
+function canListen(host, port) {
   return new Promise((resolve) => {
     const server = createServer();
     server.unref();
     server.once("error", () => resolve(false));
-    // Match the wildcard listeners used by Vite, Node, and Wrangler. On macOS a
-    // loopback-only probe can coexist briefly with an existing wildcard socket,
-    // which would produce a false "available" result.
-    server.listen({ host: "0.0.0.0", port }, () => {
+    server.listen({ host, port }, () => {
       server.close(() => resolve(true));
     });
   });

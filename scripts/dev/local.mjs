@@ -1,5 +1,6 @@
 import { constants, rmSync } from "node:fs";
 import { access, mkdir, readFile, readdir, rm, stat, watch, writeFile } from "node:fs/promises";
+import net from "node:net";
 import path from "node:path";
 
 import {
@@ -36,6 +37,23 @@ import {
 
 export function resolveLocalProfileNames({ adapterAvailable } = {}) {
   return adapterAvailable ? ["node", "worker"] : ["node"];
+}
+
+export function resolveStudioServices() {
+  return Object.values(localProfiles).map((profile) => ({
+    name: profile.name,
+    port: profile.studioPort,
+    database: profile.database,
+    envFile: generatedEnvironmentFiles[profile.name],
+  }));
+}
+
+export function studioBrowserUrl(port) {
+  const url = new URL("https://local.drizzle.studio");
+  if (port !== localProfiles.node.studioPort) {
+    url.searchParams.set("port", String(port));
+  }
+  return url.toString().replace(/\/$/, "");
 }
 
 export async function startLocal() {
@@ -197,6 +215,73 @@ export async function startLocal() {
     if (!stopping && result.error) throw result.error;
     if (!stopping && result.code !== 0) {
       throw new Error(`Development process exited with ${result.signal ?? result.code}.`);
+    }
+  } finally {
+    await stop();
+  }
+}
+
+export async function startStudio() {
+  await ensureDevelopmentEnvironment();
+  const services = resolveStudioServices();
+  await assertPortsAvailable(services.map((service) => service.port));
+  await dependencies(["up", "-d", "postgres", "--wait"]);
+
+  const children = [];
+  let stopping = false;
+  let stopPromise;
+  const stop = (signal = "SIGTERM") => {
+    if (stopPromise) return stopPromise;
+    stopping = true;
+    stopPromise = stopChildren(children, signal);
+    return stopPromise;
+  };
+
+  try {
+    let color = 0;
+    for (const service of services) {
+      const generated = await loadGeneratedEnvironment(service.envFile);
+      if (!generated.DATABASE_URL?.trim()) {
+        throw new Error(`${service.name} DATABASE_URL is missing from the generated local environment.`);
+      }
+      children.push(spawnService(
+        `${service.name}-studio`,
+        process.execPath,
+        [
+          path.join(coreDir, "node_modules", "drizzle-kit", "bin.cjs"),
+          "studio",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          String(service.port),
+        ],
+        {
+          cwd: path.join(coreDir, "apps", "server"),
+          env: {
+            ...process.env,
+            ...generated,
+            DATABASE_URL: generated.DATABASE_URL,
+            ZILOBASE_ENV_FILE: service.envFile,
+          },
+        },
+        color++,
+      ));
+    }
+
+    for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+      process.once(signal, () => void stop(signal));
+    }
+
+    await waitForStudioReadiness(services, children);
+    printStudioSummary(services);
+
+    const result = await Promise.race(children.map((child) => new Promise((resolve) => {
+      child.once("error", (error) => resolve({ error }));
+      child.once("exit", (code, signal) => resolve({ code, signal }));
+    })));
+    if (!stopping && result.error) throw result.error;
+    if (!stopping && result.code !== 0) {
+      throw new Error(`Drizzle Studio exited with ${result.signal ?? result.code}.`);
     }
   } finally {
     await stop();
@@ -433,6 +518,17 @@ async function probe(url) {
   }
 }
 
+function printStudioSummary(services) {
+  console.info("\nDrizzle Studio is ready for isolated local databases:\n");
+  for (const service of services) {
+    console.info(
+      `${service.name.padEnd(7)} ${studioBrowserUrl(service.port)}  ${service.database}  127.0.0.1:${service.port}`,
+    );
+  }
+  console.info("\nNode and worker databases stay separate. Worker tables that are not in Node remain only in zilobase_worker.");
+  console.info("Keep npm run dev:local in another terminal. Ctrl-C stops Studio and preserves data.\n");
+}
+
 function printLocalSummary(names, profiles = localProfiles) {
   console.info("\nZilobase development runtimes are ready:\n");
   for (const name of names) {
@@ -497,6 +593,41 @@ export function runtimeEnvironment(profile, env) {
 
 function websocketUrl(profile, pathname) {
   return `ws://${profile.apiHost}:${profile.apiPort}${pathname}`;
+}
+
+async function waitForStudioReadiness(services, children) {
+  const ready = Promise.all(services.map((service) => waitForTcp(service.port)));
+  const exited = Promise.race(children.map((child) => new Promise((_, reject) => {
+    child.once("error", reject);
+    child.once("exit", (code, signal) => {
+      reject(new Error(
+        `Drizzle Studio exited before readiness with ${signal ?? code}.`,
+      ));
+    });
+  })));
+  await Promise.race([ready, exited]);
+}
+
+function waitForTcp(port, host = "127.0.0.1") {
+  const timeoutMs = 30_000;
+  const deadline = Date.now() + timeoutMs;
+  return new Promise((resolve, reject) => {
+    const attempt = () => {
+      const socket = net.createConnection({ port, host }, () => {
+        socket.end();
+        resolve();
+      });
+      socket.once("error", () => {
+        socket.destroy();
+        if (Date.now() > deadline) {
+          reject(new Error(`Timed out waiting for Drizzle Studio on ${host}:${port}`));
+          return;
+        }
+        setTimeout(attempt, 200);
+      });
+    };
+    attempt();
+  });
 }
 
 async function waitForRuntimeReadiness(names, profiles, children) {

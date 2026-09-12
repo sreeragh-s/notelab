@@ -134,6 +134,8 @@ range:
 | Dependency | Port |
 | --- | --- |
 | PostgreSQL | `15432` |
+| Drizzle Studio (Node, `zilobase_node`) | `4983` |
+| Drizzle Studio (worker, `zilobase_worker`) | `4984` |
 | MinIO API | `19100` |
 | MinIO console | `19101` |
 | Mailpit SMTP | `11025` |
@@ -179,12 +181,15 @@ while records stay isolated.
 Useful commands in a second terminal:
 
 ```sh
+npm run dev:studio
 npm run dev:status
 npm run dev:logs
 ```
 
-`dev:status` checks dependency state and runtime endpoints. `dev:logs` follows
-the supervisor's prefixed logs and applies secret redaction.
+`dev:studio` opens isolated Drizzle Studio instances for `zilobase_node` and
+`zilobase_worker`. Worker-only tables stay in the worker database. `dev:status`
+checks dependency state and runtime endpoints. `dev:logs` follows the
+supervisor's prefixed logs and applies secret redaction.
 
 ### Reload behavior
 
@@ -564,6 +569,7 @@ longer needed; do not delete unrelated Docker containers or kind clusters.
 | `npm run dev:doctor` | Validate required and optional tooling |
 | `npm run dev:setup` | Create missing environments and local secrets safely |
 | `npm run dev:local` | Run Node and, if the sibling adapter repo is present, the adapter profile |
+| `npm run dev:studio` | Open isolated Drizzle Studio for the Node and worker databases |
 | `npm run dev:status` | Inspect dependencies, recorded processes, and endpoints |
 | `npm run dev:logs` | Follow prefixed, redacted runtime logs |
 | `npm run dev:down` | Stop source processes and containers while preserving data |

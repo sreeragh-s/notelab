@@ -130,6 +130,7 @@ Common commands:
 | `npm run dev:doctor` | Validate source and optional Kubernetes tooling. |
 | `npm run dev:setup` | Create missing private development files without overwriting. |
 | `npm run dev:local` | Run Node and, if the sibling adapter repo is present, the adapter profile. |
+| `npm run dev:studio` | Open isolated Drizzle Studio windows for the Node and worker databases. |
 | `npm run dev:status` | Inspect dependency and runtime health. |
 | `npm run dev:web` | Start the web client. |
 | `npm run build:web` | Type-check and build the web client. |

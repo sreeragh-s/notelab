@@ -18,6 +18,7 @@ import {
   resetLocal,
   showStatus,
   startLocal,
+  startStudio,
   stopLocal,
 } from "./local.mjs";
 import { testRuntimeParity } from "./parity.mjs";
@@ -53,6 +54,13 @@ try {
       );
     }
     await startLocal();
+  } else if (command === "studio") {
+    if (args.includes("--target")) {
+      throw new Error(
+        "dev:studio no longer accepts --target. It opens isolated Node and worker databases together.",
+      );
+    }
+    await startStudio();
   }
   else if (command === "status") await showStatus();
   else if (command === "logs") await followLocalLogs();
