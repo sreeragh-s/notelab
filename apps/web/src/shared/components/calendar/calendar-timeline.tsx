@@ -78,6 +78,38 @@ function armSettle(state: ScrollState, commit: () => void) {
   }, SETTLE_TIMEOUT_MS);
 }
 
+/** Apply the snap animation or instant jump. Returns true if a smooth animation was started (caller should wait for scrollend). */
+function smoothSnap(element: HTMLDivElement, target: number): boolean {
+  const reduceMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+  if (reduceMotion || typeof element.scrollTo !== "function") {
+    element.scrollLeft = target;
+    return false;
+  }
+  element.scrollTo({ left: target, behavior: "smooth" });
+  return true;
+}
+
+/** Commit the visible date range at a resolved scroll position. */
+function commitVisibleRange(
+  left: number,
+  element: HTMLDivElement,
+  state: ScrollState,
+  geometry: ReturnType<typeof timelineGeometry>,
+  rail: number,
+  onViewport: TimelineProps["onViewport"],
+  onVisibleDate: TimelineProps["onVisibleDate"],
+) {
+  state.snappingTo = null;
+  const first = geometry.positionToDate(left);
+  const last = geometry.positionToDate(left + Math.max(0, element.clientWidth - rail - 1));
+  if (state.previous) state.previous.anchor = geometry.anchor(left);
+  onViewport(first, last, true);
+  if (state.emittedDate !== first) {
+    state.emittedDate = first;
+    onVisibleDate(first);
+  }
+}
+
 /**
  * Execute the snap after scroll has fully stopped.
  * Called by both `scrollend` and the fallback timer.
@@ -95,30 +127,12 @@ function settleTimeline(
   cancelSettle(state);
 
   const snapped = snapTimelineOffset(element.scrollLeft, columnWidth);
-
   if (snapped !== null) {
-    // Snap needed — animate to target (once only per settle)
     state.snappingTo = snapped;
-    const reduceMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-    if (reduceMotion || typeof element.scrollTo !== "function") {
-      element.scrollLeft = snapped;
-    } else {
-      element.scrollTo({ left: snapped, behavior: "smooth" });
-      return; // scrollend will fire again after the snap animation
-    }
+    if (smoothSnap(element, snapped)) return;
   }
 
-  // Commit visible date
-  const commitLeft = snapped ?? element.scrollLeft;
-  state.snappingTo = null;
-  const first = geometry.positionToDate(commitLeft);
-  const last = geometry.positionToDate(commitLeft + Math.max(0, element.clientWidth - rail - 1));
-  if (state.previous) state.previous.anchor = geometry.anchor(commitLeft);
-  onViewport(first, last, true);
-  if (state.emittedDate !== first) {
-    state.emittedDate = first;
-    onVisibleDate(first);
-  }
+  commitVisibleRange(snapped ?? element.scrollLeft, element, state, geometry, rail, onViewport, onVisibleDate);
 }
 
 // ── Scroll restore ────────────────────────────────────────────────────
@@ -216,10 +230,131 @@ function handleTimelineScroll(
   armSettle(state, commitRef.current);
 }
 
+// ── Scroll-end handling ────────────────────────────────────────────────
+
+/** Handle the scrollend event — either commit a completed snap or delegate to the fallback commit. */
+function handleScrollEnd(
+  element: HTMLDivElement,
+  state: ScrollState,
+  geometry: ReturnType<typeof timelineGeometry>,
+  rail: number,
+  onViewport: TimelineProps["onViewport"],
+  onVisibleDate: TimelineProps["onVisibleDate"],
+  commit: { current: () => void },
+) {
+  cancelSettle(state);
+  if (state.pointerDown || state.ignoring) return;
+  if (state.snappingTo !== null) {
+    commitVisibleRange(state.snappingTo, element, state, geometry, rail, onViewport, onVisibleDate);
+  } else {
+    commit.current();
+  }
+}
+
 // ── Component ──────────────────────────────────────────────────────────
 
 export type TimelineProps = CalendarColumnActions & { days: string[]; date: string; target: string; eventsByDay: Record<string, CalendarItem[]>; zoneControls?: ReactNode; onMetric?: (name: "mounted_columns", value: number) => void; onRetry?: () => void; onViewport: (first: string, last: string, retain?: boolean) => void; beforeLoading: boolean; afterLoading: boolean; loadingMessage?: string; onVisibleDate: (date: string) => void };
 const EMPTY: CalendarItem[] = [];
+function timelineRangeExtractor(
+  count: number,
+  direction: number,
+  fast: boolean,
+  focusedDay: string | null,
+  days: string[],
+) {
+  return (range: Parameters<typeof defaultRangeExtractor>[0]) => {
+    const lead = fast ? count * 2 : count;
+    const pad = Math.ceil(count / 2);
+    const first = Math.max(0, range.startIndex - (direction < 0 ? lead : pad));
+    const last = Math.min(range.count - 1, range.endIndex + (direction > 0 ? lead : pad));
+    const focused = focusedDay ? days.indexOf(focusedDay) : -1;
+    const indices: number[] = [];
+    for (let i = first; i <= last; i++) indices.push(i);
+    if (focused >= 0 && !indices.includes(focused)) indices.push(focused);
+    return indices.sort((a, b) => a - b);
+  };
+}
+
+function useTimelineElementListeners(
+  element: HTMLDivElement | null,
+  state: ScrollState,
+  geometry: ReturnType<typeof timelineGeometry>,
+  rail: number,
+  onViewport: TimelineProps["onViewport"],
+  onVisibleDate: TimelineProps["onVisibleDate"],
+  commit: { current: () => void },
+  setWidth: (w: number) => void,
+  setHeight: (h: number) => void,
+) {
+  useLayoutEffect(() => {
+    if (!element) return;
+    const release = () => { state.pointerDown = false; cancelSettle(state); };
+    const onEnd = () => handleScrollEnd(element, state, geometry, rail, onViewport, onVisibleDate, commit);
+    window.addEventListener("pointerup", release);
+    window.addEventListener("pointercancel", release);
+    element.addEventListener("scrollend", onEnd);
+    const observer = new ResizeObserver(() => {
+      setWidth(element.clientWidth);
+      setHeight(element.clientHeight);
+    });
+    observer.observe(element);
+    setWidth(element.clientWidth);
+    setHeight(element.clientHeight);
+    return () => {
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
+      element.removeEventListener("scrollend", onEnd);
+      observer.disconnect();
+      cancelSettle(state);
+    };
+  }, [element, geometry, rail, onViewport, onVisibleDate]);
+}
+
+function TimelineHeaderRail({
+  rail,
+  headerHeight,
+  zoneControls,
+  collapsed,
+  onToggleCollapse,
+  allDayToggleRef,
+  target,
+  days,
+  preferences,
+}: {
+  rail: number;
+  headerHeight: number;
+  zoneControls?: ReactNode;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
+  allDayToggleRef: React.RefObject<HTMLButtonElement | null>;
+  target: string;
+  days: string[];
+  preferences: TimelineProps["preferences"];
+}) {
+  return (
+    <div className="sticky left-0 z-30 shrink-0 bg-surface-canvas" style={{ width: rail }}>
+      <div className="sticky top-0 z-40 bg-surface-canvas" style={{ height: headerHeight }}>
+        <div className="h-8">{zoneControls}</div>
+        <button
+          ref={allDayToggleRef}
+          type="button"
+          className="flex w-full items-center justify-center border-y border-stroke-default text-content-secondary hover:bg-surface-muted hover:text-content-primary transition-colors"
+          style={{ height: headerHeight - 32 }}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? "Expand all-day events" : "Collapse all-day events"}
+          title={collapsed ? "Expand all-day events" : "Collapse all-day events"}
+          onClick={onToggleCollapse}
+        >
+          {collapsed ? <ChevronDownIcon className="size-3.5" /> : <ChevronUpIcon className="size-3.5" />}
+        </button>
+      </div>
+      <div style={{ paddingLeft: 24 }}>
+        <TimeAxis day={target} days={days} preferences={preferences} />
+      </div>
+    </div>
+  );
+}
+
 export function CalendarTimeline({ days, date, target, eventsByDay, zoneControls, onViewport, beforeLoading, afterLoading, loadingMessage, onVisibleDate, onMetric, onRetry, ...actions }: TimelineProps) {
   const viewport = useRef<HTMLDivElement>(null), allDayToggle = useRef<HTMLButtonElement>(null);
   const [width, setWidth] = useState(900), [top, setTop] = useState(0), [height, setHeight] = useState(800), [collapsed, collapse] = useState(true);
@@ -234,63 +369,71 @@ export function CalendarTimeline({ days, date, target, eventsByDay, zoneControls
   const weekdays = p.showWeekends;
   const geometry = useMemo(() => timelineGeometry(days[0]!, columnWidth, weekdays), [days[0], columnWidth, weekdays]);
   const commit = useRef<() => void>(() => {});
-  const rangeExtractor = useCallback((range: Parameters<typeof defaultRangeExtractor>[0]) => {
-    const first = Math.max(0, range.startIndex - (direction < 0 ? count * (fast ? 2 : 1) : Math.ceil(count / 2)));
-    const last = Math.min(range.count - 1, range.endIndex + (direction > 0 ? count * (fast ? 2 : 1) : Math.ceil(count / 2)));
-    const focused = focusedDay ? days.indexOf(focusedDay) : -1;
-    return [...new Set([...Array.from({ length: last - first + 1 }, (_, i) => first + i), ...(focused >= 0 ? [focused] : [])])].sort((a, b) => a - b);
-  }, [count, direction, focusedDay, days, fast]);
+  const rangeExtractor = useCallback(
+    timelineRangeExtractor(count, direction, fast, focusedDay, days),
+    [count, direction, fast, focusedDay, days],
+  );
   const virtual = useVirtualizer({ horizontal: true, count: days.length, getScrollElement: () => viewport.current, estimateSize: () => columnWidth, getItemKey: index => days[index]!, rangeExtractor, scrollMargin: rail });
+
   useLayoutEffect(() => {
     const element = viewport.current; if (!element) return;
     restoreTimelineScroll(element, scroll.current, geometry, target, date, hourHeight, virtual, setEdges);
   }, [geometry, target, date, hourHeight]);
-  useLayoutEffect(() => {
-    const element = viewport.current; if (!element) return;
-    const state = scroll.current;
-    const release = () => { state.pointerDown = false; cancelSettle(state); };
-    const onEnd = () => {
-      cancelSettle(state);
-      if (!state.pointerDown && !state.ignoring) {
-        if (state.snappingTo !== null) {
-          // Snap animation finished — commit the snapped position
-          const snapped = state.snappingTo;
-          state.snappingTo = null;
-          const first = geometry.positionToDate(snapped);
-          const last = geometry.positionToDate(snapped + Math.max(0, element.clientWidth - rail - 1));
-          if (state.previous) state.previous.anchor = geometry.anchor(snapped);
-          onViewport(first, last, true);
-          if (state.emittedDate !== first) {
-            state.emittedDate = first;
-            onVisibleDate(first);
-          }
-        } else {
-          commit.current();
-        }
-      }
-    };
-    window.addEventListener("pointerup", release); window.addEventListener("pointercancel", release);
-    element.addEventListener("scrollend", onEnd);
-    const observer = new ResizeObserver(() => { setWidth(element.clientWidth); setHeight(element.clientHeight); }); observer.observe(element); setWidth(element.clientWidth); setHeight(element.clientHeight);
-    return () => { window.removeEventListener("pointerup", release); window.removeEventListener("pointercancel", release); element.removeEventListener("scrollend", onEnd); observer.disconnect(); cancelSettle(state); };
-  }, []);
+
+  useTimelineElementListeners(viewport.current, scroll.current, geometry, rail, onViewport, onVisibleDate, commit, setWidth, setHeight);
+
   const mounted = virtual.getVirtualItems();
   useEffect(() => onMetric?.("mounted_columns", mounted.length), [mounted.length, onMetric]);
+
+  const onScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const element = event.currentTarget;
+    const state = scroll.current;
+    commit.current = () => settleTimeline(element, state, geometry, columnWidth, rail, onViewport, onVisibleDate);
+    handleTimelineScroll(element, state, geometry, columnWidth, hourHeight, rail, commit, setEdges, setTop, setFast, setDirection, onViewport);
+  };
+
   return <div className="relative min-h-0 flex-1">
-    <div ref={viewport} data-calendar-scroll data-calendar-timeline-scroll data-calendar-rail-width={rail} onFocusCapture={event => setFocusedDay((event.target as HTMLElement).closest<HTMLElement>("[data-calendar-day-column]")?.dataset.calendarDayColumn ?? null)} className="h-full overflow-auto overscroll-none [overflow-anchor:none] [scrollbar-gutter:stable]" onPointerDown={() => { scroll.current.pointerDown = true; cancelSettle(scroll.current); }} onPointerUp={() => { scroll.current.pointerDown = false; }} onWheel={() => cancelSettle(scroll.current)} onTouchStart={() => cancelSettle(scroll.current)} onKeyDown={() => cancelSettle(scroll.current)} onScroll={event => {
-      const element = event.currentTarget;
-      const state = scroll.current;
-      commit.current = () => settleTimeline(element, state, geometry, columnWidth, rail, onViewport, onVisibleDate);
-      handleTimelineScroll(element, state, geometry, columnWidth, hourHeight, rail, commit, setEdges, setTop, setFast, setDirection, onViewport);
-    }}>
+    <div
+      ref={viewport}
+      data-calendar-scroll
+      data-calendar-timeline-scroll
+      data-calendar-rail-width={rail}
+      onFocusCapture={event => setFocusedDay((event.target as HTMLElement).closest<HTMLElement>("[data-calendar-day-column]")?.dataset.calendarDayColumn ?? null)}
+      className="h-full overflow-auto overscroll-none [overflow-anchor:none] [scrollbar-gutter:stable]"
+      onPointerDown={() => { scroll.current.pointerDown = true; cancelSettle(scroll.current); }}
+      onPointerUp={() => { scroll.current.pointerDown = false; }}
+      onWheel={() => cancelSettle(scroll.current)}
+      onTouchStart={() => cancelSettle(scroll.current)}
+      onKeyDown={() => cancelSettle(scroll.current)}
+      onScroll={onScroll}
+    >
       <div className="relative flex" style={{ width: rail + days.length * columnWidth, minHeight: headerHeight + hourHeight * 24 }}>
-        <div className="sticky left-0 z-30 shrink-0 bg-surface-canvas" style={{ width: rail }}>
-          <div className="sticky top-0 z-40 bg-surface-canvas" style={{ height: headerHeight }}><div className="h-8">{zoneControls}</div><button ref={allDayToggle} type="button" className="flex w-full items-center justify-center border-y border-stroke-default text-content-secondary hover:bg-surface-muted hover:text-content-primary transition-colors" style={{ height: headerHeight - 32 }} aria-expanded={!collapsed} aria-label={collapsed ? "Expand all-day events" : "Collapse all-day events"} title={collapsed ? "Expand all-day events" : "Collapse all-day events"} onClick={() => collapse(!collapsed)}>{collapsed ? <ChevronDownIcon className="size-3.5" /> : <ChevronUpIcon className="size-3.5" />}</button></div>
-          <div style={{ paddingLeft: 24 }}><TimeAxis day={target} days={days} preferences={p} /></div>
-        </div>
+        <TimelineHeaderRail
+          rail={rail}
+          headerHeight={headerHeight}
+          zoneControls={zoneControls}
+          collapsed={collapsed}
+          onToggleCollapse={() => collapse(!collapsed)}
+          allDayToggleRef={allDayToggle}
+          target={target}
+          days={days}
+          preferences={p}
+        />
         <div className="relative" style={{ width: days.length * columnWidth }}>
           <TimelineCurrentTime days={days} columnWidth={columnWidth} zone={p.timeZone} hourHeight={hourHeight} headerHeight={headerHeight} />
-          {mounted.map(item => <div key={item.key} className="absolute top-0" style={{ left: item.index * columnWidth, width: columnWidth, height: headerHeight + hourHeight * 24 }}><CalendarDayColumn {...actions} day={days[item.index]!} items={eventsByDay[days[item.index]!] ?? EMPTY} allDayCollapsed={collapsed} onExpandAllDay={() => { collapse(false); allDayToggle.current?.focus(); }} viewportTop={top} viewportHeight={height} /></div>)}
+          {mounted.map(item => (
+            <div key={item.key} className="absolute top-0" style={{ left: item.index * columnWidth, width: columnWidth, height: headerHeight + hourHeight * 24 }}>
+              <CalendarDayColumn
+                {...actions}
+                day={days[item.index]!}
+                items={eventsByDay[days[item.index]!] ?? EMPTY}
+                allDayCollapsed={collapsed}
+                onExpandAllDay={() => { collapse(false); allDayToggle.current?.focus(); }}
+                viewportTop={top}
+                viewportHeight={height}
+              />
+            </div>
+          ))}
         </div>
       </div>
     </div>
