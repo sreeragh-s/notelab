@@ -57,6 +57,22 @@ export function studioBrowserUrl(port) {
 }
 
 export async function startLocal() {
+  await startRuntime({ spawnWeb, printSummary: printLocalSummary, processLabel: "Development" });
+}
+
+export async function startPreview() {
+  await startRuntime({ spawnWeb: spawnWebPreview, printSummary: printPreviewSummary, processLabel: "Preview" });
+}
+
+/**
+ * Shared runtime starter for startLocal and startPreview.
+ *
+ * @param {object} opts
+ * @param {Function} opts.spawnWeb - Web spawner (spawnWeb for local, spawnWebPreview for preview)
+ * @param {Function} opts.printSummary - Summary printer called after readiness
+ * @param {string} opts.processLabel - Label used in the exit error message
+ */
+async function startRuntime({ spawnWeb: spawnWebFn, printSummary, processLabel }) {
   const adapterAvailable = await exists(path.join(adapterDir, "package.json"));
   const names = resolveLocalProfileNames({ adapterAvailable });
 
@@ -151,7 +167,7 @@ export async function startLocal() {
         },
         color++,
       ));
-      children.push(spawnWeb("node-web", profile, env, color++));
+      children.push(spawnWebFn("node-web", profile, env, color++));
     }
 
     if (names.includes("worker")) {
@@ -178,7 +194,7 @@ export async function startLocal() {
         },
         color++,
       ));
-      children.push(spawnWeb(
+      children.push(spawnWebFn(
         "worker-web",
         profile,
         {
@@ -198,7 +214,8 @@ export async function startLocal() {
       profiles: Object.fromEntries(names.map((name) => [name, profiles[name]])),
       pids: children.map((child) => child.pid).filter(Boolean),
       startedAt: new Date().toISOString(),
-    }, null, 2)}\n`, { mode: 0o600 });
+    }, null, 2)}
+`, { mode: 0o600 });
 
     for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
       process.once(signal, () => void stop(signal));
@@ -206,7 +223,7 @@ export async function startLocal() {
     process.once("exit", () => rmSync(runtimeStateFile, { force: true }));
 
     await waitForRuntimeReadiness(names, profiles, children);
-    printLocalSummary(names, profiles);
+    printSummary(names, profiles);
 
     const result = await Promise.race(children.map((child) => new Promise((resolve) => {
       child.once("error", (error) => resolve({ error }));
@@ -214,175 +231,13 @@ export async function startLocal() {
     })));
     if (!stopping && result.error) throw result.error;
     if (!stopping && result.code !== 0) {
-      throw new Error(`Development process exited with ${result.signal ?? result.code}.`);
+      throw new Error(`${processLabel} process exited with ${result.signal ?? result.code}.`);
     }
   } finally {
     await stop();
   }
 }
 
-export async function startPreview() {
-  const adapterAvailable = await exists(path.join(adapterDir, "package.json"));
-  const names = resolveLocalProfileNames({ adapterAvailable });
-
-  if (!names.includes("worker")) {
-    console.info(
-      "Cloud adapter repository not found; running node profile only.",
-    );
-  }
-
-  if (names.includes("worker")) {
-    const wranglerBin = path.join(adapterDir, "node_modules", "wrangler", "bin", "wrangler.js");
-    if (!(await exists(wranglerBin))) {
-      throw new Error(
-        `Cloud adapter dependencies are not installed. Run npm install in ${adapterDir}.`,
-      );
-    }
-  }
-
-  await ensureDevelopmentEnvironment();
-  const environments = Object.fromEntries(
-    await Promise.all(names.map(async (name) => [name, await loadProfileEnvironment(name)])),
-  );
-  const profiles = Object.fromEntries(
-    names.map((name) => [name, effectiveProfile(name, environments[name])]),
-  );
-  const ports = names.flatMap((name) => {
-    const profile = profiles[name];
-    return [
-      profile.appPort,
-      profile.apiPort,
-      profile.inspectorPort,
-      ...(profile.healthPort ? [profile.healthPort] : []),
-      ...(profile.backgroundPort ? [profile.backgroundPort] : []),
-      ...(profile.backgroundInspectorPort ? [profile.backgroundInspectorPort] : []),
-    ];
-  });
-  await assertPortsAvailable(ports);
-  await dependencies(["up", "-d", "postgres", "minio", "mailpit", "--wait"]);
-  await dependencies(["run", "--rm", "-T", "minio-init"]);
-
-  const logDir = path.join(stateDir, "logs");
-  await mkdir(logDir, { recursive: true });
-  const children = [];
-  let stopping = false;
-  let stopPromise;
-  const stop = (signal = "SIGTERM") => {
-    if (stopPromise) return stopPromise;
-    stopping = true;
-    rmSync(runtimeStateFile, { force: true });
-    stopPromise = (async () => {
-      await stopChildren(children, signal);
-    })();
-    return stopPromise;
-  };
-
-  try {
-    let color = 0;
-    if (names.includes("node")) {
-      const env = runtimeEnvironment(profiles.node, environments.node);
-      const profile = profiles.node;
-      await run("npm", ["run", "db:migrate", "--workspace", "@zilobase/server"], {
-        cwd: coreDir,
-        env,
-      });
-      if (env.ZILOBASE_DEMO_ENABLED?.trim().toLowerCase() === "true") {
-        await run("npm", ["run", "db:seed:demo", "--workspace", "@zilobase/server"], {
-          cwd: coreDir,
-          env,
-        });
-      }
-      children.push(spawnService(
-        "node-api",
-        process.execPath,
-        [
-          `--inspect=127.0.0.1:${profile.inspectorPort}`,
-          "--enable-source-maps",
-          "--import",
-          "tsx",
-          "src/entrypoints/serverful.ts",
-        ],
-        {
-          cwd: path.join(coreDir, "apps", "server"),
-          logFile: path.join(logDir, "node-api.log"),
-          env: {
-            ...env,
-            PORT: String(profile.apiPort),
-            AI_DEV_TOOLS_ENABLED: "true",
-            AI_AGENT_DAILY_USAGE_LIMITS_ENABLED: "false",
-          },
-        },
-        color++,
-      ));
-      children.push(spawnWebPreview("node-web", profile, env, color++));
-    }
-
-    if (names.includes("worker")) {
-      const env = runtimeEnvironment(profiles.worker, environments.worker);
-      const profile = profiles.worker;
-      const persistDir = path.join(stateDir, "wrangler", "worker");
-      await mkdir(persistDir, { recursive: true });
-      children.push(spawnService(
-        "worker-stack",
-        process.execPath,
-        [path.join(adapterDir, "scripts", "dev-workers.mjs")],
-        {
-          cwd: adapterDir,
-          logFile: path.join(logDir, "worker-stack.log"),
-          env: {
-            ...env,
-            ZILOBASE_APP_DIR: coreDir,
-            ZILOBASE_WRANGLER_PERSIST_DIR: persistDir,
-            ZILOBASE_ADAPTER_PORT: String(profile.apiPort),
-            ZILOBASE_BACKGROUND_PORT: String(profile.backgroundPort),
-            ZILOBASE_INSPECTOR_PORT: String(profile.inspectorPort),
-            ZILOBASE_BACKGROUND_INSPECTOR_PORT: String(profile.backgroundInspectorPort),
-          },
-        },
-        color++,
-      ));
-      children.push(spawnWebPreview(
-        "worker-web",
-        profile,
-        {
-          ...env,
-          ZILOBASE_WEB_AI_CONVERSATION_MODULE: path.join(
-            adapterDir,
-            "src/web/use-agent-conversation.ts",
-          ),
-          ZILOBASE_WEB_ADAPTER_WEBSOCKET_PATHS: "/agents",
-        },
-        color++,
-      ));
-    }
-
-    await mkdir(stateDir, { recursive: true });
-    await writeFile(runtimeStateFile, `${JSON.stringify({
-      profiles: Object.fromEntries(names.map((name) => [name, profiles[name]])),
-      pids: children.map((child) => child.pid).filter(Boolean),
-      startedAt: new Date().toISOString(),
-    }, null, 2)}\n`, { mode: 0o600 });
-
-    for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
-      process.once(signal, () => void stop(signal));
-    }
-    process.once("exit", () => rmSync(runtimeStateFile, { force: true }));
-
-    await waitForRuntimeReadiness(names, profiles, children);
-    printPreviewSummary(names, profiles);
-
-    const result = await Promise.race(children.map((child) => new Promise((resolve) => {
-      child.once("error", (error) => resolve({ error }));
-      child.once("exit", (code, signal) => resolve({ code, signal }));
-    })));
-    if (!stopping && result.error) throw result.error;
-    if (!stopping && result.code !== 0) {
-      throw new Error(`Preview process exited with ${result.signal ?? result.code}.`);
-    }
-  } finally {
-    await stop();
-  }
-}
 
 export async function startStudio() {
   await ensureDevelopmentEnvironment();
