@@ -9,7 +9,7 @@ import { calendarSyncRoutes } from "./sync/routes";
 import { calendarPreferenceRoutes } from "./preferences";
 import { calendarConnectionReturnPath } from "@zilobase/features/calendar";
 import { Hono, type Context } from "hono";
-import { z } from "zod";
+import { Schema } from "effect";
 import { and, eq } from "drizzle-orm";
 import { db, runWithDbEnv } from "../../infrastructure/database";
 import { calendarAccount, calendarBinding } from "../../infrastructure/database/schema";
@@ -28,7 +28,7 @@ for (const app of [calendarRoutes, calendarProviderRoutes]) {
     await next();
   });
   app.onError((error, c) => {
-    if (error instanceof z.ZodError) return c.json({ message: "Invalid calendar request." }, 400);
+    if (Schema.isSchemaError(error)) return c.json({ message: "Invalid calendar request." }, 400);
     if (error instanceof CalendarAccessError) return c.json({ message: error.message }, error.status);
     if (error instanceof CalendarProviderError) return c.json({ message: error.code, code: error.code, retryAfterMs: error.retryAfterMs }, calendarErrorStatus(error.status));
     return c.json({ message: "Calendar request failed." }, 500);
@@ -46,8 +46,12 @@ calendarRoutes.get("/sources", async c => c.json({
   connections: await personalCalendarSources(c.env, c.get("user")!.id, c.req.param("workspaceId")!),
   providerConfigured: Boolean(getStringEnv(c.env, "CALENDAR_GOOGLE_CLIENT_ID") && getStringEnv(c.env, "CALENDAR_GOOGLE_CLIENT_SECRET") && getStringEnv(c.env, "CALENDAR_TOKEN_ENCRYPTION_KEY")),
 }));
+const GoogleOAuthStart = Schema.Struct({
+  client: Schema.Literals(["web", "desktop"]),
+});
+
 calendarRoutes.post("/connections/google/start", async c => {
-  const body = z.object({ client: z.enum(["web", "desktop"]) }).parse(await c.req.json());
+  const body = Schema.decodeUnknownSync(GoogleOAuthStart)(await c.req.json());
   return c.json({ authorizationUrl: await beginCalendarOAuth(c.env, { userId: c.get("user")!.id, workspaceId: c.req.param("workspaceId")!, clientKind: body.client }) });
 });
 calendarRoutes.delete("/connections/:bindingId", async c => {

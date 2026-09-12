@@ -1,7 +1,7 @@
 import { config as loadEnv } from "@dotenvx/dotenvx";
 import { defineConfig } from "drizzle-kit";
 
-const loaded = {};
+const loaded: Record<string, string> = {};
 loadEnv({
   path: process.env.ZILOBASE_ENV_FILE
     ? [process.env.ZILOBASE_ENV_FILE]

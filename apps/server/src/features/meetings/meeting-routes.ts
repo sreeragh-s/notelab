@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { z } from "zod";
+import { Schema } from "effect";
 import { getAuthenticatedUser as requireUser } from "../../shared/http/auth";
 import { AiProviderConfigError } from "../ai/providers/ai-provider";
 import { enqueueAiJob } from "../ai/jobs/ai-jobs";
@@ -19,7 +19,7 @@ import { getMeetingCollaborationWebSocketUrl } from "../../infrastructure/runtim
 import { getMeetingAudioWebSocketUrl } from "../../infrastructure/runtime/runtime-adapter";
 import { ServiceMutationError } from "../../shared/errors/service-mutation-error";
 import type { AppBindings } from "../../shared/types";
-import { readJsonBody } from "../../shared/http/request";
+import { parseJsonBody } from "../../shared/http/schema-json";
 import {
   claimMeetingRecorder,
   createMeeting,
@@ -34,36 +34,65 @@ import {
 import { createMeetingAudioTicket } from "./audio/meeting-audio-ticket";
 import { meetingLifecycleActions } from "./contracts/meeting-types";
 
-const createMeetingSchema = z.object({
-  pageId: z.string().min(1),
-  title: z.string().max(200).optional(),
-  workspaceId: z.string().min(1),
+const strictJson = { onExcessProperty: "error" as const };
+
+const UuidString = Schema.String.pipe(
+  Schema.check(
+    Schema.isPattern(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      { message: "Invalid UUID" },
+    ),
+  ),
+);
+
+const CreateMeetingInput = Schema.Struct({
+  pageId: Schema.String.pipe(Schema.check(Schema.isMinLength(1))),
+  title: Schema.optionalKey(Schema.String.pipe(Schema.check(Schema.isMaxLength(200)))),
+  workspaceId: Schema.String.pipe(Schema.check(Schema.isMinLength(1))),
 });
 
-const updateMeetingSchema = z
-  .object({
-    archiveLocalAudio: z.boolean().optional(),
-    autoPlayConsent: z.boolean().optional(),
-    consentMessage: z.string().max(2_000).optional(),
-    customInstructions: z.string().max(8_000).nullable().optional(),
-    instructionsPreset: z.string().min(1).max(80).optional(),
-    language: z.string().min(2).max(35).optional(),
-    title: z.string().max(200).optional(),
-  })
-  .strict();
-
-const lifecycleSchema = z.object({
-  durationMs: z.number().nonnegative().optional(),
-  leaseId: z.string().uuid().optional(),
+const UpdateMeetingInput = Schema.Struct({
+  archiveLocalAudio: Schema.optionalKey(Schema.Boolean),
+  autoPlayConsent: Schema.optionalKey(Schema.Boolean),
+  consentMessage: Schema.optionalKey(
+    Schema.String.pipe(Schema.check(Schema.isMaxLength(2_000))),
+  ),
+  customInstructions: Schema.optionalKey(
+    Schema.NullOr(
+      Schema.String.pipe(Schema.check(Schema.isMaxLength(8_000))),
+    ),
+  ),
+  instructionsPreset: Schema.optionalKey(
+    Schema.String.pipe(
+      Schema.check(Schema.isMinLength(1), Schema.isMaxLength(80)),
+    ),
+  ),
+  language: Schema.optionalKey(
+    Schema.String.pipe(
+      Schema.check(Schema.isMinLength(2), Schema.isMaxLength(35)),
+    ),
+  ),
+  title: Schema.optionalKey(
+    Schema.String.pipe(Schema.check(Schema.isMaxLength(200))),
+  ),
 });
 
-const recorderLeaseSchema = z.object({
-  leaseId: z.string().uuid(),
+const LifecycleInput = Schema.Struct({
+  durationMs: Schema.optionalKey(
+    Schema.Number.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
+  ),
+  leaseId: Schema.optionalKey(UuidString),
 });
 
-const consentSchema = z.object({
-  metadata: z.record(z.string(), z.unknown()).optional(),
-  mode: z.enum(["confirmed", "played"]),
+const RecorderLeaseInput = Schema.Struct({
+  leaseId: UuidString,
+});
+
+const ConsentInput = Schema.Struct({
+  metadata: Schema.optionalKey(
+    Schema.Record(Schema.String, Schema.Unknown),
+  ),
+  mode: Schema.Literals(["confirmed", "played"]),
 });
 
 export const meetingRoutes = new Hono<AppBindings>();
@@ -124,9 +153,9 @@ meetingRoutes.post("/", async (c) => {
   const user = requireUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
 
-  const parsed = createMeetingSchema.safeParse(await readJsonBody(c.req));
-  if (!parsed.success) {
-    return c.json({ error: "Invalid meeting payload", issues: parsed.error.issues }, 400);
+  const parsed = await parseJsonBody(c.req, CreateMeetingInput);
+  if (!parsed.ok) {
+    return c.json({ error: "Invalid meeting payload" }, 400);
   }
 
   const mismatch = rejectMismatchedApiKeyWorkspace(c, parsed.data.workspaceId);
@@ -237,8 +266,8 @@ meetingRoutes.post("/:id/recorder/claim", async (c) => {
 meetingRoutes.post("/:id/consent", async (c) => {
   const user = requireUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
-  const parsed = consentSchema.safeParse(await readJsonBody(c.req));
-  if (!parsed.success) return c.json({ error: "Invalid consent event" }, 400);
+  const parsed = await parseJsonBody(c.req, ConsentInput);
+  if (!parsed.ok) return c.json({ error: "Invalid consent event" }, 400);
   try {
     return c.json({
       consent: await recordMeetingConsent({
@@ -255,8 +284,8 @@ meetingRoutes.post("/:id/consent", async (c) => {
 meetingRoutes.post("/:id/recorder/release", async (c) => {
   const user = requireUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
-  const parsed = recorderLeaseSchema.safeParse(await readJsonBody(c.req));
-  if (!parsed.success) return c.json({ error: "Invalid recorder lease" }, 400);
+  const parsed = await parseJsonBody(c.req, RecorderLeaseInput);
+  if (!parsed.ok) return c.json({ error: "Invalid recorder lease" }, 400);
 
   try {
     return c.json({
@@ -304,9 +333,9 @@ meetingRoutes.patch("/:id", async (c) => {
   const user = requireUser(c);
   if (!user) return c.json({ error: "Unauthorized" }, 401);
 
-  const parsed = updateMeetingSchema.safeParse(await readJsonBody(c.req));
-  if (!parsed.success) {
-    return c.json({ error: "Invalid meeting patch", issues: parsed.error.issues }, 400);
+  const parsed = await parseJsonBody(c.req, UpdateMeetingInput, strictJson);
+  if (!parsed.ok) {
+    return c.json({ error: "Invalid meeting patch" }, 400);
   }
 
   try {
@@ -327,9 +356,9 @@ for (const action of meetingLifecycleActions) {
     const user = requireUser(c);
     if (!user) return c.json({ error: "Unauthorized" }, 401);
 
-    const parsed = lifecycleSchema.safeParse(await readJsonBody(c.req, {}));
-    if (!parsed.success) {
-      return c.json({ error: "Invalid lifecycle payload", issues: parsed.error.issues }, 400);
+    const parsed = await parseJsonBody(c.req, LifecycleInput);
+    if (!parsed.ok) {
+      return c.json({ error: "Invalid lifecycle payload" }, 400);
     }
 
     try {

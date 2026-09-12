@@ -9,7 +9,7 @@
 
 ## Main flow
 
-Meeting operations create page-linked meetings, transition status, claim recording sessions and accept transcripts. Browser/native capture adapters transport audio; realtime transcription and summary modules update collaborative content.
+Meeting operations create page-linked meetings, transition status, claim recording sessions and accept transcripts. Request bodies are parsed and validated using Effect `Schema` runtime parsing (`parseJsonBody`). Browser/native capture adapters transport audio; realtime transcription and summary modules update collaborative content.
 
 ## Authorization and persistence
 

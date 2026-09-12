@@ -11,7 +11,7 @@ test("old preferences normalize local display options and reject unsupported col
   const old = defaultCalendarPreferences(); delete old.calendarColors; delete old.removedCalendarKeys;
   expect(calendarPreferencesSchema.parse(old)).toMatchObject({ calendarColors: {}, removedCalendarKeys: [] });
   expect(calendarPreferencesSchema.safeParse({ ...old, calendarColors: { calendar: "pink" } }).success).toBe(false);
-  expect(calendarPreferencesSchema.parse({ ...old, calendarColors: { calendar: "green" }, removedCalendarKeys: ["calendar"] }).calendarColors.calendar).toBe("green");
+  expect(calendarPreferencesSchema.parse({ ...old, calendarColors: { calendar: "green" }, removedCalendarKeys: ["calendar"] }).calendarColors?.calendar).toBe("green");
 });
 test("retired Agenda preferences become Week", () => {
   expect(calendarPreferencesSchema.parse({ ...defaultCalendarPreferences(), view: "agenda" }).view).toBe("week");

@@ -4,7 +4,7 @@ Calendar contracts live in [the shared package](../../../packages/features/src/c
 
 The server requires both `CALENDAR_ENABLED=true` and a matching `CALENDAR_ENABLED_WORKSPACE_IDS` entry (or `*`). The web uses the independent `VITE_FEATURE_CALENDAR` flag, disabled by default. Calendar authorization never follows the Mail flag.
 
-Contract model tests exercise identity isolation and safe route construction. Configuration tests cover independent workspace rollout.
+Contract model tests exercise identity isolation and safe route construction. Configuration tests cover independent workspace rollout. Route requests, query parameters, event mutations, and preferences validate using Effect `Schema` decoding.
 
 ## Persistence and ownership
 
