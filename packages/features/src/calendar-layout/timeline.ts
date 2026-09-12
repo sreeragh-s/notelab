@@ -32,9 +32,13 @@ export function timelineGeometry(origin: string, size: number, weekends = true) 
 export function timelineRetargets(previousDate: string | null, date: string, emitted: string | null) {
   return previousDate == null || previousDate !== date && date !== emitted;
 }
-export function snapTimelineOffset(offset: number, size: number) {
-  if (!(size > 0)) return 0;
-  return Math.round(offset / size) * size;
+/** Minimum px displacement to bother snapping. Below this, accept current position. */
+const SNAP_DEAD_ZONE = 2;
+
+export function snapTimelineOffset(offset: number, size: number): number | null {
+  if (!(size > 0)) return null;
+  const snapped = Math.round(offset / size) * size;
+  return Math.abs(offset - snapped) <= SNAP_DEAD_ZONE ? null : snapped;
 }
 export const timeToPosition = (minute: number, hourHeight: number) => minute * hourHeight / 60;
 export const positionToTime = (position: number, hourHeight: number) => position * 60 / hourHeight;

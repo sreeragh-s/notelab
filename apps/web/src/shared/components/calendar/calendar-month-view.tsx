@@ -69,7 +69,7 @@ export function CalendarMonthView(props: MonthProps & { loadingMessage?: string;
     window.addEventListener("pointerup", release); window.addEventListener("pointercancel", release);
     return () => { window.removeEventListener("pointerup", release); window.removeEventListener("pointercancel", release); if (idle.current) clearTimeout(idle.current); };
   }, []);
-  return <div className="relative min-h-0 flex-1"><div data-calendar-scroll data-calendar-month-scroll ref={viewport} onFocusCapture={event => setFocused((event.target as HTMLElement).closest<HTMLElement>("[data-calendar-week]")?.dataset.calendarWeek ?? null)} className="h-full overflow-y-auto overscroll-none [overflow-anchor:none] [scrollbar-gutter:stable]" onPointerDown={() => { pointer.current = true; }} onPointerUp={() => { pointer.current = false; }} onScroll={event => {
+  return <div className="relative min-h-0 flex-1"><div data-calendar-scroll data-calendar-month-scroll ref={viewport} onFocusCapture={event => setFocused((event.target as HTMLElement).closest<HTMLElement>("[data-calendar-week]")?.dataset.calendarWeek ?? null)} className="h-full overflow-y-auto overscroll-none [overflow-anchor:none] [scrollbar-gutter:stable]" onPointerDown={() => { pointer.current = true; if (idle.current) clearTimeout(idle.current); }} onPointerUp={() => { pointer.current = false; }} onTouchStart={() => { if (idle.current) clearTimeout(idle.current); }} onScroll={event => {
     const element = event.currentTarget;
     if (idle.current) clearTimeout(idle.current);
     const top = element.scrollTop, height = element.clientHeight;
@@ -80,18 +80,14 @@ export function CalendarMonthView(props: MonthProps & { loadingMessage?: string;
     sample.current = { top, at: now };
     setMotion(old => old.direction === direction && old.fast === fast ? old : { direction, fast });
     props.onViewport(weeks[Math.min(count - 1, Math.floor(top / WEEK_HEIGHT))]![0]!, weeks[Math.min(count - 1, Math.floor((top + height - 1) / WEEK_HEIGHT))]![6]!, true);
-    const arm = () => {
-      if (idle.current) clearTimeout(idle.current);
-      const origin = element.scrollTop;
-      idle.current = setTimeout(() => {
-        if (pointer.current || element.scrollTop !== origin) { arm(); return; }
-        const settled = element.scrollTop, settledHeight = element.clientHeight;
-        const firstIndex = Math.min(count - 1, Math.floor(settled / WEEK_HEIGHT)), lastIndex = Math.min(count - 1, Math.floor((settled + settledHeight - 1) / WEEK_HEIGHT));
-        const start = weeks[firstIndex]![0]!, end = weeks[lastIndex]![6]!;
-        props.onViewport(start, end, true); const labelDate = addCalendarDays(start, 3); emitted.current = labelDate; props.onDate(labelDate);
-      }, 120);
-    };
-    arm();
+    idle.current = setTimeout(() => {
+      idle.current = null;
+      if (pointer.current) return;
+      const settled = element.scrollTop, settledHeight = element.clientHeight;
+      const firstIndex = Math.min(count - 1, Math.floor(settled / WEEK_HEIGHT)), lastIndex = Math.min(count - 1, Math.floor((settled + settledHeight - 1) / WEEK_HEIGHT));
+      const start = weeks[firstIndex]![0]!, end = weeks[lastIndex]![6]!;
+      props.onViewport(start, end, true); const labelDate = addCalendarDays(start, 3); emitted.current = labelDate; props.onDate(labelDate);
+    }, 350);
   }}>
     <div className="relative" style={{ height: count * WEEK_HEIGHT }}>{virtual.getVirtualItems().map(row => <div key={row.key} data-calendar-week={weeks[row.index]![0]} className="absolute inset-x-0 top-0" style={{ transform: `translateY(${row.start}px)` }}><CalendarMonthWeek {...props} days={weeks[row.index]!.filter(day => props.preferences.showWeekends || ![0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()))} /></div>)}</div>
   </div>{props.beforeLoading && edges.before && <div role="status" className="pointer-events-none absolute left-1 top-1 text-xs text-content-secondary">{props.loadingMessage ?? "Loading earlier dates…"}</div>}{props.afterLoading && edges.after && <div role="status" className="pointer-events-none absolute bottom-1 right-1 text-xs text-content-secondary">{props.loadingMessage ?? "Loading later dates…"}</div>}</div>;

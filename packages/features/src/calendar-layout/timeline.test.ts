@@ -29,9 +29,13 @@ test("passive visible dates do not retarget; explicit navigation does", () => {
   assert.equal(timelineRetargets("2026-09-16", "2026-09-16", "2026-09-16"), false);
 });
 test("timeline offsets snap to the nearest civil-date column", () => {
-  assert.equal(snapTimelineOffset(0, 140), 0);
+  assert.equal(snapTimelineOffset(0, 140), null);      // on boundary
+  assert.equal(snapTimelineOffset(1, 140), null);       // within dead-zone
   assert.equal(snapTimelineOffset(69, 140), 0);
   assert.equal(snapTimelineOffset(70, 140), 140);
   assert.equal(snapTimelineOffset(209, 140), 140);
   assert.equal(snapTimelineOffset(211, 140), 280);
+  assert.equal(snapTimelineOffset(140, 140), null);     // exactly on boundary
+  assert.equal(snapTimelineOffset(141, 140), null);     // within dead-zone
+  assert.equal(snapTimelineOffset(-1, 140), null);      // negative within dead-zone
 });
