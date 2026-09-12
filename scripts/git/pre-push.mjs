@@ -230,6 +230,20 @@ export async function runPushChecks({
   return selected;
 }
 
+export function collectFiles({ staged, hook, stdinText, git, baseRef }) {
+  if (staged) {
+    return { files: collectStagedFiles({ git }), pushingCommits: true };
+  }
+  if (hook) {
+    const refs = parsePushRefs(stdinText ?? "");
+    if (refs.length === 0) {
+      return { files: collectFilesFromWorkingTree({ git, baseRef }), pushingCommits: true };
+    }
+    return collectFilesFromPush(refs, { git, baseRef });
+  }
+  return { files: collectFilesFromWorkingTree({ git, baseRef }), pushingCommits: true };
+}
+
 export async function main({
   stdinText,
   env = process.env,
@@ -248,23 +262,7 @@ export async function main({
 
   const gitAt = (args) => git(args, cwd);
   const baseRef = resolveBaseRef(gitAt);
-  let files;
-  let pushingCommits = true;
-
-  if (staged) {
-    files = collectStagedFiles({ git: gitAt });
-  } else if (hook) {
-    const refs = parsePushRefs(stdinText ?? "");
-    if (refs.length === 0) {
-      files = collectFilesFromWorkingTree({ git: gitAt, baseRef });
-    } else {
-      const collected = collectFilesFromPush(refs, { git: gitAt, baseRef });
-      files = collected.files;
-      pushingCommits = collected.pushingCommits;
-    }
-  } else {
-    files = collectFilesFromWorkingTree({ git: gitAt, baseRef });
-  }
+  const { files, pushingCommits } = collectFiles({ staged, hook, stdinText, git: gitAt, baseRef });
 
   if (!pushingCommits) {
     log.info("Remote-only ref update; skipping GitHub PR checks.");
