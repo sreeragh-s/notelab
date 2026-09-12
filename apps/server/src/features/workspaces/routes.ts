@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { z } from "zod";
+import { Schema, SchemaTransformation } from "effect";
 import { getAuthenticatedUser as requireUser } from "../../shared/http/auth";
 import { getPinnedWorkspaceId, rejectMismatchedPinnedWorkspace, requireOAuthScope } from "../auth/oauth-access";
 import { getMembership, getWorkspaceRealtimeAccessExpiration, isPrivilegedOrgRole } from "../access";
@@ -21,6 +21,7 @@ import {
 } from "../../infrastructure/database/schema";
 import type { AppBindings } from "../../shared/types";
 import { readJsonBody } from "../../shared/http/request";
+import { parseJsonBody } from "../../shared/http/schema-json";
 import {
   activeMembershipCondition,
   expireTemporaryMemberships,
@@ -117,48 +118,98 @@ workspaceRoutes.post("/:workspaceId/navigation-realtime-ticket", async (c) => {
   return c.json({ ...ticket, workspaceId, websocketProtocols: [NAVIGATION_REALTIME_PROTOCOL, `${NAVIGATION_REALTIME_AUTH_PROTOCOL_PREFIX}${ticket.token}`], websocketUrl: websocketUrl.toString() });
 });
 
-const memberInvitationSchema = z
-  .object({
-    accessExpiresAt: z.string().datetime({ offset: true }).nullable().optional(),
-    email: z.string().trim().email(),
-    role: z.enum(["admin", "member", "temporary"]),
-  })
-  .strict();
-const memberUpdateSchema = z
-  .object({
-    accessExpiresAt: z.string().datetime({ offset: true }).nullable().optional(),
-    role: z.enum(["owner", "admin", "member", "temporary"]),
-  })
-  .strict();
-const updateWorkspaceSchema = z
-  .object({
-    logo: z
-      .union([
-        z.string().trim().url("Enter a valid logo URL."),
-        z.literal(""),
-        z.null(),
-      ])
-      .optional(),
-    metadata: z
-      .union([z.string().trim().max(5000), z.literal(""), z.null()])
-      .optional(),
-    name: z.string().trim().min(1, "Workspace name is required.").max(120).optional(),
-    slug: z
-      .string()
-      .trim()
-      .min(1, "Slug is required.")
-      .max(120)
-      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and hyphens only.")
-      .optional(),
-  })
-  .refine(
-    (value) =>
-      value.name !== undefined ||
-      value.slug !== undefined ||
-      value.logo !== undefined ||
-      value.metadata !== undefined,
-    "Provide at least one field to update.",
-  );
+const strictJson = { onExcessProperty: "error" as const };
+
+const IsoDateTimeString = Schema.String.pipe(
+  Schema.check(
+    Schema.isPattern(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/,
+      { message: "Invalid date-time format" },
+    ),
+  ),
+);
+
+const MemberInvitationInput = Schema.Struct({
+  accessExpiresAt: Schema.optionalKey(Schema.NullOr(IsoDateTimeString)),
+  email: Schema.String.pipe(
+    Schema.decode(SchemaTransformation.trim()),
+    Schema.check(Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { message: "Invalid email" })),
+  ),
+  role: Schema.Literals(["admin", "member", "temporary"]),
+});
+
+const MemberUpdateInput = Schema.Struct({
+  accessExpiresAt: Schema.optionalKey(Schema.NullOr(IsoDateTimeString)),
+  role: Schema.Literals(["owner", "admin", "member", "temporary"]),
+});
+
+const trimmedLogo = Schema.String.pipe(
+  Schema.decode(SchemaTransformation.trim()),
+  Schema.check(
+    Schema.makeFilter((value) => {
+      try {
+        new URL(value);
+        return undefined;
+      } catch {
+        return "Enter a valid logo URL.";
+      }
+    }),
+  ),
+);
+
+const UpdateWorkspaceInput = Schema.Struct({
+  logo: Schema.optionalKey(
+    Schema.Union([
+      trimmedLogo,
+      Schema.Literal(""),
+      Schema.Null,
+    ]),
+  ),
+  metadata: Schema.optionalKey(
+    Schema.Union([
+      Schema.String.pipe(
+        Schema.decode(SchemaTransformation.trim()),
+        Schema.check(Schema.isMaxLength(5000)),
+      ),
+      Schema.Literal(""),
+      Schema.Null,
+    ]),
+  ),
+  name: Schema.optionalKey(
+    Schema.String.pipe(
+      Schema.decode(SchemaTransformation.trim()),
+      Schema.check(
+        Schema.isMinLength(1, { message: "Workspace name is required." }),
+        Schema.isMaxLength(120),
+      ),
+    ),
+  ),
+  slug: Schema.optionalKey(
+    Schema.String.pipe(
+      Schema.decode(SchemaTransformation.trim()),
+      Schema.check(
+        Schema.isMinLength(1, { message: "Slug is required." }),
+        Schema.isMaxLength(120),
+        Schema.isPattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+          message: "Use lowercase letters, numbers, and hyphens only.",
+        }),
+      ),
+    ),
+  ),
+}).check(
+  Schema.makeFilter((value) =>
+    value.name !== undefined ||
+    value.slug !== undefined ||
+    value.logo !== undefined ||
+    value.metadata !== undefined
+      ? undefined
+      : "Provide at least one field to update.",
+  ),
+);
+
+const DeleteWorkspaceInput = Schema.Struct({
+  confirmationName: Schema.String,
+});
 
 workspaceRoutes.get("/:workspaceId/access-targets", async (c) => {
   const requestUser = requireUser(c);
@@ -230,13 +281,11 @@ workspaceRoutes.post("/:workspaceId/member-invitations", async (c) => {
     return c.json({ error: "Only workspace admins can invite members." }, 403);
   }
 
-  const parsed = memberInvitationSchema.safeParse(
-    await readJsonBody(c.req),
-  );
+  const parsed = await parseJsonBody(c.req, MemberInvitationInput, strictJson);
 
-  if (!parsed.success) {
+  if (!parsed.ok) {
     return c.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid invitation." },
+      { error: parsed.message || "Invalid invitation." },
       400,
     );
   }
@@ -353,13 +402,11 @@ workspaceRoutes.patch("/:workspaceId/members/:memberId", async (c) => {
     return c.json({ error: "Only workspace admins can manage members." }, 403);
   }
 
-  const parsed = memberUpdateSchema.safeParse(
-    await readJsonBody(c.req),
-  );
+  const parsed = await parseJsonBody(c.req, MemberUpdateInput, strictJson);
 
-  if (!parsed.success) {
+  if (!parsed.ok) {
     return c.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid member update." },
+      { error: parsed.message || "Invalid member update." },
       400,
     );
   }
@@ -585,11 +632,10 @@ workspaceRoutes.patch("/:workspaceId", async (c) => {
     return c.json({ error: "Only workspace admins can update settings." }, 403);
   }
 
-  const body = await readJsonBody(c.req);
-  const parsed = updateWorkspaceSchema.safeParse(body);
+  const parsed = await parseJsonBody(c.req, UpdateWorkspaceInput);
 
-  if (!parsed.success) {
-    return c.json({ error: parsed.error.issues[0]?.message ?? "Invalid request." }, 400);
+  if (!parsed.ok) {
+    return c.json({ error: parsed.message || "Invalid request." }, 400);
   }
 
   const nextSlug = parsed.data.slug?.trim().toLowerCase();
@@ -651,12 +697,9 @@ workspaceRoutes.delete("/:workspaceId", async (c) => {
     return c.json({ error: "Only the workspace owner can delete this workspace." }, 403);
   }
 
-  const parsed = z
-    .object({ confirmationName: z.string() })
-    .strict()
-    .safeParse(await readJsonBody(c.req));
+  const parsed = await parseJsonBody(c.req, DeleteWorkspaceInput, strictJson);
 
-  if (!parsed.success) {
+  if (!parsed.ok) {
     return c.json({ error: "Enter the workspace name to confirm deletion." }, 400);
   }
 

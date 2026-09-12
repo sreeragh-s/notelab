@@ -14,7 +14,7 @@ The [creation entrypoint](../../../apps/web/src/features/teamspaces/creation/ind
 
 ## Authorization and persistence
 
-Teamspaces, principals and team membership live in Postgres. Security policy controls public sharing, guests and export on associated pages/databases. Content operations must resolve policy for the content being accessed.
+Teamspaces, principals and team membership live in Postgres. Security policy controls public sharing, guests and export on associated pages/databases. Content operations must resolve policy for the content being accessed. Teamspace creation, settings, defaults, invite links, and principal assignments decode JSON bodies with Schema (`onExcessProperty: "error"`). [Route tests](../../../apps/server/src/features/teamspaces/routes.test.ts) cover strict validation and payload errors.
 
 ## Server management interface
 

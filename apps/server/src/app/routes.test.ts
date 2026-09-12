@@ -131,6 +131,20 @@ test("workspace routes enforce authentication and validated admin updates", asyn
     method: "PATCH",
   });
   assert.equal(invalid.status, 400);
+
+  const invalidInvite = await appFor(workspaceRoutes).request("/workspace-1/member-invitations", {
+    body: JSON.stringify({ email: "invalid-email", role: "member" }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+  });
+  assert.equal(invalidInvite.status, 400);
+
+  const invalidMemberUpdate = await appFor(workspaceRoutes).request("/workspace-1/members/member-1", {
+    body: JSON.stringify({ role: "superadmin" }),
+    headers: { "content-type": "application/json" },
+    method: "PATCH",
+  });
+  assert.equal(invalidMemberUpdate.status, 400);
 });
 
 test("workspace routes reject non-admin updates", async () => {

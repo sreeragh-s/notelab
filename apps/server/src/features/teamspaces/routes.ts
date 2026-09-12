@@ -1,49 +1,101 @@
 import { Hono, type Context } from "hono";
-import { z } from "zod";
+import { Schema, SchemaTransformation } from "effect";
 
 import type { AppBindings } from "../../shared/types";
-import { readJsonBody } from "../../shared/http/request";
+import { parseJsonBody } from "../../shared/http/schema-json";
 import { TeamspaceManagementService } from "./management";
 
 export const teamspaceRoutes = new Hono<AppBindings>();
 
-const createSchema = z
-  .object({
-    accessMode: z.enum(["open", "closed", "private"]),
-    description: z.string().trim().max(2000).nullable().optional(),
-    exportEnabled: z.boolean().optional(),
-    guestsEnabled: z.boolean().optional(),
-    icon: z.unknown().optional(),
-    name: z.string().trim().min(1).max(120),
-  })
-  .strict();
-const updateSchema = z
-  .object({
-    accessMode: z.enum(["open", "closed", "private"]).optional(),
-    description: z.string().trim().max(2000).nullable().optional(),
-    icon: z.unknown().optional(),
-    invitePolicy: z.enum(["owners", "owners_and_members"]).optional(),
-    memberAccessLevel: z.enum(["view", "comment", "edit", "full"]).optional(),
-    name: z.string().trim().min(1).max(120).optional(),
-    publicSharingEnabled: z.boolean().optional(),
-    sidebarEditPolicy: z.enum(["owners", "owners_and_members"]).optional(),
-  })
-  .strict()
-  .refine((value) => Object.keys(value).length > 0, "Provide a field to update.");
-const principalSchema = z
-  .object({
-    accessLevelOverride: z.enum(["view", "comment", "edit", "full"]).nullable().optional(),
-    principalType: z.enum(["user", "team"]).default("user"),
-    role: z.enum(["owner", "member"]),
-    userId: z.string().min(1),
-  })
-  .strict();
-const roleSchema = z
-  .object({
-    accessLevelOverride: z.enum(["view", "comment", "edit", "full"]).nullable().optional(),
-    role: z.enum(["owner", "member"]),
-  })
-  .strict();
+const strictJson = { onExcessProperty: "error" as const };
+
+const TeamspaceAccessMode = Schema.Literals(["open", "closed", "private"]);
+const TeamspaceRole = Schema.Literals(["owner", "member"]);
+const MemberAccessLevel = Schema.Literals(["view", "comment", "edit", "full"]);
+const PrincipalType = Schema.Literals(["user", "team"]);
+const InvitePolicy = Schema.Literals(["owners", "owners_and_members"]);
+const SidebarEditPolicy = Schema.Literals(["owners", "owners_and_members"]);
+const CreationPolicy = Schema.Literals(["workspace_owners", "workspace_members"]);
+
+const CreateTeamspaceInput = Schema.Struct({
+  accessMode: TeamspaceAccessMode,
+  description: Schema.optionalKey(
+    Schema.NullOr(
+      Schema.String.pipe(
+        Schema.decode(SchemaTransformation.trim()),
+        Schema.check(Schema.isMaxLength(2000)),
+      ),
+    ),
+  ),
+  exportEnabled: Schema.optionalKey(Schema.Boolean),
+  guestsEnabled: Schema.optionalKey(Schema.Boolean),
+  icon: Schema.optionalKey(Schema.Unknown),
+  name: Schema.String.pipe(
+    Schema.decode(SchemaTransformation.trim()),
+    Schema.check(Schema.isMinLength(1), Schema.isMaxLength(120)),
+  ),
+});
+
+const UpdateTeamspaceInput = Schema.Struct({
+  accessMode: Schema.optionalKey(TeamspaceAccessMode),
+  description: Schema.optionalKey(
+    Schema.NullOr(
+      Schema.String.pipe(
+        Schema.decode(SchemaTransformation.trim()),
+        Schema.check(Schema.isMaxLength(2000)),
+      ),
+    ),
+  ),
+  icon: Schema.optionalKey(Schema.Unknown),
+  invitePolicy: Schema.optionalKey(InvitePolicy),
+  memberAccessLevel: Schema.optionalKey(MemberAccessLevel),
+  name: Schema.optionalKey(
+    Schema.String.pipe(
+      Schema.decode(SchemaTransformation.trim()),
+      Schema.check(Schema.isMinLength(1), Schema.isMaxLength(120)),
+    ),
+  ),
+  publicSharingEnabled: Schema.optionalKey(Schema.Boolean),
+  sidebarEditPolicy: Schema.optionalKey(SidebarEditPolicy),
+}).check(
+  Schema.makeFilter((value) =>
+    Object.keys(value).length > 0 ? undefined : "Provide a field to update.",
+  ),
+);
+
+const AddPrincipalInput = Schema.Struct({
+  accessLevelOverride: Schema.optionalKey(
+    Schema.NullOr(MemberAccessLevel),
+  ),
+  principalType: Schema.optionalKey(PrincipalType),
+  role: TeamspaceRole,
+  userId: Schema.String.pipe(
+    Schema.check(Schema.isMinLength(1)),
+  ),
+});
+
+const UpdatePrincipalInput = Schema.Struct({
+  accessLevelOverride: Schema.optionalKey(
+    Schema.NullOr(MemberAccessLevel),
+  ),
+  role: TeamspaceRole,
+});
+
+const UpdateTeamspaceSettingsInput = Schema.Struct({
+  creationPolicy: CreationPolicy,
+});
+
+const UpdateTeamspaceDefaultsInput = Schema.Struct({
+  defaultTeamspaceIds: Schema.Array(
+    Schema.String.pipe(Schema.check(Schema.isMinLength(1))),
+  ).pipe(
+    Schema.check(Schema.isMinLength(1)),
+  ),
+});
+
+const UpdateInviteLinkInput = Schema.Struct({
+  enabled: Schema.Boolean,
+});
 
 teamspaceRoutes.get("/:workspaceId/teamspace-settings", async (c) =>
   handle(c, (service, userId, workspaceId) =>
@@ -52,26 +104,22 @@ teamspaceRoutes.get("/:workspaceId/teamspace-settings", async (c) =>
 );
 
 teamspaceRoutes.patch("/:workspaceId/teamspace-settings", async (c) => {
-  const parsed = z
-    .object({
-      creationPolicy: z.enum(["workspace_owners", "workspace_members"]),
-    })
-    .strict()
-    .safeParse(await readJsonBody(c.req));
-  if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message }, 400);
+  const parsed = await parseJsonBody(c.req, UpdateTeamspaceSettingsInput, strictJson);
+  if (!parsed.ok) return c.json({ error: parsed.message }, 400);
   return handle(c, (service, userId, workspaceId) =>
     service.updateWorkspaceSettings({ ...parsed.data, userId, workspaceId }),
   );
 });
 
 teamspaceRoutes.patch("/:workspaceId/teamspace-defaults", async (c) => {
-  const parsed = z
-    .object({ defaultTeamspaceIds: z.array(z.string().min(1)).min(1) })
-    .strict()
-    .safeParse(await readJsonBody(c.req));
-  if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message }, 400);
+  const parsed = await parseJsonBody(c.req, UpdateTeamspaceDefaultsInput, strictJson);
+  if (!parsed.ok) return c.json({ error: parsed.message }, 400);
   return handle(c, (service, userId, workspaceId) =>
-    service.updateDefaults({ ...parsed.data, userId, workspaceId }),
+    service.updateDefaults({
+      defaultTeamspaceIds: [...parsed.data.defaultTeamspaceIds],
+      userId,
+      workspaceId,
+    }),
   );
 });
 
@@ -86,8 +134,8 @@ teamspaceRoutes.get("/:workspaceId/teamspaces", async (c) =>
 );
 
 teamspaceRoutes.post("/:workspaceId/teamspaces", async (c) => {
-  const parsed = createSchema.safeParse(await readJsonBody(c.req));
-  if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message }, 400);
+  const parsed = await parseJsonBody(c.req, CreateTeamspaceInput, strictJson);
+  if (!parsed.ok) return c.json({ error: parsed.message }, 400);
   return handle(
     c,
     (service, userId, workspaceId) =>
@@ -107,8 +155,8 @@ teamspaceRoutes.get("/:workspaceId/teamspaces/:teamspaceId", async (c) =>
 );
 
 teamspaceRoutes.patch("/:workspaceId/teamspaces/:teamspaceId", async (c) => {
-  const parsed = updateSchema.safeParse(await readJsonBody(c.req));
-  if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message }, 400);
+  const parsed = await parseJsonBody(c.req, UpdateTeamspaceInput, strictJson);
+  if (!parsed.ok) return c.json({ error: parsed.message }, 400);
   return handle(c, (service, userId, workspaceId) =>
     service.update({
       ...parsed.data,
@@ -152,11 +200,8 @@ for (const action of ["archive", "restore", "recover-owner"] as const) {
 teamspaceRoutes.patch(
   "/:workspaceId/teamspaces/:teamspaceId/invite-link",
   async (c) => {
-    const parsed = z
-      .object({ enabled: z.boolean() })
-      .strict()
-      .safeParse(await readJsonBody(c.req));
-    if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message }, 400);
+    const parsed = await parseJsonBody(c.req, UpdateInviteLinkInput, strictJson);
+    if (!parsed.ok) return c.json({ error: parsed.message }, 400);
     return handle(c, (service, userId, workspaceId) =>
       service.updateInviteLink({
         enabled: parsed.data.enabled,
@@ -195,13 +240,13 @@ teamspaceRoutes.get(
 teamspaceRoutes.post(
   "/:workspaceId/teamspaces/:teamspaceId/principals",
   async (c) => {
-    const parsed = principalSchema.safeParse(await readJsonBody(c.req));
-    if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message }, 400);
+    const parsed = await parseJsonBody(c.req, AddPrincipalInput, strictJson);
+    if (!parsed.ok) return c.json({ error: parsed.message }, 400);
     return handle(c, (service, userId, workspaceId) =>
       service.addPrincipal({
         role: parsed.data.role,
         accessLevelOverride: parsed.data.accessLevelOverride,
-        principalType: parsed.data.principalType,
+        principalType: parsed.data.principalType ?? "user",
         targetUserId: parsed.data.userId,
         teamspaceId: c.req.param("teamspaceId"),
         userId,
@@ -214,8 +259,8 @@ teamspaceRoutes.post(
 teamspaceRoutes.patch(
   "/:workspaceId/teamspaces/:teamspaceId/principals/:principalId",
   async (c) => {
-    const parsed = roleSchema.safeParse(await readJsonBody(c.req));
-    if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message }, 400);
+    const parsed = await parseJsonBody(c.req, UpdatePrincipalInput, strictJson);
+    if (!parsed.ok) return c.json({ error: parsed.message }, 400);
     return handle(c, (service, userId, workspaceId) =>
       service.updatePrincipal({
         principalId: c.req.param("principalId"),

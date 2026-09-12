@@ -170,3 +170,33 @@ test("hosted runtime does not expose self-host administration", async () => {
     404,
   );
 });
+
+test("bootstrap and settings reject invalid payloads", async () => {
+  const invalidBootstrap = await appFor({ user: null }).request(
+    "/api/instance/bootstrap",
+    {
+      body: JSON.stringify({
+        email: "not-an-email",
+        name: "",
+        password: "short",
+        workspaceName: "",
+      }),
+      headers: {
+        authorization: "Bearer header-token",
+        "content-type": "application/json",
+      },
+      method: "POST",
+    },
+  );
+  assert.equal(invalidBootstrap.status, 400);
+
+  const emptySettings = await appFor().request("/api/instance/settings", {
+    body: JSON.stringify({}),
+    headers: { "content-type": "application/json" },
+    method: "PATCH",
+  });
+  assert.equal(emptySettings.status, 400);
+  assert.deepEqual(await emptySettings.json(), {
+    error: "Provide at least one setting to update.",
+  });
+});

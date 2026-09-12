@@ -1,10 +1,10 @@
 import { Hono, type Context } from "hono";
-import { z } from "zod";
+import { Schema, SchemaTransformation } from "effect";
 
 import { getMembership } from "../access";
 import { isSelfHostedRuntime } from "../../infrastructure/runtime/runtime-adapter";
 import type { AppBindings } from "../../shared/types";
-import { readJsonBody } from "../../shared/http/request";
+import { parseJsonBody } from "../../shared/http/schema-json";
 import {
   BootstrapAlreadyCompletedError,
   BootstrapStateConflictError,
@@ -18,23 +18,55 @@ import { getZilobaseDiscoveryDocument } from "./service";
 
 export const instanceRoutes = new Hono<AppBindings>();
 
-const bootstrapSchema = z.object({
-  email: z.string().trim().email().max(320),
-  name: z.string().trim().min(1).max(100),
-  password: z.string().min(8).max(128),
-  workspaceName: z.string().trim().min(1).max(120),
+const BootstrapInput = Schema.Struct({
+  email: Schema.String.pipe(
+    Schema.decode(SchemaTransformation.trim()),
+    Schema.check(
+      Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, {
+        message: "Invalid email",
+      }),
+      Schema.isMaxLength(320),
+    ),
+  ),
+  name: Schema.String.pipe(
+    Schema.decode(SchemaTransformation.trim()),
+    Schema.check(
+      Schema.isMinLength(1, { message: "Name is required." }),
+      Schema.isMaxLength(100),
+    ),
+  ),
+  password: Schema.String.pipe(
+    Schema.check(
+      Schema.isMinLength(8, { message: "Password must be at least 8 characters." }),
+      Schema.isMaxLength(128),
+    ),
+  ),
+  workspaceName: Schema.String.pipe(
+    Schema.decode(SchemaTransformation.trim()),
+    Schema.check(
+      Schema.isMinLength(1, { message: "Workspace name is required." }),
+      Schema.isMaxLength(120),
+    ),
+  ),
 });
 
-const instanceSettingsUpdateSchema = z
-  .object({
-    displayName: z.string().trim().min(1).max(100).optional(),
-    registrationMode: z.enum(["invite-only", "open"]).optional(),
-  })
-  .refine(
-    (value) =>
-      value.displayName !== undefined || value.registrationMode !== undefined,
-    "Provide at least one setting to update.",
-  );
+const InstanceSettingsUpdate = Schema.Struct({
+  displayName: Schema.optionalKey(
+    Schema.String.pipe(
+      Schema.decode(SchemaTransformation.trim()),
+      Schema.check(Schema.isMinLength(1), Schema.isMaxLength(100)),
+    ),
+  ),
+  registrationMode: Schema.optionalKey(
+    Schema.Literals(["invite-only", "open"]),
+  ),
+}).check(
+  Schema.makeFilter((value) =>
+    value.displayName !== undefined || value.registrationMode !== undefined
+      ? undefined
+      : "Provide at least one setting to update.",
+  ),
+);
 
 instanceRoutes.get("/.well-known/zilobase", async (c) => {
   c.header("Cache-Control", "no-store");
@@ -50,12 +82,11 @@ instanceRoutes.post("/api/instance/bootstrap", async (c) => {
     return c.json({ error: "Not found" }, 404);
   }
 
-  const body = await readJsonBody(c.req);
-  const parsed = bootstrapSchema.safeParse(body);
+  const parsed = await parseJsonBody(c.req, BootstrapInput);
 
-  if (!parsed.success) {
+  if (!parsed.ok) {
     return c.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid bootstrap request." },
+      { error: parsed.message || "Invalid bootstrap request." },
       400,
     );
   }
@@ -102,12 +133,11 @@ instanceRoutes.patch("/api/instance/settings", async (c) => {
     return access;
   }
 
-  const body = await readJsonBody(c.req);
-  const parsed = instanceSettingsUpdateSchema.safeParse(body);
+  const parsed = await parseJsonBody(c.req, InstanceSettingsUpdate);
 
-  if (!parsed.success) {
+  if (!parsed.ok) {
     return c.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid settings request." },
+      { error: parsed.message || "Invalid settings request." },
       400,
     );
   }

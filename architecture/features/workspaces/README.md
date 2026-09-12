@@ -14,7 +14,7 @@ The [workspace settings screen](../../../apps/web/src/features/workspaces/screen
 
 ## Authorization and persistence
 
-[Workspace routes](../../../apps/server/src/features/workspaces/routes.ts) expose authenticated `GET /workspaces` as `{ workspaces: [...] }` and `GET /workspaces/:workspaceId` as `{ workspace: ... }`. Lists include only active memberships; detail reads require current membership. OAuth requires `workspaces.read`, lists only the granted workspace and rejects other workspace IDs. API keys use the same workspace pin. [Route tests](../../../apps/server/src/app/routes.test.ts) cover OAuth filtering, cross-workspace denial and membership revocation.
+[Workspace routes](../../../apps/server/src/features/workspaces/routes.ts) expose authenticated `GET /workspaces` as `{ workspaces: [...] }` and `GET /workspaces/:workspaceId` as `{ workspace: ... }`. Lists include only active memberships; detail reads require current membership. OAuth requires `workspaces.read`, lists only the granted workspace and rejects other workspace IDs. API keys use the same workspace pin. Member invitation, member update, workspace settings patch, and deletion confirmation bodies decode JSON with Schema (`onExcessProperty: "error"` for member mutations and delete confirmation). [Route tests](../../../apps/server/src/app/routes.test.ts) cover OAuth filtering, cross-workspace denial, membership revocation, and payload validation.
 
 Workspace and membership records anchor feature ownership. Active-workspace checks and scoped key checks are separate from resource-level access. Workspace settings belong to the settings submodule.
 
