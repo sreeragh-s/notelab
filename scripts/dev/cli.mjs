@@ -19,6 +19,7 @@ import {
   resetLocal,
   showStatus,
   startLocal,
+  startPreview,
   startStudio,
   stopLocal,
 } from "./local.mjs";
@@ -58,6 +59,8 @@ try {
       );
     }
     await startLocal();
+  } else if (command === "preview") {
+    await startPreview();
   } else if (command === "studio") {
     if (args.includes("--target")) {
       throw new Error(

@@ -18,6 +18,7 @@
   ],
   "scripts": {
     "dev": "node scripts/dev/cli.mjs local",
+    "preview": "node scripts/dev/cli.mjs preview",
     "setup": "node scripts/dev/cli.mjs setup",
     "setup:check": "node scripts/dev/cli.mjs setup-check",
     "build": "npm run build --workspace @zilobase/web && npm run build --workspace @zilobase/server",
