@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import {
   findPrivateRuntimeReferences,
   isMissingWorkingTreeFile,
+  isVendoredReferenceTree,
 } from "./community-boundary.mjs";
 
 const root = process.cwd();
@@ -22,6 +23,7 @@ for (const file of stdout.toString("utf8").split("\0")) {
     !file
     || file === "scripts/community-boundary.test.mjs"
     || path.basename(file) === "package-lock.json"
+    || isVendoredReferenceTree(file)
   ) continue;
 
   let content;

@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   findPrivateRuntimeReferences,
   isMissingWorkingTreeFile,
+  isVendoredReferenceTree,
 } from "./community-boundary.mjs";
 
 test("community boundary ignores documentation and public service URLs", () => {
@@ -62,6 +63,31 @@ test("community boundary rejects private runtime dependencies", () => {
       'const path = "/enterprise/audit";',
     ),
     ["private-edition repository marker"],
+  );
+});
+
+test("community boundary ignores vendored third-party reference trees", () => {
+  assert.equal(isVendoredReferenceTree("repos/effect/packages/sql/d1/src/D1Client.ts"), true);
+  assert.deepEqual(
+    findPrivateRuntimeReferences(
+      "repos/effect/packages/sql/d1/src/D1Client.ts",
+      'import type { D1Database } from "@cloudflare/workers-types"',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    findPrivateRuntimeReferences(
+      "repos/effect/packages/sql/d1/package.json",
+      JSON.stringify({ dependencies: { "@cloudflare/workers-types": "^5.0.0" } }),
+    ),
+    [],
+  );
+  assert.deepEqual(
+    findPrivateRuntimeReferences(
+      "apps/server/src/runtime.ts",
+      'import type { D1Database } from "@cloudflare/workers-types"',
+    ),
+    ["@cloudflare/workers-types"],
   );
 });
 

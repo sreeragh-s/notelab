@@ -19,8 +19,9 @@
     "apps/desktop/e2e/**/*.mjs"
   ],
   // CI workflow shell fragments are not JavaScript entrypoints. In particular,
-  // Docker's {{...}} format strings are not filesystem globs.
-  "ignorePatterns": [".github/**/*.yml", ".github/**/*.yaml"],
+  // Docker's {{...}} format strings are not filesystem globs. Vendored trees
+  // under repos/ are read-only agent reference, not production code.
+  "ignorePatterns": [".github/**/*.yml", ".github/**/*.yaml", "repos/**"],
   // Test-only decoders and fixture factories are intentionally outside their
   // published package graphs and are imported by colocated tests.
   "ignoreFindings": [

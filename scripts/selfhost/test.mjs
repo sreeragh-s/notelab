@@ -612,7 +612,7 @@ async function verifyCollaborationWebSocket(ticket, sessionToken) {
 }
 
 async function mirrorObjectStorage(direction, localDirectory) {
-  const image = "minio/mc:RELEASE.2025-04-16T18-13-26Z"
+  const image = "quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z"
   const backupOwner =
     typeof process.getuid === "function" && typeof process.getgid === "function"
       ? `${process.getuid()}:${process.getgid()}`

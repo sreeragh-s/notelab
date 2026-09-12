@@ -18,8 +18,14 @@ function isPrivatePackage(specifier) {
   return privatePackageMarkers.some((marker) => normalized.includes(marker));
 }
 
+export function isVendoredReferenceTree(file) {
+  const normalizedFile = file.replaceAll("\\", "/");
+  return normalizedFile === "repos" || normalizedFile.startsWith("repos/");
+}
+
 export function findPrivateRuntimeReferences(file, content) {
   const normalizedFile = file.replaceAll("\\", "/");
+  if (isVendoredReferenceTree(normalizedFile)) return [];
   if (
     !isBoundaryImplementation(normalizedFile) &&
     (

@@ -114,7 +114,7 @@ jobs:
           docker run -d --name community-helm-minio --network kind \
             -e MINIO_ROOT_USER=zilobase \
             -e MINIO_ROOT_PASSWORD="$minio_password" \
-            minio/minio:RELEASE.2025-04-22T22-12-26Z server --address :443 /data
+            quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z server --address :443 /data
           docker exec community-helm-minio mkdir -p /root/.minio/certs
           docker cp "$RUNNER_TEMP/community-minio-tls/public.crt" community-helm-minio:/root/.minio/certs/public.crt
           docker cp "$RUNNER_TEMP/community-minio-tls/private.key" community-helm-minio:/root/.minio/certs/private.key
@@ -229,7 +229,7 @@ jobs:
           docker run -d --name community-helm-minio --network kind \
             -e MINIO_ROOT_USER=zilobase -e MINIO_ROOT_PASSWORD="$minio_password" \
             -v community-helm-minio-restored:/data \
-            minio/minio:RELEASE.2025-04-22T22-12-26Z server --address :443 /data
+            quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z server --address :443 /data
           docker exec community-helm-minio mkdir -p /root/.minio/certs
           docker cp "$RUNNER_TEMP/community-minio-tls/public.crt" community-helm-minio:/root/.minio/certs/public.crt
           docker cp "$RUNNER_TEMP/community-minio-tls/private.key" community-helm-minio:/root/.minio/certs/private.key
