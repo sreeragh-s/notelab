@@ -1,4 +1,5 @@
 import { TimelineCurrentTime } from "./current-time";
+import { ChevronDownIcon, ChevronUpIcon } from "@/shared/components/icons";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useVirtualizer, defaultRangeExtractor } from "@tanstack/react-virtual";
 import { snapTimelineOffset, timelineGeometry, timelineRetargets } from "@zilobase/features/calendar";
@@ -9,8 +10,8 @@ import type { ReactNode } from "react";
 export type TimelineProps = CalendarColumnActions & { days: string[]; date: string; target: string; eventsByDay: Record<string, CalendarItem[]>; zoneControls?: ReactNode; onMetric?: (name: "mounted_columns", value: number) => void; onRetry?: () => void; onViewport: (first: string, last: string, retain?: boolean) => void; beforeLoading: boolean; afterLoading: boolean; loadingMessage?: string; onVisibleDate: (date: string) => void };
 const EMPTY: CalendarItem[] = [];
 export function CalendarTimeline({ days, date, target, eventsByDay, zoneControls, onViewport, beforeLoading, afterLoading, loadingMessage, onVisibleDate, onMetric, onRetry, ...actions }: TimelineProps) {
-  const viewport = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(900), [top, setTop] = useState(0), [height, setHeight] = useState(800), [collapsed, collapse] = useState(false);
+  const viewport = useRef<HTMLDivElement>(null), allDayToggle = useRef<HTMLButtonElement>(null);
+  const [width, setWidth] = useState(900), [top, setTop] = useState(0), [height, setHeight] = useState(800), [collapsed, collapse] = useState(true);
   const [edges, setEdges] = useState({ before: false, after: false });
   const [focusedDay, setFocusedDay] = useState<string | null>(null);
   const [fast, setFast] = useState(false);
@@ -52,12 +53,12 @@ export function CalendarTimeline({ days, date, target, eventsByDay, zoneControls
     <div ref={viewport} data-calendar-scroll data-calendar-timeline-scroll data-calendar-rail-width={rail} onFocusCapture={event => setFocusedDay((event.target as HTMLElement).closest<HTMLElement>("[data-calendar-day-column]")?.dataset.calendarDayColumn ?? null)} className="h-full overflow-auto overscroll-none [overflow-anchor:none] [scrollbar-gutter:stable]" onPointerDown={() => { active.current = true; snappingTo.current = null; }} onPointerUp={() => { active.current = false; snappingTo.current = null; }} onWheel={() => { snappingTo.current = null; }} onKeyDown={() => { snappingTo.current = null; }} onScroll={event => handleTimelineScroll(event.currentTarget, { geometry, hourHeight, columnWidth, rail, previous, lastScroll, sampleAt, settle, active, ignore, commit, emitted, snappingTo, setEdges, setTop, setFast, setDirection, onViewport, onVisibleDate })}>
       <div className="relative flex" style={{ width: rail + days.length * columnWidth, minHeight: headerHeight + hourHeight * 24 }}>
         <div className="sticky left-0 z-30 shrink-0 bg-surface-canvas" style={{ width: rail }}>
-          <div className="sticky top-0 z-40 bg-surface-canvas" style={{ height: headerHeight }}><div className="h-8">{zoneControls}</div><button type="button" className="w-full border-y border-stroke-default text-xs" style={{ height: headerHeight - 32 }} aria-expanded={!collapsed} onClick={() => collapse(!collapsed)}>{collapsed ? "Expand all-day" : "Collapse all-day"}</button></div>
+          <div className="sticky top-0 z-40 bg-surface-canvas" style={{ height: headerHeight }}><div className="h-8">{zoneControls}</div><button ref={allDayToggle} type="button" className="flex w-full items-center justify-center border-y border-stroke-default text-content-secondary hover:bg-surface-muted hover:text-content-primary transition-colors" style={{ height: headerHeight - 32 }} aria-expanded={!collapsed} aria-label={collapsed ? "Expand all-day events" : "Collapse all-day events"} title={collapsed ? "Expand all-day events" : "Collapse all-day events"} onClick={() => collapse(!collapsed)}>{collapsed ? <ChevronDownIcon className="size-3.5" /> : <ChevronUpIcon className="size-3.5" />}</button></div>
           <div style={{ paddingLeft: 24 }}><TimeAxis day={target} days={days} preferences={p} /></div>
         </div>
         <div className="relative" style={{ width: days.length * columnWidth }}>
           <TimelineCurrentTime days={days} columnWidth={columnWidth} zone={p.timeZone} hourHeight={hourHeight} headerHeight={headerHeight} />
-          {mounted.map(item => <div key={item.key} className="absolute top-0" style={{ left: item.index * columnWidth, width: columnWidth, height: headerHeight + hourHeight * 24 }}><CalendarDayColumn {...actions} day={days[item.index]!} items={eventsByDay[days[item.index]!] ?? EMPTY} allDayCollapsed={collapsed} onExpandAllDay={() => collapse(false)} viewportTop={top} viewportHeight={height} /></div>)}
+          {mounted.map(item => <div key={item.key} className="absolute top-0" style={{ left: item.index * columnWidth, width: columnWidth, height: headerHeight + hourHeight * 24 }}><CalendarDayColumn {...actions} day={days[item.index]!} items={eventsByDay[days[item.index]!] ?? EMPTY} allDayCollapsed={collapsed} onExpandAllDay={() => { collapse(false); allDayToggle.current?.focus(); }} viewportTop={top} viewportHeight={height} /></div>)}
         </div>
       </div>
     </div>

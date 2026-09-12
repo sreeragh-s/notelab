@@ -209,8 +209,9 @@ function createScheduleEvent(calendars: CalendarRecord[], connections: CalendarC
   catch (error) { toast.error(getApiErrorMessage(error)); }
 }
 function CalendarScheduleStatus({ navigation, viewportRange, isRangeReady, data }: { navigation: ReturnType<typeof useCalendarNavigation>; viewportRange: CalendarRange | null; isRangeReady: (range: CalendarRange) => boolean; data: Snapshot[] }) {
+  const loading = viewportLoadingLabel(navigation.pending, viewportRange, isRangeReady);
   return <>
-    <div className="h-5 shrink-0 px-4 text-xs text-content-secondary" role="status">{viewportLoadingLabel(navigation.pending, viewportRange, isRangeReady)}</div>
+    {loading && <div className="h-5 shrink-0 px-4 text-xs text-content-secondary" role="status">{loading}</div>}
     <CalendarStatus data={data} online={data.every(d => d.online)} error={undefined} />
     <ScheduleRetry navigation={navigation} data={data} />
     <SchedulePending navigation={navigation} />
